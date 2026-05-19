@@ -3,11 +3,31 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
+  "scripts": {
+    "build": "vite build && tsc -p tsconfig.build.json",
+    "lint": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "verify": "npm run lint && npm run build"
   },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "peerDependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react": ">=18.0.0 <20.0.0",
+    "react-dom": ">=18.0.0 <20.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "latest",
+    "typescript": "^6.0.3",
+    "vite": "latest",
+    "vitest": "latest"
   }
 }
