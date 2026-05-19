@@ -12,6 +12,6 @@
 
 ## Stable Rules
 
-- public export는 `src/index.ts`에서 관리한다.
+- public export는 `src/index.tsx`에서 관리한다.
 - table behavior는 React generic environment에서 동작해야 한다.
 - large row rendering과 accessibility를 future baseline으로 고려한다.

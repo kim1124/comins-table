@@ -8,10 +8,10 @@
 
 ## Scope
 
-`test`는 future Vitest, browser checks, reports를 담당한다.
+`test`는 Vitest, future browser checks, report routing을 담당한다.
 
 ## Stable Rules
 
-- behavior를 추가하기 전에 test script와 focused test를 먼저 만든다.
+- behavior를 추가하기 전에 focused test를 먼저 만든다.
 - rendered table interaction은 browser-capable test로 검증한다.
-- 현재 검증 script 부재는 report에 residual risk로 남긴다.
+- package baseline은 `npm --workspace=@kmsf/data-table run verify`로 확인한다.

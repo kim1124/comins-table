@@ -8,10 +8,10 @@
 
 ## Scope
 
-패키지 루트는 data table package contract, peer dependency, future verification policy를 관리한다.
+패키지 루트는 data table package contract, peer dependency, verification policy를 관리한다.
 
 ## Stable Rules
 
 - React와 React DOM은 peer dependency로 유지한다.
-- 현재는 초기 skeleton이므로 behavior 변경 전 테스트 구조를 먼저 계획한다.
+- behavior 변경 전 focused test와 package verification impact를 먼저 계획한다.
 - Next.js 전용 API를 runtime source에 넣지 않는다.

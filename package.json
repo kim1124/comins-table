@@ -8,7 +8,7 @@
     "lint": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
-    "verify": "npm run lint && npm run build"
+    "verify": "npm run lint && npm run test:run && npm run build"
   },
   "exports": {
     ".": {
