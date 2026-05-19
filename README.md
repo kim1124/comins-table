@@ -31,3 +31,7 @@ export function Example() {
 ## Styling
 
 The package renders a stable `.kmsf-data-table` root class. Consumers can style it from their app CSS without modifying package source.
+
+## Local Port
+
+`@kmsf/data-table` does not currently ship a browser example server. If an example is added later, reserve port `5000` by default and use `KMSF_DATA_TABLE_PORT=5001` when that port is already in use.
