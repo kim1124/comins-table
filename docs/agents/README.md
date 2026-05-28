@@ -21,4 +21,4 @@
 - 런타임 지침은 실제 코드 경로의 `AGENTS.md`를 우선한다.
 - 세부 배경과 긴 계획은 이 디렉터리 아래에 둔다.
 - 계획이 500줄 이상이면 `plans/00_<name>.md` 형태로 분할한다.
-- 검증 실패, 생략, sandbox 제한은 repo root `test-reports/YYYYMMDD_HHMMSS_report.md`에 남긴다.
+- 검증 실패, 생략, sandbox 제한은 `packages/data-table/reports/YYYY-MM-DD.md`에 남긴다.
