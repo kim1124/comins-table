@@ -2,11 +2,18 @@
 
 ## Active Plan
 
-- 2026-05-03: `charts` 기준 하네스 구조를 이 도메인에 맞춰 적용한다.
+- 2026-06-04: 이전 package 참조 표현을 제거하고 KMSF repo root `AGENTS.md`/`GUIDE.md` 하네스 기준으로 정렬한다.
 - 이번 단계는 instruction-only 변경이며 production code 변경은 포함하지 않는다.
 - 2026-05-28: AG Grid와 MUI X Data Grid 공식 기능을 분석해 `docs/agents/src/2026-05-28-data-table-feature-design-draft.md`에 설계 초안을 작성한다.
 - 이번 단계는 design-doc-only 변경이며 production code 변경은 포함하지 않는다.
 - 사용자 검토 후 Phase 1 범위만 별도 implementation plan으로 분리한다.
+- 2026-06-04: 사용자가 "wrapper가 아니라 다기능 고성능 오픈소스 신규 React 테이블"이라고 방향을 확정했다. 기존 초안의 축소형 MVP 전제를 제거하고 full-feature open-source data grid 설계로 재작성한다.
+- 다음 implementation plan은 Milestone 0 engine foundation과 Milestone 1 visible grid baseline을 대상으로 한다.
+- 2026-06-04: Header size/position save-load, Row position moving, Row right-click context menu를 feature 설계에 추가한다.
+- 2026-06-04: 설계 초안 기반 source 작업의 TDD 필수, 실패 테스트 완료 금지, 외부 grid wrapper 금지, browser verification gate를 하네스에 추가한다.
+- 2026-06-04: 테스트/문서 playground는 charts-style developer playground를 참고하되, 20/80 layout, feature menu, menu-keyed destroy/recreate contract를 data-table 전용 기준으로 추가한다.
+- 2026-06-04: 초기 개발은 `docs/agents/src/2026-06-04-basic-features-implementation-plan.md`를 기준으로 기본 기능만 구현한다.
+- 2026-06-05: 잔여 리스크 종료 구현은 `docs/agents/src/2026-06-05-residual-risk-closure-plan.md`를 기준으로 진행한다. MIT/public package metadata 전환은 MS 요청으로 보류하고, `data`/`onDataChange`, selection 초기화, range selection, multi-cell clipboard, fill helper, subpath exports, shadcn/Tailwind playground scaffold, lifecycle smoke는 구현 범위에 포함한다.
 
 ## Planning Rules
 
@@ -21,3 +28,34 @@
 - 코드나 설정이 바뀌면 패키지별 `AGENTS.md`의 verification command를 따른다.
 - 이번 설계 초안 작업의 최소 gate는 문서 파일 존재, line count, source-domain 문서 업데이트, report 기록이다.
 - runtime source가 바뀌지 않았더라도 package baseline 확인이 가능하면 `npm --workspace=@kmsf/data-table run verify`를 실행한다.
+- 설계 문서만 바뀌어도 no-wrapper, full-feature target, open-source readiness, browser/performance verification gate가 문서에 남아 있는지 확인한다.
+- Header/Row 기능 추가 시 component area requirements, feature modules, milestone, research/memory/report가 함께 갱신되었는지 확인한다.
+- 하네스 문서 변경 시 다른 package를 실행 기준으로 삼는 표현이 active docs에 남아 있지 않은지 확인한다. 단, chart integration 같은 data grid 기능명은 유지한다.
+- source 작업 plan은 focused RED command, expected failure reason, required baseline verify, browser gate 적용 여부를 포함해야 한다.
+- playground implementation plan은 Basic, Basic CRUD, Header, Body, Td / Cell, Tr / Row, Core Features, Advanced Features menu와 content remount Playwright coverage를 포함해야 한다.
+- basic feature implementation은 core store 테스트를 먼저 작성하고 missing export RED를 확인한 뒤 최소 production code를 작성한다.
+- React rendered interaction은 Vitest jsdom 테스트와 Playwright browser 테스트를 모두 둔다. 특히 range drag는 jsdom event와 Chromium pointer path가 다르므로 browser spec을 생략하지 않는다.
+
+## 2026-06-05 API Redesign Decisions
+
+- Unified data prop: use `data`; remove `rows`, `defaultRows`, `defaultData`.
+- Internal edits render immediately and call `onChangeData(nextData)`.
+- Parent `data` prop change overwrites internal working data.
+- Event props use React-style props, not emitter registration.
+- State-change event names use `onChangeXxx`.
+- User action event names use verb-first names: `onClickCell`, `onDoubleClickCell`, `onContextMenuCell`, `onKeyDownCell`, `onClickRow`, `onDoubleClickRow`, `onContextMenuRow`, `onKeyDownRow`.
+- Column layout is controlled through ref methods: `getColumnLayout`, `setColumnLayout`.
+- Selection methods use visible row indexes: `setSelectedRow(index)`, `setSelectedRows(indexes)`.
+- Column schema is `id`, `label`, `field`, `sort`, `props`, `format`, `header`.
+- `id` is optional; default id is `field`.
+- `field` is a string and supports nested paths.
+- `rowProps.disabled` blocks all row and cell interactions for that row.
+- `column.props.disabled` blocks all cell interactions for that column cell.
+- Single-column sort is in scope; multi-column sort is deferred.
+
+## 설계 결정 질문 루프
+
+- 이 문서를 작성하거나 갱신하기 전에 사용자 결정이 필요한 항목을 질문으로 분리한다.
+- 답변 전에는 추천안을 확정된 계획이나 결론으로 쓰지 않는다.
+- 답변 이후에도 재결정 항목이 남으면 추가 질문을 먼저 한다.
+- 모든 사용자 결정 항목이 닫힌 뒤 내용을 확정한다.

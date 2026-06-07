@@ -7,6 +7,7 @@
 - `root/`: package contract, peer dependencies, verification policy
 - `src/`: public data table exports and future component rules
 - `test/`: Vitest tests, future browser tests, report routing
+- `example/`: future playground, docs examples, feature menu, browser verification
 
 ## File Roles
 

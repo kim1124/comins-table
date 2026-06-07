@@ -1,10 +1,24 @@
-# @kmsf/data-table Feature Design Draft
+# @kmsf/data-table Open Source Data Grid Design Draft
 
 ## Status
 
-- Date: 2026-05-28
-- Scope: AG Grid와 MUI X Data Grid의 공식 기능을 기준으로 `@kmsf/data-table`이 가져야 할 기능 범위와 단계별 설계 방향을 정리한다.
+- Created: 2026-05-28
+- Revised: 2026-06-04
+- Current direction: AG Grid Enterprise와 MUI X Premium급 기능군을 자체 지원하는 다기능 고성능 오픈소스 React data grid를 만든다.
 - Document type: 설계 초안. 이 문서는 production code 변경을 승인하지 않는다.
+
+## Correction From Prior Draft
+
+이전 초안은 `@kmsf/data-table`을 KMSF 내부 화면용 축소형 data table로 해석했다. 그 방향은 폐기한다.
+
+확정된 방향은 아래와 같다.
+
+- AG Grid, MUI X Data Grid, TanStack Table 같은 외부 grid/table을 래핑하지 않는다.
+- 외부 제품은 feature benchmark와 UX reference로만 사용한다.
+- 최종 목표는 searched data grid 제품군의 핵심 기능을 모두 자체 구현하는 신규 React data grid다.
+- "Phase"는 기능 제외가 아니라 구현 순서를 의미한다.
+- AG Grid Enterprise 또는 MUI X Premium에 있는 기능도 최종 지원 대상에 포함한다.
+- 오픈소스 제품을 목표로 하므로 상용 plan으로 기능을 잠그는 구조를 기본 설계에 넣지 않는다.
 
 ## Source Basis
 
@@ -25,232 +39,601 @@
 - MUI X Data Grid Export: https://mui.com/x/react-data-grid/export/
 - MUI Pricing: https://mui.com/pricing/
 
-## Design Goal
+## Product Goal
 
-`@kmsf/data-table`은 AG Grid를 복제하는 엔터프라이즈 그리드가 아니라, KMSF 제품군에서 반복 사용 가능한 React-first data table package여야 한다. 기본 방향은 다음과 같다.
+`@kmsf/data-table`은 React application에서 사용할 수 있는 open-source data grid package가 된다. 목표는 단순 table component가 아니라 아래 기능군을 자체 engine으로 제공하는 것이다.
 
-- Next.js 전용 API 없이 React generic 환경에서 동작한다.
-- React와 React DOM은 peer dependency로 유지한다.
-- KMSF 앱에서는 즉시 사용할 수 있는 기본 UI를 제공하되, 장기적으로는 headless core와 styled component를 분리할 수 있는 구조를 둔다.
-- 대용량, 키보드 접근성, server-side data contract를 초기 설계 기준에 포함한다.
-- grouping, pivot, chart, Excel급 기능은 초기 MVP가 아니라 enterprise backlog로 분리한다.
+- column, row, cell, layout, rendering, state, event, data-source를 다루는 grid core.
+- sorting, filtering, pagination, selection, editing, grouping, aggregation, pivoting, tree data, master/detail, export, clipboard, virtualization, accessibility를 포함한 feature modules.
+- KMSF 앱뿐 아니라 외부 React 소비자가 사용할 수 있는 public API, docs, examples, tests, benchmarks.
+- framework-specific API에 묶이지 않는 React-first implementation.
 
-## Competitor Analysis
+## Non-Negotiable Principles
 
-| Area | AG Grid | MUI X Data Grid | KMSF Design Implication |
-| --- | --- | --- | --- |
-| Product stance | 독립형 고기능 grid. Community와 Enterprise 분리. | MUI 생태계 기반 open-core grid. Community, Pro, Premium 분리. | 특정 UI framework에 묶지 않는 package로 설계한다. |
-| Basic data mapping | `field`, `valueGetter`, `valueFormatter`, cell renderer 중심. | `rows`, `columns`, `field`, `headerName`, `GridColDef` 중심. row `id` 권장. | `rowId`, `accessor`, `render`, `format`을 명확히 나눈 column contract가 필요하다. |
-| Column features | sizing, moving, pinning, spanning, grouped headers, column state가 넓다. | resizing, autosizing, ordering, pinning, grouping 등 plan별 제공. | MVP는 width/min/max/visibility부터 시작하고, reorder/pin/group은 Phase 2로 둔다. |
-| Sorting/filtering/pagination | client/server 모두 지원. filter 종류가 많고 Enterprise에는 set/multi/advanced filter가 있다. | 기본 sorting/filtering/pagination과 server mode, Data Source layer 제공. multi-sorting 등 일부는 상위 plan. | controlled model 기반으로 client/manual server mode를 모두 지원해야 한다. |
-| Selection | row selection, multi-row, cell/range selection, fill handle 등 고급 선택 제공. | row selection, multi-row, cell/range selection 등 plan별 제공. | MVP는 row selection만 제공하고 cell/range selection은 후순위로 둔다. |
-| Editing | cell/row editing, custom editor, validation, batch, undo/redo 등 제공. | cell/row editing, clipboard paste, undo/redo 등 제공. | 초기에는 read-mostly table로 두고, editing은 별도 승인된 Phase 2 기능으로 분리한다. |
-| Export | CSV 기본, Excel은 Enterprise. CSV formula injection 방어가 중요하다. | print, CSV, clipboard, Excel export 제공. | MVP export는 dependency 없는 CSV부터 시작하고 formula injection escaping을 기본값으로 둔다. |
-| Server-side data | SSRM으로 lazy loading, infinite scroll, server-side grouping/pivot/aggregation까지 다룬다. | Data Source layer가 sorting/filtering/pagination을 server mode로 자동 연결한다. | `manualSorting`, `manualFiltering`, `manualPagination`, `dataSource` 계약을 먼저 정의한다. |
-| Performance | DOM virtualization, massive row count, value cache, SSRM 등 성숙함. | row/column virtualization과 performance guide 제공. | row virtualization은 MVP 이후 빠르게 도입하되 API는 처음부터 virtualization을 막지 않게 설계한다. |
-| Advanced analytics | grouping, aggregation, pivoting, tree data, master/detail, integrated charts. | Premium 중심으로 row grouping, aggregation, pivoting, tree data, charts integration 제공. | 분석형 기능은 Phase 3로 두고, Phase 1 API가 이를 막지 않아야 한다. |
-| Accessibility | ARIA grid roles와 WCAG target을 명시한다. | keyboard navigation, selection shortcuts, WCAG target을 명시한다. | keyboard navigation과 aria state는 기능별 acceptance criteria에 포함한다. |
-| Theming | theme parameter와 theme builder 제공. | MUI theme override와 slots/custom subcomponents 제공. | CSS variables, className, slots를 기본 확장 지점으로 둔다. MUI dependency는 추가하지 않는다. |
+- No wrapper: AG Grid, MUI X, TanStack Table을 내부 구현체로 쓰지 않는다.
+- No hidden paid tier: 오픈소스 제품 목표에 맞게 핵심 기능을 공개 package 안에서 설계한다.
+- Modular full feature set: 모든 기능을 한 파일에 넣지 않고 독립 feature module로 나눈다.
+- Performance first: large row count, virtualization, memoized row model, server-side row model을 초기 architecture에 포함한다.
+- Accessibility first: keyboard navigation, ARIA grid semantics, screen reader state를 기능 완료 조건에 포함한다.
+- Controlled state first: grid state는 controlled, uncontrolled, persisted, server-driven mode를 모두 지원할 수 있어야 한다.
+- Browser verification required: rendered UI, keyboard, layout, virtualization, resize, export flow는 jsdom test만으로 완료 처리하지 않는다.
 
-## Proposed Product Shape
+## Benchmark Feature Scope
 
-초기 공개 surface는 아래 세 계층으로 나눈다.
+| Feature Area | Benchmark Evidence | KMSF Support Target |
+| --- | --- | --- |
+| Data mapping | AG Grid `field`, `valueGetter`, `valueFormatter`, cell component. MUI rows/columns and `GridColDef`. | `field`, `accessorKey`, `accessorFn`, `valueGetter`, `valueFormatter`, cell renderer를 모두 지원한다. |
+| Column engine | column definitions, column state, headers, groups, sizing, moving, pinning, spanning. | column definition/state engine을 별도 core로 둔다. resize, reorder, pin, hide, group, span, header size/position persistence를 지원한다. |
+| Row engine | row data, sorting, row numbers, spanning, pinning, height, row dragging, full width rows. | row identity, row state, row height, pinned rows, row dragging, row position moving, row-level context menu, full-width rows를 지원한다. |
+| Cell engine | cell content, typed values, custom components, formatting, notes, tooltips, highlight changes. | typed cell model과 renderer/editor lifecycle을 분리한다. |
+| Sorting | AG Grid sorting, MUI sorting. | single, multi, custom comparator, server-side sorting을 지원한다. |
+| Filtering | text, number, BigInt, date, set, multi, advanced, external, quick, floating filters. | filter operator registry와 custom filter UI를 제공한다. |
+| Pagination | client and server pagination. | client pagination, manual pagination, data-source pagination을 지원한다. |
+| Selection | row selection, multi-row, cell selection, range handle, fill handle. | row, cell, range selection과 fill/copy handle을 지원한다. |
+| Editing | cell/row editing, custom editors, parsing, saving, validation, batch editing, undo/redo. | editor registry, validation pipeline, batch transaction, undo/redo stack을 지원한다. |
+| Data updates | single row/cell updates, transactions, high frequency updates. | immutable updates, transactions, keyed patch, high-frequency render path를 지원한다. |
+| Server-side data | lazy group loading, infinite scrolling, server-side grouping, pivot, aggregation, slice-and-dice. | client, infinite, viewport, server-side row model을 모두 architecture에 포함한다. |
+| Grouping | row grouping, group display types, group panel, expansion, hierarchy selection. | grouping model과 group row renderer를 feature module로 제공한다. |
+| Aggregation | built-in aggregate functions, custom aggregate functions, total rows. | aggregation registry, group/footer totals, custom aggregate를 지원한다. |
+| Pivoting | pivot mode, pivot columns, pivot result columns, pivot totals. | pivot model, generated columns, pivot totals, server-side pivot contract를 지원한다. |
+| Tree data | hierarchical data paths, nested records, self-referential records, tree selection. | tree data row model과 path/self-reference adapters를 지원한다. |
+| Master/detail | detail grids, detail height, nested detail, custom detail. | expandable detail row와 nested grid composition을 지원한다. |
+| Tool panels | side bar, columns panel, filters panel, status bar, context menu. | toolbar, side panels, column/filter/pivot/chart panels, context menu slots를 지원한다. |
+| Import/export | CSV, Excel export, clipboard, drag and drop, printing, Excel import. | CSV/Excel export, clipboard copy/paste, print, import adapters를 지원한다. |
+| Charts | integrated charts, range chart, pivot chart, chart panels, image export. | chart integration은 plugin module로 제공한다. |
+| Performance | DOM virtualization, value cache, massive row count, scrolling performance. | row/column virtualization, measurement cache, value cache, render scheduler를 core concern으로 둔다. |
+| Accessibility | keyboard navigation, touch, ARIA, RTL, localization. | keyboard grid map, ARIA state, RTL, i18n, screen reader smoke test를 포함한다. |
+| AI features | AG Grid AI Toolkit, MUI AI Assistant. | AI assistant는 optional extension target으로 둔다. core grid와 분리한다. |
 
-1. Core types
-   - rows, columns, row id, sort model, filter model, pagination model, selection model을 정의한다.
-   - React에 직접 묶이지 않는 순수 타입과 state transition helper를 우선한다.
+## Component Area Requirements
 
-2. React hook
-   - `useKmsfDataTable()`이 controlled/uncontrolled state를 연결한다.
-   - client mode에서는 sorting, filtering, pagination을 내부 처리한다.
-   - manual server mode에서는 상태 변경 이벤트만 발생시키고 데이터 fetch는 소비자가 담당한다.
+### Header
 
-3. Default component
-   - `KmsfDataTable`은 바로 사용할 수 있는 table UI를 제공한다.
-   - `className`, CSS variables, slots로 visual override를 허용한다.
-   - App Router, Vite, plain React에서 동일하게 동작해야 한다.
+- header renderer and custom header component.
+- header height, density, and responsive sizing.
+- header position state for column order, pinned region, and group hierarchy.
+- header size state for width, min width, max width, flex width, and measured header height.
+- header size and position save/load through grid state persistence.
+- sortable header with `aria-sort`.
+- filter entry point, floating filter, and column menu.
+- column resize handle.
+- column move/reorder handle.
+- column hide/show control.
+- header hide/show mode.
+- grouped headers and generated pivot result headers.
+- keyboard focus and navigation across header cells.
 
-## Phase 1 MVP
+### Body
 
-Phase 1은 KMSF 내부 관리 화면에서 반복적으로 필요한 read-mostly data table을 목표로 한다.
+- grid viewport, scroll container, and virtualized render window.
+- client, infinite, viewport, and server-side row model rendering.
+- row virtualization and column virtualization.
+- pinned column regions and center scroll region.
+- loading, empty, error, and active overlay rendering.
+- server-side block loading and retry surface.
+- scroll scheduler and measurement cache.
 
-### Data and Column Contract
+### Row
 
-- `rowId`는 필수에 가깝게 취급한다. 기본값은 `row.id`를 사용하되, 없으면 `getRowId`를 요구한다.
-- column은 `id`, `header`, `accessorKey` 또는 `accessorFn`, `render`, `format`, `meta`를 가진다.
-- `render`는 display-only cell을 담당한다.
-- `accessor`는 sorting/filtering/export에서 사용할 원시값을 담당한다.
-- column width는 `width`, `minWidth`, `maxWidth`를 지원한다.
+- row identity and row state registry.
+- row rendering and custom row renderer.
+- row height and dynamic row height.
+- row position moving through drag, keyboard action, and controlled state update.
+- row order save/load when the application opts into persisted row order.
+- row selection, expansion, dirty state, pinned state, and highlight state.
+- right-click row context menu with default and custom menu item registry.
+- row context menu keyboard alternative for accessibility.
+- row dragging and external drop zone hooks.
+- full-width rows, grouped rows, tree rows, detail rows, and aggregation footer rows.
 
-### State Models
+### Cell
 
-- `sortModel`: `{ columnId, direction }[]`
-- `filterModel`: `{ columnId, operator, value }[]`
-- `globalFilter`: string
-- `paginationModel`: `{ pageIndex, pageSize }`
-- `rowSelectionModel`: `Set<RowId>` 또는 serializable array
-- 모든 model은 controlled prop과 `on*Change` callback을 가진다.
+- raw, formatted, rendered, editable, and export value separation.
+- cell renderer and editor lifecycle.
+- typed cell model.
+- validation, dirty state, and highlight state.
+- cell selection, range selection, fill handle, and clipboard boundary.
+- tooltip, notes, custom class, and custom style.
+- export value conversion and spreadsheet formula injection protection.
 
-### Core Features
-
-- single-column sorting을 기본 제공한다.
-- multi-column sorting은 API shape만 열어두고 Phase 2에서 활성화한다.
-- quick filter와 column filter를 제공한다.
-- client pagination과 manual server pagination을 제공한다.
-- single/multi row selection을 제공한다.
-- loading, empty, error state를 제공한다.
-- CSV export를 제공하되 formula injection escaping을 기본 활성화한다.
-
-### Accessibility
-
-- table/grid role 전략을 명확히 결정한다.
-- sortable header는 `aria-sort`를 반영한다.
-- row selection은 checkbox와 keyboard activation을 지원한다.
-- interactive cell이 있는 경우 tab order가 예측 가능해야 한다.
-- keyboard-only smoke test를 Phase 1 acceptance gate에 포함한다.
-
-### Verification Gate
-
-- type-level API test.
-- sorting/filtering/pagination/selection pure helper unit test.
-- component render test.
-- keyboard navigation browser-capable test.
-- CSV export escaping test.
-- package baseline: `npm --workspace=@kmsf/data-table run verify`.
-
-## Phase 2 Operational Table
-
-Phase 2는 실제 운영 화면에서 필요한 조작성을 확장한다.
-
-- multi-column sorting.
-- column visibility panel.
-- column resizing.
-- density: compact, standard, comfortable.
-- sticky header.
-- row virtualization.
-- column pinning.
-- row action column convention.
-- persisted table state import/export.
-- controlled toolbar slot.
-- row/cell editing with validation and dirty state.
-- clipboard copy.
-- server-side data source adapter with cache invalidation hooks.
-
-Phase 2부터는 browser verification이 필수다. 특히 virtualization, resizing, sticky header, keyboard navigation은 jsdom 단위 테스트만으로 완료 처리하지 않는다.
-
-## Phase 3 Enterprise Backlog
-
-아래 기능은 AG Grid와 MUI X가 상용 plan에서 제공하는 영역과 겹친다. KMSF에서 실제 제품 요구가 생기기 전에는 구현하지 않는다.
-
-- row grouping.
-- aggregation footer and group aggregation.
-- tree data.
-- master/detail row.
-- pivot table.
-- cell/range selection.
-- fill handle.
-- Excel export.
-- integrated chart generation.
-- AI prompt/assistant panel.
-
-이 기능들은 개별 feature spec으로 분리해야 하며, Phase 1/2 API가 확장을 막지 않는지 확인하는 수준만 이번 초안에 포함한다.
-
-## Initial API Sketch
-
-```ts
-export type KmsfDataTableRowId = string | number;
-
-export type KmsfDataTableColumn<TData, TValue = unknown> = {
-  id: string;
-  header: React.ReactNode;
-  accessorKey?: keyof TData;
-  accessorFn?: (row: TData) => TValue;
-  render?: (context: {
-    row: TData;
-    value: TValue;
-    rowId: KmsfDataTableRowId;
-    columnId: string;
-  }) => React.ReactNode;
-  format?: (value: TValue, row: TData) => string;
-  width?: number;
-  minWidth?: number;
-  maxWidth?: number;
-  sortable?: boolean;
-  filterable?: boolean;
-  meta?: Record<string, unknown>;
-};
-
-export type KmsfDataTableSort = {
-  columnId: string;
-  direction: "asc" | "desc";
-};
-
-export type KmsfDataTablePagination = {
-  pageIndex: number;
-  pageSize: number;
-};
-
-export type KmsfDataTableProps<TData> = {
-  rows: TData[];
-  columns: Array<KmsfDataTableColumn<TData>>;
-  getRowId?: (row: TData, index: number) => KmsfDataTableRowId;
-  sortModel?: KmsfDataTableSort[];
-  onSortModelChange?: (model: KmsfDataTableSort[]) => void;
-  paginationModel?: KmsfDataTablePagination;
-  onPaginationModelChange?: (model: KmsfDataTablePagination) => void;
-  rowSelectionModel?: KmsfDataTableRowId[];
-  onRowSelectionModelChange?: (model: KmsfDataTableRowId[]) => void;
-  manualSorting?: boolean;
-  manualFiltering?: boolean;
-  manualPagination?: boolean;
-  loading?: boolean;
-  error?: React.ReactNode;
-  empty?: React.ReactNode;
-  className?: string;
-};
-```
-
-이 sketch는 구현 계약이 아니라 방향성이다. 실제 구현 전에는 TDD plan에서 타입 이름, 파일 분리, migration path를 확정해야 한다.
-
-## File Structure Proposal
-
-구현 단계에서는 아래처럼 분리한다.
+## Architecture Overview
 
 ```text
 src/
 ├── index.tsx
 ├── core/
+│   ├── grid.ts
 │   ├── types.ts
-│   ├── row-id.ts
-│   ├── sorting.ts
-│   ├── filtering.ts
-│   ├── pagination.ts
-│   └── csv-export.ts
-└── react/
-    ├── KmsfDataTable.tsx
-    ├── useKmsfDataTable.ts
-    └── accessibility.ts
+│   ├── state.ts
+│   ├── events.ts
+│   ├── row-model.ts
+│   ├── column-model.ts
+│   ├── cell-model.ts
+│   └── scheduler.ts
+├── features/
+│   ├── sorting/
+│   ├── filtering/
+│   ├── pagination/
+│   ├── selection/
+│   ├── editing/
+│   ├── grouping/
+│   ├── aggregation/
+│   ├── pivoting/
+│   ├── tree-data/
+│   ├── master-detail/
+│   ├── virtualization/
+│   ├── state-persistence/
+│   ├── row-ordering/
+│   ├── context-menu/
+│   ├── export/
+│   ├── clipboard/
+│   ├── charts/
+│   └── ai-assistant/
+├── react/
+│   ├── KmsfDataGrid.tsx
+│   ├── KmsfDataTable.tsx
+│   ├── useDataGrid.ts
+│   ├── DataGridProvider.tsx
+│   ├── renderers/
+│   ├── editors/
+│   └── panels/
+├── accessibility/
+│   ├── aria.ts
+│   ├── keyboard.ts
+│   └── focus.ts
+└── testing/
+    ├── fixtures.ts
+    └── harness.ts
 ```
 
-현재 package는 단일 `src/index.tsx`만 가지고 있으므로, 위 구조는 Phase 1 구현 승인 이후에 적용한다. 문서 단계에서는 production file을 분리하지 않는다.
+현재 package는 단일 `src/index.tsx`만 가진다. 위 구조는 구현 승인 후 단계적으로 적용한다.
 
-## Design Decisions
+## Core Engine Design
 
-- MUI X와 호환되는 UX 용어는 참고하되 MUI dependency를 추가하지 않는다.
-- AG Grid Enterprise 기능은 MVP에 넣지 않는다.
-- `rowId`는 장기 확장성을 위해 초기부터 설계한다.
-- export는 CSV부터 시작한다.
-- server-side mode는 데이터 fetch를 package 내부에 숨기지 않는다. 상태 모델과 callback을 통해 앱 layer가 fetch를 소유한다.
-- accessibility는 후속 polish가 아니라 feature acceptance 조건으로 둔다.
+### Grid Core
 
-## Open Questions
+Grid core는 React UI와 분리된 순수 engine이다.
 
-- Phase 1에서 multi-sorting을 실제 제공할지, model만 열어둘지 결정이 필요하다.
-- row virtualization을 자체 구현할지, 별도 dependency를 검토할지 결정이 필요하다.
-- KMSF 앱에서 table state를 URL query와 동기화해야 하는지 확인이 필요하다.
-- 디자인 시스템 token을 이 패키지가 직접 제공할지, class/CSS variable contract만 제공할지 결정이 필요하다.
-- TanStack Table을 내부 engine으로 쓸지 여부는 별도 검토가 필요하다. 현재 초안은 신규 dependency 추가를 전제하지 않는다.
+- grid option normalization.
+- row/column/cell registry.
+- event bus.
+- feature module registration.
+- controlled/uncontrolled state reconciliation.
+- transaction and batch update pipeline.
+- derived row model calculation.
+- plugin lifecycle.
+
+### Row Models
+
+아래 row model을 모두 지원 대상으로 둔다.
+
+- Client-side row model: 모든 데이터를 browser memory에 올리고 grid가 sorting/filtering/grouping을 처리한다.
+- Infinite row model: block 단위로 데이터를 불러오며 scroll 위치에 따라 cache를 관리한다.
+- Viewport row model: 현재 viewport가 요구하는 row window만 외부 data source에 요청한다.
+- Server-side row model: filtering, sorting, grouping, pivoting, aggregation을 server에 위임한다.
+
+### Column Model
+
+Column model은 visual column과 data column을 분리한다.
+
+- logical column definition.
+- generated column from pivot result.
+- column group tree.
+- pinned left/right/center regions.
+- resize and flex width calculation.
+- header size and measured position state.
+- visibility, ordering, moving.
+- column state serialization.
+- header size and position persistence serialization.
+- header renderer and menu lifecycle.
+
+### Cell Model
+
+Cell model은 value, display, edit, export를 분리한다.
+
+- raw value.
+- formatted value.
+- rendered value.
+- editable value.
+- export value.
+- validation state.
+- dirty state.
+- highlight/change state.
+
+### Layout and State Persistence
+
+Persisted grid state stores and restores user-controlled layout choices.
+
+- header size state.
+- header position state.
+- column order, pinning, visibility, width, and flex state.
+- row order state when row movement is enabled.
+- sorting, filtering, grouping, pivoting, pagination, and selection state.
+- versioned serialization with migration hooks.
+- partial restore so consumers can restore only layout, only data state, or a named subset.
+
+## React Layer Design
+
+React layer는 core engine을 화면에 렌더링한다.
+
+- `KmsfDataGrid`: full-feature grid component.
+- `KmsfDataTable`: table-oriented compatibility component. full grid를 래핑하는 외부 wrapper가 아니라 같은 package의 lightweight preset이다.
+- `useDataGrid`: controlled state와 engine instance를 연결하는 hook.
+- `DataGridProvider`: slots, panels, menus, editor registry, theme context를 제공한다.
+- renderers/editors: cell renderer, header renderer, row renderer, editor component registry.
+
+React layer는 Next.js API를 사용하지 않는다. React와 React DOM은 peer dependency로 유지한다.
+
+## Playground And Documentation Environment
+
+테스트 및 문서 환경은 `@kmsf/charts`의 developer-facing playground 운영 방식을 참고하되, data-table 전용 feature playground로 설계한다.
+
+### Layout Contract
+
+- 좌측 aside는 feature menu 영역이며 기본 화면 폭의 20%를 사용한다.
+- 우측 content는 data table example 출력 영역이며 기본 화면 폭의 80%를 사용한다.
+- 레이아웃은 `grid-template-columns: minmax(220px, 20%) minmax(0, 80%)` 같은 명시적 20/80 계약을 가져야 한다.
+- 우측 content는 선택된 기능의 table instance, controls, sample data, state inspector, usage snippet을 포함할 수 있다.
+
+### Menu Contract
+
+초기 메뉴는 아래 feature group을 기준으로 구성한다.
+
+- Basic
+- Basic CRUD
+- Header
+- Body
+- Td / Cell
+- Tr / Row
+- Core Features
+- Advanced Features
+
+각 메뉴는 해당 기능의 독립 예제 group을 가진다. 예제 group은 stable id, label, summary, fixture builder, expected verification scope를 가져야 한다.
+
+### Destroy And Recreate Contract
+
+- 좌측 메뉴에서 다른 기능을 선택하면 우측 content boundary를 selected feature id로 keying해 이전 content를 unmount한다.
+- 메뉴 변경 시 이전 예제 content를 destroy하고 새 예제 content를 recreate한다.
+- 새 기능 content는 fresh fixture, fresh table state, fresh timers, fresh editors, fresh context menu state로 recreate한다.
+- 같은 메뉴를 다시 선택하는 것은 no-op이며 content state를 reset하지 않는다.
+- inactive feature content는 hidden 상태로 DOM에 남기지 않는다.
+- browser test는 메뉴 변경 후 이전 feature의 table instance, editor value, context menu, timer side effect가 남지 않는지 검증한다.
+
+### Verification Contract
+
+- Playground behavior는 Vitest만으로 완료하지 않는다.
+- Playwright 또는 동등한 browser-capable verification으로 aside menu, 20/80 layout, selected feature rendering, destroy/recreate, keyboard menu navigation, browser diagnostics empty를 검증한다.
+- menu switching test는 `Basic -> Header -> Basic CRUD` 같은 교차 이동을 포함해야 한다.
+
+## Public API Direction
+
+```ts
+export type KmsfGridRowId = string | number;
+
+export type KmsfGridColumn<TData, TValue = unknown> = {
+  id: string;
+  field?: keyof TData;
+  headerName?: string;
+  header?: React.ReactNode;
+  valueGetter?: (params: KmsfValueGetterParams<TData>) => TValue;
+  valueSetter?: (params: KmsfValueSetterParams<TData, TValue>) => TData;
+  valueFormatter?: (params: KmsfValueFormatterParams<TData, TValue>) => string;
+  renderCell?: (params: KmsfCellRendererParams<TData, TValue>) => React.ReactNode;
+  renderHeader?: (params: KmsfHeaderRendererParams<TData>) => React.ReactNode;
+  editor?: KmsfCellEditor<TData, TValue>;
+  type?: "string" | "number" | "bigint" | "date" | "boolean" | "singleSelect" | "custom";
+  width?: number;
+  minWidth?: number;
+  maxWidth?: number;
+  flex?: number;
+  pinned?: "left" | "right";
+  hidden?: boolean;
+  sortable?: boolean;
+  filterable?: boolean;
+  editable?: boolean | ((params: KmsfCellParams<TData>) => boolean);
+  rowGroup?: boolean;
+  pivot?: boolean;
+  aggFunc?: string | KmsfAggregateFn<TData>;
+  meta?: Record<string, unknown>;
+};
+
+export type KmsfDataSource<TData> = {
+  getRows: (params: KmsfGetRowsParams) => Promise<KmsfGetRowsResult<TData>>;
+};
+
+export type KmsfDataGridProps<TData> = {
+  rows?: TData[];
+  columns: Array<KmsfGridColumn<TData>>;
+  getRowId?: (row: TData, index: number) => KmsfGridRowId;
+  rowModel?: "client" | "infinite" | "viewport" | "server";
+  dataSource?: KmsfDataSource<TData>;
+  sorting?: KmsfSortingState;
+  filtering?: KmsfFilteringState;
+  pagination?: KmsfPaginationState;
+  selection?: KmsfSelectionState;
+  grouping?: KmsfGroupingState;
+  aggregation?: KmsfAggregationState;
+  pivoting?: KmsfPivotState;
+  editing?: KmsfEditingState;
+  virtualization?: KmsfVirtualizationOptions;
+  exportOptions?: KmsfExportOptions;
+  localeText?: KmsfLocaleText;
+  slots?: KmsfDataGridSlots<TData>;
+  className?: string;
+};
+```
+
+이 API sketch는 방향성이다. 실제 구현 전에는 각 type과 callback shape를 implementation plan에서 확정한다.
+
+## Feature Modules
+
+### Sorting
+
+- single and multi sort.
+- custom comparator.
+- stable sort.
+- server-side sort model serialization.
+- sorted state in ARIA headers.
+
+### Filtering
+
+- text, number, BigInt, date, boolean, set filters.
+- quick filter.
+- floating filters.
+- multi filters.
+- advanced filter expression model.
+- external filter hook.
+- custom filter component registry.
+
+### Selection
+
+- single row and multi row selection.
+- checkbox selection.
+- cell selection.
+- range selection.
+- range handle.
+- fill handle.
+- keyboard selection.
+- selection persistence across pagination/server-side blocks.
+
+### Row Ordering and Context Menu
+
+- row position moving through drag gesture.
+- row position moving through keyboard command.
+- controlled row order model.
+- row order persistence through grid state.
+- row-level right-click context menu.
+- context menu item registry.
+- default menu items for copy, export, pin, expand, move, and inspect actions.
+- custom menu item slots.
+- keyboard-accessible context menu trigger.
+- row movement compatibility rules for sorting, filtering, grouping, pagination, and server-side row models.
+
+### Editing
+
+- cell editing.
+- row editing.
+- full-row editing.
+- custom editor registry.
+- parser and setter pipeline.
+- validation.
+- async validation.
+- batch editing.
+- undo/redo.
+- dirty state and commit/cancel transaction.
+
+### Grouping, Aggregation, Pivoting
+
+- row grouping by one or more columns.
+- group display modes.
+- group expansion and collapsed state.
+- hierarchy selection.
+- built-in aggregate functions: sum, min, max, count, average, first, last.
+- custom aggregate functions.
+- total rows and group footers.
+- pivot mode.
+- generated pivot result columns.
+- pivot totals.
+- server-side group/aggregate/pivot request model.
+
+### Tree Data and Master Detail
+
+- tree path data.
+- nested record adapter.
+- self-referential parent id adapter.
+- tree filtering and selection.
+- expandable detail rows.
+- custom detail renderer.
+- nested grid composition.
+
+### Import, Export, Clipboard
+
+- CSV export with safe escaping.
+- Excel export with styles, formulas, multiple sheets, frozen rows/columns, images, hyperlinks.
+- clipboard copy/paste.
+- print mode.
+- import adapter boundary for Excel/CSV.
+- formula injection protection for spreadsheet exports.
+
+### Charts and AI Extensions
+
+- range chart.
+- pivot chart.
+- chart panel.
+- chart image export.
+- AI assistant panel.
+- prompt field.
+- natural language query adapter.
+
+Charts and AI must remain optional modules so the base grid remains usable without heavy dependencies.
+
+## Performance Requirements
+
+성능은 후속 최적화가 아니라 architecture requirement다.
+
+- row virtualization.
+- column virtualization.
+- pinned column virtualization boundary.
+- dynamic row height measurement cache.
+- value cache.
+- memoized row model pipeline.
+- batched state updates.
+- scroll scheduler.
+- high-frequency transaction handling.
+- server-side block cache.
+- large row count benchmarks.
+
+초기 benchmark 목표는 implementation plan에서 수치로 고정한다. 최소한 10,000 client rows, 100,000 virtualized rows, server-side million-row simulation을 별도 benchmark fixture로 둔다.
+
+## Accessibility Requirements
+
+- `role="grid"` 또는 native table mode를 명확히 선택 가능하게 한다.
+- header sorting state uses `aria-sort`.
+- selected row/cell state uses ARIA selection state.
+- keyboard navigation supports arrow keys, Home, End, PageUp, PageDown.
+- editing mode has predictable Enter, Escape, Tab behavior.
+- focus never disappears during virtualization.
+- screen reader smoke test and keyboard-only Playwright test are required before interactive feature completion.
+- RTL and localization are first-class requirements.
+
+## Styling and Theming
+
+- CSS variables for color, spacing, typography, row height, border, focus ring.
+- compact, standard, comfortable density.
+- slot-based subcomponent replacement.
+- className contract for rows, cells, headers, panels, menus.
+- theme package or preset can be added later, but core must not depend on MUI.
+
+## Open Source Readiness
+
+오픈소스 제품 목표를 만족하려면 구현 외에 아래 artifact가 필요하다.
+
+- license decision before public release.
+- contribution guide.
+- issue templates.
+- public README written for external users.
+- feature matrix.
+- browser examples.
+- benchmark report.
+- accessibility report.
+- migration and changelog policy.
+- package export stability policy.
+
+현재 `package.json`은 `private: true`다. 오픈소스 공개 단계에서는 package metadata, license, publish policy를 별도 작업으로 확정해야 한다.
+
+## Milestone Strategy
+
+Milestone은 기능 제외가 아니라 구현 순서다.
+
+### Milestone 0: Engine Foundation
+
+- core state model.
+- row/column/cell model.
+- feature module registration.
+- event bus.
+- controlled state contract.
+- package verification baseline.
+
+### Milestone 1: Visible Grid Baseline
+
+- `KmsfDataGrid`.
+- rows and columns rendering.
+- value getter, formatter, renderer.
+- column width/flex.
+- sorting.
+- filtering.
+- pagination.
+- row selection.
+- loading, empty, error overlays.
+- keyboard navigation baseline.
+
+### Milestone 2: Operational Grid
+
+- column resize, reorder, pin, hide.
+- header size and position save/load.
+- toolbar and panels.
+- row position moving.
+- row context menu.
+- row and cell editing.
+- validation.
+- undo/redo.
+- clipboard.
+- CSV export.
+- persisted grid state.
+- row virtualization.
+- column virtualization.
+
+### Milestone 3: Analytical Grid
+
+- row grouping.
+- aggregation.
+- pivoting.
+- tree data.
+- master/detail.
+- server-side row model.
+- infinite row model.
+- viewport row model.
+
+### Milestone 4: Enterprise-Class Open Source Feature Set
+
+- Excel export/import boundary.
+- chart integration.
+- advanced filters.
+- range selection and fill handle.
+- high-frequency transaction optimization.
+- AI assistant extension.
+- public docs, examples, benchmark suite.
+
+## Verification Strategy
+
+### Unit and Type Tests
+
+- state reducer tests.
+- row model tests.
+- column model tests.
+- filter operator tests.
+- aggregation tests.
+- pivot generation tests.
+- export escaping tests.
+- type-level public API tests.
+
+### Browser Tests
+
+- visible rendering.
+- keyboard navigation.
+- selection.
+- editing.
+- column resize/reorder/pin.
+- virtualization with scroll.
+- focus retention under virtualization.
+- server-side loading and retry.
+- export user flow.
+- accessibility smoke tests.
+
+### Performance Tests
+
+- 10,000 row client render path.
+- 100,000 row virtual scroll path.
+- server-side block loading simulation.
+- high-frequency transaction simulation.
+- memory retention check after data replacement.
+
+### Documentation Tests
+
+- README examples compile.
+- API examples compile.
+- feature matrix stays in sync with exported modules.
+- package docs mention no external grid wrapper dependency.
+
+## Required Decisions Before Implementation
+
+- Public license.
+- Primary component name: `KmsfDataGrid` with `KmsfDataTable` preset, or only `KmsfDataTable`.
+- Minimum supported React version.
+- Whether heavy modules such as Excel export, charts, and AI assistant live in subpath exports.
+- Browser example app location and default port.
+- Benchmark thresholds for release readiness.
 
 ## Next Step
 
-사용자 검토 후 Phase 1만 별도 implementation plan으로 분리한다. 구현 승인 전에는 production code를 변경하지 않는다.
+사용자 검토 후 Milestone 0과 Milestone 1을 대상으로 implementation plan을 작성한다. 구현 단계에서는 Superpowers TDD를 적용하고, 각 feature module은 focused test와 browser gate를 가진다.

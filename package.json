@@ -5,15 +5,32 @@
   "type": "module",
   "scripts": {
     "build": "vite build && tsc -p tsconfig.build.json",
+    "dev": "vite --config vite.example.config.ts",
     "lint": "tsc --noEmit",
     "test": "vitest",
+    "test:e2e": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep-invert @perf",
+    "test:perf": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep @perf",
     "test:run": "vitest run",
-    "verify": "npm run lint && npm run test:run && npm run build"
+    "verify": "npm run lint && npm run test:run && npm run build",
+    "verify:e2e": "npm run test:e2e",
+    "verify:full": "npm run verify && npm run verify:e2e"
   },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./clipboard": {
+      "types": "./dist/clipboard.d.ts",
+      "import": "./dist/clipboard.js"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
+    },
+    "./selection": {
+      "types": "./dist/selection.d.ts",
+      "import": "./dist/selection.js"
     }
   },
   "files": [
@@ -29,5 +46,8 @@
     "typescript": "^6.0.3",
     "vite": "latest",
     "vitest": "latest"
+  },
+  "dependencies": {
+    "lucide-react": "^1.17.0"
   }
 }
