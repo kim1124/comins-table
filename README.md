@@ -78,7 +78,7 @@ Run the local playground from the repository root:
 npm --workspace=@kmsf/data-table run dev
 ```
 
-The playground follows the `@kmsf/charts` docs shell: topbar, tabs, collapsible feature navigation, recreated center example content, and a right docs panel. It includes a standalone `컨텍스트 메뉴` page for callback-driven row/cell menu examples.
+The playground follows the `@kmsf/charts` docs shell: topbar, tabs, collapsible feature navigation, recreated center example content, and a main-content `옵션 가이드` tab. Each feature page starts with a Korean description and an option table. It includes a standalone `Context Menu 예제` page and a `테이블 사이즈` page for manual height, parent-size, and browser-resize examples.
 
 ## Verification
 

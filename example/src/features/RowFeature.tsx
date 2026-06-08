@@ -1,32 +1,52 @@
 import { useState } from "react";
 
-import { KmsfDataTable } from "../../../src";
+import { KmsfDataTable, type KmsfDataTableColumn } from "../../../src";
+import { FeatureControls } from "../components/FeatureControls";
 import { createBaseColumns, defaultColumnLayout } from "../fixtures/columns";
-import { cloneBaseRows } from "../fixtures/people";
+import { createExampleRows, type PersonRow } from "../fixtures/people";
+
+const rowColumns: Array<KmsfDataTableColumn<PersonRow>> = createBaseColumns().map((column) =>
+  column.id === "name" || column.field === "name"
+    ? {
+        ...column,
+        format: ({ row, value }) => (
+          <span>
+            {String(value)}
+            {row.active ? (
+              <em className="row-custom-badge" data-testid={`row-custom-badge-${String(row.id)}`}>
+                커스텀
+              </em>
+            ) : null}
+          </span>
+        ),
+      }
+    : column,
+);
 
 export function RowFeature() {
   const [events, setEvents] = useState<string[]>([]);
-  const [rows, setRows] = useState(() => cloneBaseRows());
+  const [rows, setRows] = useState(() => createExampleRows(100));
   const pushEvent = (event: string) => setEvents((current) => [event, ...current].slice(0, 5));
 
   return (
     <section className="feature-panel">
-      <section className="feature-doc" data-testid="feature-doc-row">
-        <h2>행 예제 설명</h2>
-        <p>Row 이벤트: 클릭, 더블클릭, 우클릭, 키보드 이벤트, 드래그 이동을 확인합니다.</p>
-        <p>rowProps로 행 스타일과 상태를 적용하며, Row 이동은 행 전용 drag gesture로만 검증합니다.</p>
-      </section>
-      <div className="feature-controls">
-        <span data-testid="layout-order">{defaultColumnLayout.order.join(",")}</span>
-        <span className="state-pill">행 스타일:Owner</span>
-        <span className="state-pill">Row drag handle로 행 c를 행 a로 이동</span>
-      </div>
+      <FeatureControls
+        options={
+          <>
+            <span data-testid="layout-order">{defaultColumnLayout.order.join(",")}</span>
+            <span className="state-pill">행 스타일:Owner</span>
+            <span className="state-pill">row b:drag 비활성화</span>
+            <span className="state-pill">row-3:비활성화</span>
+            <span className="state-pill">Row drag handle로 행 c를 행 a로 이동</span>
+          </>
+        }
+      />
       <pre className="state-output" data-testid="event-log">
         {events.join("\n") || "행 이벤트 없음"}
       </pre>
       <KmsfDataTable
         className="example-table"
-        columns={createBaseColumns()}
+        columns={rowColumns}
         data={rows}
         data-testid="data-table-viewport"
         getRowId={(row) => row.id}
@@ -39,7 +59,12 @@ export function RowFeature() {
         onDoubleClickRow={({ row }) => pushEvent(`행 더블클릭:${String(row.id)}`)}
         onKeyDownRow={({ event, row }) => pushEvent(`행 키다운:${String(row.id)}:${event.key}`)}
         pagination={{ pageIndex: 0, pageSize: 10 }}
-        rowProps={{ className: (row) => (row.role === "Owner" ? "row-owner" : undefined) }}
+        rowProps={{
+          className: (row) => (row.role === "Owner" ? "row-owner" : undefined),
+          disabled: (row) => row.id === "row-3",
+          draggable: (row) => row.id !== "b",
+          style: (row) => (row.active ? { background: "#f1fcf8" } : undefined),
+        }}
         theme={{ density: "compact" }}
       />
     </section>

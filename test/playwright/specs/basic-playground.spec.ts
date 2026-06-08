@@ -39,20 +39,40 @@ test("playground uses charts-style docs shell and remounts content when switchin
   expect(asideBox!.width).toBeLessThanOrEqual(320);
   expect(contentBox!.width).toBeGreaterThan(asideBox!.width);
 
+  for (const label of [
+    "기본",
+    "CRUD 동작",
+    "테이블 사이즈",
+    "Header 예제",
+    "대용량 데이터 표시",
+    "Td Cell 예제",
+    "Tr Row 예제",
+    "Context Menu 예제",
+  ]) {
+    await expect(page.getByRole("button", { exact: true, name: label })).toBeVisible();
+  }
+  await expect(page.getByRole("button", { exact: true, name: "핵심 기능" })).toHaveCount(0);
+  await expect(page.getByRole("button", { exact: true, name: "고급 기능" })).toHaveCount(0);
+
   const firstMountId = await page.getByTestId("mount-id").textContent();
   await page.getByRole("button", { exact: true, name: "기본" }).click();
   await expect(page.getByTestId("mount-id")).toHaveText(firstMountId ?? "");
 
-  await page.getByRole("button", { name: "헤더" }).click();
+  await page.getByRole("button", { name: "Header 예제" }).click();
   const headerMountId = await page.getByTestId("mount-id").textContent();
   expect(headerMountId).not.toBe(firstMountId);
   await expect(content).toHaveAttribute("data-feature", "header");
 
-  await page.getByRole("button", { name: "기본 CRUD" }).click();
+  await page.getByRole("button", { name: "CRUD 동작" }).click();
   await expect(content).toHaveAttribute("data-feature", "basic-crud");
   await expect
     .poll(() => page.evaluate(() => window.__kmsfDataTableLastUnmount))
     .toBe(headerMountId);
+
+  await page.getByRole("tab", { exact: true, name: "옵션 가이드" }).click();
+  await expect(page.getByTestId("option-guide")).toContainText("columns");
+  await expect(page.getByTestId("option-guide")).toContainText("setMoveTargetRow");
+  await expect(page.getByRole("tab", { exact: true, name: "문서 요약" })).toHaveCount(0);
 
   expect(diagnostics).toEqual([]);
 });
@@ -61,14 +81,14 @@ test("playground verifies row and cell Ctrl+C Ctrl+V interactions in a browser",
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
 
-  const bodyRows = page.locator("tbody tr");
+  const bodyRows = page.locator(".kmsf-data-table__body-table tbody tr");
   await bodyRows.nth(0).focus();
   await page.keyboard.press(process.platform === "darwin" ? "Meta+C" : "Control+C");
   await bodyRows.nth(1).focus();
   await page.keyboard.press(process.platform === "darwin" ? "Meta+V" : "Control+V");
   await expect(bodyRows.nth(2).locator("td").first()).toHaveText("Alpha");
 
-  const cells = page.locator("tbody td");
+  const cells = page.locator(".kmsf-data-table__body-table tbody td");
   await cells.nth(2).focus();
   await page.keyboard.press(process.platform === "darwin" ? "Meta+C" : "Control+C");
   await cells.nth(0).focus();
@@ -117,6 +137,21 @@ test("basic page live controls update the data table immediately", async ({ page
   await page.getByRole("button", { name: "Owner 행 스타일 끄기" }).click();
   await expect(page.getByTestId("row-a")).not.toHaveClass(/row-owner/u);
   await expect(page.getByTestId("basic-live-state")).toContainText("Owner 스타일:꺼짐");
+
+  expect(diagnostics).toEqual([]);
+});
+
+test("basic page uses one hundred rows and the table expands inside the content area", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.setViewportSize({ height: 900, width: 1280 });
+  await page.goto("/");
+  await page.getByRole("button", { exact: true, name: "기본" }).click();
+
+  await expect(page.getByTestId("sample-row-count")).toContainText("100");
+
+  const tableBox = await page.locator(".example-table.kmsf-data-table").first().boundingBox();
+  expect(tableBox).not.toBeNull();
+  expect(tableBox!.height).toBeGreaterThan(220);
 
   expect(diagnostics).toEqual([]);
 });

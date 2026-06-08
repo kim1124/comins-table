@@ -20,7 +20,7 @@ test("row and cell context examples show selected data objects", async ({ page }
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
 
-  await page.getByRole("button", { exact: true, name: "컨텍스트 메뉴" }).click();
+  await page.getByRole("button", { exact: true, name: "Context Menu 예제" }).click();
   await page.getByTestId("row-a").click({ button: "right" });
   await expect(page.getByRole("menuitem", { name: "행 데이터 보기" })).toBeVisible();
   await expect(page.getByTestId("context-data-preview")).toContainText('"id": "a"');

@@ -27,3 +27,20 @@ export function createRows(count: number): PersonRow[] {
     role: index % 2 === 0 ? "Owner" : "Viewer",
   }));
 }
+
+export function createExampleRows(count = 100): PersonRow[] {
+  const rows = cloneBaseRows();
+
+  for (let index = rows.length; index < count; index += 1) {
+    rows.push({
+      active: index % 2 === 0,
+      age: index,
+      id: `row-${index}`,
+      locked: `lock-${index}`,
+      name: `Row ${index}`,
+      role: index % 2 === 0 ? "Owner" : "Viewer",
+    });
+  }
+
+  return rows.slice(0, count);
+}

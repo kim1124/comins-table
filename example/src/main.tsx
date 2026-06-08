@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { ChevronsLeft, ChevronsRight, Library, TableProperties } from "lucide-react";
 
+import { OptionGuideSection } from "./components/OptionGuideSection";
 import { Button } from "./components/ui/button";
 import { ScrollArea } from "./components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
@@ -45,16 +46,39 @@ function FeatureContent({ featureId }: { featureId: FeatureId }) {
       data-feature-label={feature.label}
       data-testid="feature-content"
     >
-      <div className="content-header">
-        <div>
-          <p className="eyebrow">기능</p>
+      <section className="feature-intro" data-testid="feature-intro">
+        <div className="content-header">
           <h1>{feature.label}</h1>
+          <span className="sr-only" data-testid="mount-id">
+            {mountId}
+          </span>
         </div>
-        <span data-testid="mount-id">{mountId}</span>
-      </div>
-      <p className="feature-summary" data-testid="feature-summary">
-        {feature.summary}
-      </p>
+        <p className="feature-summary" data-testid="feature-intro-description">
+          {feature.description}
+        </p>
+        <div className="feature-option-table-wrap">
+          <table className="feature-option-table" data-testid="feature-option-table">
+            <thead>
+              <tr>
+                <th>옵션</th>
+                <th>설명</th>
+                <th>예시</th>
+              </tr>
+            </thead>
+            <tbody>
+              {feature.options.map((option) => (
+                <tr key={option.name}>
+                  <td>{option.name}</td>
+                  <td>{option.description}</td>
+                  <td>
+                    <code>{option.example}</code>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
       <FeatureComponent />
     </main>
   );
@@ -137,7 +161,7 @@ function App() {
         <div className="workspace-tabs__bar">
           <TabsList aria-label="플레이그라운드 보기">
             <TabsTrigger value="examples">기능 예제</TabsTrigger>
-            <TabsTrigger value="notes">문서 요약</TabsTrigger>
+            <TabsTrigger value="options">옵션 가이드</TabsTrigger>
           </TabsList>
         </div>
         <TabsContent value="examples">
@@ -151,17 +175,18 @@ function App() {
             <FeatureContent featureId={activeFeature} key={activeFeature} />
           </div>
         </TabsContent>
-        <TabsContent value="notes">
-          <main className="example-content" data-feature="notes">
+        <TabsContent value="options">
+          <main className="example-content" data-feature="options">
             <div className="content-header">
               <div>
-                <p className="eyebrow">문서</p>
-                <h1>플레이그라운드 구성</h1>
+                <p className="eyebrow">옵션</p>
+                <h1>옵션 가이드</h1>
               </div>
             </div>
             <p className="feature-summary">
-              왼쪽 기능 메뉴와 본문 예제로 구성하며 기능 메뉴 이동 시 예제 인스턴스를 새로 생성합니다.
+              현재 구현된 props, events, ref method, core helper와 후속 기능 경계를 정리합니다.
             </p>
+            <OptionGuideSection />
           </main>
         </TabsContent>
       </Tabs>

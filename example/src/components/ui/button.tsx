@@ -3,7 +3,7 @@ import type * as React from "react";
 import { cn } from "../../lib/utils";
 
 type ButtonSize = "default" | "icon";
-type ButtonVariant = "ghost" | "outline" | "secondary";
+type ButtonVariant = "danger" | "filter" | "ghost" | "outline" | "primary" | "secondary";
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;

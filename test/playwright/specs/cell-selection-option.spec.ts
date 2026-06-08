@@ -4,7 +4,7 @@ test("cellSelection false disables cell selection style while preserving cell ev
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "셀" }).click();
+  await page.getByRole("button", { exact: true, name: "Td Cell 예제" }).click();
   await page.getByTestId("cell-a-name").click();
 
   await expect(page.getByTestId("row-a")).toHaveAttribute("data-selected-row", "true");
@@ -15,7 +15,7 @@ test("cellSelection false disables cell selection style while preserving cell ev
 
 test("cell page toggles cellSelection and keeps row selection independent", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "셀" }).click();
+  await page.getByRole("button", { exact: true, name: "Td Cell 예제" }).click();
 
   await page.getByRole("button", { name: "Cell Selection 활성화" }).click();
   await page.getByTestId("cell-a-name").click();

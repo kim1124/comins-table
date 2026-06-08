@@ -19,7 +19,7 @@ function collectBrowserDiagnostics(page: Page) {
 test("header boundary resize is isolated from long-press column move and animated sort state", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "헤더" }).click();
+  await page.getByRole("button", { exact: true, name: "Header 예제" }).click();
   await expect(page.getByTestId("header-proof-layout")).toContainText("getColumnLayout");
 
   await expect(page.getByTestId("header-role")).toHaveAttribute("data-sortable", "false");
@@ -29,7 +29,7 @@ test("header boundary resize is isolated from long-press column move and animate
   );
   await expect(page.getByTestId("header-name")).toHaveAttribute("data-sortable", "true");
 
-  const firstHeaderBefore = await page.locator("thead th").first().textContent();
+  const firstHeaderBefore = await page.locator(".kmsf-data-table__header-table thead th").first().textContent();
   const boundary = page.getByTestId("resize-age");
   await boundary.scrollIntoViewIfNeeded();
   const boundaryBox = await boundary.boundingBox();
@@ -41,7 +41,7 @@ test("header boundary resize is isolated from long-press column move and animate
   await page.mouse.move(boundaryBox!.x + boundaryBox!.width / 2 + 60, boundaryBox!.y + boundaryBox!.height / 2);
   await page.mouse.up();
 
-  await expect(page.locator("thead th").first()).toContainText(firstHeaderBefore ?? "");
+  await expect(page.locator(".kmsf-data-table__header-table thead th").first()).toContainText(firstHeaderBefore ?? "");
   await expect(page.getByTestId("layout-width-age")).toContainText("age:");
 
   const ageHeader = page.getByTestId("header-age");
@@ -82,10 +82,18 @@ test("header boundary resize is isolated from long-press column move and animate
   await page.mouse.move(nameBox!.x + nameBox!.width / 2, nameBox!.y + nameBox!.height / 2);
   await page.mouse.up();
 
-  await expect(page.locator("thead th").first()).toContainText("나이");
+  await expect(page.locator(".kmsf-data-table__header-table thead th").first()).toContainText("나이");
   await expect(page.getByTestId("layout-order")).toHaveText("age,name,role");
 
-  const firstHeaderAfterMove = await page.locator("thead th").first().textContent();
+  const firstBodyCell = page.locator(".kmsf-data-table__body-table tbody tr").first().locator("td").first();
+  const firstBodyCellBox = await firstBodyCell.boundingBox();
+  const rowDragHandleBox = await page.getByTestId("row-drag-handle-a").boundingBox();
+  expect(firstBodyCellBox).not.toBeNull();
+  expect(rowDragHandleBox).not.toBeNull();
+  expect(rowDragHandleBox!.x - firstBodyCellBox!.x).toBeGreaterThanOrEqual(0);
+  expect(rowDragHandleBox!.x - firstBodyCellBox!.x).toBeLessThanOrEqual(24);
+
+  const firstHeaderAfterMove = await page.locator(".kmsf-data-table__header-table thead th").first().textContent();
   const roleHeader = page.getByTestId("header-role");
   const roleBox = await roleHeader.boundingBox();
   expect(roleBox).not.toBeNull();
@@ -94,7 +102,7 @@ test("header boundary resize is isolated from long-press column move and animate
   await page.mouse.move(roleBox!.x + roleBox!.width / 2 + 8, roleBox!.y + roleBox!.height / 2);
   await page.mouse.up();
 
-  await expect(page.locator("thead th").first()).toContainText(firstHeaderAfterMove ?? "");
+  await expect(page.locator(".kmsf-data-table__header-table thead th").first()).toContainText(firstHeaderAfterMove ?? "");
   await expect(page.getByTestId("sort-indicator-role")).toHaveAttribute("data-sort-state", "none");
 
   expect(diagnostics).toEqual([]);
@@ -103,7 +111,7 @@ test("header boundary resize is isolated from long-press column move and animate
 test("column move shows a ghost and insertion marker while dragging", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "헤더" }).click();
+  await page.getByRole("button", { exact: true, name: "Header 예제" }).click();
 
   const ageHeader = page.getByTestId("header-age");
   const nameHeader = page.getByTestId("header-name");
@@ -125,7 +133,7 @@ test("column move shows a ghost and insertion marker while dragging", async ({ p
 
   await page.mouse.up();
   await expect(page.getByTestId("column-move-ghost")).toHaveCount(0);
-  await expect(page.locator("thead th").first()).toContainText("나이");
+  await expect(page.locator(".kmsf-data-table__header-table thead th").first()).toContainText("나이");
 
   expect(diagnostics).toEqual([]);
 });
@@ -133,7 +141,7 @@ test("column move shows a ghost and insertion marker while dragging", async ({ p
 test("resize handle is hidden until boundary hover and first resize starts from measured width", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "헤더" }).click();
+  await page.getByRole("button", { exact: true, name: "Header 예제" }).click();
 
   const ageHeader = page.getByTestId("header-age");
   const handle = page.getByTestId("resize-age");

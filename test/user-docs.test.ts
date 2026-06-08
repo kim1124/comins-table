@@ -50,6 +50,8 @@ const implementedTerms = [
   "virtualized",
   "setSelectedRow",
   "setSelectedRows",
+  "setMoveTargetRow",
+  "rowProps.draggable",
 ];
 
 function readWorkspaceFile(path: string) {

@@ -643,4 +643,71 @@ describe("@kmsf/data-table keyboard interaction", () => {
     });
     expect(onChangeColumnLayout).toHaveBeenLastCalledWith(ref.current?.getColumnLayout());
   });
+
+  it("moves rows by visible indexes through setMoveTargetRow and clears active sort", () => {
+    const ref = createRef<KmsfDataTableRef<PersonRow>>();
+    const onChangeData = vi.fn();
+    const onChangeSort = vi.fn();
+    const element = renderTableElement(
+      <KmsfDataTable
+        columns={columns}
+        data={threeRows}
+        getRowId={(row) => row.id}
+        onChangeData={onChangeData}
+        onChangeSort={onChangeSort}
+        ref={ref}
+      />,
+    );
+
+    act(() => {
+      ref.current?.setSortState({ columnId: "age", direction: "asc" });
+    });
+
+    expect([...element.querySelectorAll("tbody tr")].map((row) => row.textContent)).toEqual([
+      "Gamma27",
+      "Alpha31",
+      "Beta42",
+    ]);
+
+    act(() => {
+      ref.current?.setMoveTargetRow(2, 0);
+    });
+
+    expect(ref.current?.getSortState()).toBeNull();
+    expect([...element.querySelectorAll("tbody tr")].map((row) => row.textContent)).toEqual([
+      "Alpha31",
+      "Beta42",
+      "Gamma27",
+    ]);
+    expect(onChangeSort).toHaveBeenLastCalledWith(null);
+    expect(onChangeData).toHaveBeenLastCalledWith([
+      { age: 31, id: "a", name: "Alpha" },
+      { age: 42, id: "b", name: "Beta" },
+      { age: 27, id: "c", name: "Gamma" },
+    ]);
+  });
+
+  it("blocks row drag through rowProps.draggable without disabling row click", () => {
+    const onClickRow = vi.fn();
+    const element = renderTableElement(
+      <KmsfDataTable
+        columns={columns}
+        data={threeRows}
+        getRowId={(row) => row.id}
+        onClickRow={onClickRow}
+        rowProps={{ draggable: (row) => row.id !== "b" }}
+      />,
+    );
+    const rowB = element.querySelector("[data-testid='row-b']")!;
+
+    expect(rowB.getAttribute("data-row-draggable")).toBe("false");
+    expect(element.querySelector("[data-testid='row-drag-handle-b']")).toBeNull();
+
+    act(() => {
+      rowB.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onClickRow).toHaveBeenCalledWith(expect.objectContaining({ row: expect.objectContaining({ id: "b" }) }));
+    expect(rowB.getAttribute("data-selected-row")).toBe("true");
+  });
 });

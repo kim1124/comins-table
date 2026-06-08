@@ -3,14 +3,14 @@ import { ScrollArea } from "./ui/scroll-area";
 
 const docsByFeature: Record<string, Array<{ href: string; label: string }>> = {
   "basic-crud": [
-    { href: "./docs/user/04-basic-crud.md", label: "기본 CRUD" },
+    { href: "./docs/user/04-basic-crud.md", label: "CRUD 동작" },
     { href: "./docs/user/10-selection.md", label: "선택" },
   ],
   body: [{ href: "./docs/user/11-virtualization.md", label: "버추얼 스크롤" }],
-  cell: [{ href: "./docs/user/08-cell.md", label: "셀" }],
+  cell: [{ href: "./docs/user/08-cell.md", label: "Td Cell 예제" }],
   "context-menu": [{ href: "./docs/user/12-playground.md", label: "플레이그라운드" }],
-  header: [{ href: "./docs/user/06-header.md", label: "헤더" }],
-  row: [{ href: "./docs/user/07-row.md", label: "행" }],
+  header: [{ href: "./docs/user/06-header.md", label: "Header 예제" }],
+  row: [{ href: "./docs/user/07-row.md", label: "Tr Row 예제" }],
 };
 
 export function FeatureDocsPanel({ feature }: { feature: FeatureDefinition }) {

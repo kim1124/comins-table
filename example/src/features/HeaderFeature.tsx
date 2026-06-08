@@ -1,9 +1,10 @@
 import { useRef, useState } from "react";
+import { Eye, EyeOff, RotateCcw, Save, Upload } from "lucide-react";
 
 import { KmsfDataTable, type KmsfColumnLayout, type KmsfDataTableRef, type KmsfSortState } from "../../../src";
-import { Button } from "../components/ui/button";
+import { ActionButton, FeatureControls } from "../components/FeatureControls";
 import { createBaseColumns, defaultColumnLayout } from "../fixtures/columns";
-import { cloneBaseRows, type PersonRow } from "../fixtures/people";
+import { createExampleRows, type PersonRow } from "../fixtures/people";
 
 function cloneDefaultLayout(): KmsfColumnLayout {
   return {
@@ -14,7 +15,7 @@ function cloneDefaultLayout(): KmsfColumnLayout {
 
 export function HeaderFeature() {
   const tableRef = useRef<KmsfDataTableRef<PersonRow>>(null);
-  const [rows] = useState(() => cloneBaseRows());
+  const [rows] = useState(() => createExampleRows(100));
   const [columnLayout, setColumnLayout] = useState<KmsfColumnLayout>(() => cloneDefaultLayout());
   const [savedLayout, setSavedLayout] = useState("");
   const [showHeader, setShowHeader] = useState(true);
@@ -25,46 +26,49 @@ export function HeaderFeature() {
 
   return (
     <section className="feature-panel">
-      <section className="feature-doc" data-testid="feature-doc-header">
-        <h2>헤더 예제 설명</h2>
-        <p>헤더 표시, 숨김, 컬럼 리사이즈, 1초 long-press 컬럼 이동, 정렬 접근성을 확인합니다.</p>
-        <p>getColumnLayout, setColumnLayout, onChangeColumnLayout으로 컬럼 위치와 너비를 저장하고 불러옵니다.</p>
-      </section>
-      <div className="feature-controls">
-        <span data-testid="layout-order">{layoutOrder}</span>
-        <span data-testid="layout-width-age">age:{ageWidth}</span>
-        <Button onClick={() => setShowHeader(false)} variant="secondary">
-          헤더 숨기기
-        </Button>
-        <Button onClick={() => setShowHeader(true)} variant="secondary">
-          헤더 표시
-        </Button>
-        <Button onClick={() => setSavedLayout(JSON.stringify(columnLayout))} variant="secondary">
-          레이아웃 저장
-        </Button>
-        <Button
-          onClick={() => {
-            if (savedLayout) {
-              const nextLayout = JSON.parse(savedLayout) as KmsfColumnLayout;
-              setColumnLayout(nextLayout);
-              tableRef.current?.setColumnLayout(nextLayout);
-            }
-          }}
-          variant="secondary"
-        >
-          레이아웃 불러오기
-        </Button>
-        <Button
-          onClick={() => {
-            const nextLayout = cloneDefaultLayout();
-            setColumnLayout(nextLayout);
-            tableRef.current?.setColumnLayout(nextLayout);
-          }}
-          variant="secondary"
-        >
-          레이아웃 복원
-        </Button>
-      </div>
+      <FeatureControls
+        actions={
+          <>
+            <ActionButton icon={<EyeOff />} onClick={() => setShowHeader(false)}>
+              헤더 숨기기
+            </ActionButton>
+            <ActionButton icon={<Eye />} onClick={() => setShowHeader(true)}>
+              헤더 표시
+            </ActionButton>
+            <ActionButton icon={<Save />} onClick={() => setSavedLayout(JSON.stringify(columnLayout))}>
+              레이아웃 저장
+            </ActionButton>
+            <ActionButton
+              icon={<Upload />}
+              onClick={() => {
+                if (savedLayout) {
+                  const nextLayout = JSON.parse(savedLayout) as KmsfColumnLayout;
+                  setColumnLayout(nextLayout);
+                  tableRef.current?.setColumnLayout(nextLayout);
+                }
+              }}
+            >
+              레이아웃 불러오기
+            </ActionButton>
+            <ActionButton
+              icon={<RotateCcw />}
+              onClick={() => {
+                const nextLayout = cloneDefaultLayout();
+                setColumnLayout(nextLayout);
+                tableRef.current?.setColumnLayout(nextLayout);
+              }}
+            >
+              레이아웃 복원
+            </ActionButton>
+          </>
+        }
+        options={
+          <>
+            <span data-testid="layout-order">{layoutOrder}</span>
+            <span data-testid="layout-width-age">age:{ageWidth}</span>
+          </>
+        }
+      />
       <pre className="state-output" data-testid="saved-layout-json">
         {savedLayout || "저장된 레이아웃 없음"}
       </pre>

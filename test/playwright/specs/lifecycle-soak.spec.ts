@@ -22,9 +22,9 @@ test("playground repeatedly destroys and recreates feature content without stale
   await page.goto("/");
 
   for (let index = 0; index < 30; index += 1) {
-    await page.getByRole("button", { name: "헤더" }).click();
-    await page.getByRole("button", { name: "본문" }).click();
-    await page.getByRole("button", { name: "셀" }).click();
+    await page.getByRole("button", { name: "Header 예제" }).click();
+    await page.getByRole("button", { name: "대용량 데이터 표시" }).click();
+    await page.getByRole("button", { name: "Td Cell 예제" }).click();
     await page.getByRole("button", { exact: true, name: "기본" }).click();
   }
 

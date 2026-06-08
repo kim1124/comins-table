@@ -25,7 +25,7 @@ test("row selection is mint styled, multi-selectable, sort-stable, and grid bord
 
   await page.getByTestId("row-b").click();
   await expect(page.getByTestId("row-b")).toHaveAttribute("data-selected-row", "true");
-  await expect(page.getByTestId("row-b")).toHaveCSS("background-color", "rgb(232, 248, 242)");
+  await expect(page.getByTestId("row-b")).toHaveCSS("background-color", "rgb(209, 250, 229)");
   await expect(page.getByTestId("cell-b-name")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 
   const modifier = process.platform === "darwin" || browserName === "webkit" ? "Meta" : "Control";
@@ -38,7 +38,7 @@ test("row selection is mint styled, multi-selectable, sort-stable, and grid bord
   await expect(page.getByTestId("row-b")).toHaveAttribute("data-selected-row", "true");
   await expect(page.getByTestId("row-c")).toHaveAttribute("data-selected-row", "true");
 
-  await page.getByTestId("header-age").click();
+  await page.getByTestId("header-name").click();
   await expect(page.getByTestId("row-a")).toHaveAttribute("data-selected-row", "true");
   await expect(page.getByTestId("row-b")).toHaveAttribute("data-selected-row", "true");
   await expect(page.getByTestId("row-c")).toHaveAttribute("data-selected-row", "true");
@@ -82,6 +82,6 @@ test("same-column cell drag selects a range without reordering rows", async ({ p
 
   await expect(page.getByTestId("cell-a-name")).toHaveAttribute("data-range-selected", "true");
   await expect(page.getByTestId("cell-b-name")).toHaveAttribute("data-range-selected", "true");
-  await expect(page.locator("tbody tr").first().locator("td").first()).toHaveText("Alpha");
+  await expect(page.locator(".kmsf-data-table__body-table tbody tr").first().locator("td").first()).toHaveText("Alpha");
   expect(diagnostics).toEqual([]);
 });

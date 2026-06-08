@@ -1,5 +1,5 @@
 import type React from "react";
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { Fragment, forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { ArrowUp } from "lucide-react";
 
 import {
@@ -61,10 +61,15 @@ type KmsfColumnPointerInteraction = {
   startY: number;
   timer: number;
 };
+type KmsfRowMoveState = {
+  sourceRowId: KmsfRowId;
+  targetDataIndex: number;
+};
 
 export type KmsfDataTableRowProps<TData> = {
   className?: KmsfRowPropValue<TData, KmsfClassValue>;
   disabled?: KmsfRowPropValue<TData, boolean | undefined>;
+  draggable?: KmsfRowPropValue<TData, boolean | undefined>;
   style?: KmsfRowPropValue<TData, React.CSSProperties | undefined>;
 };
 
@@ -105,6 +110,7 @@ export type KmsfDataTableRef<TData = unknown> = {
   getColumnLayout: () => KmsfColumnLayout;
   getSortState: () => KmsfSortState | null;
   setColumnLayout: (layout: KmsfColumnLayout) => void;
+  setMoveTargetRow: (targetIdx: number, sourceIdx: number) => void;
   setSelectedRow: (index: number) => void;
   setSelectedRows: (indexes: number[]) => void;
   setSortState: (sort: KmsfSortState | null) => void;
@@ -169,9 +175,12 @@ function resolveRowProps<TData>(
   row: TData,
   index: number,
 ) {
+  const disabled = resolveRowProp(rowProps?.disabled, row, index) === true;
+
   return {
     className: toClassName(resolveRowProp(rowProps?.className, row, index)),
-    disabled: resolveRowProp(rowProps?.disabled, row, index) === true,
+    disabled,
+    draggable: !disabled && resolveRowProp(rowProps?.draggable, row, index) !== false,
     style: resolveRowProp(rowProps?.style, row, index),
   };
 }
@@ -319,13 +328,12 @@ function KmsfDataTableInner<TData>(
   const copiedRangeRef = useRef<KmsfCopiedCellRange | null>(null);
   const copiedRowRef = useRef<KmsfCopiedRow<TData> | null>(null);
   const columnPointerInteractionRef = useRef<KmsfColumnPointerInteraction | null>(null);
-  const draggedRowIdRef = useRef<KmsfRowId | null>(null);
-  const dragOverDataIndexRef = useRef<number | null>(null);
   const lastCellAnchorRef = useRef<KmsfCellAddress | null>(null);
   const lastRowAnchorRef = useRef<KmsfRowId | null>(null);
   const rangeDragAnchorRef = useRef<KmsfCellAddress | null>(null);
   const rangeDragLastAddressRef = useRef<KmsfCellAddress | null>(null);
   const rangeDragMovedRef = useRef(false);
+  const rowMoveStateRef = useRef<KmsfRowMoveState | null>(null);
   const suppressedSortColumnIdRef = useRef<string | null>(null);
   const [containerHeight, setContainerHeight] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
@@ -333,6 +341,7 @@ function KmsfDataTableInner<TData>(
   const [columnMovePointer, setColumnMovePointer] = useState<{ x: number; y: number } | null>(null);
   const [columnMoveTargetId, setColumnMoveTargetId] = useState<string | null>(null);
   const [resizingColumnId, setResizingColumnId] = useState<string | null>(null);
+  const [rowMoveState, setRowMoveState] = useState<KmsfRowMoveState | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [state, setState] = useState(() =>
     createKmsfDataTableState({
@@ -496,7 +505,7 @@ function KmsfDataTableInner<TData>(
       return Math.min(maxWidth, Math.max(minWidth, width));
     });
   }, [containerWidth, state.columnState, visibleColumns]);
-  const tableWidth = useMemo(() => {
+  const columnWidthTotal = useMemo(() => {
     let totalWidth = 0;
 
     for (const width of columnWidths) {
@@ -507,8 +516,20 @@ function KmsfDataTableInner<TData>(
       totalWidth += width;
     }
 
-    return Math.max(containerWidth, totalWidth);
-  }, [columnWidths, containerWidth]);
+    return totalWidth;
+  }, [columnWidths]);
+  const tableWidth = useMemo(() => {
+    if (typeof columnWidthTotal !== "number") {
+      return undefined;
+    }
+
+    return Math.max(containerWidth, columnWidthTotal);
+  }, [columnWidthTotal, containerWidth]);
+  const hasHorizontalOverflow =
+    typeof columnWidthTotal === "number" && containerWidth > 0 ? columnWidthTotal > containerWidth + 1 : false;
+  const renderedRowsHeight =
+    rowWindow.topSpacerHeight + rowWindow.entries.length * rowHeight + rowWindow.bottomSpacerHeight;
+  const emptyFillerHeight = Math.max(0, containerHeight - renderedRowsHeight);
 
   const isCopyPasteKey = (event: React.KeyboardEvent, key: "c" | "v") =>
     (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === key;
@@ -573,6 +594,44 @@ function KmsfDataTableInner<TData>(
       getSortState: () => state.sort,
       setColumnLayout: (layout) =>
         commitState((current) => applyKmsfColumnLayout(current, layout), { columnLayoutChanged: true }),
+      setMoveTargetRow: (targetIdx, sourceIdx) =>
+        commitState(
+          (current) => {
+            const visibleRowIds = getKmsfSortedRowIndexes(current).flatMap((dataIndex) => {
+              const rowId = current.rowIds[dataIndex];
+
+              return rowId === undefined ? [] : [rowId];
+            });
+            const sourceRowId = visibleRowIds[sourceIdx];
+
+            if (sourceRowId === undefined || targetIdx < 0 || sourceIdx < 0) {
+              return current;
+            }
+
+            const nextVisibleRowIds = visibleRowIds.filter((rowId) => rowId !== sourceRowId);
+            const targetPosition = Math.min(nextVisibleRowIds.length, targetIdx);
+            nextVisibleRowIds.splice(targetPosition, 0, sourceRowId);
+
+            const rowById = new Map(current.rowIds.map((rowId, index) => [rowId, current.rows[index]] as const));
+            const nextRows = nextVisibleRowIds.flatMap((rowId) => {
+              const row = rowById.get(rowId);
+
+              return row === undefined ? [] : [row];
+            });
+
+            if (nextRows.length !== current.rows.length) {
+              return current;
+            }
+
+            return {
+              ...current,
+              rowIds: nextVisibleRowIds,
+              rows: nextRows,
+              sort: null,
+            };
+          },
+          { sortChanged: true },
+        ),
       setSelectedRow: (index) => selectRowsByVisibleIndexes([index]),
       setSelectedRows: (indexes) => selectRowsByVisibleIndexes(indexes),
       setSortState: (sort) => commitState((current) => setKmsfSortState(current, sort), { sortChanged: true }),
@@ -864,8 +923,9 @@ function KmsfDataTableInner<TData>(
     event: React.PointerEvent<HTMLElement>,
     entry: VisibleRowEntry<TData>,
     disabled: boolean,
+    draggable: boolean,
   ) => {
-    if (disabled || event.button !== 0) {
+    if (disabled || !draggable || event.button !== 0) {
       return;
     }
 
@@ -873,20 +933,47 @@ function KmsfDataTableInner<TData>(
     event.stopPropagation();
 
     const sourceRowId = entry.rowId;
-    const handlePointerUp = (upEvent: PointerEvent) => {
-      window.removeEventListener("pointerup", handlePointerUp);
-
+    const setActiveRowMoveState = (next: KmsfRowMoveState | null) => {
+      rowMoveStateRef.current = next;
+      setRowMoveState(next);
+    };
+    const updateTarget = (clientX: number, clientY: number) => {
       const targetRow = document
-        .elementFromPoint(upEvent.clientX, upEvent.clientY)
+        .elementFromPoint(clientX, clientY)
         ?.closest<HTMLElement>("[data-kmsf-row-data-index]");
-      const targetIndex =
-        targetRow?.dataset.kmsfRowDataIndex === undefined ? NaN : Number(targetRow.dataset.kmsfRowDataIndex);
 
-      if (Number.isInteger(targetIndex)) {
+      if (!targetRow || targetRow.dataset.kmsfRowDataIndex === undefined) {
+        return;
+      }
+
+      const targetDataIndex = Number(targetRow.dataset.kmsfRowDataIndex);
+
+      if (Number.isInteger(targetDataIndex)) {
+        setActiveRowMoveState({ sourceRowId, targetDataIndex });
+      }
+    };
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      if (moveEvent.buttons !== 1) {
+        return;
+      }
+
+      updateTarget(moveEvent.clientX, moveEvent.clientY);
+    };
+    const handlePointerUp = (upEvent: PointerEvent) => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      updateTarget(upEvent.clientX, upEvent.clientY);
+
+      const targetIndex = rowMoveStateRef.current?.targetDataIndex;
+      setActiveRowMoveState(null);
+
+      if (targetIndex !== undefined) {
         commitState((current) => moveKmsfRow(current, sourceRowId, targetIndex));
       }
     };
 
+    updateTarget(event.clientX, event.clientY);
+    window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
   };
   const movingColumn = movingColumnId
@@ -900,10 +987,21 @@ function KmsfDataTableInner<TData>(
     </colgroup>
   );
   const handleBodyScroll = (event: React.UIEvent<HTMLDivElement>) => {
-    setScrollTop(event.currentTarget.scrollTop);
+    const bodyViewport = event.currentTarget;
+
+    setScrollTop(bodyViewport.scrollTop);
 
     if (headerRef.current) {
-      headerRef.current.scrollLeft = event.currentTarget.scrollLeft;
+      const headerMaxScrollLeft = Math.max(0, headerRef.current.scrollWidth - headerRef.current.clientWidth);
+      const bodyMaxScrollLeft = Math.max(0, bodyViewport.scrollWidth - bodyViewport.clientWidth);
+      const sharedMaxScrollLeft = Math.min(headerMaxScrollLeft, bodyMaxScrollLeft);
+      const nextScrollLeft = Math.min(sharedMaxScrollLeft, Math.max(0, bodyViewport.scrollLeft));
+
+      if (Math.abs(bodyViewport.scrollLeft - nextScrollLeft) > 0.5) {
+        bodyViewport.scrollLeft = nextScrollLeft;
+      }
+
+      headerRef.current.scrollLeft = nextScrollLeft;
     }
   };
 
@@ -1036,6 +1134,7 @@ function KmsfDataTableInner<TData>(
       ) : null}
       <div
         className="kmsf-data-table__body-viewport"
+        data-horizontal-overflow={hasHorizontalOverflow ? "true" : undefined}
         data-testid={dataTestId}
         onScroll={handleBodyScroll}
         ref={containerRef}
@@ -1047,16 +1146,26 @@ function KmsfDataTableInner<TData>(
           {renderColumnSizing()}
         <tbody>
           {virtualized ? <tr aria-hidden="true" style={{ height: rowWindow.topSpacerHeight }} /> : null}
-          {rowWindow.entries.map((entry) => {
+          {rowWindow.entries.map((entry, entryIndex) => {
             const rowRuntimeProps = resolveRowProps(rowProps, entry.row, entry.visibleIndex);
             const isRowSelected = state.selection.rowIds.includes(entry.rowId);
+            const isViewportEndRow = emptyFillerHeight === 0 && entryIndex === rowWindow.entries.length - 1;
 
             return (
+              <Fragment key={String(entry.rowId)}>
+                {rowMoveState?.targetDataIndex === entry.dataIndex && rowMoveState.sourceRowId !== entry.rowId ? (
+                  <tr aria-hidden="true" className="kmsf-row-move-placeholder">
+                    <td colSpan={Math.max(1, visibleColumns.length)} data-testid="row-move-placeholder">
+                      이 위치로 이동
+                    </td>
+                  </tr>
+                ) : null}
               <tr
                 aria-disabled={rowRuntimeProps.disabled ? "true" : undefined}
                 aria-selected={isRowSelected}
                 className={[
                   "kmsf-data-table__tr",
+                  isViewportEndRow ? "kmsf-data-table__tr--viewport-end" : undefined,
                   isRowSelected ? "kmsf-row-selected" : undefined,
                   rowRuntimeProps.className,
                 ]
@@ -1064,9 +1173,10 @@ function KmsfDataTableInner<TData>(
                   .join(" ")}
 	                data-disabled={rowRuntimeProps.disabled ? "true" : undefined}
 	                data-kmsf-row-data-index={entry.dataIndex}
+	                data-row-draggable={rowRuntimeProps.draggable ? "true" : "false"}
 	                data-selected-row={isRowSelected ? "true" : undefined}
 	                data-testid={`row-${String(entry.rowId)}`}
-                draggable={!rowRuntimeProps.disabled}
+                draggable={false}
                 key={String(entry.rowId)}
                 onClick={(event) => {
                   if (rowRuntimeProps.disabled) {
@@ -1098,51 +1208,6 @@ function KmsfDataTableInner<TData>(
 
                   onDoubleClickRow?.(createRowPayload(event, entry));
                 }}
-                onDragOver={(event) => {
-                  if (!rowRuntimeProps.disabled) {
-                    dragOverDataIndexRef.current = entry.dataIndex;
-                    event.preventDefault();
-                  }
-                }}
-                onDragEnter={() => {
-                  if (!rowRuntimeProps.disabled) {
-                    dragOverDataIndexRef.current = entry.dataIndex;
-                  }
-                }}
-                onDragEnd={() => {
-                  const sourceRowId = draggedRowIdRef.current;
-                  const targetIndex = dragOverDataIndexRef.current;
-                  draggedRowIdRef.current = null;
-                  dragOverDataIndexRef.current = null;
-
-                  if (sourceRowId !== null && targetIndex !== null) {
-                    commitState((current) => moveKmsfRow(current, sourceRowId, targetIndex));
-                  }
-                }}
-                onDragStart={(event) => {
-                  if (rowRuntimeProps.disabled) {
-                    event.preventDefault();
-                    return;
-                  }
-
-                  draggedRowIdRef.current = entry.rowId;
-                  event.dataTransfer.setData("text/plain", String(entry.rowId));
-                }}
-                onDrop={(event) => {
-                  event.preventDefault();
-
-                  if (rowRuntimeProps.disabled) {
-                    return;
-                  }
-
-                  const sourceRowId = event.dataTransfer.getData("text/plain") || draggedRowIdRef.current;
-                  draggedRowIdRef.current = null;
-                  dragOverDataIndexRef.current = null;
-
-                  if (sourceRowId !== null) {
-                    commitState((current) => moveKmsfRow(current, sourceRowId, entry.dataIndex));
-                  }
-                }}
                 onKeyDown={(event) => handleRowKeyDown(event, entry, rowRuntimeProps.disabled)}
                 style={{ height: rowHeight, ...rowRuntimeProps.style }}
                 tabIndex={rowRuntimeProps.disabled ? -1 : 0}
@@ -1166,6 +1231,7 @@ function KmsfDataTableInner<TData>(
                       aria-disabled={cellDisabled ? "true" : undefined}
                       className={[
                         "kmsf-data-table__td px-3 py-2",
+                        columnIndex === 0 ? "kmsf-data-table__td--with-row-handle" : undefined,
                         isCellInRange ? "kmsf-cell-range-selected" : undefined,
                         cellClassName,
                       ]
@@ -1271,46 +1337,6 @@ function KmsfDataTableInner<TData>(
 
 	                        onDoubleClickCell?.(createCellPayload(event, entry, column, columnIndex, rawValue));
 	                      }}
-	                      onDragEnd={() => {
-	                        const sourceRowId = draggedRowIdRef.current;
-	                        const targetIndex = dragOverDataIndexRef.current;
-	                        draggedRowIdRef.current = null;
-	                        dragOverDataIndexRef.current = null;
-
-	                        if (sourceRowId !== null && targetIndex !== null) {
-	                          commitState((current) => moveKmsfRow(current, sourceRowId, targetIndex));
-	                        }
-	                      }}
-	                      onDragOver={(event) => {
-	                        if (!cellDisabled) {
-	                          dragOverDataIndexRef.current = entry.dataIndex;
-	                          event.preventDefault();
-	                        }
-	                      }}
-	                      onDragStart={(event) => {
-	                        if (cellDisabled) {
-	                          event.preventDefault();
-	                          return;
-	                        }
-
-	                        draggedRowIdRef.current = entry.rowId;
-	                        event.dataTransfer.setData("text/plain", String(entry.rowId));
-	                      }}
-	                      onDrop={(event) => {
-	                        event.preventDefault();
-
-	                        if (cellDisabled) {
-	                          return;
-	                        }
-
-	                        const sourceRowId = event.dataTransfer.getData("text/plain") || draggedRowIdRef.current;
-	                        draggedRowIdRef.current = null;
-	                        dragOverDataIndexRef.current = null;
-
-	                        if (sourceRowId !== null) {
-	                          commitState((current) => moveKmsfRow(current, sourceRowId, entry.dataIndex));
-	                        }
-	                      }}
 	                      onKeyDown={(event) => handleCellKeyDown(event, entry, column, columnIndex, address, cellDisabled)}
 	                      onMouseDown={(event) => beginCellRangeDrag(event, address, cellDisabled)}
                       onMouseOver={() => updateCellRangeDrag(address)}
@@ -1326,7 +1352,7 @@ function KmsfDataTableInner<TData>(
                       style={cellStyle}
 	                      tabIndex={cellDisabled ? -1 : 0}
 	                    >
-	                      {columnIndex === 0 ? (
+	                      {columnIndex === 0 && rowRuntimeProps.draggable ? (
 	                        <span
 	                          aria-hidden="true"
 	                          className="kmsf-row-drag-handle"
@@ -1334,7 +1360,14 @@ function KmsfDataTableInner<TData>(
 	                          draggable={false}
 	                          onClick={(event) => event.stopPropagation()}
 	                          onMouseDown={(event) => event.stopPropagation()}
-	                          onPointerDown={(event) => beginRowHandlePointerDrag(event, entry, rowRuntimeProps.disabled)}
+	                          onPointerDown={(event) =>
+	                            beginRowHandlePointerDrag(
+	                              event,
+	                              entry,
+	                              rowRuntimeProps.disabled,
+	                              rowRuntimeProps.draggable,
+	                            )
+	                          }
 	                        />
 	                      ) : null}
 	                      {formattedValue}
@@ -1342,9 +1375,19 @@ function KmsfDataTableInner<TData>(
                   );
                 })}
               </tr>
+              </Fragment>
             );
           })}
           {virtualized ? <tr aria-hidden="true" style={{ height: rowWindow.bottomSpacerHeight }} /> : null}
+          {emptyFillerHeight > 0 ? (
+            <tr aria-hidden="true" className="kmsf-table-empty-filler">
+              <td
+                colSpan={Math.max(1, visibleColumns.length)}
+                data-testid="table-empty-filler"
+                style={{ height: emptyFillerHeight }}
+              />
+            </tr>
+          ) : null}
         </tbody>
       </table>
       </div>

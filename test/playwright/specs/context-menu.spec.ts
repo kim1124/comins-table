@@ -20,8 +20,8 @@ test("playground shows callback-driven shadcn context menu examples", async ({ p
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
 
-  await page.getByRole("button", { exact: true, name: "컨텍스트 메뉴" }).click();
-  await expect(page.getByTestId("feature-summary")).toContainText("우클릭");
+  await page.getByRole("button", { exact: true, name: "Context Menu 예제" }).click();
+  await expect(page.getByTestId("feature-intro-description")).toContainText("우클릭");
   const modifier = process.platform === "darwin" || browserName === "webkit" ? "Meta" : "Control";
   await page.getByTestId("row-a").click();
   await page.getByTestId("row-b").click({ modifiers: [modifier] });
