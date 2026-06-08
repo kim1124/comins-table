@@ -22,24 +22,19 @@ test("playground uses charts-style docs shell and remounts content when switchin
 
   const aside = page.getByRole("complementary", { name: "데이터 테이블 기능 메뉴" });
   const content = page.getByRole("main", { name: "데이터 테이블 예제" });
-  const docs = page.getByRole("complementary", { name: "데이터 테이블 문서" });
   await expect(aside).toBeVisible();
   await expect(content).toBeVisible();
-  await expect(docs).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "데이터 테이블 문서" })).toHaveCount(0);
   await expect(page.locator(".example-topbar")).toContainText("@kmsf/data-table");
   await expect(page.locator(".workspace-tabs")).toBeVisible();
   await expect(page.locator(".docs-layout")).toBeVisible();
 
   const asideBox = await aside.boundingBox();
   const contentBox = await content.boundingBox();
-  const docsBox = await docs.boundingBox();
   expect(asideBox).not.toBeNull();
   expect(contentBox).not.toBeNull();
-  expect(docsBox).not.toBeNull();
   expect(asideBox!.width).toBeGreaterThanOrEqual(260);
   expect(asideBox!.width).toBeLessThanOrEqual(320);
-  expect(docsBox!.width).toBeGreaterThanOrEqual(280);
-  expect(docsBox!.width).toBeLessThanOrEqual(360);
   expect(contentBox!.width).toBeGreaterThan(asideBox!.width);
 
   const firstMountId = await page.getByTestId("mount-id").textContent();
@@ -104,5 +99,22 @@ test("playground verifies range drag and multi-cell Ctrl+C Ctrl+V interactions i
   await expect(page.getByTestId("cell-b-age")).toHaveText("31 years");
   await expect(page.getByTestId("cell-c-name")).toHaveText("Beta");
   await expect(page.getByTestId("cell-c-age")).toHaveText("42 years");
+  expect(diagnostics).toEqual([]);
+});
+
+test("basic page live controls update the data table immediately", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/");
+  await page.getByRole("button", { exact: true, name: "기본" }).click();
+
+  await page.getByLabel("첫 번째 이름").fill("Alpha 수정");
+
+  await expect(page.getByTestId("cell-a-name")).toHaveText("Alpha 수정");
+  await expect(page.getByTestId("basic-live-state")).toContainText("Alpha 수정");
+
+  await page.getByRole("button", { name: "Owner 행 스타일 끄기" }).click();
+  await expect(page.getByTestId("row-a")).not.toHaveClass(/row-owner/u);
+  await expect(page.getByTestId("basic-live-state")).toContainText("Owner 스타일:꺼짐");
+
   expect(diagnostics).toEqual([]);
 });

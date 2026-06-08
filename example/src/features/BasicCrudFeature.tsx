@@ -76,6 +76,11 @@ export function BasicCrudFeature() {
 
   return (
     <section className="feature-panel">
+      <section className="feature-doc" data-testid="feature-doc-basic-crud">
+        <h2>기본 CRUD 예제 설명</h2>
+        <p>실시간 data 수정: 행 추가, 선택 행 JSON 수정, 선택 행 삭제, 조회 필터, 페이징을 한 화면에서 확인합니다.</p>
+        <p>선택된 Row ID를 기준으로 수정/삭제하며, 테이블 callback은 외부 rows 상태로 다시 연결됩니다.</p>
+      </section>
       <div className="feature-controls">
         <Button onClick={addRow} variant="secondary">
           행 추가

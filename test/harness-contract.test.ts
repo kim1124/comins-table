@@ -32,6 +32,25 @@ describe("@kmsf/data-table harness contract", () => {
     expect(guide).toContain("browser-capable verification");
   });
 
+  it("keeps high-risk interaction evidence gates explicit", () => {
+    const rootAgents = readPackageFile("AGENTS.md");
+    const testAgents = readPackageFile("test/AGENTS.md");
+    const guide = readPackageFile("GUIDE.md");
+    const playgroundDocs = readPackageFile("docs/user/12-playground.md");
+
+    for (const content of [rootAgents, guide]) {
+      expect(content).toContain("Interaction Work Gate");
+      expect(content).toContain("Requirement-to-test matrix");
+      expect(content).toContain("Expected RED reason");
+      expect(content).toContain("Browser proof");
+      expect(content).toContain("No checkbox without evidence");
+    }
+
+    expect(testAgents).toContain("DOM, CSS, geometry, and event isolation");
+    expect(playgroundDocs).toContain("Requirement-to-test matrix");
+    expect(playgroundDocs).toContain("사용자가 직접 지적한 visual 문제");
+  });
+
   it("keeps playground documentation and remount contracts explicit", () => {
     const guide = readPackageFile("GUIDE.md");
     const designDraft = readPackageFile("docs/agents/src/2026-05-28-data-table-feature-design-draft.md");

@@ -93,6 +93,14 @@ function pressControlKey(element: Element, key: "c" | "v") {
 }
 
 describe("@kmsf/data-table keyboard interaction", () => {
+  it("applies the shared KMSF typography class and 12px base text class", () => {
+    const element = renderTable();
+    const table = element.querySelector(".kmsf-data-table");
+
+    expect(table?.className).toContain("kmsf-typography-base");
+    expect(table?.className).toContain("text-[length:var(--kmsf-font-size-base,12px)]");
+  });
+
   it("renders the redesigned field and label column API", () => {
     const element = renderTableElement(
       <KmsfDataTable columns={apiColumns} data={apiRows} getRowId={(row) => row.id} />,
@@ -528,6 +536,35 @@ describe("@kmsf/data-table keyboard interaction", () => {
       "Alpha31",
       "Gamma27",
     ]);
+  });
+
+  it("exposes aria-sort and keyboard activation for sortable headers", () => {
+    const element = renderTableElement(
+      <KmsfDataTable columns={columns} data={threeRows} getRowId={(row) => row.id} />,
+    );
+    const ageHeader = element.querySelector("[data-testid='header-age']")!;
+    const nameHeader = element.querySelector("[data-testid='header-name']")!;
+
+    expect(ageHeader.getAttribute("aria-sort")).toBe("none");
+    expect(ageHeader.getAttribute("tabindex")).toBe("0");
+    expect(nameHeader.getAttribute("aria-sort")).toBeNull();
+
+    act(() => {
+      ageHeader.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Enter" }));
+    });
+
+    expect(ageHeader.getAttribute("aria-sort")).toBe("ascending");
+    expect([...element.querySelectorAll("tbody tr")].map((row) => row.textContent)).toEqual([
+      "Gamma27",
+      "Alpha31",
+      "Beta42",
+    ]);
+
+    act(() => {
+      ageHeader.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: " " }));
+    });
+
+    expect(ageHeader.getAttribute("aria-sort")).toBe("descending");
   });
 
   it("renders animated sort indicator state for the full sort cycle", () => {

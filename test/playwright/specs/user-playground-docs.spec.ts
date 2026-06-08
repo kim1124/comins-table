@@ -62,7 +62,7 @@ test("user playground uses charts-style docs shell and shadcn-style action butto
   await expect(page.locator(".workspace-tabs")).toBeVisible();
   await expect(page.locator(".docs-layout")).toBeVisible();
   await expect(page.locator(".feature-aside")).toBeVisible();
-  await expect(page.getByRole("complementary", { name: "데이터 테이블 문서" })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "데이터 테이블 문서" })).toHaveCount(0);
 
   await page.getByRole("button", { exact: true, name: "기본 CRUD" }).click();
   await expect(page.locator(".feature-controls button:not(.ui-button)")).toHaveCount(0);

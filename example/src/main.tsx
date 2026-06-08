@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { ChevronsLeft, ChevronsRight, Library, TableProperties } from "lucide-react";
 
-import { FeatureDocsPanel } from "./components/FeatureDocsPanel";
 import { Button } from "./components/ui/button";
 import { ScrollArea } from "./components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
@@ -122,7 +121,6 @@ function FeatureNavigation({
 function App() {
   const [activeFeature, setActiveFeature] = useState<FeatureId>("basic");
   const [isNavigationCollapsed, setIsNavigationCollapsed] = useState(false);
-  const activeFeatureDefinition = findFeature(activeFeature);
 
   return (
     <div className="example-shell">
@@ -151,7 +149,6 @@ function App() {
               onSelectFeature={setActiveFeature}
             />
             <FeatureContent featureId={activeFeature} key={activeFeature} />
-            <FeatureDocsPanel feature={activeFeatureDefinition} key={`docs-${activeFeature}`} />
           </div>
         </TabsContent>
         <TabsContent value="notes">
@@ -163,7 +160,7 @@ function App() {
               </div>
             </div>
             <p className="feature-summary">
-              왼쪽 기능 메뉴, 중앙 예제, 오른쪽 문서 패널로 구성하며 기능 메뉴 이동 시 예제 인스턴스를 새로 생성합니다.
+              왼쪽 기능 메뉴와 본문 예제로 구성하며 기능 메뉴 이동 시 예제 인스턴스를 새로 생성합니다.
             </p>
           </main>
         </TabsContent>

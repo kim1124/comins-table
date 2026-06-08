@@ -29,11 +29,13 @@ test("playground shows callback-driven shadcn context menu examples", async ({ p
   await expect(page.getByTestId("row-a")).not.toHaveAttribute("data-selected-row", "true");
   await expect(page.getByTestId("row-b")).not.toHaveAttribute("data-selected-row", "true");
   await expect(page.getByTestId("row-c")).toHaveAttribute("data-selected-row", "true");
+  await expect(page.getByTestId("context-proof-selection")).toContainText("선택 Row:c");
 
   await page.getByTestId("row-a").click({ button: "right" });
   await expect(page.getByRole("menu", { name: "데이터 테이블 컨텍스트 메뉴" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "행 데이터 보기" })).toBeVisible();
   await expect(page.getByTestId("context-data-preview")).toContainText('"id": "a"');
+  await expect(page.getByTestId("context-proof-menu")).toContainText("Row 메뉴");
 
   await page.getByTestId("cell-a-name").click({ button: "right" });
   await expect(page.getByRole("menuitem", { name: "셀 데이터 보기" })).toBeVisible();
@@ -44,6 +46,7 @@ test("playground shows callback-driven shadcn context menu examples", async ({ p
   await expect(page.getByTestId("row-a")).toHaveAttribute("data-selected-row", "true");
   await expect(page.getByTestId("context-menu-alert")).toContainText("셀 데이터 보기");
   await expect(page.getByTestId("context-menu-alert")).toContainText("메뉴를 선택했습니다");
+  await expect(page.getByTestId("context-proof-menu")).toContainText("셀 데이터 보기");
 
   await page.getByRole("button", { name: "Cell 컨텍스트 비활성화" }).click();
   await expect(page.getByTestId("context-menu-cell-state")).toContainText("Cell 활성화:비활성");

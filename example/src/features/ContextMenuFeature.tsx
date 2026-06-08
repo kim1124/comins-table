@@ -1,7 +1,7 @@
 import type React from "react";
 import { useMemo, useState } from "react";
 
-import { KmsfDataTable } from "../../../src";
+import { KmsfDataTable, type KmsfSelectionState } from "../../../src";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { Button } from "../components/ui/button";
 import { ContextMenu, type ContextMenuItem } from "../components/ui/context-menu";
@@ -60,8 +60,12 @@ export function ContextMenuFeature() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
   const [cellContextEnabled, setCellContextEnabled] = useState(true);
   const [selectedMenuLabel, setSelectedMenuLabel] = useState("");
+  const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const [rows, setRows] = useState(() => cloneBaseRows());
   const columns = useMemo(() => createGuardedColumns(), []);
+  const syncSelection = (selection: KmsfSelectionState) => {
+    setSelectedRowIds(selection.rowIds.map(String));
+  };
   const contextMenuItems = useMemo<ContextMenuItem[]>(() => {
     if (!contextMenu) {
       return [];
@@ -93,6 +97,11 @@ export function ContextMenuFeature() {
 
   return (
     <section className="feature-panel" onClick={() => setContextMenu(null)}>
+      <section className="feature-doc" data-testid="feature-doc-context-menu">
+        <h2>컨텍스트 메뉴 예제 설명</h2>
+        <p>우클릭 시 Row 또는 Cell callback payload를 이용해 샤드 CN 스타일 메뉴를 구성합니다.</p>
+        <p>메뉴 선택 후에도 Row 선택 상태를 유지하고, 선택한 메뉴는 Alert으로 표시합니다.</p>
+      </section>
       <div className="feature-controls">
         <span className="state-pill" data-testid="context-menu-cell-state">
           Cell 활성화:{cellContextEnabled ? "활성" : "비활성"}
@@ -113,6 +122,13 @@ export function ContextMenuFeature() {
       <pre className="state-output" data-testid="context-data-preview">
         {contextMenu ? JSON.stringify(contextMenu.data, null, 2) : "우클릭한 행 또는 셀 데이터가 여기에 표시됩니다."}
       </pre>
+      <div className="evidence-grid">
+        <span data-testid="context-proof-selection">선택 Row:{selectedRowIds.join(",") || "없음"}</span>
+        <span data-testid="context-proof-menu">
+          표시 메뉴:{contextMenu?.items.map((item) => item.section).join(",") || "없음"} / 선택 메뉴:
+          {selectedMenuLabel || "없음"}
+        </span>
+      </div>
       <pre className="state-output code-sample" data-testid="context-example-code">
         {contextMenuExampleCode}
       </pre>
@@ -123,6 +139,7 @@ export function ContextMenuFeature() {
         data-testid="data-table-viewport"
         getRowId={(row) => row.id}
         onChangeData={setRows}
+        onChangeSelection={syncSelection}
         onContextMenuCell={
           cellContextEnabled
             ? ({ column, event, row, value }) => {

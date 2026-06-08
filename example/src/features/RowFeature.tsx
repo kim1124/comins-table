@@ -11,10 +11,15 @@ export function RowFeature() {
 
   return (
     <section className="feature-panel">
+      <section className="feature-doc" data-testid="feature-doc-row">
+        <h2>행 예제 설명</h2>
+        <p>Row 이벤트: 클릭, 더블클릭, 우클릭, 키보드 이벤트, 드래그 이동을 확인합니다.</p>
+        <p>rowProps로 행 스타일과 상태를 적용하며, Row 이동은 행 전용 drag gesture로만 검증합니다.</p>
+      </section>
       <div className="feature-controls">
         <span data-testid="layout-order">{defaultColumnLayout.order.join(",")}</span>
         <span className="state-pill">행 스타일:Owner</span>
-        <span className="state-pill">행 c를 행 a로 드래그</span>
+        <span className="state-pill">Row drag handle로 행 c를 행 a로 이동</span>
       </div>
       <pre className="state-output" data-testid="event-log">
         {events.join("\n") || "행 이벤트 없음"}

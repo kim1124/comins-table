@@ -1,6 +1,6 @@
 # Header
 
-Header는 표시/숨김, DOM props, label, column boundary resize, TH 영역 1초 long-press column move, animated sort indicator, layout save/load를 제공한다. Layout save/load는 ref method로 처리한다.
+Header는 표시/숨김, DOM props, label, column boundary resize, TH 영역 1초 long-press column move, keyboard sort, `aria-sort`, animated sort indicator, layout save/load를 제공한다. Layout save/load는 ref method로 처리한다.
 
 ```tsx
 const tableRef = useRef<KmsfDataTableRef<Row>>(null);
@@ -39,5 +39,16 @@ tableRef.current?.clearSort();
 - Column move mode에서는 이동 중인 header ghost와 drop marker를 표시한다.
 - 1초 전에 pointer move가 발생하면 column move와 sort click을 모두 취소한다.
 - Sort cycle은 `none -> asc -> desc -> none`이다.
+- Sort 가능한 Header는 focus 가능하며 `Enter` 또는 `Space`로 sort cycle을 실행한다.
+- Sort 가능한 Header는 `aria-sort="none" | "ascending" | "descending"` 상태를 노출한다.
 - Sort icon은 `lucide-react` 기반이며 asc/desc/none 전환 시 CSS rotate/opacity animation으로 표시한다.
 - Multi-column sort는 후속 설계 항목이다.
+
+Playground 검증 기준:
+
+- `헤더` 예제는 resize와 move를 같은 pointer 흐름에서 검증한다.
+- Header sort 접근성은 mouse click, keyboard `Enter`/`Space`, `aria-sort`, sort indicator 상태를 함께 검증한다.
+- Resize는 width 변경, 최초 drag jump 없음, column move 미발생을 함께 확인한다.
+- Move는 1초 long-press, 이동 ghost, drop marker, 의도한 column order 변경을 함께 확인한다.
+- Virtualized mode에서는 header/body가 다른 table이어도 resize 후 column left/width가 같아야 한다.
+- 사용자가 header 위치, resize, sort 표시 문제를 지적한 경우 Playwright assertion 외에 screenshot 또는 DOM geometry evidence를 report에 남긴다.

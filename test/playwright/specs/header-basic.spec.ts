@@ -19,10 +19,11 @@ function collectBrowserDiagnostics(page: Page) {
 test("playground verifies header resize, column position change, and layout restore", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "헤더" }).click();
+  await page.getByRole("button", { exact: true, name: "헤더" }).click();
 
   const ageHeader = page.getByTestId("header-age");
   const nameHeader = page.getByTestId("header-name");
+  await ageHeader.scrollIntoViewIfNeeded();
   const ageBox = await ageHeader.boundingBox();
   const nameBox = await nameHeader.boundingBox();
   expect(ageBox).not.toBeNull();
@@ -36,6 +37,7 @@ test("playground verifies header resize, column position change, and layout rest
   await expect(page.getByTestId("layout-order")).toHaveText("age,name,role");
 
   const handle = page.getByTestId("resize-age");
+  await handle.scrollIntoViewIfNeeded();
   const box = await handle.boundingBox();
   expect(box).not.toBeNull();
   await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);

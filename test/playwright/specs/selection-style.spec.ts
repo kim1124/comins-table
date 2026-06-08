@@ -70,3 +70,18 @@ test("row selection is mint styled, multi-selectable, sort-stable, and grid bord
 
   expect(diagnostics).toEqual([]);
 });
+
+test("same-column cell drag selects a range without reordering rows", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/");
+
+  await page.getByTestId("cell-a-name").hover();
+  await page.mouse.down();
+  await page.getByTestId("cell-b-name").hover();
+  await page.mouse.up();
+
+  await expect(page.getByTestId("cell-a-name")).toHaveAttribute("data-range-selected", "true");
+  await expect(page.getByTestId("cell-b-name")).toHaveAttribute("data-range-selected", "true");
+  await expect(page.locator("tbody tr").first().locator("td").first()).toHaveText("Alpha");
+  expect(diagnostics).toEqual([]);
+});

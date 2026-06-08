@@ -245,6 +245,14 @@ function getSortIndicatorState(current: KmsfSortState | null, columnId: string) 
   return current.direction;
 }
 
+function getAriaSortState(current: KmsfSortState | null, columnId: string) {
+  if (current?.columnId !== columnId) {
+    return "none";
+  }
+
+  return current.direction === "asc" ? "ascending" : "descending";
+}
+
 function areRowIdSequencesEqual(left: readonly KmsfRowId[], right: readonly KmsfRowId[]) {
   return left.length === right.length && left.every((id, index) => id === right[index]);
 }
@@ -451,10 +459,10 @@ function KmsfDataTableInner<TData>(
   }, [allVisibleEntries, containerHeight, pageStartIndex, rowHeight, scrollTop, state.pagination.pageSize, virtualized]);
   const densityClass =
     state.theme.density === "compact"
-      ? "text-xs"
+      ? "text-[11px]"
       : state.theme.density === "spacious"
-        ? "text-base"
-        : "text-sm";
+        ? "text-[13px]"
+        : "text-[length:var(--kmsf-font-size-base,12px)]";
   const columnWidths = useMemo(() => {
     const columnCount = visibleColumns.length;
 
@@ -540,6 +548,20 @@ function KmsfDataTableInner<TData>(
       });
 
       return selectRows(current, rowIds);
+    });
+  };
+  const activateHeaderSort = (column: KmsfDataTableRuntimeColumn<TData>) => {
+    if (suppressedSortColumnIdRef.current === column.id) {
+      suppressedSortColumnIdRef.current = null;
+      return;
+    }
+
+    if (!column.sort) {
+      return;
+    }
+
+    commitState((current) => setKmsfSortState(current, getNextSort(current.sort, column.id)), {
+      sortChanged: true,
     });
   };
 
@@ -803,17 +825,6 @@ function KmsfDataTableInner<TData>(
       return;
     }
 
-    const anchor = rangeDragAnchorRef.current;
-    const focus = rangeDragLastAddressRef.current;
-
-    if (anchor && focus && anchor.columnId === focus.columnId && anchor.rowId !== focus.rowId) {
-      const targetIndex = stateRef.current.rowIds.findIndex((rowId) => rowId === focus.rowId);
-
-      if (targetIndex >= 0) {
-        commitState((current) => moveKmsfRow(current, anchor.rowId, targetIndex));
-      }
-    }
-
     rangeDragAnchorRef.current = null;
     rangeDragLastAddressRef.current = null;
   };
@@ -849,6 +860,35 @@ function KmsfDataTableInner<TData>(
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
   };
+  const beginRowHandlePointerDrag = (
+    event: React.PointerEvent<HTMLElement>,
+    entry: VisibleRowEntry<TData>,
+    disabled: boolean,
+  ) => {
+    if (disabled || event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const sourceRowId = entry.rowId;
+    const handlePointerUp = (upEvent: PointerEvent) => {
+      window.removeEventListener("pointerup", handlePointerUp);
+
+      const targetRow = document
+        .elementFromPoint(upEvent.clientX, upEvent.clientY)
+        ?.closest<HTMLElement>("[data-kmsf-row-data-index]");
+      const targetIndex =
+        targetRow?.dataset.kmsfRowDataIndex === undefined ? NaN : Number(targetRow.dataset.kmsfRowDataIndex);
+
+      if (Number.isInteger(targetIndex)) {
+        commitState((current) => moveKmsfRow(current, sourceRowId, targetIndex));
+      }
+    };
+
+    window.addEventListener("pointerup", handlePointerUp);
+  };
   const movingColumn = movingColumnId
     ? visibleColumns.find((visibleColumn) => visibleColumn.id === movingColumnId)
     : undefined;
@@ -869,7 +909,7 @@ function KmsfDataTableInner<TData>(
 
   return (
     <div
-      className={["kmsf-data-table h-full w-full overflow-hidden", densityClass, state.theme.className, className]
+      className={["kmsf-data-table kmsf-typography-base h-full w-full overflow-hidden", densityClass, state.theme.className, className]
         .filter(Boolean)
         .join(" ")}
       data-show-header={state.showHeader ? "true" : undefined}
@@ -903,30 +943,37 @@ function KmsfDataTableInner<TData>(
                     data-column-drop-target={columnMoveTargetId === column.id ? "true" : undefined}
                     data-column-moving={movingColumnId === column.id ? "true" : undefined}
                     data-kmsf-column-index={index}
-                    data-kmsf-column-id={column.id}
-                    data-sortable={column.sort ? "true" : "false"}
-                    data-sort-direction={state.sort?.columnId === column.id ? state.sort.direction : undefined}
-                    data-testid={`header-${column.id}`}
-                    key={column.id}
-                    onClick={(event) => {
-                      headerProps.onClick?.(event);
+	                    data-kmsf-column-id={column.id}
+	                    data-sortable={column.sort ? "true" : "false"}
+	                    data-sort-direction={state.sort?.columnId === column.id ? state.sort.direction : undefined}
+	                    data-testid={`header-${column.id}`}
+	                    aria-sort={column.sort ? getAriaSortState(state.sort, column.id) : undefined}
+	                    key={column.id}
+	                    onClick={(event) => {
+	                      headerProps.onClick?.(event);
 
-                      if (suppressedSortColumnIdRef.current === column.id) {
-                        suppressedSortColumnIdRef.current = null;
-                        return;
-                      }
+	                      if (event.defaultPrevented || !column.sort) {
+	                        return;
+	                      }
 
-                      if (event.defaultPrevented || !column.sort) {
-                        return;
-                      }
+	                      activateHeaderSort(column);
+	                    }}
+	                    onKeyDown={(event) => {
+	                      headerProps.onKeyDown?.(event);
 
-                      commitState((current) => setKmsfSortState(current, getNextSort(current.sort, column.id)), {
-                        sortChanged: true,
-                      });
-                    }}
-                    onPointerDown={(event) => beginHeaderPointerInteraction(event, column)}
-                    style={{ width: columnState?.width ?? column.width, ...headerProps.style }}
-                  >
+	                      if (event.defaultPrevented || !column.sort) {
+	                        return;
+	                      }
+
+	                      if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
+	                        event.preventDefault();
+	                        activateHeaderSort(column);
+	                      }
+	                    }}
+	                    onPointerDown={(event) => beginHeaderPointerInteraction(event, column)}
+	                    style={{ width: columnState?.width ?? column.width, ...headerProps.style }}
+	                    tabIndex={column.sort ? 0 : undefined}
+	                  >
                     <span aria-hidden="true" className="kmsf-column-drop-marker" />
                     <span className="kmsf-data-table__header-content" data-kmsf-header-body="true">
                       <span>{column.label}</span>
@@ -1015,9 +1062,10 @@ function KmsfDataTableInner<TData>(
                 ]
                   .filter(Boolean)
                   .join(" ")}
-                data-disabled={rowRuntimeProps.disabled ? "true" : undefined}
-                data-selected-row={isRowSelected ? "true" : undefined}
-                data-testid={`row-${String(entry.rowId)}`}
+	                data-disabled={rowRuntimeProps.disabled ? "true" : undefined}
+	                data-kmsf-row-data-index={entry.dataIndex}
+	                data-selected-row={isRowSelected ? "true" : undefined}
+	                data-testid={`row-${String(entry.rowId)}`}
                 draggable={!rowRuntimeProps.disabled}
                 key={String(entry.rowId)}
                 onClick={(event) => {
@@ -1126,11 +1174,11 @@ function KmsfDataTableInner<TData>(
                       data-disabled={cellDisabled ? "true" : undefined}
                       data-kmsf-cell-column-id={column.id}
                       data-kmsf-data-index={entry.dataIndex}
-                      data-range-selected={isCellInRange ? "true" : undefined}
-                      data-selected={isCellSelected ? "true" : undefined}
-                      data-testid={`cell-${String(entry.rowId)}-${column.id}`}
-                      draggable={false}
-                      key={column.id}
+	                      data-range-selected={isCellInRange ? "true" : undefined}
+	                      data-selected={isCellSelected ? "true" : undefined}
+	                      data-testid={`cell-${String(entry.rowId)}-${column.id}`}
+	                      draggable={false}
+	                      key={column.id}
                       onClick={(event) => {
                         if (onClickCell) {
                           event.stopPropagation();
@@ -1210,21 +1258,61 @@ function KmsfDataTableInner<TData>(
                           onContextMenuCell(createCellPayload(event, entry, column, columnIndex, rawValue));
                         }
                       }}
-                      onDoubleClick={(event) => {
-                        if (onDoubleClickCell) {
-                          event.stopPropagation();
-                        }
+	                      onDoubleClick={(event) => {
+	                        if (onDoubleClickCell) {
+	                          event.stopPropagation();
+	                        }
 
-                        if (cellDisabled) {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          return;
-                        }
+	                        if (cellDisabled) {
+	                          event.preventDefault();
+	                          event.stopPropagation();
+	                          return;
+	                        }
 
-                        onDoubleClickCell?.(createCellPayload(event, entry, column, columnIndex, rawValue));
-                      }}
-                      onKeyDown={(event) => handleCellKeyDown(event, entry, column, columnIndex, address, cellDisabled)}
-                      onMouseDown={(event) => beginCellRangeDrag(event, address, cellDisabled)}
+	                        onDoubleClickCell?.(createCellPayload(event, entry, column, columnIndex, rawValue));
+	                      }}
+	                      onDragEnd={() => {
+	                        const sourceRowId = draggedRowIdRef.current;
+	                        const targetIndex = dragOverDataIndexRef.current;
+	                        draggedRowIdRef.current = null;
+	                        dragOverDataIndexRef.current = null;
+
+	                        if (sourceRowId !== null && targetIndex !== null) {
+	                          commitState((current) => moveKmsfRow(current, sourceRowId, targetIndex));
+	                        }
+	                      }}
+	                      onDragOver={(event) => {
+	                        if (!cellDisabled) {
+	                          dragOverDataIndexRef.current = entry.dataIndex;
+	                          event.preventDefault();
+	                        }
+	                      }}
+	                      onDragStart={(event) => {
+	                        if (cellDisabled) {
+	                          event.preventDefault();
+	                          return;
+	                        }
+
+	                        draggedRowIdRef.current = entry.rowId;
+	                        event.dataTransfer.setData("text/plain", String(entry.rowId));
+	                      }}
+	                      onDrop={(event) => {
+	                        event.preventDefault();
+
+	                        if (cellDisabled) {
+	                          return;
+	                        }
+
+	                        const sourceRowId = event.dataTransfer.getData("text/plain") || draggedRowIdRef.current;
+	                        draggedRowIdRef.current = null;
+	                        dragOverDataIndexRef.current = null;
+
+	                        if (sourceRowId !== null) {
+	                          commitState((current) => moveKmsfRow(current, sourceRowId, entry.dataIndex));
+	                        }
+	                      }}
+	                      onKeyDown={(event) => handleCellKeyDown(event, entry, column, columnIndex, address, cellDisabled)}
+	                      onMouseDown={(event) => beginCellRangeDrag(event, address, cellDisabled)}
                       onMouseOver={() => updateCellRangeDrag(address)}
                       onMouseUp={endCellRangeDrag}
                       onPointerDown={(event) => beginCellRangePointerDrag(event, address, cellDisabled)}
@@ -1236,10 +1324,21 @@ function KmsfDataTableInner<TData>(
                       }}
                       onPointerUp={endCellRangeDrag}
                       style={cellStyle}
-                      tabIndex={cellDisabled ? -1 : 0}
-                    >
-                      {formattedValue}
-                    </td>
+	                      tabIndex={cellDisabled ? -1 : 0}
+	                    >
+	                      {columnIndex === 0 ? (
+	                        <span
+	                          aria-hidden="true"
+	                          className="kmsf-row-drag-handle"
+	                          data-testid={`row-drag-handle-${String(entry.rowId)}`}
+	                          draggable={false}
+	                          onClick={(event) => event.stopPropagation()}
+	                          onMouseDown={(event) => event.stopPropagation()}
+	                          onPointerDown={(event) => beginRowHandlePointerDrag(event, entry, rowRuntimeProps.disabled)}
+	                        />
+	                      ) : null}
+	                      {formattedValue}
+	                    </td>
                   );
                 })}
               </tr>

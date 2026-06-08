@@ -44,7 +44,7 @@ export const featureRegistry: FeatureDefinition[] = [
     Component: RowFeature,
     id: "row",
     label: "행",
-    summary: "행 스타일, 클릭, 더블클릭, 드래그 이동, 행 클립보드 예제입니다.",
+    summary: "행 스타일, 클릭, 더블클릭, drag handle 이동, 행 클립보드 예제입니다.",
   },
   {
     Component: ContextMenuFeature,

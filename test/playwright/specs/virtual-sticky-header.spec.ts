@@ -22,6 +22,8 @@ test("virtualized header stays sticky while scrolling one million rows", async (
   await page.getByRole("button", { exact: true, name: "본문" }).click();
   await page.getByRole("button", { name: "100만 행 로드" }).click();
   await expect(page.getByTestId("virtual-row-count")).toContainText("1000000");
+  await expect(page.getByTestId("body-proof-virtualization")).toContainText("virtualized:true");
+  await expect(page.getByTestId("body-proof-virtualization")).toContainText("Lazy-load:후속");
 
   const viewport = page.getByTestId("data-table-viewport");
   const header = page.getByTestId("header-name");

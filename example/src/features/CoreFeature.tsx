@@ -35,6 +35,11 @@ export function CoreFeature() {
 
   return (
     <section className="feature-panel">
+      <section className="feature-doc" data-testid="feature-doc-core">
+        <h2>핵심 기능 예제 설명</h2>
+        <p>core helper 함수로 selection, cell range, fill, layout serialization을 React 밖에서도 사용할 수 있습니다.</p>
+        <p>KmsfDataTable 컴포넌트와 동일한 상태 모델을 사용해 테스트 가능한 순수 로직을 구성합니다.</p>
+      </section>
       <div className="feature-controls">
         <Button onClick={() => setCoreState((state) => selectRow(state, "a"))} variant="secondary">
           Alpha 선택

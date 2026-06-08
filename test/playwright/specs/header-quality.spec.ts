@@ -20,6 +20,7 @@ test("header boundary resize is isolated from long-press column move and animate
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
   await page.getByRole("button", { exact: true, name: "헤더" }).click();
+  await expect(page.getByTestId("header-proof-layout")).toContainText("getColumnLayout");
 
   await expect(page.getByTestId("header-role")).toHaveAttribute("data-sortable", "false");
   await expect(page.getByTestId("header-role").locator(".kmsf-data-table__header-content")).toHaveCSS(
@@ -30,6 +31,7 @@ test("header boundary resize is isolated from long-press column move and animate
 
   const firstHeaderBefore = await page.locator("thead th").first().textContent();
   const boundary = page.getByTestId("resize-age");
+  await boundary.scrollIntoViewIfNeeded();
   const boundaryBox = await boundary.boundingBox();
   expect(boundaryBox).not.toBeNull();
 
@@ -43,6 +45,7 @@ test("header boundary resize is isolated from long-press column move and animate
   await expect(page.getByTestId("layout-width-age")).toContainText("age:");
 
   const ageHeader = page.getByTestId("header-age");
+  await ageHeader.scrollIntoViewIfNeeded();
   await expect(ageHeader).toHaveCSS("cursor", "grab");
 
   const indicator = page.getByTestId("sort-indicator-age");
@@ -51,12 +54,21 @@ test("header boundary resize is isolated from long-press column move and animate
   await ageHeader.click();
   await expect(indicator).toHaveAttribute("data-sort-state", "asc");
   await expect(indicator).toHaveCSS("opacity", "1");
+  await expect(page.getByTestId("header-proof-sort")).toContainText("age:asc");
 
   await ageHeader.click();
   await expect(indicator).toHaveAttribute("data-sort-state", "desc");
 
   await ageHeader.click();
   await expect(indicator).toHaveAttribute("data-sort-state", "none");
+
+  await ageHeader.focus();
+  await page.keyboard.press("Enter");
+  await expect(indicator).toHaveAttribute("data-sort-state", "asc");
+  await expect(ageHeader).toHaveAttribute("aria-sort", "ascending");
+  await page.keyboard.press("Space");
+  await expect(indicator).toHaveAttribute("data-sort-state", "desc");
+  await expect(ageHeader).toHaveAttribute("aria-sort", "descending");
 
   const ageBox = await ageHeader.boundingBox();
   const nameBox = await page.getByTestId("header-name").boundingBox();
@@ -95,6 +107,7 @@ test("column move shows a ghost and insertion marker while dragging", async ({ p
 
   const ageHeader = page.getByTestId("header-age");
   const nameHeader = page.getByTestId("header-name");
+  await ageHeader.scrollIntoViewIfNeeded();
   const ageBox = await ageHeader.boundingBox();
   const nameBox = await nameHeader.boundingBox();
   expect(ageBox).not.toBeNull();
@@ -124,6 +137,7 @@ test("resize handle is hidden until boundary hover and first resize starts from 
 
   const ageHeader = page.getByTestId("header-age");
   const handle = page.getByTestId("resize-age");
+  await handle.scrollIntoViewIfNeeded();
   const beforeHeaderBox = await ageHeader.boundingBox();
   const handleBox = await handle.boundingBox();
   expect(beforeHeaderBox).not.toBeNull();

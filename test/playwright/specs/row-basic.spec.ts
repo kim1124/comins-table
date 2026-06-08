@@ -19,9 +19,10 @@ function collectBrowserDiagnostics(page: Page) {
 test("playground verifies row drag reorder without row order persistence", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "행" }).click();
+  await page.getByRole("button", { exact: true, name: "행" }).click();
 
-  await page.getByTestId("row-c").dragTo(page.getByTestId("row-a"));
+  await page.getByTestId("row-drag-handle-c").scrollIntoViewIfNeeded();
+  await page.getByTestId("row-drag-handle-c").dragTo(page.getByTestId("row-a"));
   await expect(page.locator("tbody tr").first().locator("td").first()).toHaveText("Gamma");
   await expect(page.getByTestId("layout-order")).toHaveText("name,age,role");
 
