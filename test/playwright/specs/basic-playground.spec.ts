@@ -20,6 +20,8 @@ test("playground uses charts-style docs shell and remounts content when switchin
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
 
+  await expect(page.locator("body")).toHaveCSS("font-size", "12px");
+  await expect(page.locator("body")).toHaveCSS("font-family", /Spoqa Han Sans Neo/);
   const aside = page.getByRole("complementary", { name: "데이터 테이블 기능 메뉴" });
   const content = page.getByRole("main", { name: "데이터 테이블 예제" });
   await expect(aside).toBeVisible();

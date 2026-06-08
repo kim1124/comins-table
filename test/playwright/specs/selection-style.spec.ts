@@ -54,7 +54,7 @@ test("row selection is mint styled, multi-selectable, sort-stable, and grid bord
   await expect(header).toHaveCSS("border-right-width", "1px");
   await expect(header).toHaveCSS("border-left-width", "0px");
   await expect(header).toHaveCSS("background-color", "rgb(16, 185, 129)");
-  await expect(page.getByTestId("data-table-viewport")).toHaveCSS("font-size", "14px");
+  await expect(page.getByTestId("data-table-viewport")).toHaveCSS("font-size", "12px");
 
   await page.getByTestId("cell-a-name").click();
   await expect(page.getByTestId("row-a")).toHaveAttribute("data-selected-row", "true");
