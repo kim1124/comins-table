@@ -10,17 +10,21 @@ export function createBaseColumns(): Array<KmsfDataTableColumn<PersonRow>> {
   return [
     { field: "name", label: "이름", sort: true },
     {
+      cell: {
+        format: ({ value }) => `${String(value)} years`,
+        props: { style: { textAlign: "right" } },
+      },
       field: "age",
-      format: ({ value }) => `${String(value)} years`,
       label: "나이",
-      props: { style: { textAlign: "right" } },
       sort: true,
     },
     {
+      cell: {
+        format: ({ value }) => <strong>{String(value)}</strong>,
+        props: { className: ({ value }) => (value === "Owner" ? "cell-owner" : undefined) },
+      },
       field: "role",
-      format: ({ value }) => <strong>{String(value)}</strong>,
       label: "역할",
-      props: { className: ({ value }) => (value === "Owner" ? "cell-owner" : undefined) },
     },
   ];
 }
@@ -29,12 +33,14 @@ export function createGuardedColumns(): Array<KmsfDataTableColumn<PersonRow>> {
   return [
     ...createBaseColumns(),
     {
+      cell: {
+        props: {
+          copyable: false,
+          pasteable: false,
+        },
+      },
       field: "locked",
       label: "잠금",
-      props: {
-        copyable: false,
-        pasteable: false,
-      },
     },
   ];
 }

@@ -1,6 +1,6 @@
 # Styling
 
-Table 전체 스타일은 `className`, `style`, `theme`로 제어한다. Row 스타일은 `rowProps`, column/cell 스타일은 `columns[].props`로 둔다.
+Table 전체 스타일은 `className`, `style`, `theme`로 제어한다. Row 스타일은 `rowProps`, column/cell 스타일은 `columns[].cell.props`로 둔다.
 
 ```tsx
 <KmsfDataTable
@@ -10,9 +10,11 @@ Table 전체 스타일은 `className`, `style`, `theme`로 제어한다. Row 스
       field: "name",
       header: { props: { className: "header-cell", title: "Name" } },
       label: "Name",
-      props: {
-        className: ({ row }) => (row.role === "Owner" ? "cell-owner" : undefined),
-        style: { textAlign: "left" },
+      cell: {
+        props: {
+          className: ({ row }) => (row.data.role === "Owner" ? "cell-owner" : undefined),
+          style: { textAlign: "left" },
+        },
       },
     },
   ]}

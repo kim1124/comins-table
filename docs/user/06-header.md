@@ -29,6 +29,66 @@ tableRef.current?.setSortState({ columnId: "age", direction: "desc" });
 tableRef.current?.clearSort();
 ```
 
+Header custom UI는 `header.renderer` 또는 `header.components`로 렌더링한다. `renderer`가 있으면 label과 components를 모두 대체한다.
+
+```tsx
+{
+  field: "name",
+  label: "Name",
+  header: {
+    renderer: ({ column }) => <span>{column.label}</span>,
+  },
+}
+```
+
+```tsx
+{
+  field: "role",
+  label: "Role",
+  header: {
+    components: [
+      {
+        type: "select",
+        direction: "right",
+        options: [
+          { label: "Owner", value: "Owner" },
+          { label: "Viewer", value: "Viewer" },
+        ],
+        props: { value: "Owner" },
+        onValueChange: ({ value }) => setHeaderFilter(value),
+      },
+    ],
+  },
+}
+```
+
+Header components는 배열 순서대로 렌더링되며 `direction`으로 label 왼쪽 또는 오른쪽에 붙인다. 기본값은 `direction: "left"`, `align: "center"`다. Built-in component 이벤트는 Header sort, resize, move 이벤트로 전파되지 않는다. `input`은 Cell input과 동일하게 `Enter` 또는 `Blur` 시점에만 변경 값을 commit한다.
+
+Phase 2 Header components는 `button`, `input`, `checkbox`, `radio`, `select`, `toggle`, `progress`, `menu`를 지원한다. `menu`는 Header 전용이며 `document.body` portal과 fixed position으로 버튼 바로 아래에 popover를 표시한다. `popup`은 built-in으로 제공하지 않는다.
+
+```tsx
+{
+  field: "status",
+  label: "상태",
+  header: {
+    components: [
+      {
+        type: "menu",
+        direction: "right",
+        items: [
+          { label: "상태 확인", value: "status-check" },
+          { type: "divider" },
+          { label: "도움말", type: "label" },
+        ],
+        onBeforeChange: ({ open }) => open,
+        onOpenChange: ({ open }) => setMenuOpen(open),
+        onSelect: ({ value }) => handleHeaderMenu(value),
+      },
+    ],
+  },
+}
+```
+
 동작 기준:
 
 - 컬럼과 컬럼 경계는 resize 영역이며 cursor는 `col-resize`다.
@@ -42,6 +102,8 @@ tableRef.current?.clearSort();
 - Sort 가능한 Header는 focus 가능하며 `Enter` 또는 `Space`로 sort cycle을 실행한다.
 - Sort 가능한 Header는 `aria-sort="none" | "ascending" | "descending"` 상태를 노출한다.
 - Sort icon은 `lucide-react` 기반이며 asc/desc/none 전환 시 CSS rotate/opacity animation으로 표시한다.
+- Header menu 버튼 클릭은 sort, resize, column move를 발생시키지 않는다.
+- Header menu는 바깥 클릭, `Escape`, item 선택 시 닫히며 `onBeforeChange`가 `false`를 반환하면 open/close를 취소한다.
 - Multi-column sort는 후속 설계 항목이다.
 
 Playground 검증 기준:

@@ -30,11 +30,14 @@ import {
   setKmsfColumnWidth,
   setKmsfSortState,
 } from "./core";
+import { renderKmsfBuiltInComponent } from "./component-renderer";
 
 export * from "./core";
 
 import type {
   KmsfCellAddress,
+  KmsfCellComponent,
+  KmsfCellComponentPayload,
   KmsfColumnLayout,
   KmsfCopiedCell,
   KmsfCopiedCellRange,
@@ -44,6 +47,8 @@ import type {
   KmsfDataTableState,
   KmsfDataTableTheme,
   KmsfEventColumn,
+  KmsfHeaderComponent,
+  KmsfHeaderComponentPayload,
   KmsfPaginationState,
   KmsfRowId,
   KmsfSelectionState,
@@ -57,6 +62,7 @@ type KmsfColumnPointerInteraction = {
   cancelSort: boolean;
   columnId: string;
   movedBeforeLongPress: boolean;
+  startedAt: number;
   startX: number;
   startY: number;
   timer: number;
@@ -232,6 +238,114 @@ function createCellPayload<TData, TEvent>(
     row: createEventRow(entry),
     value,
   };
+}
+
+function createComponentColumnPayload<TData>(
+  column: KmsfDataTableRuntimeColumn<TData>,
+  columnIndex: number,
+): KmsfCellComponentPayload<TData>["column"] {
+  return {
+    definition: column,
+    field: column.field,
+    id: column.id,
+    index: columnIndex,
+    label: column.label,
+  };
+}
+
+function createCellComponentPayload<TData>(
+  entry: VisibleRowEntry<TData>,
+  rowDisabled: boolean,
+  rowSelected: boolean,
+  selectedRowCount: number,
+  column: KmsfDataTableRuntimeColumn<TData>,
+  columnIndex: number,
+  value: unknown,
+): KmsfCellComponentPayload<TData> {
+  return {
+    column: createComponentColumnPayload(column, columnIndex),
+    row: {
+      data: entry.row,
+      dataIndex: entry.dataIndex,
+      disabled: rowDisabled,
+      id: entry.rowId,
+      index: entry.visibleIndex,
+      selected: rowSelected,
+    },
+    selection: {
+      selectedRowCount,
+    },
+    value,
+  };
+}
+
+function createHeaderComponentPayload<TData>(
+  state: KmsfDataTableState<TData>,
+  column: KmsfDataTableRuntimeColumn<TData>,
+  columnIndex: number,
+): KmsfHeaderComponentPayload<TData> {
+  const columnState = state.columnState[column.id];
+
+  return {
+    column: createComponentColumnPayload(column, columnIndex),
+    layout: {
+      hidden: columnState?.hidden === true || column.hidden === true,
+      width: columnState?.width ?? column.width,
+    },
+    sort: {
+      direction: state.sort?.columnId === column.id ? state.sort.direction : null,
+      enabled: Boolean(column.sort),
+    },
+  };
+}
+
+type KmsfRenderableComponent<TData> = KmsfCellComponent<TData> | KmsfHeaderComponent<TData>;
+type KmsfRenderablePayload<TData> = KmsfCellComponentPayload<TData> | KmsfHeaderComponentPayload<TData>;
+
+function renderKmsfComponentSlots<TData>(
+  components: ReadonlyArray<KmsfRenderableComponent<TData>> | undefined,
+  payload: KmsfRenderablePayload<TData>,
+  direction: "left" | "right",
+) {
+  return (components ?? [])
+    .map((component, index) => ({ component, index }))
+    .filter(({ component }) => (component.direction ?? "left") === direction)
+    .map(({ component, index }) => (
+      <span
+        className="kmsf-data-table__component-slot"
+        data-kmsf-component-align={component.align ?? "center"}
+        data-kmsf-component-direction={direction}
+        data-kmsf-component-id={component.id ?? `${component.type}-${index}`}
+        key={component.id ?? `${component.type}-${index}`}
+      >
+        {renderKmsfBuiltInComponent(component as never, payload as never)}
+      </span>
+    ));
+}
+
+function renderKmsfContentWithComponents<TData>(
+  content: React.ReactNode,
+  components: ReadonlyArray<KmsfRenderableComponent<TData>> | undefined,
+  payload: KmsfRenderablePayload<TData>,
+  options: { showContent?: boolean } = {},
+) {
+  if (!components?.length) {
+    return content;
+  }
+
+  const showContent = options.showContent ?? true;
+
+  return (
+    <span className="kmsf-data-table__component-layout">
+      <span className="kmsf-data-table__component-group" data-kmsf-component-direction="left">
+        {renderKmsfComponentSlots(components, payload, "left")}
+      </span>
+      {showContent ? <span className="kmsf-data-table__component-content">{content}</span> : null}
+      <span className="kmsf-data-table__component-group" data-kmsf-component-direction="right">
+        {renderKmsfComponentSlots(components, payload, "right")}
+      </span>
+    </span>
+  );
 }
 
 function getNextSort(current: KmsfSortState | null, columnId: string): KmsfSortState | null {
@@ -660,11 +774,20 @@ function KmsfDataTableInner<TData>(
       return;
     }
 
+    const activateColumnMove = (current: KmsfColumnPointerInteraction, x: number, y: number) => {
+      current.active = true;
+      current.cancelSort = true;
+      suppressedSortColumnIdRef.current = column.id;
+      setColumnMovePointer({ x, y });
+      setColumnMoveTargetId(column.id);
+      setMovingColumnId(column.id);
+    };
     const interaction: KmsfColumnPointerInteraction = {
       active: false,
       cancelSort: false,
       columnId: column.id,
       movedBeforeLongPress: false,
+      startedAt: performance.now(),
       startX: event.clientX,
       startY: event.clientY,
       timer: window.setTimeout(() => {
@@ -674,12 +797,7 @@ function KmsfDataTableInner<TData>(
           return;
         }
 
-        current.active = true;
-        current.cancelSort = true;
-        suppressedSortColumnIdRef.current = column.id;
-        setColumnMovePointer({ x: current.startX, y: current.startY });
-        setColumnMoveTargetId(column.id);
-        setMovingColumnId(column.id);
+        activateColumnMove(current, current.startX, current.startY);
       }, 1000),
     };
 
@@ -691,6 +809,10 @@ function KmsfDataTableInner<TData>(
       }
 
       const distance = Math.hypot(moveEvent.clientX - current.startX, moveEvent.clientY - current.startY);
+
+      if (!current.active && performance.now() - current.startedAt >= 1000 && !current.movedBeforeLongPress) {
+        activateColumnMove(current, moveEvent.clientX, moveEvent.clientY);
+      }
 
       if (!current.active && distance > 4) {
         current.movedBeforeLongPress = true;
@@ -1033,6 +1155,10 @@ function KmsfDataTableInner<TData>(
                 ]
                   .filter(Boolean)
                   .join(" ");
+                const headerPayload = createHeaderComponentPayload(state, column, index);
+                const headerBody = column.header?.renderer
+                  ? column.header.renderer(headerPayload)
+                  : renderKmsfContentWithComponents(column.label, column.header?.components, headerPayload);
 
                 return (
                   <th
@@ -1074,7 +1200,7 @@ function KmsfDataTableInner<TData>(
 	                  >
                     <span aria-hidden="true" className="kmsf-column-drop-marker" />
                     <span className="kmsf-data-table__header-content" data-kmsf-header-body="true">
-                      <span>{column.label}</span>
+                      <span>{headerBody}</span>
                       <span
                         aria-hidden="true"
                         className="kmsf-sort-indicator"
@@ -1214,7 +1340,6 @@ function KmsfDataTableInner<TData>(
               >
                 {visibleColumns.map((column, columnIndex) => {
                   const rawValue = getKmsfCellValue(state, entry.row, column.id);
-                  const formattedValue = formatKmsfCellValue(state, entry.row, entry.rowId, column);
                   const address = { columnId: column.id, rowId: entry.rowId };
                   const cellDisabled =
                     rowRuntimeProps.disabled || isKmsfCellDisabled(state, entry.row, entry.rowId, column);
@@ -1225,6 +1350,25 @@ function KmsfDataTableInner<TData>(
                     cellSelection &&
                     state.selection.cell?.rowId === entry.rowId &&
                     state.selection.cell.columnId === column.id;
+                  const cellPayload = createCellComponentPayload(
+                    entry,
+                    rowRuntimeProps.disabled,
+                    isRowSelected,
+                    state.selection.rowIds.length,
+                    column,
+                    columnIndex,
+                    rawValue,
+                  );
+                  const cellContent = column.cell?.renderer
+                    ? column.cell.renderer(cellPayload)
+                    : renderKmsfContentWithComponents(
+                        formatKmsfCellValue(state, entry.row, entry.rowId, column),
+                        column.cell?.components,
+                        cellPayload,
+                        { showContent: false },
+                      );
+                  const tooltip =
+                    typeof column.cell?.tooltip === "function" ? column.cell.tooltip(cellPayload) : column.cell?.tooltip;
 
                   return (
                     <td
@@ -1240,11 +1384,11 @@ function KmsfDataTableInner<TData>(
                       data-disabled={cellDisabled ? "true" : undefined}
                       data-kmsf-cell-column-id={column.id}
                       data-kmsf-data-index={entry.dataIndex}
-	                      data-range-selected={isCellInRange ? "true" : undefined}
-	                      data-selected={isCellSelected ? "true" : undefined}
-	                      data-testid={`cell-${String(entry.rowId)}-${column.id}`}
-	                      draggable={false}
-	                      key={column.id}
+                      data-range-selected={isCellInRange ? "true" : undefined}
+                      data-selected={isCellSelected ? "true" : undefined}
+                      data-testid={`cell-${String(entry.rowId)}-${column.id}`}
+                      draggable={false}
+                      key={column.id}
                       onClick={(event) => {
                         if (onClickCell) {
                           event.stopPropagation();
@@ -1324,21 +1468,21 @@ function KmsfDataTableInner<TData>(
                           onContextMenuCell(createCellPayload(event, entry, column, columnIndex, rawValue));
                         }
                       }}
-	                      onDoubleClick={(event) => {
-	                        if (onDoubleClickCell) {
-	                          event.stopPropagation();
-	                        }
+                      onDoubleClick={(event) => {
+                        if (onDoubleClickCell) {
+                          event.stopPropagation();
+                        }
 
-	                        if (cellDisabled) {
-	                          event.preventDefault();
-	                          event.stopPropagation();
-	                          return;
-	                        }
+                        if (cellDisabled) {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          return;
+                        }
 
-	                        onDoubleClickCell?.(createCellPayload(event, entry, column, columnIndex, rawValue));
-	                      }}
-	                      onKeyDown={(event) => handleCellKeyDown(event, entry, column, columnIndex, address, cellDisabled)}
-	                      onMouseDown={(event) => beginCellRangeDrag(event, address, cellDisabled)}
+                        onDoubleClickCell?.(createCellPayload(event, entry, column, columnIndex, rawValue));
+                      }}
+                      onKeyDown={(event) => handleCellKeyDown(event, entry, column, columnIndex, address, cellDisabled)}
+                      onMouseDown={(event) => beginCellRangeDrag(event, address, cellDisabled)}
                       onMouseOver={() => updateCellRangeDrag(address)}
                       onMouseUp={endCellRangeDrag}
                       onPointerDown={(event) => beginCellRangePointerDrag(event, address, cellDisabled)}
@@ -1350,28 +1494,29 @@ function KmsfDataTableInner<TData>(
                       }}
                       onPointerUp={endCellRangeDrag}
                       style={cellStyle}
-	                      tabIndex={cellDisabled ? -1 : 0}
-	                    >
-	                      {columnIndex === 0 && rowRuntimeProps.draggable ? (
-	                        <span
-	                          aria-hidden="true"
-	                          className="kmsf-row-drag-handle"
-	                          data-testid={`row-drag-handle-${String(entry.rowId)}`}
-	                          draggable={false}
-	                          onClick={(event) => event.stopPropagation()}
-	                          onMouseDown={(event) => event.stopPropagation()}
-	                          onPointerDown={(event) =>
-	                            beginRowHandlePointerDrag(
-	                              event,
-	                              entry,
-	                              rowRuntimeProps.disabled,
-	                              rowRuntimeProps.draggable,
-	                            )
-	                          }
-	                        />
-	                      ) : null}
-	                      {formattedValue}
-	                    </td>
+                      title={typeof tooltip === "string" ? tooltip : undefined}
+                      tabIndex={cellDisabled ? -1 : 0}
+                    >
+                      {columnIndex === 0 && rowRuntimeProps.draggable ? (
+                        <span
+                          aria-hidden="true"
+                          className="kmsf-row-drag-handle"
+                          data-testid={`row-drag-handle-${String(entry.rowId)}`}
+                          draggable={false}
+                          onClick={(event) => event.stopPropagation()}
+                          onMouseDown={(event) => event.stopPropagation()}
+                          onPointerDown={(event) =>
+                            beginRowHandlePointerDrag(
+                              event,
+                              entry,
+                              rowRuntimeProps.disabled,
+                              rowRuntimeProps.draggable,
+                            )
+                          }
+                        />
+                      ) : null}
+                      {cellContent}
+                    </td>
                   );
                 })}
               </tr>

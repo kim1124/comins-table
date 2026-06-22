@@ -34,7 +34,7 @@ test("playground verifies header resize, column position change, and layout rest
   await page.mouse.move(nameBox!.x + nameBox!.width / 2, nameBox!.y + nameBox!.height / 2);
   await page.mouse.up();
   await expect(page.locator(".kmsf-data-table__header-table thead th").first()).toContainText("나이");
-  await expect(page.getByTestId("layout-order")).toHaveText("age,name,role");
+  await expect(page.getByTestId("layout-order")).toHaveCount(0);
 
   const handle = page.getByTestId("resize-age");
   await handle.scrollIntoViewIfNeeded();
@@ -44,9 +44,11 @@ test("playground verifies header resize, column position change, and layout rest
   await page.mouse.down();
   await page.mouse.move(box!.x + box!.width / 2 + 40, box!.y + box!.height / 2);
   await page.mouse.up();
-  await expect(page.getByTestId("layout-width-age")).toContainText("age:");
+  const resizedAgeBox = await ageHeader.boundingBox();
+  expect(resizedAgeBox?.width ?? 0).toBeGreaterThan(ageBox!.width);
+  await expect(page.getByTestId("layout-width-age")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "레이아웃 복원" }).click();
+  await page.getByRole("button", { exact: true, name: "복원" }).click();
   await expect(page.locator(".kmsf-data-table__header-table thead th").first()).toContainText("이름");
 
   expect(diagnostics).toEqual([]);

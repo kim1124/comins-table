@@ -31,11 +31,13 @@
     "./selection": {
       "types": "./dist/selection.d.ts",
       "import": "./dist/selection.js"
-    }
+    },
+    "./styles.css": "./styles.css"
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "styles.css"
   ],
   "peerDependencies": {
     "react": ">=18.0.0 <20.0.0",

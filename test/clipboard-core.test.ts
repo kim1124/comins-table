@@ -29,7 +29,7 @@ const rows: PersonRow[] = [
 const columns = [
   { field: "name", label: "Name" },
   { field: "age", label: "Age" },
-  { field: "locked", label: "Locked", props: { copyable: false, pasteable: false } },
+  { cell: { props: { copyable: false, pasteable: false } }, field: "locked", label: "Locked" },
 ] as const;
 
 function createState() {

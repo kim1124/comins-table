@@ -409,8 +409,10 @@ describe("@kmsf/data-table keyboard interaction", () => {
         <KmsfDataTable
           columns={[
             {
+              cell: {
+                format: ({ value }) => `${String(value)} years`,
+              },
               field: "age",
-              format: ({ value }) => `${String(value)} years`,
               id: "age",
               label: "Age",
             },
@@ -473,10 +475,12 @@ describe("@kmsf/data-table keyboard interaction", () => {
             field: "name",
             header: { props: { className: "name-header", title: "Name title" } },
             label: "Name",
-            props: {
+            cell: {
+              props: {
               className: ({ row }) => (row.id === "a" ? "blocked-cell" : "open-cell"),
               disabled: ({ row }) => row.id === "a",
               style: ({ row }) => (row.id === "a" ? { color: "rgb(0, 0, 255)" } : undefined),
+              },
             },
           },
         ]}

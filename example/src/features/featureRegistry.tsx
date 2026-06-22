@@ -2,6 +2,7 @@ import { BasicCrudFeature } from "./BasicCrudFeature";
 import { BasicFeature } from "./BasicFeature";
 import { BodyFeature } from "./BodyFeature";
 import { CellFeature } from "./CellFeature";
+import { ComponentFeature } from "./ComponentFeature";
 import { ContextMenuFeature } from "./ContextMenuFeature";
 import { HeaderFeature } from "./HeaderFeature";
 import { RowFeature } from "./RowFeature";
@@ -55,6 +56,8 @@ export const featureRegistry: FeatureDefinition[] = [
     label: "Header 예제",
     options: [
       { description: "Header label, sort, format 기준 컬럼 정의", example: "{ label, field, sort }", name: "columns" },
+      { description: "Header custom renderer", example: "header.renderer={({ column }) => ...}", name: "header.renderer" },
+      { description: "Header built-in components", example: "header.components=[{ type:'button' }]", name: "header.components" },
       { description: "Header 표시 여부", example: "showHeader={showHeader}", name: "showHeader" },
       { description: "컬럼 위치와 너비 저장", example: "getColumnLayout()", name: "getColumnLayout" },
       { description: "컬럼 위치와 너비 복원", example: "setColumnLayout(layout)", name: "setColumnLayout" },
@@ -81,11 +84,29 @@ export const featureRegistry: FeatureDefinition[] = [
     label: "Td Cell 예제",
     options: [
       { description: "Cell 선택 스타일과 이벤트 제어", example: "cellSelection={enabled}", name: "cellSelection" },
+      { description: "Cell custom renderer", example: "cell.renderer={({ row, value }) => ...}", name: "cell.renderer" },
+      { description: "Cell built-in components", example: "cell.components=[{ type:'checkbox' }]", name: "cell.components" },
       { description: "Cell click payload 확인", example: "onClickCell={({ row, column }) => ...}", name: "onClickCell" },
       { description: "Cell context menu callback", example: "onContextMenuCell={...}", name: "onContextMenuCell" },
-      { description: "컬럼 단위 className, style, copy/paste 옵션", example: "columns[].props", name: "columns.props" },
+      { description: "컬럼 단위 className, style, copy/paste 옵션", example: "columns[].cell.props", name: "cell.props" },
     ],
     summary: "Cell 포맷, 스타일, 이벤트, 컨텍스트 메뉴 예제입니다.",
+  },
+  {
+    Component: ComponentFeature,
+    description: "Phase 1 컴포넌트 renderer와 built-in 컴포넌트를 Header와 Cell에서 확인하는 예제 페이지입니다.",
+    id: "component",
+    label: "컴포넌트 예제",
+    options: [
+      { description: "Header 내부 lightweight 컴포넌트 배열", example: "header.components=[{ type:'button' }]", name: "header.components" },
+      { description: "Cell 내부 lightweight 컴포넌트 배열", example: "cell.components=[{ type:'checkbox' }]", name: "cell.components" },
+      { description: "Header 전용 popover menu", example: "header.components=[{ type:'menu', items }]", name: "header menu" },
+      { description: "Cell 내부 다중 item virtual list", example: "cell.components=[{ type:'virtual-list', items }]", name: "cell virtual-list" },
+      { description: "사용자 정의 React renderer", example: "header.renderer / cell.renderer", name: "renderer" },
+      { description: "외부 data 상태를 즉시 갱신하는 controlled 패턴", example: "onValueChange -> setRows(next)", name: "controlled data" },
+      { description: "컴포넌트별 독립 테이블 높이", example: "height: 300px", name: "example height" },
+    ],
+    summary: "Button, Input, Checkbox, Radio, Select, Toggle, Progress, Header Menu, Cell Virtual List, custom renderer 예제입니다.",
   },
   {
     Component: RowFeature,

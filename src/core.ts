@@ -28,30 +28,273 @@ export type KmsfColumnValueResolver<TData, TValue> =
   | TValue
   | ((params: KmsfCellFormatParams<TData, TValue>) => TValue);
 
+export type KmsfComponentPrimitiveValue = string | number | boolean;
+export type KmsfComponentAlign = "center" | "end" | "start";
+export type KmsfComponentDirection = "left" | "right";
+
+export type KmsfComponentPlacement = {
+  align?: KmsfComponentAlign;
+  direction?: KmsfComponentDirection;
+  id?: string;
+};
+
+export type KmsfDataTableComponentOption = {
+  disabled?: boolean;
+  label: React.ReactNode;
+  value: KmsfComponentPrimitiveValue;
+};
+
+export type KmsfVirtualListItem<TItem = unknown> = {
+  data?: TItem;
+  disabled?: boolean;
+  label: React.ReactNode;
+  searchText?: string;
+  value: KmsfComponentPrimitiveValue;
+};
+
+export type KmsfDataTableMenuItem =
+  | {
+      disabled?: boolean;
+      label: React.ReactNode;
+      type?: "item";
+      value: KmsfComponentPrimitiveValue;
+    }
+  | {
+      label: React.ReactNode;
+      type: "label";
+    }
+  | {
+      type: "divider";
+    };
+
+export type KmsfComponentColumnPayload<TData, TValue = unknown> = {
+  definition: KmsfDataTableRuntimeColumn<TData, TValue>;
+  field: string;
+  id: string;
+  index: number;
+  label: React.ReactNode;
+};
+
+export type KmsfComponentRowPayload<TData> = {
+  data: TData;
+  dataIndex: number;
+  disabled: boolean;
+  id: KmsfRowId;
+  index: number;
+  selected: boolean;
+};
+
+export type KmsfCellComponentPayload<TData, TValue = unknown> = {
+  column: KmsfComponentColumnPayload<TData, TValue>;
+  row: KmsfComponentRowPayload<TData>;
+  selection: {
+    selectedRowCount: number;
+  };
+  value: TValue;
+};
+
+export type KmsfHeaderComponentPayload<TData, TValue = unknown> = {
+  column: KmsfComponentColumnPayload<TData, TValue>;
+  layout: {
+    hidden: boolean;
+    width?: number;
+  };
+  sort: {
+    direction: KmsfSortDirection | null;
+    enabled: boolean;
+  };
+};
+
 export type KmsfClipboardGuard<TData, TValue = unknown> =
   | boolean
-  | ((params: KmsfCellFormatParams<TData, TValue>) => boolean);
+  | ((params: KmsfCellComponentPayload<TData, TValue>) => boolean);
 
 export type KmsfColumnProps<TData, TValue = unknown> = {
-  className?: string | ((params: KmsfCellFormatParams<TData, TValue>) => string | undefined);
+  className?: string | ((params: KmsfCellComponentPayload<TData, TValue>) => string | undefined);
   copyable?: KmsfClipboardGuard<TData, TValue>;
   disabled?: KmsfClipboardGuard<TData, TValue>;
   pasteable?: KmsfClipboardGuard<TData, TValue>;
-  style?: React.CSSProperties | ((params: KmsfCellFormatParams<TData, TValue>) => React.CSSProperties | undefined);
+  style?: React.CSSProperties | ((params: KmsfCellComponentPayload<TData, TValue>) => React.CSSProperties | undefined);
+};
+
+export type KmsfDataTableComponentProps<TPayload, TProps> = TProps | ((payload: TPayload) => TProps);
+
+export type KmsfDataTableOptions<TPayload> =
+  | KmsfDataTableComponentOption[]
+  | ((payload: TPayload) => KmsfDataTableComponentOption[]);
+
+export type KmsfDataTableMenuItems<TPayload> =
+  | KmsfDataTableMenuItem[]
+  | ((payload: TPayload) => KmsfDataTableMenuItem[]);
+
+export type KmsfVirtualListItems<TPayload> =
+  | Array<KmsfVirtualListItem>
+  | ((payload: TPayload) => Array<KmsfVirtualListItem>);
+
+export type KmsfButtonComponentConfig<TPayload> = {
+  onClick?: (payload: TPayload & { event: React.MouseEvent<HTMLButtonElement> }) => void;
+  props?: KmsfDataTableComponentProps<TPayload, React.ButtonHTMLAttributes<HTMLButtonElement>>;
+  type: "button";
+};
+
+export type KmsfInputCommitEvent =
+  | React.ChangeEvent<HTMLInputElement>
+  | React.FocusEvent<HTMLInputElement>
+  | React.KeyboardEvent<HTMLInputElement>;
+
+export type KmsfInputComponentConfig<TPayload> = {
+  onChange?: (payload: TPayload & { event: KmsfInputCommitEvent; value: string }) => void;
+  onValueChange?: (payload: TPayload & { value: string }) => void;
+  props?: KmsfDataTableComponentProps<TPayload, React.InputHTMLAttributes<HTMLInputElement>>;
+  type: "input";
+};
+
+export type KmsfCheckboxComponentConfig<TPayload> = {
+  onCheckedChange?: (payload: TPayload & { checked: boolean }) => void;
+  props?: KmsfDataTableComponentProps<TPayload, React.InputHTMLAttributes<HTMLInputElement>>;
+  type: "checkbox";
+};
+
+export type KmsfRadioComponentConfig<TPayload> = {
+  onValueChange?: (payload: TPayload & { value: string }) => void;
+  options: KmsfDataTableOptions<TPayload>;
+  props?: KmsfDataTableComponentProps<
+    TPayload,
+    React.HTMLAttributes<HTMLDivElement> & { value?: KmsfComponentPrimitiveValue }
+  >;
+  type: "radio";
+};
+
+export type KmsfSelectComponentConfig<TPayload> = {
+  onValueChange?: (payload: TPayload & { value: string }) => void;
+  options: KmsfDataTableOptions<TPayload>;
+  props?: KmsfDataTableComponentProps<TPayload, React.SelectHTMLAttributes<HTMLSelectElement>>;
+  type: "select";
+};
+
+export type KmsfToggleComponentConfig<TPayload> = {
+  onCheckedChange?: (payload: TPayload & { checked: boolean }) => void;
+  props?: KmsfDataTableComponentProps<
+    TPayload,
+    React.ButtonHTMLAttributes<HTMLButtonElement> & { checked?: boolean }
+  >;
+  type: "toggle";
+};
+
+export type KmsfProgressComponentConfig<TPayload> = {
+  props?: KmsfDataTableComponentProps<
+    TPayload,
+    React.HTMLAttributes<HTMLDivElement> & { max?: number; value?: number }
+  >;
+  type: "progress";
+};
+
+export type KmsfMenuComponentConfig<TPayload> = {
+  items: KmsfDataTableMenuItems<TPayload>;
+  onBeforeChange?: (
+    payload: TPayload & { event?: Event | React.SyntheticEvent; open: boolean },
+  ) => boolean | void;
+  onOpenChange?: (payload: TPayload & { event?: Event | React.SyntheticEvent; open: boolean }) => void;
+  onSelect?: (
+    payload: TPayload & {
+      event: React.MouseEvent<HTMLButtonElement>;
+      item: Extract<KmsfDataTableMenuItem, { value: KmsfComponentPrimitiveValue }>;
+      value: KmsfComponentPrimitiveValue;
+    },
+  ) => void;
+  props?: KmsfDataTableComponentProps<TPayload, React.ButtonHTMLAttributes<HTMLButtonElement>>;
+  type: "menu";
+};
+
+export type KmsfVirtualListSearchFilterPayload = {
+  item: KmsfVirtualListItem;
+  itemIndex: number;
+  value: string;
+};
+
+export type KmsfVirtualListComponentConfig<TPayload> = {
+  items: KmsfVirtualListItems<TPayload>;
+  onClickItem?: (
+    payload: TPayload & {
+      event: React.MouseEvent<HTMLButtonElement> | React.KeyboardEvent<HTMLButtonElement>;
+      item: KmsfVirtualListItem;
+      itemIndex: number;
+      value: KmsfComponentPrimitiveValue;
+    },
+  ) => void;
+  onContextMenuItem?: (
+    payload: TPayload & {
+      event: React.MouseEvent<HTMLButtonElement>;
+      item: KmsfVirtualListItem;
+      itemIndex: number;
+      value: KmsfComponentPrimitiveValue;
+    },
+  ) => void;
+  props?: KmsfDataTableComponentProps<
+    TPayload,
+    React.HTMLAttributes<HTMLDivElement> & {
+      height?: number | string;
+      itemHeight?: number;
+      limit?: number;
+      more?: boolean;
+      searchable?: boolean;
+    }
+  >;
+  searchFilter?: (payload: KmsfVirtualListSearchFilterPayload) => boolean;
+  type: "virtual-list";
+};
+
+export type KmsfHeaderComponentConfig<TData, TValue = unknown> =
+  | KmsfButtonComponentConfig<KmsfHeaderComponentPayload<TData, TValue>>
+  | KmsfInputComponentConfig<KmsfHeaderComponentPayload<TData, TValue>>
+  | KmsfCheckboxComponentConfig<KmsfHeaderComponentPayload<TData, TValue>>
+  | KmsfRadioComponentConfig<KmsfHeaderComponentPayload<TData, TValue>>
+  | KmsfSelectComponentConfig<KmsfHeaderComponentPayload<TData, TValue>>
+  | KmsfToggleComponentConfig<KmsfHeaderComponentPayload<TData, TValue>>
+  | KmsfProgressComponentConfig<KmsfHeaderComponentPayload<TData, TValue>>
+  | KmsfMenuComponentConfig<KmsfHeaderComponentPayload<TData, TValue>>;
+
+export type KmsfCellComponentConfig<TData, TValue = unknown> =
+  | KmsfButtonComponentConfig<KmsfCellComponentPayload<TData, TValue>>
+  | KmsfInputComponentConfig<KmsfCellComponentPayload<TData, TValue>>
+  | KmsfCheckboxComponentConfig<KmsfCellComponentPayload<TData, TValue>>
+  | KmsfRadioComponentConfig<KmsfCellComponentPayload<TData, TValue>>
+  | KmsfSelectComponentConfig<KmsfCellComponentPayload<TData, TValue>>
+  | KmsfToggleComponentConfig<KmsfCellComponentPayload<TData, TValue>>
+  | KmsfProgressComponentConfig<KmsfCellComponentPayload<TData, TValue>>
+  | KmsfVirtualListComponentConfig<KmsfCellComponentPayload<TData, TValue>>;
+
+export type KmsfHeaderComponent<TData, TValue = unknown> = KmsfComponentPlacement &
+  KmsfHeaderComponentConfig<TData, TValue>;
+
+export type KmsfCellComponent<TData, TValue = unknown> = KmsfComponentPlacement &
+  KmsfCellComponentConfig<TData, TValue>;
+
+export type KmsfDataTableCellConfig<TData, TValue = unknown> = {
+  components?: Array<KmsfCellComponent<TData, TValue>>;
+  format?: (params: KmsfCellComponentPayload<TData, TValue>) => React.ReactNode;
+  props?:
+    | KmsfColumnProps<TData, TValue>
+    | ((params: KmsfCellComponentPayload<TData, TValue>) => KmsfColumnProps<TData, TValue>);
+  renderer?: (params: KmsfCellComponentPayload<TData, TValue>) => React.ReactNode;
+  tooltip?: string | ((params: KmsfCellComponentPayload<TData, TValue>) => React.ReactNode);
+};
+
+export type KmsfDataTableHeaderConfig<TData, TValue = unknown> = {
+  components?: Array<KmsfHeaderComponent<TData, TValue>>;
+  props?: React.ThHTMLAttributes<HTMLTableCellElement>;
+  renderer?: (params: KmsfHeaderComponentPayload<TData, TValue>) => React.ReactNode;
 };
 
 export type KmsfDataTableColumn<TData, TValue = unknown> = {
+  cell?: KmsfDataTableCellConfig<TData, TValue>;
   field: string;
-  format?: (params: KmsfCellFormatParams<TData, TValue>) => React.ReactNode;
-  header?: {
-    props?: React.ThHTMLAttributes<HTMLTableCellElement>;
-  };
+  header?: KmsfDataTableHeaderConfig<TData, TValue>;
   hidden?: boolean;
   id?: string;
   label: React.ReactNode;
   maxWidth?: number;
   minWidth?: number;
-  props?: KmsfColumnProps<TData, TValue>;
   sort?: boolean | ((left: TValue, right: TValue, leftRow: TData, rightRow: TData) => number);
   width?: number;
 };
@@ -324,29 +567,56 @@ function setNestedFieldValue<TData>(row: TData, field: string, value: unknown): 
   return root as TData;
 }
 
-function createCellParams<TData>(
+function createCellComponentParams<TData>(
   state: KmsfDataTableState<TData>,
   row: TData,
   rowId: KmsfRowId,
   column: KmsfDataTableRuntimeColumn<TData>,
-): KmsfCellFormatParams<TData> {
+): KmsfCellComponentPayload<TData> {
   return {
-    column,
-    row,
-    rowId,
+    column: {
+      definition: column,
+      field: column.field,
+      id: column.id,
+      index: state.columns.findIndex((current) => current.id === column.id),
+      label: column.label,
+    },
+    row: {
+      data: row,
+      dataIndex: state.rows.indexOf(row),
+      disabled: false,
+      id: rowId,
+      index: state.rowIds.indexOf(rowId),
+      selected: state.selection.rowIds.includes(rowId),
+    },
+    selection: {
+      selectedRowCount: state.selection.rowIds.length,
+    },
     value: getKmsfCellValue(state, row, column.id),
   };
 }
 
 function resolveGuard<TData>(
   guard: KmsfClipboardGuard<TData> | undefined,
-  params: KmsfCellFormatParams<TData>,
+  params: KmsfCellComponentPayload<TData>,
 ) {
   if (guard === undefined) {
     return true;
   }
 
   return typeof guard === "boolean" ? guard : guard(params);
+}
+
+function resolveCellProps<TData>(
+  state: KmsfDataTableState<TData>,
+  row: TData,
+  rowId: KmsfRowId,
+  column: KmsfDataTableRuntimeColumn<TData>,
+) {
+  const params = createCellComponentParams(state, row, rowId, column);
+  const props = column.cell?.props;
+
+  return typeof props === "function" ? props(params) : props;
 }
 
 function getCellRangeBounds<TData>(state: KmsfDataTableState<TData>, range: KmsfCellRange) {
@@ -401,13 +671,14 @@ function canUseCellClipboard<TData>(
     return false;
   }
 
-  const params = createCellParams(state, row, rowId, column);
+  const params = createCellComponentParams(state, row, rowId, column);
+  const props = resolveCellProps(state, row, rowId, column);
 
-  if (column.props?.disabled !== undefined && resolveGuard(column.props.disabled, params) === true) {
+  if (props?.disabled !== undefined && resolveGuard(props.disabled, params) === true) {
     return false;
   }
 
-  return resolveGuard(kind === "copy" ? column.props?.copyable : column.props?.pasteable, params);
+  return resolveGuard(kind === "copy" ? props?.copyable : props?.pasteable, params);
 }
 
 function defaultCompare(left: unknown, right: unknown) {
@@ -851,8 +1122,8 @@ export function formatKmsfCellValue<TData>(
 ) {
   const value = getKmsfCellValue(state, row, column.id);
 
-  if (column.format) {
-    return column.format({ column, row, rowId, value });
+  if (column.cell?.format) {
+    return column.cell.format(createCellComponentParams(state, row, rowId, column));
   }
 
   return value == null ? "" : String(value);
@@ -864,7 +1135,9 @@ export function isKmsfCellDisabled<TData>(
   rowId: KmsfRowId,
   column: KmsfDataTableRuntimeColumn<TData>,
 ) {
-  return column.props?.disabled !== undefined && resolveGuard(column.props.disabled, createCellParams(state, row, rowId, column)) === true;
+  const props = resolveCellProps(state, row, rowId, column);
+
+  return props?.disabled !== undefined && resolveGuard(props.disabled, createCellComponentParams(state, row, rowId, column)) === true;
 }
 
 export function getKmsfCellClassName<TData>(
@@ -873,9 +1146,10 @@ export function getKmsfCellClassName<TData>(
   rowId: KmsfRowId,
   column: KmsfDataTableRuntimeColumn<TData>,
 ) {
-  const className = column.props?.className;
+  const params = createCellComponentParams(state, row, rowId, column);
+  const className = resolveCellProps(state, row, rowId, column)?.className;
 
-  return typeof className === "function" ? className(createCellParams(state, row, rowId, column)) : className;
+  return typeof className === "function" ? className(params) : className;
 }
 
 export function getKmsfCellStyle<TData>(
@@ -884,9 +1158,10 @@ export function getKmsfCellStyle<TData>(
   rowId: KmsfRowId,
   column: KmsfDataTableRuntimeColumn<TData>,
 ) {
-  const style = column.props?.style;
+  const params = createCellComponentParams(state, row, rowId, column);
+  const style = resolveCellProps(state, row, rowId, column)?.style;
 
-  return typeof style === "function" ? style(createCellParams(state, row, rowId, column)) : style;
+  return typeof style === "function" ? style(params) : style;
 }
 
 export function copyKmsfRow<TData>(state: KmsfDataTableState<TData>, rowId: KmsfRowId): KmsfCopiedRow<TData> {

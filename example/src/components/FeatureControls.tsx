@@ -11,19 +11,19 @@ type FeatureControlsProps = {
 
 export function FeatureControls({ actions, options }: FeatureControlsProps) {
   return (
-    <div className="feature-controls">
-      {options ? (
-        <div className="feature-options" data-testid="feature-options">
-          <span className="feature-control-label">옵션</span>
-          <div className="feature-control-items">{options}</div>
-        </div>
-      ) : null}
-      {actions ? (
-        <div className="feature-actions" data-testid="feature-actions">
-          <span className="feature-control-label">조작</span>
-          <div className="feature-control-items">{actions}</div>
-        </div>
-      ) : null}
+    <div className="feature-controls" data-testid="feature-controls">
+      <div className="feature-control-row" data-testid="feature-control-row">
+        {options ? (
+          <span className="feature-control-group" data-testid="feature-options">
+            {options}
+          </span>
+        ) : null}
+        {actions ? (
+          <span className="feature-control-group" data-testid="feature-actions">
+            {actions}
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }

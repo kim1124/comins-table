@@ -20,7 +20,7 @@ test("header boundary resize is isolated from long-press column move and animate
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
   await page.getByRole("button", { exact: true, name: "Header 예제" }).click();
-  await expect(page.getByTestId("header-proof-layout")).toContainText("getColumnLayout");
+  await expect(page.getByTestId("header-proof-layout")).toHaveCount(0);
 
   await expect(page.getByTestId("header-role")).toHaveAttribute("data-sortable", "false");
   await expect(page.getByTestId("header-role").locator(".kmsf-data-table__header-content")).toHaveCSS(
@@ -42,7 +42,6 @@ test("header boundary resize is isolated from long-press column move and animate
   await page.mouse.up();
 
   await expect(page.locator(".kmsf-data-table__header-table thead th").first()).toContainText(firstHeaderBefore ?? "");
-  await expect(page.getByTestId("layout-width-age")).toContainText("age:");
 
   const ageHeader = page.getByTestId("header-age");
   await ageHeader.scrollIntoViewIfNeeded();
@@ -54,7 +53,7 @@ test("header boundary resize is isolated from long-press column move and animate
   await ageHeader.click();
   await expect(indicator).toHaveAttribute("data-sort-state", "asc");
   await expect(indicator).toHaveCSS("opacity", "1");
-  await expect(page.getByTestId("header-proof-sort")).toContainText("age:asc");
+  await expect(page.getByTestId("header-proof-sort")).toHaveCount(0);
 
   await ageHeader.click();
   await expect(indicator).toHaveAttribute("data-sort-state", "desc");
@@ -83,7 +82,7 @@ test("header boundary resize is isolated from long-press column move and animate
   await page.mouse.up();
 
   await expect(page.locator(".kmsf-data-table__header-table thead th").first()).toContainText("나이");
-  await expect(page.getByTestId("layout-order")).toHaveText("age,name,role");
+  await expect(page.getByTestId("layout-order")).toHaveCount(0);
 
   const firstBodyCell = page.locator(".kmsf-data-table__body-table tbody tr").first().locator("td").first();
   const firstBodyCellBox = await firstBodyCell.boundingBox();

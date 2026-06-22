@@ -5,6 +5,7 @@ export type FeatureId =
   | "basic-crud"
   | "body"
   | "cell"
+  | "component"
   | "context-menu"
   | "header"
   | "row"

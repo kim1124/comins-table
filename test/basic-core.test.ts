@@ -41,8 +41,10 @@ type PersonRow = {
 const columns = [
   { field: "name", label: "Name", sort: true },
   {
+    cell: {
+      format: ({ value }: { value: unknown }) => `${String(value)} years`,
+    },
     field: "age",
-    format: ({ value }: { value: unknown }) => `${String(value)} years`,
     label: "Age",
     sort: true,
   },

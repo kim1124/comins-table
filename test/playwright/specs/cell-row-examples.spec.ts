@@ -4,8 +4,9 @@ test("cell page demonstrates formatting styling and events", async ({ page }) =>
   await page.goto("/");
   await page.getByRole("button", { exact: true, name: "Td Cell 예제" }).click();
 
-  await expect(page.getByTestId("feature-intro-description")).toContainText("Td Cell 포맷");
-  await expect(page.getByTestId("feature-option-table")).toContainText("onClickCell");
+  await expect(page.getByTestId("feature-option-description").first()).toContainText("Td Cell 포맷");
+  await expect(page.getByTestId("feature-option-description").first()).toContainText("onClickCell");
+  await expect(page.getByTestId("feature-options")).toHaveCount(0);
   await expect(page.getByTestId("cell-b-age")).toHaveText("42 years");
   await expect(page.getByTestId("cell-a-role")).toContainText("Owner");
   await expect(page.getByTestId("cell-a-role")).toHaveClass(/cell-owner/u);
@@ -30,8 +31,9 @@ test("row page demonstrates styling and events", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { exact: true, name: "Tr Row 예제" }).click();
 
-  await expect(page.getByTestId("feature-intro-description")).toContainText("드래그 이동");
-  await expect(page.getByTestId("feature-option-table")).toContainText("rowProps");
+  await expect(page.getByTestId("feature-option-description").first()).toContainText("드래그 이동");
+  await expect(page.getByTestId("feature-option-description").first()).toContainText("rowProps");
+  await expect(page.getByTestId("feature-controls")).toHaveCount(0);
   await expect(page.getByTestId("row-a")).toHaveClass(/row-owner/u);
   await expect(page.getByTestId("row-b")).toHaveAttribute("data-row-draggable", "false");
   await expect(page.getByTestId("row-row-3")).toHaveAttribute("aria-disabled", "true");

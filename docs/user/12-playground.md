@@ -12,16 +12,19 @@ npm --workspace=@kmsf/data-table run dev
 - `기본`: `KmsfDataTable`, `data`, `onChangeData`, theme, rowProps
 - `CRUD 동작`: 행 추가, 선택 행 수정, 선택 행 삭제, 필터 요약, table 우측 상단 pagination
 - `테이블 사이즈`: 높이 수동 지정, 상위 컨테이너 크기 따라가기, 브라우저 리사이즈 반응
-- `Header 예제`: show/hide, boundary resize, 1초 long-press reorder, keyboard sort, `aria-sort`, `getColumnLayout`, `setColumnLayout`, `onChangeColumnLayout`, `onChangeSort`
+- `Header 예제`: show/hide, boundary resize, 1초 long-press reorder, keyboard sort, `aria-sort`, `header.renderer`, `header.components`, `getColumnLayout`, `setColumnLayout`, `onChangeColumnLayout`, `onChangeSort`
 - `대용량 데이터 표시`: header/body table split, virtualized 100000 and 1000000 row smoke
-- `Td Cell 예제`: `format`, `columns[].props`, `cellSelection` toggle, `onClickCell`, `onDoubleClickCell`, `onContextMenuCell`, `onKeyDownCell`, clipboard guard
+- `Td Cell 예제`: `cell.format`, `cell.tooltip`, `cell.props`, `cell.components`, `cell.renderer`, `cellSelection` toggle, `onClickCell`, `onDoubleClickCell`, `onContextMenuCell`, `onKeyDownCell`, clipboard guard
+- `컴포넌트 예제`: `button`, `input`, `checkbox`, `radio`, `select`, `toggle`, `progress`, Header `menu`, Cell `virtual-list`, custom `renderer`를 Header와 Cell에 적용한 독립 예제
 - `Tr Row 예제`: drag handle reorder, `rowProps.draggable`, row disabled, row custom formatting, row keyboard copy/paste, `onClickRow`, `onDoubleClickRow`, `onContextMenuRow`, `onKeyDownRow`
 - `Context Menu 예제`: callback 기반 row/cell context menu, 우클릭 단일 row selection, `{ row, columnId, value }` data preview
 
 각 기능 Content 상단에는 기능 제목, 짧은 설명, `옵션 / 설명 / 예시` 표를 표시한다. 예제 내부에는 사용자가 조작해야 하는 control과 data table을 우선 배치하고, 긴 배열을 그대로 출력하는 debug 텍스트는 노출하지 않는다.
 `CRUD 동작` 예제의 pagination은 data table 우측 상단 toolbar에 표시한다.
 `옵션 가이드` 탭은 `data`, `columns`, event callback, ref method, core helper, 후속 기능 경계를 한 화면에 정리한다.
+현재 후속 기능 경계는 CSR 기준으로 표시한다. 외부 store adapter 객체는 별도로 제공하지 않고, 외부 배열 또는 store state를 `data`에 직접 연결하는 방식을 문서화한다.
 모든 일반 예제는 최소 100개 row data를 사용한다. 테이블은 예제 content 안에서 남은 영역을 채우도록 확장하고, row가 부족한 경우에도 빈 영역 border를 유지한다.
+`컴포넌트 예제`는 컴포넌트 종류별로 최소 500px 높이의 독립 DataTable을 렌더링해 Header와 Cell 사용 형태를 나누어 확인한다. Button 예제는 클릭 결과를 Alert로 표시하고, Input 예제는 입력 중 값이 유지되다가 `Enter` 또는 `Blur` 후 commit되는 흐름을 보여준다. Header `menu`는 body portal popover와 `onBeforeChange`, `onOpenChange`, `onSelect` 흐름을 보여준다. Cell `virtual-list`는 기본 스크롤, More 버튼, Search 입력 예제를 분리해서 보여준다.
 
 메뉴가 바뀔 때마다 중앙 content는 key 기반으로 destroy/recreate한다. 이 동작은 예제 수가 늘어도 mount/unmount와 메모리 누수 검증을 가능하게 하기 위한 playground 계약이다.
 

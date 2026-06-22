@@ -29,6 +29,9 @@ test("playground uses charts-style docs shell and remounts content when switchin
   await expect(page.getByRole("complementary", { name: "데이터 테이블 문서" })).toHaveCount(0);
   await expect(page.locator(".example-topbar")).toContainText("@kmsf/data-table");
   await expect(page.locator(".workspace-tabs")).toBeVisible();
+  await expect(page.locator(".workspace-tabs__bar")).toHaveCount(0);
+  await expect(page.locator(".example-topbar").getByRole("tablist", { name: "플레이그라운드 보기" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "React Table Playground" })).toHaveCount(0);
   await expect(page.locator(".docs-layout")).toBeVisible();
 
   const asideBox = await aside.boundingBox();
@@ -69,7 +72,7 @@ test("playground uses charts-style docs shell and remounts content when switchin
     .poll(() => page.evaluate(() => window.__kmsfDataTableLastUnmount))
     .toBe(headerMountId);
 
-  await page.getByRole("tab", { exact: true, name: "옵션 가이드" }).click();
+  await page.locator(".example-topbar").getByRole("tab", { exact: true, name: "옵션 가이드" }).click();
   await expect(page.getByTestId("option-guide")).toContainText("columns");
   await expect(page.getByTestId("option-guide")).toContainText("setMoveTargetRow");
   await expect(page.getByRole("tab", { exact: true, name: "문서 요약" })).toHaveCount(0);
@@ -124,34 +127,33 @@ test("playground verifies range drag and multi-cell Ctrl+C Ctrl+V interactions i
   expect(diagnostics).toEqual([]);
 });
 
-test("basic page live controls update the data table immediately", async ({ page }) => {
+test("basic page removes live controls and keeps only the default table", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
   await page.getByRole("button", { exact: true, name: "기본" }).click();
 
-  await page.getByLabel("첫 번째 이름").fill("Alpha 수정");
-
-  await expect(page.getByTestId("cell-a-name")).toHaveText("Alpha 수정");
-  await expect(page.getByTestId("basic-live-state")).toContainText("Alpha 수정");
-
-  await page.getByRole("button", { name: "Owner 행 스타일 끄기" }).click();
-  await expect(page.getByTestId("row-a")).not.toHaveClass(/row-owner/u);
-  await expect(page.getByTestId("basic-live-state")).toContainText("Owner 스타일:꺼짐");
+  await expect(page.getByTestId("feature-controls")).toHaveCount(0);
+  await expect(page.getByTestId("basic-live-state")).toHaveCount(0);
+  await expect(page.getByLabel("첫 번째 이름")).toHaveCount(0);
+  await expect(page.getByTestId("cell-a-name")).toHaveText("Alpha");
 
   expect(diagnostics).toEqual([]);
 });
 
-test("basic page uses one hundred rows and the table expands inside the content area", async ({ page }) => {
+test("basic page table expands to the available browser height", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.setViewportSize({ height: 900, width: 1280 });
   await page.goto("/");
   await page.getByRole("button", { exact: true, name: "기본" }).click();
 
-  await expect(page.getByTestId("sample-row-count")).toContainText("100");
+  await expect(page.getByTestId("sample-row-count")).toHaveCount(0);
 
   const tableBox = await page.locator(".example-table.kmsf-data-table").first().boundingBox();
+  const sampleBox = await page.getByTestId("feature-option-sample").first().boundingBox();
   expect(tableBox).not.toBeNull();
-  expect(tableBox!.height).toBeGreaterThan(220);
+  expect(sampleBox).not.toBeNull();
+  expect(tableBox!.height).toBeGreaterThan(600);
+  expect(Math.abs(tableBox!.height - sampleBox!.height)).toBeLessThanOrEqual(2);
 
   expect(diagnostics).toEqual([]);
 });

@@ -10,6 +10,7 @@ function readPackageFile(path: string) {
 describe("@kmsf/data-table public API boundary", () => {
   it("defines root and stable feature subpath exports", async () => {
     const packageJson = JSON.parse(readPackageFile("package.json")) as {
+      files?: string[];
       exports?: Record<string, unknown>;
     };
     const entry = await import("../src");
@@ -21,6 +22,8 @@ describe("@kmsf/data-table public API boundary", () => {
     expect(packageJson.exports?.["./core"]).toBeDefined();
     expect(packageJson.exports?.["./clipboard"]).toBeDefined();
     expect(packageJson.exports?.["./selection"]).toBeDefined();
+    expect(packageJson.exports?.["./styles.css"]).toBe("./styles.css");
+    expect(packageJson.files).toContain("styles.css");
     expect(entry.KmsfDataTable).toBeDefined();
     expect(core.createKmsfDataTableState).toBeDefined();
     expect(clipboard.copyKmsfCellRange).toBeDefined();
@@ -46,5 +49,21 @@ describe("@kmsf/data-table public API boundary", () => {
     expect(readPackageFile("postcss.config.mjs")).toContain("@tailwindcss/postcss");
     expect(existsSync(postcssConfigPath)).toBe(true);
     expect(source).not.toMatch(/from ["'](?:radix-ui|@radix-ui|tailwindcss|@tailwindcss|class-variance-authority)/u);
+  });
+
+  it("ships a dependency-free KMSF mint component skin as optional CSS", () => {
+    const stylesPath = new URL("styles.css", packageRoot);
+    const styles = existsSync(stylesPath) ? readPackageFile("styles.css") : "";
+
+    expect(existsSync(stylesPath)).toBe(true);
+    expect(styles).toContain(".kmsf-data-table__component-button");
+    expect(styles).toContain(".kmsf-data-table__component-input");
+    expect(styles).toContain(".kmsf-data-table__component-virtual-list");
+    expect(styles).toContain("--kmsf-data-table-component-accent: #10b981");
+    expect(styles).toContain("--kmsf-data-table-component-virtual-list-height: calc(var(--kmsf-data-table-virtual-list-item-height, 28px) * 5)");
+    expect(styles).toMatch(/\.kmsf-data-table__component-input,[\s\S]*border-radius: 0/u);
+    expect(styles).toMatch(/\.kmsf-data-table__component-checkbox,[\s\S]*width: 20px/u);
+    expect(styles).toMatch(/\.kmsf-data-table__component-radio input[\s\S]*width: 20px/u);
+    expect(styles).not.toMatch(/bootstrap|@radix-ui|shadcn|class-variance-authority|tailwind-merge/u);
   });
 });

@@ -21,9 +21,8 @@ test("virtualized header stays sticky while scrolling one million rows", async (
   await page.goto("/");
   await page.getByRole("button", { exact: true, name: "대용량 데이터 표시" }).click();
   await page.getByRole("button", { name: "100만 행 로드" }).click();
-  await expect(page.getByTestId("virtual-row-count")).toContainText("1000000");
-  await expect(page.getByTestId("body-proof-virtualization")).toContainText("virtualized:true");
-  await expect(page.getByTestId("body-proof-virtualization")).toContainText("Lazy-load:후속");
+  await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
+  await expect(page.getByTestId("body-proof-virtualization")).toHaveCount(0);
 
   const viewport = page.getByTestId("data-table-viewport");
   const header = page.getByTestId("header-name");
@@ -53,7 +52,7 @@ test("split header and body columns stay aligned in virtualized mode", async ({ 
   await page.goto("/");
   await page.getByRole("button", { exact: true, name: "대용량 데이터 표시" }).click();
   await page.getByRole("button", { name: "100만 행 로드" }).click();
-  await expect(page.getByTestId("virtual-row-count")).toContainText("1000000");
+  await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
 
   const alignment = await page.evaluate(() => {
     const headers = [...document.querySelectorAll<HTMLElement>(".kmsf-data-table__header-table th")];
@@ -87,7 +86,7 @@ test("split header and body columns stay aligned after column resize", async ({ 
   await page.goto("/");
   await page.getByRole("button", { exact: true, name: "대용량 데이터 표시" }).click();
   await page.getByRole("button", { name: "100만 행 로드" }).click();
-  await expect(page.getByTestId("virtual-row-count")).toContainText("1000000");
+  await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
 
   const nameHeader = page.getByTestId("header-name");
   const resizeHandle = page.getByTestId("resize-name");
@@ -132,24 +131,26 @@ test("split header and body columns stay aligned after column resize", async ({ 
   expect(diagnostics).toEqual([]);
 });
 
-test("body viewport only shows horizontal overflow when columns exceed table width", async ({ page }) => {
+test("body viewport uses horizontal overflow for the wide data set and keeps scroll sync", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
   await page.getByRole("button", { exact: true, name: "대용량 데이터 표시" }).click();
   await page.getByRole("button", { name: "10만 행 로드" }).click();
-  await expect(page.getByTestId("virtual-row-count")).toContainText("100000");
+  await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
 
   const viewport = page.getByTestId("data-table-viewport");
   await expect(viewport).toHaveCSS("overflow-y", "auto");
-  await expect(viewport).toHaveCSS("overflow-x", "hidden");
+  await expect(viewport).toHaveCSS("overflow-x", "auto");
   const defaultOverflow = await viewport.evaluate((element) => ({
+    horizontalOverflow: element.getAttribute("data-horizontal-overflow"),
     clientWidth: element.clientWidth,
     scrollHeight: element.scrollHeight,
     scrollWidth: element.scrollWidth,
     clientHeight: element.clientHeight,
   }));
   expect(defaultOverflow.scrollHeight).toBeGreaterThan(defaultOverflow.clientHeight);
-  expect(defaultOverflow.scrollWidth).toBeLessThanOrEqual(defaultOverflow.clientWidth + 1);
+  expect(defaultOverflow.horizontalOverflow).toBe("true");
+  expect(defaultOverflow.scrollWidth).toBeGreaterThan(defaultOverflow.clientWidth + 100);
 
   const resizeHandle = page.getByTestId("resize-name");
   const handleBox = await resizeHandle.boundingBox();

@@ -41,14 +41,15 @@ export function Example() {
 ## Implemented Features
 
 - Basic `KmsfDataTable` rendering with `data`, `columns`, and `getRowId`
-- Controlled external state flow with `data` and `onChangeData`
+- Controlled external state flow with `data` and `onChangeData` for CSR applications
 - Row full refresh, add, update, delete, and query helpers
 - Pagination helpers and pagination props
 - Theme, density, table class, row class, header style, and cell style
 - Header show/hide, header formatting, boundary resize, 1-second long-press reorder, animated sort indicator, and column layout save/load
 - Row click, multi-row selection, double click, context menu callback, drag reorder, row copy, and row paste
-- Cell formatting, custom cell rendering, optional `cellSelection={false}`, context menu callback, cell copy, and cell paste
-- Column-level `props.copyable` and `props.pasteable` guards
+- Header and Cell `components` arrays with lightweight built-ins, Header-only menu popover, and Cell-only virtual list
+- Cell formatting, `cell.renderer`, optional `cellSelection={false}`, context menu callback, cell copy, and cell paste
+- Column-level `cell.props.copyable` and `cell.props.pasteable` guards
 - Single row, multi row, single cell, cell range, and clear selection helpers through `selectRow`, `selectRows`, `selectCell`, and `selectCellRange`
 - Multi-cell clipboard helpers and keyboard range copy/paste
 - Fill helper for copying one source cell value into a target range
@@ -91,6 +92,6 @@ npm --workspace=@kmsf/data-table run test:perf
 
 ## Current Limits
 
-- Dedicated external store adapter object is not shipped; pass external `useState`, Zustand, Redux, or other store arrays through `data` and reflect internal edits through `onChangeData`.
-- Visual fill handle UI is planned separately; `fillKmsfCellRange` is available as a core helper.
-- Server-side row model, grouping, aggregation, pivoting, tree data, master/detail, export, charts integration, and AI assistant features are not part of the current core implementation.
+- Dedicated external store adapter object is not shipped. Pass an external `useState`, Zustand, Redux, or other store state array directly through `data`, and reflect table-originated edits through `onChangeData`.
+- Visual Fill Handle UI is not implemented yet. `fillKmsfCellRange` is available as a core helper, but the Excel-like drag handle UI is deferred until its UX contract is confirmed.
+- The current implementation scope is CSR. Server-side row model, lazy-load row model, grouping, aggregation, pivoting, tree data, master/detail, export, charts integration, and AI assistant features are roadmap items outside the current core.

@@ -90,4 +90,24 @@ describe("@kmsf/data-table user documentation contract", () => {
     expect(docsText).not.toMatch(/external store adapter.*supported/iu);
     expect(docsText).not.toMatch(/visual fill handle.*supported/iu);
   });
+
+  it("keeps residual-risk documentation aligned with the current CSR data-table scope", () => {
+    const readme = readWorkspaceFile("README.md");
+    const optionGuide = readWorkspaceFile("example/src/docs/dataTableOptionGuide.ts");
+    const advancedFeature = readWorkspaceFile("example/src/features/AdvancedFeature.tsx");
+
+    expect(readme).toContain("Controlled external state flow with `data` and `onChangeData`");
+    expect(readme).toContain("CSR");
+    expect(readme).toContain("Visual Fill Handle UI");
+
+    expect(optionGuide).toContain("data + onChangeData");
+    expect(optionGuide).toContain("CSR");
+    expect(optionGuide).toContain("Visual Fill Handle UI");
+
+    const unavailableList = advancedFeature.match(/const unavailable = \[([\s\S]*?)\];/u)?.[1] ?? "";
+
+    expect(unavailableList).not.toContain("범위 선택 고도화");
+    expect(unavailableList).not.toContain("multi-cell clipboard");
+    expect(advancedFeature).toContain("시각적 Fill Handle UI");
+  });
 });

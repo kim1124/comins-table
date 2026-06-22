@@ -40,8 +40,8 @@ test("user playground exposes every current feature page with recreated content"
     const content = page.getByRole("main", { name: "데이터 테이블 예제" });
     await expect(content).toHaveAttribute("data-feature", item.feature);
     await expect(content).toHaveAttribute("data-feature-label", item.label);
-    await expect(page.getByTestId("feature-intro-description")).toBeVisible();
-    await expect(page.getByTestId("feature-option-table")).toBeVisible();
+    await expect(page.getByTestId("feature-option-container").first()).toBeVisible();
+    await expect(page.getByTestId("feature-option-description").first()).toBeVisible();
     if (item.feature === "size") {
       await expect(page.getByTestId("data-table-size-manual")).toBeVisible();
     } else {
@@ -64,6 +64,8 @@ test("user playground uses charts-style docs shell and shadcn-style action butto
   await expect(page.locator(".example-shell")).toBeVisible();
   await expect(page.locator(".example-topbar")).toContainText("@kmsf/data-table");
   await expect(page.locator(".workspace-tabs")).toBeVisible();
+  await expect(page.locator(".workspace-tabs__bar")).toHaveCount(0);
+  await expect(page.locator(".example-topbar").getByRole("tablist", { name: "플레이그라운드 보기" })).toBeVisible();
   await expect(page.locator(".docs-layout")).toBeVisible();
   await expect(page.locator(".feature-aside")).toBeVisible();
   await expect(page.getByRole("complementary", { name: "데이터 테이블 문서" })).toHaveCount(0);
@@ -79,22 +81,26 @@ test("basic crud page demonstrates row updates filter summary and pagination", a
   await page.goto("/");
   await page.getByRole("button", { exact: true, name: "CRUD 동작" }).click();
 
-  await page.getByRole("button", { name: "행 추가" }).click();
+  await expect(page.getByTestId("crud-row-summary")).toHaveCount(0);
+  await expect(page.getByTestId("pagination-state")).toHaveCount(0);
+  await expect(page.getByTestId("selected-row-state")).toHaveCount(0);
+
+  await page.getByRole("button", { exact: true, name: "추가" }).click();
   await expect(page.getByTestId("row-new-1")).toBeVisible();
 
   await page.getByTestId("row-b").click();
   await page.getByLabel("선택 행 JSON").fill('{"id":"b","name":"Beta","age":43,"role":"Editor","active":true}');
-  await page.getByRole("button", { name: "선택 행 수정" }).click();
+  await page.getByRole("button", { exact: true, name: "수정" }).click();
   await expect(page.getByTestId("cell-b-age")).toContainText("43");
 
-  await page.getByRole("button", { name: "선택 행 삭제" }).click();
+  await page.getByRole("button", { exact: true, name: "삭제" }).click();
   await expect(page.getByTestId("row-b")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "소유자만 보기" }).click();
-  await expect(page.getByTestId("crud-row-summary")).toContainText("필터:Owner");
+  await page.getByRole("button", { exact: true, name: "필터링" }).click();
+  await expect(page.getByTestId("row-row-3")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "다음 페이지" }).click();
-  await expect(page.getByTestId("pagination-state")).toContainText("pageIndex:1");
+  await page.getByRole("button", { exact: true, name: "다음" }).click();
+  await expect(page.getByTestId("crud-pagination")).toContainText("2 /");
 
   expect(diagnostics).toEqual([]);
 });
@@ -102,12 +108,15 @@ test("basic crud page demonstrates row updates filter summary and pagination", a
 test("option guide documents core helpers and ref methods", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("tab", { exact: true, name: "옵션 가이드" }).click();
+  await page.locator(".example-topbar").getByRole("tab", { exact: true, name: "옵션 가이드" }).click();
 
   await expect(page.getByTestId("option-guide")).toContainText("setSelectedRow");
   await expect(page.getByTestId("option-guide")).toContainText("setMoveTargetRow");
   await expect(page.getByTestId("option-guide")).toContainText("core helper");
   await expect(page.getByTestId("option-guide")).toContainText("후속 기능");
+  await expect(page.getByTestId("option-guide")).toContainText("data + onChangeData");
+  await expect(page.getByTestId("option-guide")).toContainText("CSR");
+  await expect(page.getByTestId("option-guide")).toContainText("Visual Fill Handle UI");
 
   expect(diagnostics).toEqual([]);
 });
