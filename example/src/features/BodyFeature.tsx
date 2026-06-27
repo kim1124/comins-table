@@ -4,27 +4,68 @@ import { Database } from "lucide-react";
 import { KmsfDataTable, type KmsfDataTableColumn } from "../../../src";
 import { ActionButton, FeatureControls } from "../components/FeatureControls";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
-import { createBaseColumns } from "../fixtures/columns";
-import { createExampleRows, createRows, type PersonRow } from "../fixtures/people";
+import { createExampleRows, createVirtualRows, type PersonRow } from "../fixtures/people";
+
+function formatBodyRole(index: number) {
+  return index % 2 === 0 ? "Owner" : "Viewer";
+}
 
 export function BodyFeature() {
   const [rows, setRows] = useState<PersonRow[]>(() => createExampleRows(100));
   const columns = useMemo<Array<KmsfDataTableColumn<PersonRow>>>(
     () => [
-      ...createBaseColumns(),
-      { field: "id", label: "ID", width: 140 },
       {
         cell: {
-          format: ({ value }) => (value ? "활성" : "비활성"),
+          format: ({ row }) => `Row ${row.index}`,
+        },
+        field: "name",
+        label: "이름",
+        sort: true,
+      },
+      {
+        cell: {
+          format: ({ row }) => `${row.index} years`,
+          props: { style: { textAlign: "right" } },
+        },
+        field: "age",
+        label: "나이",
+        sort: true,
+      },
+      {
+        cell: {
+          format: ({ row }) => <strong>{formatBodyRole(row.index)}</strong>,
+          props: { className: ({ row }) => (formatBodyRole(row.index) === "Owner" ? "cell-owner" : undefined) },
+        },
+        field: "role",
+        label: "역할",
+      },
+      {
+        cell: {
+          format: ({ row }) => `row-${row.index}`,
+        },
+        field: "id",
+        label: "ID",
+        width: 140,
+      },
+      {
+        cell: {
+          format: ({ row }) => (row.index % 2 === 0 ? "활성" : "비활성"),
         },
         field: "active",
         label: "활성",
         width: 120,
       },
-      { field: "locked", label: "잠금", width: 160 },
       {
         cell: {
-          format: ({ row }) => `${row.data.role}-${row.index + 1}`,
+          format: ({ row }) => `lock-${row.index}`,
+        },
+        field: "locked",
+        label: "잠금",
+        width: 160,
+      },
+      {
+        cell: {
+          format: ({ row }) => `${formatBodyRole(row.index)}-${row.index + 1}`,
         },
         field: "role",
         id: "group",
@@ -42,7 +83,7 @@ export function BodyFeature() {
       },
       {
         cell: {
-          format: ({ row }) => (row.data.active ? "운영" : "대기"),
+          format: ({ row }) => (row.index % 2 === 0 ? "운영" : "대기"),
         },
         field: "active",
         id: "status",
@@ -72,11 +113,8 @@ export function BodyFeature() {
         <FeatureControls
           actions={
             <>
-              <ActionButton icon={<Database />} onClick={() => setRows(createRows(100_000))}>
+              <ActionButton icon={<Database />} onClick={() => setRows(createVirtualRows(100_000))}>
                 10만 행 로드
-              </ActionButton>
-              <ActionButton icon={<Database />} onClick={() => setRows(createRows(1_000_000))}>
-                100만 행 로드
               </ActionButton>
             </>
           }
@@ -86,7 +124,7 @@ export function BodyFeature() {
           columns={columns}
           data={rows}
           data-testid="data-table-viewport"
-          getRowId={(row) => row.id}
+          getRowId={(_row, index) => index}
           pagination={{ pageIndex: 0, pageSize: rows.length }}
           theme={{ density: "compact" }}
           virtualized

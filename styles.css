@@ -15,16 +15,20 @@
   align-items: center;
   display: inline-flex;
   gap: 6px;
+  height: 100%;
   justify-content: center;
   min-width: 0;
+  overflow: hidden;
   width: 100%;
 }
 
 .kmsf-data-table__component-group {
   align-items: center;
   display: inline-flex;
+  flex: 1 1 0;
   gap: 4px;
   justify-content: center;
+  min-width: 0;
 }
 
 .kmsf-data-table__component-content {
@@ -34,15 +38,20 @@
 .kmsf-data-table__component-slot {
   align-items: center;
   display: inline-flex;
+  height: 100%;
+  justify-content: center;
   line-height: 1;
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
 }
 
 .kmsf-data-table__component-slot[data-kmsf-component-align="start"] {
-  align-items: flex-start;
+  justify-content: flex-start;
 }
 
 .kmsf-data-table__component-slot[data-kmsf-component-align="end"] {
-  align-items: flex-end;
+  justify-content: flex-end;
 }
 
 .kmsf-data-table__component button,
@@ -96,8 +105,11 @@
   border-radius: 0;
   box-sizing: border-box;
   color: var(--kmsf-data-table-component-foreground);
+  height: 100%;
   min-height: 24px;
+  min-width: 0;
   padding: 2px 5px 2px 2px;
+  text-overflow: ellipsis;
   width: 100%;
 }
 
@@ -107,8 +119,24 @@
 }
 
 .kmsf-data-table__component-checkbox {
+  appearance: none;
+  background: var(--kmsf-data-table-component-surface);
+  border: 1px solid var(--kmsf-data-table-component-border);
+  box-sizing: border-box;
+  flex: 0 0 20px;
   height: 20px;
+  margin: 0;
+  max-width: 20px;
+  min-width: 20px;
   width: 20px;
+}
+
+.kmsf-data-table__component-checkbox:checked {
+  background:
+    linear-gradient(45deg, transparent 54%, #ffffff 54% 66%, transparent 66%) 3px 3px / 11px 11px no-repeat,
+    linear-gradient(135deg, transparent 44%, #ffffff 44% 56%, transparent 56%) 7px 2px / 10px 14px no-repeat,
+    var(--kmsf-data-table-component-accent);
+  border-color: var(--kmsf-data-table-component-accent-strong);
 }
 
 .kmsf-data-table__component-radio {
@@ -124,9 +152,22 @@
 }
 
 .kmsf-data-table__component-radio input {
+  appearance: none;
+  background: var(--kmsf-data-table-component-surface);
+  border: 1px solid var(--kmsf-data-table-component-border);
+  border-radius: 999px;
+  box-sizing: border-box;
+  flex: 0 0 20px;
   height: 20px;
   margin: 0;
+  max-width: 20px;
+  min-width: 20px;
   width: 20px;
+}
+
+.kmsf-data-table__component-radio input:checked {
+  background: radial-gradient(circle, var(--kmsf-data-table-component-accent) 0 45%, transparent 48%);
+  border-color: var(--kmsf-data-table-component-accent-strong);
 }
 
 .kmsf-data-table__component-toggle[aria-pressed="true"],
@@ -211,25 +252,21 @@
   background: var(--kmsf-data-table-component-surface);
   border: 1px solid var(--kmsf-data-table-component-border);
   border-radius: 6px;
+  box-sizing: border-box;
   display: grid;
-  gap: 6px;
+  gap: 2px;
   grid-template-rows: minmax(0, 1fr) auto;
-  height: var(
-    --kmsf-data-table-virtual-list-height,
-    var(--kmsf-data-table-component-virtual-list-height)
-  );
-  max-height: var(
-    --kmsf-data-table-virtual-list-height,
-    var(--kmsf-data-table-component-virtual-list-height)
-  );
-  min-width: 160px;
+  height: 100%;
+  max-height: 100%;
+  min-width: 0;
   overflow: hidden;
-  padding: 6px;
+  padding: 2px;
+  width: 100%;
 }
 
 .kmsf-data-table__component-virtual-list-items {
   display: grid;
-  gap: 3px;
+  gap: 2px;
   min-height: 0;
   overflow: auto;
 }
@@ -239,13 +276,29 @@
   background: var(--kmsf-data-table-component-surface-muted);
   border: 1px solid rgba(57, 99, 88, 0.18);
   border-radius: 4px;
+  box-sizing: border-box;
   color: var(--kmsf-data-table-component-foreground);
   cursor: pointer;
   display: flex;
   font: inherit;
-  min-height: var(--kmsf-data-table-virtual-list-item-height, 28px);
+  height: var(--kmsf-data-table-virtual-list-item-height, 28px);
+  min-height: 0;
+  min-width: 0;
   padding: 3px 7px;
   text-align: left;
+  width: 100%;
+}
+
+.kmsf-data-table__component-virtual-list-item-label {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kmsf-data-table__component-virtual-list-spacer {
+  display: block;
 }
 
 .kmsf-data-table__component-virtual-list-item:hover,
@@ -275,6 +328,7 @@
 }
 
 .kmsf-data-table__component-virtual-list-search {
+  height: 28px;
   min-height: 26px;
   padding: 3px 7px;
 }
@@ -283,4 +337,16 @@
   font: inherit;
   font-size: 11px;
   min-height: 26px;
+}
+
+.kmsf-data-table__td[data-kmsf-component-cell="true"] {
+  padding: 2px;
+}
+
+.kmsf-data-table__cell-value {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

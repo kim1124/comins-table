@@ -48,7 +48,7 @@ test("playground verifies header resize, column position change, and layout rest
   expect(resizedAgeBox?.width ?? 0).toBeGreaterThan(ageBox!.width);
   await expect(page.getByTestId("layout-width-age")).toHaveCount(0);
 
-  await page.getByRole("button", { exact: true, name: "복원" }).click();
+  await page.getByRole("button", { exact: true, name: "초기화" }).click();
   await expect(page.locator(".kmsf-data-table__header-table thead th").first()).toContainText("이름");
 
   expect(diagnostics).toEqual([]);

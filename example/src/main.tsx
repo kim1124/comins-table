@@ -22,8 +22,8 @@ import { ScrollArea } from "./components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { featureRegistry, findFeature } from "./features/featureRegistry";
 import type { FeatureId } from "./features/types";
-import "../../styles.css";
 import "./styles.css";
+import "../../styles.css";
 
 let mountCounter = 0;
 

@@ -20,7 +20,7 @@
 
 - 문서만 변경하는 작업은 TDD 예외다.
 - 코드나 설정이 바뀌면 패키지별 `AGENTS.md`의 verification command를 따른다.
-- test 하네스 문서 변경 시 data-table package verify command와 future browser gate가 `test/AGENTS.md`와 일치하는지 확인한다.
+- test 하네스 문서 변경 시 data-table package verify command와 browser gate가 `test/AGENTS.md`와 일치하는지 확인한다.
 - required tests cannot be downgraded, skipped, or deleted to pass a change.
 - future Playwright coverage는 menu switch 후 stale content, stale timer, stale editor state, stale context menu가 남지 않는지 검증해야 한다.
 - 기본 기능 테스트 협의는 core CRUD/layout, selection, clipboard, context callback, shadcn context menu example, header/row interaction, 100k/1M virtualization을 포함한다.

@@ -74,6 +74,29 @@ describe("@kmsf/data-table basic core", () => {
     expect(getKmsfCellValue(state, rows[0], "profile.score")).toBe(8);
   });
 
+  it("treats incoming row arrays as immutable references", () => {
+    const inputRows: PersonRow[] = [
+      { active: true, age: 31, id: "a", name: "Alpha", profile: { score: 8 } },
+      { active: false, age: 42, id: "b", name: "Beta", profile: { score: 4 } },
+    ];
+    const state = createKmsfDataTableState<PersonRow>({
+      columns,
+      getRowId: (row) => row.id,
+      rows: inputRows,
+    });
+    const replacementRows: PersonRow[] = [{ active: true, age: 19, id: "z", name: "Zeta" }];
+
+    expect(state.rows).toBe(inputRows);
+
+    const replaced = replaceKmsfRows(state, replacementRows);
+    expect(replaced.rows).toBe(replacementRows);
+
+    const updated = updateKmsfRows(state, [{ id: "a", patch: { name: "Updated Alpha" } }]);
+    expect(updated.rows).not.toBe(inputRows);
+    expect(inputRows[0]?.name).toBe("Alpha");
+    expect(updated.rows[0]?.name).toBe("Updated Alpha");
+  });
+
   it("supports full refresh, partial update, CRUD, query, and theme updates", () => {
     let state = createState();
 

@@ -2,6 +2,10 @@
 
 ## Active Plan
 
+- 2026-06-25: large-data playground control follows `docs/agents/src/2026-06-25-immutable-data-100k-performance-plan.md`; current examples expose 100,000 rows only, and older 1,000,000-row playground/perf gates are historical context.
+- 2026-06-24: Component Input/Select examples must reflect package default single-row-selection gating, global 50px minimum column width, and visible-only sort indicator spacing from `docs/agents/src/2026-06-24-input-select-minwidth-sort-indicator-plan.md`.
+- 2026-06-24: component example repeated Card structure is retained, but its layout containment must match other playground examples. Header slot order, header default left alignment, cell default center alignment, Td Cell resize by removing fixed `maxWidth`, and playground containment follow `docs/agents/src/2026-06-24-component-renderer-playground-layout-plan.md`.
+- 2026-06-23: playground component/layout 수정과 100만 row large jump scroll 성능 개선은 `docs/agents/example/2026-06-23-playground-component-virtual-scroll-plan.md`를 따른다. `ask-research` / `ask-question` / `ask-plan` gate는 닫혔으며, large-data 예제는 대용량 의미를 유지한다.
 - 2026-06-19: playground visibility 개선 계획은 `Playground Visibility TDD Plan` 섹션을 따른다. `ask-plan`/`ask-question` gate는 닫혔으며, 사용자 결정은 `docs/agents/example/research.md`의 `2026-06-19 Playground Visibility Research`에 기록했다.
 - 2026-06-05: 사용자용 playground와 `docs/user` 문서 구현을 완료했다. 후속 변경은 `test/user-docs.test.ts`와 `test/playwright/specs/user-playground-docs.spec.ts`를 먼저 갱신한 뒤 TDD로 진행한다.
 - 2026-06-05: 실제 구현 실행 순서는 `docs/agents/example/2026-06-05-user-playground-docs-implementation-execution-plan.md`를 따른다. 이 문서는 RED/GREEN 테스트, feature component 분리, 사용자 문서 작성, 최종 verify gate를 단계별로 정의한다.

@@ -142,7 +142,7 @@ export function ContextMenuFeature() {
                   y: position.y,
                 });
               }}
-              pagination={{ pageIndex: 0, pageSize: 10 }}
+              pagination={{ pageIndex: 0, pageSize: 30 }}
               rowProps={{ className: (row) => (row.role === "Owner" ? "row-owner" : undefined) }}
               theme={{ density: "compact" }}
             />

@@ -444,8 +444,8 @@ function defaultGetRowId<TData>(_row: TData, index: number) {
   return index;
 }
 
-function cloneRows<TData>(rows: readonly TData[]) {
-  return [...rows];
+function useRowsReference<TData>(rows: readonly TData[]) {
+  return rows as TData[];
 }
 
 function normalizeColumns<TData>(columns: ReadonlyArray<KmsfDataTableColumn<TData>>) {
@@ -699,7 +699,7 @@ export function createKmsfDataTableState<TData>({
   sort = null,
   theme = {},
 }: KmsfDataTableStateInput<TData>): KmsfDataTableState<TData> {
-  const nextRows = cloneRows(rows);
+  const nextRows = useRowsReference(rows);
   const nextColumns = normalizeColumns(columns);
 
   return {
@@ -728,7 +728,7 @@ export function queryKmsfRows<TData>(
 }
 
 export function replaceKmsfRows<TData>(state: KmsfDataTableState<TData>, rows: readonly TData[]) {
-  return withRows(state, cloneRows(rows), { resetSelection: true });
+  return withRows(state, useRowsReference(rows), { resetSelection: true });
 }
 
 export function addKmsfRows<TData>(state: KmsfDataTableState<TData>, rows: readonly TData[]) {

@@ -16,11 +16,12 @@ function collectBrowserDiagnostics(page: Page) {
   return diagnostics;
 }
 
-test("virtualized header stays sticky while scrolling one million rows", async ({ page }) => {
+test("virtualized header stays sticky while scrolling one hundred thousand rows", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
   await page.getByRole("button", { exact: true, name: "대용량 데이터 표시" }).click();
-  await page.getByRole("button", { name: "100만 행 로드" }).click();
+  await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
+  await page.getByRole("button", { name: "10만 행 로드" }).click();
   await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
   await expect(page.getByTestId("body-proof-virtualization")).toHaveCount(0);
 
@@ -51,7 +52,8 @@ test("split header and body columns stay aligned in virtualized mode", async ({ 
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
   await page.getByRole("button", { exact: true, name: "대용량 데이터 표시" }).click();
-  await page.getByRole("button", { name: "100만 행 로드" }).click();
+  await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
+  await page.getByRole("button", { name: "10만 행 로드" }).click();
   await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
 
   const alignment = await page.evaluate(() => {
@@ -85,7 +87,8 @@ test("split header and body columns stay aligned after column resize", async ({ 
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
   await page.getByRole("button", { exact: true, name: "대용량 데이터 표시" }).click();
-  await page.getByRole("button", { name: "100만 행 로드" }).click();
+  await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
+  await page.getByRole("button", { name: "10만 행 로드" }).click();
   await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
 
   const nameHeader = page.getByTestId("header-name");

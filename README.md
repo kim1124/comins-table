@@ -53,7 +53,7 @@ export function Example() {
 - Single row, multi row, single cell, cell range, and clear selection helpers through `selectRow`, `selectRows`, `selectCell`, and `selectCellRange`
 - Multi-cell clipboard helpers and keyboard range copy/paste
 - Fill helper for copying one source cell value into a target range
-- Virtualized rendering path with split header/body tables for 100000 and 1000000 row smoke tests
+- Virtualized rendering path with split header/body tables for 100000 row smoke and perf tests
 - Public subpaths: `@kmsf/data-table/core`, `@kmsf/data-table/clipboard`, `@kmsf/data-table/selection`
 
 ## User Docs
@@ -79,7 +79,7 @@ Run the local playground from the repository root:
 npm --workspace=@kmsf/data-table run dev
 ```
 
-The playground follows the `@kmsf/charts` docs shell: topbar, tabs, collapsible feature navigation, recreated center example content, and a main-content `옵션 가이드` tab. Each feature page starts with a Korean description and an option table. It includes a standalone `Context Menu 예제` page and a `테이블 사이즈` page for manual height, parent-size, and browser-resize examples.
+The playground follows the `@kmsf/charts` docs shell: topbar, header-right view toggle, collapsible feature navigation, recreated center example content, and a main-content `옵션 가이드` view. Each feature page starts with a Korean title and description, then prioritizes the interactive table sample. It includes standalone `Context Menu 예제`, `컴포넌트 예제`, and `테이블 사이즈` pages for context-menu, built-in component, manual-height, parent-size, and browser-resize examples.
 
 ## Verification
 

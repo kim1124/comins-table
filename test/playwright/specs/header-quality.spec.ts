@@ -86,7 +86,7 @@ test("header boundary resize is isolated from long-press column move and animate
 
   const firstBodyCell = page.locator(".kmsf-data-table__body-table tbody tr").first().locator("td").first();
   const firstBodyCellBox = await firstBodyCell.boundingBox();
-  const rowDragHandleBox = await page.getByTestId("row-drag-handle-a").boundingBox();
+  const rowDragHandleBox = await page.locator(".kmsf-row-drag-handle").first().boundingBox();
   expect(firstBodyCellBox).not.toBeNull();
   expect(rowDragHandleBox).not.toBeNull();
   expect(rowDragHandleBox!.x - firstBodyCellBox!.x).toBeGreaterThanOrEqual(0);

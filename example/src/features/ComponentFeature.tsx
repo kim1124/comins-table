@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { KmsfDataTable, type KmsfDataTableColumn, type KmsfVirtualListItem } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
@@ -43,7 +43,7 @@ const componentExamples: Array<{
     title: "Button 예제",
   },
   {
-    description: "Cell 입력값을 외부 data 상태에 즉시 반영하는 controlled Input 예제입니다.",
+    description: "Cell 입력값을 내부 draft로 유지하고 Enter 또는 Blur에서 외부 data 변경을 commit하는 Input 예제입니다.",
     id: "input",
     title: "Input Field 예제",
   },
@@ -78,17 +78,17 @@ const componentExamples: Array<{
     title: "Header Menu 예제",
   },
   {
-    description: "Cell 내부 item을 5개 높이의 스크롤 영역으로 표시하는 Virtual Scroll Item List 기본 예제입니다.",
+    description: "미선택 상태에서는 5개 preview를 표시하고, 단일 Row 선택 시 전체 목록 virtual scroll을 활성화하는 기본 예제입니다.",
     id: "virtual-list",
     title: "Virtual Scroll Item List 기본 예제",
   },
   {
-    description: "More 버튼을 사용해 제한된 item을 단계적으로 추가 표시하는 Virtual Scroll Item List 예제입니다.",
+    description: "단일 Row 선택 시 More 버튼(...)으로 5개 preview에서 전체 목록 virtual scroll로 확장하는 예제입니다.",
     id: "virtual-list-more",
     title: "Virtual Scroll Item List More 예제",
   },
   {
-    description: "선택된 단일 Row에서 검색 input을 활성화하는 Virtual Scroll Item List 검색 예제입니다.",
+    description: "단일 Row 선택 시 검색 input을 표시하고 필터링된 virtual range를 확인하는 검색 예제입니다.",
     id: "virtual-list-search",
     title: "Virtual Scroll Item List Search 예제",
   },
@@ -105,19 +105,21 @@ const roleOptions = [
   { label: "Viewer", value: "Viewer" },
 ];
 
-function createVirtualListItems(rowIndex: number) {
-  return Array.from({ length: 36 }, (_value, index) => ({
-    data: { rowIndex },
-    label: `검색-${index + 1}`,
-    value: `검색-${index + 1}`,
-  }));
+const virtualListItemsFixture: KmsfVirtualListItem[] = Array.from({ length: 10_000 }, (_value, index) => ({
+  data: { index },
+  label: `검색-${index + 1}`,
+  value: `검색-${index + 1}`,
+}));
+
+function getVirtualListItems() {
+  return virtualListItemsFixture;
 }
 
 function createComponentRows(componentId: ComponentExampleId): ComponentRow[] {
-  return createExampleRows(100).map((row, index) => ({
+  return createExampleRows(100).map((row) => ({
     ...row,
     id: `${componentId}-${row.id}`,
-    virtualListItems: componentId.startsWith("virtual-list") ? createVirtualListItems(index) : undefined,
+    virtualListItems: componentId.startsWith("virtual-list") ? getVirtualListItems() : undefined,
   }));
 }
 
@@ -170,27 +172,28 @@ export function ComponentFeature() {
   const [eventLog, setEventLog] = useState("컴포넌트 이벤트 대기");
   const [eventAlert, setEventAlert] = useState("");
 
-  const reportComponentEvent = (componentName: string, detail?: string) => {
+  const reportComponentEvent = useCallback((componentName: string, detail?: string) => {
     const message = detail ? `${componentName}:${detail}` : componentName;
 
     setEventAlert(message);
     setEventLog(message);
-  };
+  }, []);
 
-  const updateRow = (componentId: ComponentExampleId, rowId: string | number, patch: Partial<ComponentRow>) => {
+  const updateRow = useCallback((componentId: ComponentExampleId, rowId: string | number, patch: Partial<ComponentRow>) => {
     setRowsByExample((current) => ({
       ...current,
       [componentId]: current[componentId].map((row) => (row.id === rowId ? { ...row, ...patch } : row)),
     }));
-  };
+  }, []);
 
-  const createColumns = (componentId: ComponentExampleId): Array<KmsfDataTableColumn<ComponentRow>> => {
+  const createColumns = useCallback((componentId: ComponentExampleId): Array<KmsfDataTableColumn<ComponentRow>> => {
     const field = getComponentField(componentId);
     const componentColumn: KmsfDataTableColumn<ComponentRow> = {
       cell: {},
       field,
       id: `${componentId}-component`,
       label: "컴포넌트",
+      sort: true,
       width: 260,
     };
 
@@ -418,8 +421,9 @@ export function ComponentFeature() {
             },
             props: {
               "aria-label": "Virtual List Item",
+              height: 186,
               itemHeight: 28,
-              limit: 10,
+              limit: 5,
               more: componentId === "virtual-list-more",
               searchable: componentId === "virtual-list-search",
             },
@@ -474,7 +478,19 @@ export function ComponentFeature() {
         width: 150,
       },
     ];
-  };
+  }, [headerState, reportComponentEvent, updateRow]);
+
+  const columnsByExample = useMemo(
+    () =>
+      componentExamples.reduce(
+        (acc, example) => {
+          acc[example.id] = createColumns(example.id);
+          return acc;
+        },
+        {} as Record<ComponentExampleId, Array<KmsfDataTableColumn<ComponentRow>>>,
+      ),
+    [createColumns],
+  );
 
   return (
     <section className="feature-panel feature-panel--components">
@@ -494,14 +510,14 @@ export function ComponentFeature() {
               <div className="component-example-table-wrap" data-testid={`component-example-${example.id}`}>
                 <KmsfDataTable
                   className="example-table component-example-table"
-                  columns={createColumns(example.id)}
+                  columns={columnsByExample[example.id]}
                   data={rowsByExample[example.id]}
                   data-testid={`component-table-viewport-${example.id}`}
                   getRowId={(row) => row.id}
                   onChangeData={(nextData) => {
                     setRowsByExample((current) => ({ ...current, [example.id]: nextData }));
                   }}
-                  pagination={{ pageIndex: 0, pageSize: 100 }}
+                  pagination={{ pageIndex: 0, pageSize: 30 }}
                   rowHeight={example.id.startsWith("virtual-list") ? 190 : undefined}
                   theme={{ density: "compact" }}
                 />

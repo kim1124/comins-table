@@ -1,6 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
-import { createPortal } from "react-dom";
 
 import type {
   KmsfCellComponentConfig,
@@ -260,66 +259,62 @@ function KmsfHeaderMenuComponent<TData, TValue>({
     };
   }, [open]);
 
-  const menu =
-    open && typeof document !== "undefined"
-      ? createPortal(
-          <div
-            aria-label="Header menu"
-            className="kmsf-data-table__component-menu-popover"
-            id={menuId}
-            ref={menuRef}
-            role="menu"
-            style={menuPosition}
+  const menu = open ? (
+    <span
+      aria-label="Header menu"
+      className="kmsf-data-table__component-menu-popover"
+      id={menuId}
+      ref={menuRef}
+      role="menu"
+      style={menuPosition}
+    >
+      {items.map((item, index) => {
+        if (item.type === "divider") {
+          return (
+            <span
+              aria-orientation="horizontal"
+              className="kmsf-data-table__component-menu-divider"
+              key={`divider-${index}`}
+              role="separator"
+            />
+          );
+        }
+
+        if (item.type === "label") {
+          return (
+            <span className="kmsf-data-table__component-menu-label" key={`label-${index}`} role="presentation">
+              {item.label}
+            </span>
+          );
+        }
+
+        return (
+          <button
+            className="kmsf-data-table__component-menu-item"
+            disabled={item.disabled}
+            key={`${String(item.value)}-${index}`}
+            onClick={(event) => {
+              preventAndStopComponentEvent(event);
+
+              if (item.disabled || !isMenuSelectableItem(item)) {
+                return;
+              }
+
+              requestOpen(false, event);
+              component.onSelect?.({ ...payload, event, item, value: item.value } as never);
+            }}
+            onKeyDown={stopComponentEvent}
+            onMouseDown={stopComponentEvent}
+            onPointerDown={stopComponentEvent}
+            role="menuitem"
+            type="button"
           >
-            {items.map((item, index) => {
-              if (item.type === "divider") {
-                return (
-                  <div
-                    aria-orientation="horizontal"
-                    className="kmsf-data-table__component-menu-divider"
-                    key={`divider-${index}`}
-                    role="separator"
-                  />
-                );
-              }
-
-              if (item.type === "label") {
-                return (
-                  <div className="kmsf-data-table__component-menu-label" key={`label-${index}`} role="presentation">
-                    {item.label}
-                  </div>
-                );
-              }
-
-              return (
-                <button
-                  className="kmsf-data-table__component-menu-item"
-                  disabled={item.disabled}
-                  key={`${String(item.value)}-${index}`}
-                  onClick={(event) => {
-                    preventAndStopComponentEvent(event);
-
-                    if (item.disabled || !isMenuSelectableItem(item)) {
-                      return;
-                    }
-
-                    requestOpen(false, event);
-                    component.onSelect?.({ ...payload, event, item, value: item.value } as never);
-                  }}
-                  onKeyDown={stopComponentEvent}
-                  onMouseDown={stopComponentEvent}
-                  onPointerDown={stopComponentEvent}
-                  role="menuitem"
-                  type="button"
-                >
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>,
-          document.body,
-        )
-      : null;
+            {item.label}
+          </button>
+        );
+      })}
+    </span>
+  ) : null;
 
   return (
     <span className="kmsf-data-table__component kmsf-data-table__component-menu">
@@ -386,18 +381,64 @@ function KmsfCellVirtualListComponent<TData, TValue>({
     ...rootProps
   } = props;
   const items = useMemo(() => resolveVirtualListItems(component.items, payload), [component.items, payload]);
-  const limit = Math.max(1, Number(limitProp ?? 10));
+  const limit = Math.max(1, Number(limitProp ?? 5));
   const itemHeight = Math.max(1, Number(itemHeightProp ?? 28));
   const defaultHeight = itemHeight * 5;
+  const hasExplicitHeight = height !== undefined || style?.height !== undefined;
   const [query, setQuery] = useState("");
+  const [expanded, setExpanded] = useState(false);
+  const [scrollTop, setScrollTop] = useState(0);
   const [selectedValue, setSelectedValue] = useState<string | number | boolean | null>(null);
-  const [visibleLimit, setVisibleLimit] = useState(limit);
-  const searchEnabled = Boolean(searchable && !more && payload.row.selected && payload.selection.selectedRowCount === 1);
+  const [viewportHeight, setViewportHeight] = useState(defaultHeight);
+  const itemsViewportRef = useRef<HTMLDivElement>(null);
+  const isSingleRowSelected = payload.row.selected && payload.selection.selectedRowCount === 1;
+  const searchEnabled = Boolean(searchable && isSingleRowSelected);
+  const moreEnabled = Boolean(more && isSingleRowSelected);
   const activeQuery = searchEnabled ? query : "";
 
   useEffect(() => {
-    setVisibleLimit(limit);
-  }, [limit, items.length]);
+    setExpanded(false);
+    setScrollTop(0);
+  }, [items.length, limit]);
+
+  useLayoutEffect(() => {
+    const viewport = itemsViewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    const measuredHeight = viewport.clientHeight > 0 ? viewport.clientHeight : defaultHeight;
+
+    setViewportHeight(hasExplicitHeight ? measuredHeight : Math.min(measuredHeight, defaultHeight));
+  }, [defaultHeight, expanded, activeQuery, hasExplicitHeight]);
+
+  useEffect(() => {
+    const viewport = itemsViewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    viewport.scrollTop = 0;
+    setScrollTop(0);
+  }, [activeQuery]);
+
+  useEffect(() => {
+    if (isSingleRowSelected) {
+      return;
+    }
+
+    const viewport = itemsViewportRef.current;
+
+    if (viewport) {
+      viewport.scrollTop = 0;
+    }
+
+    setExpanded(false);
+    setQuery("");
+    setScrollTop(0);
+  }, [isSingleRowSelected]);
 
   const filteredEntries = useMemo(() => {
     const normalizedQuery = activeQuery.trim().toLowerCase();
@@ -416,10 +457,26 @@ function KmsfCellVirtualListComponent<TData, TValue>({
         return toSearchableText(item.label).toLowerCase().includes(normalizedQuery);
       });
   }, [activeQuery, component, items]);
-  const renderedEntries = more
-    ? filteredEntries.slice(0, Math.min(visibleLimit, filteredEntries.length))
-    : filteredEntries;
-  const hasMore = Boolean(more && visibleLimit < filteredEntries.length);
+  const hasOverflow = filteredEntries.length > limit;
+  const virtualized = Boolean(
+    isSingleRowSelected && (expanded || activeQuery.trim().length > 0 || (!more && hasOverflow)),
+  );
+  const showOverflowControl = hasOverflow && !virtualized;
+  const overscan = searchEnabled && !expanded ? 0 : 2;
+  const safeViewportHeight = Math.max(
+    itemHeight,
+    hasExplicitHeight ? viewportHeight || defaultHeight : Math.min(viewportHeight || defaultHeight, defaultHeight),
+  );
+  const visibleStart = Math.max(0, Math.floor(Math.max(0, scrollTop) / itemHeight) - overscan);
+  const visibleEnd = Math.min(
+    filteredEntries.length,
+    Math.ceil((Math.max(0, scrollTop) + safeViewportHeight) / itemHeight) + overscan,
+  );
+  const renderedEntries = virtualized
+    ? filteredEntries.slice(visibleStart, visibleEnd)
+    : filteredEntries.slice(0, hasOverflow ? limit : filteredEntries.length);
+  const topSpacerHeight = virtualized ? visibleStart * itemHeight : 0;
+  const bottomSpacerHeight = virtualized ? Math.max(0, filteredEntries.length - visibleEnd) * itemHeight : 0;
   const listId = `${String(payload.row.id)}-${payload.column.id}`;
   const rootStyle = {
     ...style,
@@ -445,6 +502,7 @@ function KmsfCellVirtualListComponent<TData, TValue>({
       {...rootProps}
       aria-label={rootProps["aria-label"] ?? "Virtual list"}
       className={mergeClassName("kmsf-data-table__component", "kmsf-data-table__component-virtual-list", rootProps.className)}
+      data-kmsf-virtual-list-expanded={virtualized ? "true" : undefined}
       data-kmsf-virtual-list-visible-count={renderedEntries.length}
       data-testid={`virtual-list-${listId}`}
       onClick={(event) => {
@@ -483,7 +541,20 @@ function KmsfCellVirtualListComponent<TData, TValue>({
       role="listbox"
       style={rootStyle}
     >
-      <div className="kmsf-data-table__component-virtual-list-items" role="presentation">
+      <div
+        className="kmsf-data-table__component-virtual-list-items"
+        onScroll={(event) => {
+          stopComponentEvent(event);
+          setScrollTop(event.currentTarget.scrollTop);
+          const measuredHeight = event.currentTarget.clientHeight > 0 ? event.currentTarget.clientHeight : defaultHeight;
+          setViewportHeight(hasExplicitHeight ? measuredHeight : Math.min(measuredHeight, defaultHeight));
+        }}
+        ref={itemsViewportRef}
+        role="presentation"
+      >
+        {topSpacerHeight > 0 ? (
+          <span aria-hidden="true" className="kmsf-data-table__component-virtual-list-spacer" style={{ height: topSpacerHeight }} />
+        ) : null}
         {renderedEntries.map(({ item, itemIndex }) => (
           <button
             aria-selected={selectedValue === item.value}
@@ -517,17 +588,50 @@ function KmsfCellVirtualListComponent<TData, TValue>({
             role="option"
             type="button"
           >
-            {item.label}
+            <span className="kmsf-data-table__component-virtual-list-item-label">{item.label}</span>
           </button>
         ))}
+        {bottomSpacerHeight > 0 ? (
+          <span
+            aria-hidden="true"
+            className="kmsf-data-table__component-virtual-list-spacer"
+            style={{ height: bottomSpacerHeight }}
+          />
+        ) : null}
       </div>
       <div className="kmsf-data-table__component-virtual-list-controls">
-        {searchable ? (
+        {showOverflowControl ? (
+          moreEnabled ? (
+            <button
+              aria-label="전체 목록 보기"
+              className="kmsf-data-table__component-virtual-list-overflow kmsf-data-table__component-virtual-list-more"
+              data-testid={`virtual-list-overflow-${listId}`}
+              onClick={(event) => {
+                preventAndStopComponentEvent(event);
+                setExpanded(true);
+              }}
+              onKeyDown={stopComponentEvent}
+              onMouseDown={stopComponentEvent}
+              onPointerDown={stopComponentEvent}
+              type="button"
+            >
+              ...
+            </button>
+          ) : (
+            <span
+              aria-hidden="true"
+              className="kmsf-data-table__component-virtual-list-overflow kmsf-data-table__component-virtual-list-more"
+              data-testid={`virtual-list-overflow-${listId}`}
+            >
+              ...
+            </span>
+          )
+        ) : null}
+        {searchEnabled ? (
           <input
             aria-label={`${rootProps["aria-label"] ?? "Virtual list"} 검색`}
             className="kmsf-data-table__component-virtual-list-search"
             data-testid={`virtual-list-search-${listId}`}
-            disabled={!searchEnabled}
             onChange={(event) => {
               stopComponentEvent(event);
               setQuery(event.currentTarget.value);
@@ -539,23 +643,6 @@ function KmsfCellVirtualListComponent<TData, TValue>({
             placeholder="검색"
             value={query}
           />
-        ) : null}
-        {more ? (
-          <button
-            className="kmsf-data-table__component-virtual-list-more"
-            data-testid={`virtual-list-more-${listId}`}
-            disabled={!hasMore}
-            onClick={(event) => {
-              preventAndStopComponentEvent(event);
-              setVisibleLimit((current) => Math.min(filteredEntries.length, current + limit));
-            }}
-            onKeyDown={stopComponentEvent}
-            onMouseDown={stopComponentEvent}
-            onPointerDown={stopComponentEvent}
-            type="button"
-          >
-            더보기
-          </button>
         ) : null}
       </div>
     </div>
@@ -627,7 +714,7 @@ export function renderKmsfBuiltInComponent<TData, TValue>(
 
   if (component.type === "checkbox") {
     const props = resolveComponentProps<React.InputHTMLAttributes<HTMLInputElement>>(component.props, payload);
-    const { onChange, onClick, onKeyDown, onMouseDown, onPointerDown, ...inputProps } = props;
+    const { onChange, onClick, onKeyDown, onMouseDown, onPointerDown, style, ...inputProps } = props;
 
     return (
       <input
@@ -658,6 +745,7 @@ export function renderKmsfBuiltInComponent<TData, TValue>(
           onPointerDown?.(event);
           stopComponentEvent(event);
         }}
+        style={{ height: 20, width: 20, ...style }}
         type="checkbox"
       />
     );
@@ -759,6 +847,7 @@ export function renderKmsfBuiltInComponent<TData, TValue>(
               onKeyDown={stopComponentEvent}
               onMouseDown={stopComponentEvent}
               onPointerDown={stopComponentEvent}
+              style={{ height: 20, width: 20 }}
               type="radio"
               value={String(option.value)}
             />

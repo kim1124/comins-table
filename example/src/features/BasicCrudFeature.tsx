@@ -21,7 +21,7 @@ export function BasicCrudFeature() {
     () => (ownersOnly ? rows.filter((row) => row.role === "Owner") : rows),
     [ownersOnly, rows],
   );
-  const pageSize = 10;
+  const pageSize = 30;
   const pageCount = Math.max(1, Math.ceil(visibleRows.length / pageSize));
   const safePageIndex = Math.min(pageIndex, pageCount - 1);
   const columns = useMemo<Array<KmsfDataTableColumn<PersonRow>>>(

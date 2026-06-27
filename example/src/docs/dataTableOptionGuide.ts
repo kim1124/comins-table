@@ -5,6 +5,8 @@ export const dataTableOptionGuide = [
       { description: "label, field, id, sort, props, format, header를 정의합니다.", name: "columns" },
       { description: "selection, row 이동, callback payload를 안정적으로 유지하기 위한 row id resolver입니다.", name: "getRowId" },
       { description: "cell 선택 이벤트와 스타일 적용 여부를 제어합니다.", name: "cellSelection" },
+      { description: "대용량 row window rendering 경로를 활성화합니다.", name: "virtualized" },
+      { description: "virtualized body가 viewport 위/아래에 유지할 row buffer 크기입니다. 기본값은 25입니다.", name: "buffer-size" },
     ],
     title: "Props",
   },

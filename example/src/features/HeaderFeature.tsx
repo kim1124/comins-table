@@ -24,12 +24,11 @@ export function HeaderFeature() {
   const [columnLayout, setColumnLayout] = useState<KmsfColumnLayout>(() => cloneDefaultLayout());
   const [savedLayout, setSavedLayout] = useState("");
   const [showHeader, setShowHeader] = useState(true);
-  const headerEvent = "헤더 컴포넌트 이벤트 대기";
 
   return (
     <section className="feature-panel">
       <FeatureSampleSection
-        description="Header 포맷, 정렬, showHeader, header.renderer를 확인합니다."
+        description="Header 표시/숨김, 정렬, 컬럼 위치와 너비 저장/불러오기/초기화를 확인합니다."
         id="header"
         title="Header 예제"
       >
@@ -57,27 +56,22 @@ export function HeaderFeature() {
               >
                 불러오기
               </ActionButton>
-              <ActionButton icon={<RotateCcw />} onClick={() => setSavedLayout("")}>
-                초기화
-              </ActionButton>
               <ActionButton
                 icon={<RotateCcw />}
                 onClick={() => {
                   const nextLayout = cloneDefaultLayout();
+                  setSavedLayout("");
                   setColumnLayout(nextLayout);
                   tableRef.current?.setColumnLayout(nextLayout);
                 }}
               >
-                복원
+                초기화
               </ActionButton>
             </>
           }
         />
         <pre className="state-output" data-testid="saved-layout-json">
           {savedLayout || "저장된 레이아웃 없음"}
-        </pre>
-        <pre className="state-output" data-testid="header-component-event">
-          {headerEvent}
         </pre>
         <KmsfDataTable
           className="example-table"
@@ -88,6 +82,7 @@ export function HeaderFeature() {
           onChangeColumnLayout={setColumnLayout}
           ref={tableRef}
           showHeader={showHeader}
+          pagination={{ pageIndex: 0, pageSize: 30 }}
           theme={{ density: "compact" }}
         />
       </FeatureSampleSection>

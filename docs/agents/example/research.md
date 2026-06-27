@@ -8,13 +8,13 @@
 
 ## Scope
 
-`example`은 future playground, documentation examples, feature menu, browser verification surface를 담당한다.
+`example`은 playground, documentation examples, feature menu, browser verification surface를 담당한다.
 
 ## Stable Rules
 
 - 좌측 aside는 feature menu로 구성하고 기본 화면 폭의 20%를 사용한다.
 - 우측 content는 data table example 출력 영역으로 구성하고 기본 화면 폭의 80%를 사용한다.
-- 메뉴는 `Basic`, `Basic CRUD`, `Header`, `Body`, `Td / Cell`, `Tr / Row`, `Core Features`, `Advanced Features`를 시작점으로 둔다.
+- 메뉴는 현재 `기본`, `CRUD 동작`, `테이블 사이즈`, `Header 예제`, `대용량 데이터 표시`, `Td Cell 예제`, `컴포넌트 예제`, `Tr Row 예제`, `Context Menu 예제`를 제공한다.
 - 다른 메뉴로 이동하면 우측 content를 destroy하고 새 content를 recreate한다.
 - 같은 메뉴를 다시 선택하는 것은 no-op으로 처리한다.
 - inactive feature example을 hidden DOM으로 유지하지 않는다.

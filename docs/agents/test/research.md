@@ -8,14 +8,14 @@
 
 ## Scope
 
-`test`는 Vitest, future browser checks, report routing을 담당한다.
+`test`는 Vitest, Playwright browser checks, report routing을 담당한다.
 
 ## Stable Rules
 
 - behavior를 추가하기 전에 focused test를 먼저 만든다.
 - rendered table interaction은 browser-capable test로 검증한다.
 - package baseline은 `npm --workspace=@kmsf/data-table run verify`로 확인한다.
-- test 하네스는 `charts` package 검증 체계를 상속하지 않는다. `@kmsf/data-table` 자체 Vitest, future browser check, package verify 기준으로 유지한다.
+- test 하네스는 `charts` package 검증 체계를 상속하지 않는다. `@kmsf/data-table` 자체 Vitest, browser check, package verify 기준으로 유지한다.
 - required focused test, package verify, browser-required verification은 completion gate다.
 - failing required tests를 남긴 상태에서는 작업을 완료로 보고하지 않는다.
 - test를 통과시키기 위한 assertion 약화, 테스트 삭제, jsdom-only 대체는 금지한다.

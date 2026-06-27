@@ -55,7 +55,7 @@ export function RowFeature() {
           }}
           onDoubleClickRow={({ row }) => pushEvent(`행 더블클릭:${String(row.id)}`)}
           onKeyDownRow={({ event, row }) => pushEvent(`행 키다운:${String(row.id)}:${event.key}`)}
-          pagination={{ pageIndex: 0, pageSize: 10 }}
+          pagination={{ pageIndex: 0, pageSize: 30 }}
           rowProps={{
             className: (row) => (row.role === "Owner" ? "row-owner" : undefined),
             disabled: (row) => row.id === "row-3",

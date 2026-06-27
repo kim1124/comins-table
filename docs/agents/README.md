@@ -5,9 +5,9 @@
 ## Domain Map
 
 - `root/`: package contract, peer dependencies, verification policy
-- `src/`: public data table exports and future component rules
-- `test/`: Vitest tests, future browser tests, report routing
-- `example/`: future playground, docs examples, feature menu, browser verification
+- `src/`: public data table exports and component rules
+- `test/`: Vitest tests, browser tests, report routing
+- `example/`: playground, docs examples, feature menu, browser verification
 
 ## File Roles
 

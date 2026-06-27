@@ -62,6 +62,11 @@ describe("@kmsf/data-table public API boundary", () => {
     expect(styles).toContain("--kmsf-data-table-component-accent: #10b981");
     expect(styles).toContain("--kmsf-data-table-component-virtual-list-height: calc(var(--kmsf-data-table-virtual-list-item-height, 28px) * 5)");
     expect(styles).toMatch(/\.kmsf-data-table__component-input,[\s\S]*border-radius: 0/u);
+    expect(styles).toMatch(/\.kmsf-data-table__td\[data-kmsf-component-cell="true"\][\s\S]*padding: 2px/u);
+    expect(styles).toMatch(/\.kmsf-data-table__cell-value[\s\S]*text-overflow: ellipsis/u);
+    expect(styles).toMatch(/\.kmsf-data-table__component-virtual-list-item-label[\s\S]*text-overflow: ellipsis/u);
+    expect(styles).toMatch(/\.kmsf-data-table__component-input,[\s\S]*height: 100%/u);
+    expect(styles).toMatch(/\.kmsf-data-table__component-virtual-list[\s\S]*height: 100%/u);
     expect(styles).toMatch(/\.kmsf-data-table__component-checkbox,[\s\S]*width: 20px/u);
     expect(styles).toMatch(/\.kmsf-data-table__component-radio input[\s\S]*width: 20px/u);
     expect(styles).not.toMatch(/bootstrap|@radix-ui|shadcn|class-variance-authority|tailwind-merge/u);

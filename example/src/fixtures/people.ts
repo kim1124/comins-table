@@ -28,6 +28,19 @@ export function createRows(count: number): PersonRow[] {
   }));
 }
 
+const virtualRowTemplate: PersonRow = {
+  active: true,
+  age: 0,
+  id: "virtual-row",
+  locked: "virtual-lock",
+  name: "Virtual Row",
+  role: "Owner",
+};
+
+export function createVirtualRows(count: number): PersonRow[] {
+  return Array.from({ length: count }, () => virtualRowTemplate);
+}
+
 export function createExampleRows(count = 100): PersonRow[] {
   const rows = cloneBaseRows();
 

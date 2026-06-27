@@ -21,7 +21,7 @@ test("CRUD example adds every click, updates active row JSON, and deletes select
   await page.goto("/");
   await page.getByRole("button", { exact: true, name: "CRUD 동작" }).click();
 
-  await expect(page.locator("tbody tr[data-testid^='row-']")).toHaveCount(10);
+  await expect(page.locator("tbody tr[data-testid^='row-']")).toHaveCount(30);
   await page.getByTestId("cell-b-name").click();
   await expect(page.getByTestId("selected-row-state")).toHaveCount(0);
   await expect(page.getByTestId("row-b")).toHaveAttribute("data-selected-row", "true");
@@ -32,7 +32,7 @@ test("CRUD example adds every click, updates active row JSON, and deletes select
 
   await page.getByRole("button", { exact: true, name: "추가" }).click();
   await page.getByRole("button", { exact: true, name: "추가" }).click();
-  await expect(page.locator("tbody tr[data-testid^='row-']")).toHaveCount(10);
+  await expect(page.locator("tbody tr[data-testid^='row-']")).toHaveCount(30);
   await expect(page.getByTestId("row-new-1")).toBeVisible();
   await expect(page.getByTestId("row-new-2")).toBeVisible();
 

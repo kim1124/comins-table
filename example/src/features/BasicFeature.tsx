@@ -22,7 +22,7 @@ export function BasicFeature() {
           data-testid="data-table-viewport"
           getRowId={(row) => row.id}
           onChangeData={setRows}
-          pagination={{ pageIndex: 0, pageSize: 10 }}
+          pagination={{ pageIndex: 0, pageSize: 30 }}
           theme={{ density: "compact" }}
         />
       </FeatureSampleSection>

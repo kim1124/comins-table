@@ -1,127 +1,41 @@
 import { useState } from "react";
-import { MousePointerClick } from "lucide-react";
 
 import { KmsfDataTable, type KmsfDataTableColumn } from "../../../src";
-import { ActionButton, FeatureControls } from "../components/FeatureControls";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
-import { createGuardedColumns } from "../fixtures/columns";
 import { createExampleRows, type PersonRow } from "../fixtures/people";
 
 export function CellFeature() {
   const [eventLog, setEventLog] = useState("셀 이벤트 대기");
-  const [cellSelectionEnabled, setCellSelectionEnabled] = useState(false);
   const [rows, setRows] = useState(() => createExampleRows(100));
-  const updateRow = (rowId: string | number, patch: Partial<PersonRow>) => {
-    setRows((current) => current.map((row) => (row.id === rowId ? { ...row, ...patch } : row)));
-  };
   const columns: Array<KmsfDataTableColumn<PersonRow>> = [
-    ...createGuardedColumns(),
     {
       cell: {
-        components: [
-          {
-            onClick: ({ row, value }) => setEventLog(`버튼 클릭:${String(row.id)}:${String(value)}`),
-            props: ({ value }) => ({ children: `버튼 ${String(value)}` }),
-            type: "button",
-          },
-        ],
+        tooltip: ({ value }) => `name:${String(value)}`,
       },
       field: "name",
-      id: "component-button",
-      label: "Button",
+      id: "name",
+      label: "텍스트",
+      width: 100,
     },
     {
       cell: {
-        components: [
-          {
-            onValueChange: ({ row, value }) => updateRow(row.id, { name: value }),
-            props: ({ value }) => ({ "aria-label": "이름 입력", value: String(value) }),
-            type: "input",
-          },
-        ],
-      },
-      field: "name",
-      id: "component-input",
-      label: "Input",
-    },
-    {
-      cell: {
-        components: [
-          {
-            onCheckedChange: ({ row, checked }) => updateRow(row.id, { active: checked }),
-            props: ({ value }) => ({ "aria-label": "활성 체크", checked: Boolean(value) }),
-            type: "checkbox",
-          },
-        ],
-      },
-      field: "active",
-      id: "component-checkbox",
-      label: "Checkbox",
-    },
-    {
-      cell: {
-        components: [
-          {
-            onValueChange: ({ row, value }) => updateRow(row.id, { role: value }),
-            options: [
-              { label: "Owner", value: "Owner" },
-              { label: "Editor", value: "Editor" },
-              { label: "Viewer", value: "Viewer" },
-            ],
-            props: ({ value }) => ({ value: String(value) }),
-            type: "radio",
-          },
-        ],
-      },
-      field: "role",
-      id: "component-radio",
-      label: "Radio",
-    },
-    {
-      cell: {
-        components: [
-          {
-            onValueChange: ({ row, value }) => updateRow(row.id, { role: value }),
-            options: [
-              { label: "Owner", value: "Owner" },
-              { label: "Editor", value: "Editor" },
-              { label: "Viewer", value: "Viewer" },
-            ],
-            props: ({ value }) => ({ value: String(value) }),
-            type: "select",
-          },
-        ],
-      },
-      field: "role",
-      id: "component-select",
-      label: "Select",
-    },
-    {
-      cell: {
-        components: [
-          {
-            onCheckedChange: ({ row, checked }) => updateRow(row.id, { active: checked }),
-            props: ({ value }) => ({ checked: Boolean(value), children: Boolean(value) ? "ON" : "OFF" }),
-            type: "toggle",
-          },
-        ],
-      },
-      field: "active",
-      id: "component-toggle",
-      label: "Toggle",
-    },
-    {
-      cell: {
-        components: [
-          {
-            props: ({ value }) => ({ value: Number(value), max: 100 }),
-            type: "progress",
-          },
-        ],
+        format: ({ value }) => `${String(value)} years`,
+        props: { style: { textAlign: "right" } },
       },
       field: "age",
-      id: "component-progress",
-      label: "Progress",
+      id: "age",
+      label: "포맷",
+      width: 100,
+    },
+    {
+      cell: {
+        format: ({ value }) => <strong>{String(value)}</strong>,
+        props: { className: ({ value }) => (value === "Owner" ? "cell-owner" : undefined) },
+      },
+      field: "role",
+      id: "style",
+      label: "스타일",
+      width: 100,
     },
     {
       cell: {
@@ -130,33 +44,44 @@ export function CellFeature() {
         ),
       },
       field: "name",
-      id: "component-renderer",
-      label: "Renderer",
+      id: "renderer",
+      label: "렌더러",
+      width: 100,
+    },
+    {
+      cell: {
+        props: {
+          copyable: false,
+          pasteable: false,
+        },
+      },
+      field: "locked",
+      id: "locked",
+      label: "가드",
+      width: 100,
+    },
+    {
+      cell: {
+        format: ({ value }) => (value ? "활성" : "비활성"),
+      },
+      field: "active",
+      id: "event",
+      label: "이벤트",
+      width: 100,
     },
   ];
 
   return (
     <section className="feature-panel">
       <FeatureSampleSection
-        description="Td Cell 포맷, cell.components, cell.renderer, onClickCell, onContextMenuCell, clipboard guard와 cellSelection 옵션을 확인합니다."
+        description="Td Cell 포맷, 스타일, cell.renderer, onClickCell, onContextMenuCell, clipboard guard를 확인합니다."
         id="cell"
         title="Td Cell 예제"
       >
-        <FeatureControls
-          actions={
-            <ActionButton icon={<MousePointerClick />} onClick={() => setCellSelectionEnabled((current) => !current)}>
-              Cell Selection {cellSelectionEnabled ? "비활성화" : "활성화"}
-            </ActionButton>
-          }
-        />
-        <div className="state-row">
-          <span data-testid="cell-selection-state">cellSelection:{cellSelectionEnabled ? "활성" : "비활성"}</span>
-        </div>
         <pre className="state-output" data-testid="cell-event-log">
           {eventLog}
         </pre>
         <KmsfDataTable
-          cellSelection={cellSelectionEnabled}
           className="example-table"
           columns={columns}
           data={rows}
@@ -176,7 +101,7 @@ export function CellFeature() {
           onKeyDownCell={({ column, event, row }) => {
             setEventLog(`셀 키다운:${String(row.id)}:${column.id}:${event.key}`);
           }}
-          pagination={{ pageIndex: 0, pageSize: 10 }}
+          pagination={{ pageIndex: 0, pageSize: 30 }}
           rowProps={{ className: (row) => (row.role === "Owner" ? "row-owner" : undefined) }}
           theme={{ density: "compact" }}
         />

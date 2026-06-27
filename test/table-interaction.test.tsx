@@ -42,6 +42,11 @@ const threeRows: PersonRow[] = [
   ...rows,
   { age: 27, id: "c", name: "Gamma" },
 ];
+const manyRows: PersonRow[] = Array.from({ length: 200 }, (_value, index) => ({
+  age: index,
+  id: `row-${index}`,
+  name: `Row ${index}`,
+}));
 
 let root: ReturnType<typeof createRoot> | undefined;
 let container: HTMLDivElement | undefined;
@@ -110,6 +115,36 @@ describe("@kmsf/data-table keyboard interaction", () => {
     expect(element.querySelector("[data-testid='header-profile.age']")?.textContent).toContain("Profile Age");
     expect(element.querySelector("[data-testid='cell-a-name']")?.textContent).toBe("Alpha");
     expect(element.querySelector("[data-testid='cell-a-profile.age']")?.textContent).toBe("31");
+  });
+
+  it("accepts buffer-size and uses a practical default virtualized row buffer", () => {
+    const defaultProps: KmsfDataTableProps<PersonRow> = {
+      columns,
+      data: manyRows,
+      getRowId: (row) => row.id,
+      rowHeight: 20,
+      virtualized: true,
+    };
+    const customProps: KmsfDataTableProps<PersonRow> = {
+      ...defaultProps,
+      "buffer-size": 30,
+    };
+
+    const defaultElement = renderTableElement(<KmsfDataTable {...defaultProps} />);
+    const defaultRows = defaultElement.querySelectorAll("tbody tr[data-kmsf-row-data-index]");
+
+    expect(defaultRows.length).toBeGreaterThanOrEqual(32);
+    expect(defaultRows.length).toBeLessThanOrEqual(42);
+
+    act(() => root?.unmount());
+    container?.remove();
+    root = undefined;
+    container = undefined;
+
+    const customElement = renderTableElement(<KmsfDataTable {...customProps} />);
+    const customRows = customElement.querySelectorAll("tbody tr[data-kmsf-row-data-index]");
+
+    expect(customRows.length).toBe(42);
   });
 
   it("notifies onChangeData when internal interactions mutate data", () => {

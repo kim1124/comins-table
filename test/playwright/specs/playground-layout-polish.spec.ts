@@ -110,6 +110,73 @@ test("repeated sample containers provide at least 500px sample height and full-w
   expect(diagnostics).toEqual([]);
 });
 
+test("all playground examples keep width containment and component resize scrolls inside the table", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.setViewportSize({ height: 760, width: 1180 });
+  await page.goto("/");
+
+  for (const label of [
+    "기본",
+    "CRUD 동작",
+    "테이블 사이즈",
+    "Header 예제",
+    "대용량 데이터 표시",
+    "Td Cell 예제",
+    "컴포넌트 예제",
+    "Tr Row 예제",
+    "Context Menu 예제",
+  ]) {
+    await page.getByRole("button", { exact: true, name: label }).click();
+    const metrics = await page.getByTestId("feature-content").evaluate((element) => {
+      const panel = element.querySelector<HTMLElement>(".feature-panel");
+      const panelStyle = panel ? window.getComputedStyle(panel) : null;
+      const contentRect = element.getBoundingClientRect();
+      const panelRect = panel?.getBoundingClientRect();
+
+      return {
+        contentRight: contentRect.right,
+        documentWidth: document.documentElement.scrollWidth,
+        overflowX: panelStyle?.overflowX ?? "",
+        panelRight: panelRect?.right ?? 0,
+        viewportWidth: window.innerWidth,
+      };
+    });
+
+    expect(metrics.panelRight).toBeLessThanOrEqual(metrics.contentRight + 1);
+    expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1);
+    expect(metrics.overflowX).not.toBe("visible");
+  }
+
+  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  const beforeWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+  const table = page.getByTestId("component-example-button");
+  const resizeHandle = table.getByTestId("resize-button-component");
+  const handleBox = await resizeHandle.boundingBox();
+  expect(handleBox).not.toBeNull();
+
+  await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handleBox!.x + 420, handleBox!.y + handleBox!.height / 2);
+  await page.mouse.up();
+
+  const overflowMetrics = await table.locator(".kmsf-data-table__body-viewport").evaluate((element) => {
+    const style = window.getComputedStyle(element);
+
+    return {
+      clientWidth: element.clientWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      overflowX: style.overflowX,
+      scrollWidth: element.scrollWidth,
+      viewportWidth: window.innerWidth,
+    };
+  });
+
+  expect(overflowMetrics.documentWidth).toBeLessThanOrEqual(Math.max(beforeWidth, overflowMetrics.viewportWidth) + 1);
+  expect(overflowMetrics.scrollWidth).toBeGreaterThan(overflowMetrics.clientWidth);
+  expect(["auto", "scroll"]).toContain(overflowMetrics.overflowX);
+  expect(diagnostics).toEqual([]);
+});
+
 test("CRUD page removes noisy query output and shows table pagination at the top right", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
@@ -124,7 +191,7 @@ test("CRUD page removes noisy query output and shows table pagination at the top
     await expect(page.getByRole("button", { exact: true, name: label })).toBeVisible();
   }
   await expect(page.getByTestId("crud-pagination")).toBeVisible();
-  await expect(page.getByTestId("crud-pagination")).toContainText("1 / 10");
+  await expect(page.getByTestId("crud-pagination")).toContainText("1 / 4");
   await expect(page.locator(".kmsf-data-table__header-table th")).toHaveCount(6);
 
   const detailBox = await page.getByTestId("crud-detail-pane").boundingBox();
@@ -141,7 +208,29 @@ test("CRUD page removes noisy query output and shows table pagination at the top
   expect(Math.abs(tableBox!.width - sampleBox!.width)).toBeLessThanOrEqual(2);
 
   await page.getByRole("button", { exact: true, name: "다음" }).click();
-  await expect(page.getByTestId("crud-pagination")).toContainText("2 / 10");
+  await expect(page.getByTestId("crud-pagination")).toContainText("2 / 4");
+  expect(diagnostics).toEqual([]);
+});
+
+test("general samples render thirty rows per page while large data remains virtualized", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/");
+
+  for (const label of ["기본", "CRUD 동작", "Header 예제", "Td Cell 예제", "Tr Row 예제", "Context Menu 예제"]) {
+    await page.getByRole("button", { exact: true, name: label }).click();
+    await expect(page.getByTestId("data-table-viewport")).toBeVisible();
+    await expect(page.locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]")).toHaveCount(30);
+  }
+
+  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await expect(
+    page.getByTestId("component-example-button").locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
+  ).toHaveCount(30);
+
+  await page.getByRole("button", { exact: true, name: "대용량 데이터 표시" }).click();
+  await expect(page.getByRole("button", { exact: true, name: "100만 행 로드" })).toHaveCount(0);
+  await page.getByRole("button", { exact: true, name: "10만 행 로드" }).click();
+  await expect.poll(() => page.locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]").count()).toBeLessThan(90);
   expect(diagnostics).toEqual([]);
 });
 
@@ -159,19 +248,20 @@ test("header page keeps only requested actions and state outputs", async ({ page
   await page.goto("/");
   await page.getByRole("button", { exact: true, name: "Header 예제" }).click();
 
-  for (const label of ["표시", "숨김", "저장", "불러오기", "초기화", "복원"]) {
+  for (const label of ["표시", "숨김", "저장", "불러오기", "초기화"]) {
     await expect(page.getByRole("button", { exact: true, name: label })).toBeVisible();
   }
+  await expect(page.getByRole("button", { exact: true, name: "복원" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Header components/u })).toHaveCount(0);
   await expect(page.getByTestId("header-component-table")).toHaveCount(0);
   await expect(page.getByTestId("header-proof-layout")).toHaveCount(0);
   await expect(page.getByTestId("header-proof-sort")).toHaveCount(0);
   await expect(page.getByTestId("saved-layout-json")).toBeVisible();
-  await expect(page.getByTestId("header-component-event")).toBeVisible();
+  await expect(page.getByTestId("header-component-event")).toHaveCount(0);
   expect(diagnostics).toEqual([]);
 });
 
-test("data table uses 1px outer radius and keeps viewport edge lines visible", async ({ page }) => {
+test("data table uses 2px outer radius and keeps viewport edge lines visible", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
   await page.getByRole("button", { exact: true, name: "대용량 데이터 표시" }).click();
@@ -179,9 +269,10 @@ test("data table uses 1px outer radius and keeps viewport edge lines visible", a
   await expect(page.locator(".kmsf-data-table__header-table th")).toHaveCount(10);
 
   const table = page.locator(".example-table.kmsf-data-table").first();
-  await expect(table).toHaveCSS("border-radius", "1px");
+  await expect(table).toHaveCSS("border-radius", "2px");
   await expect(table).toHaveCSS("border-right-width", "1px");
   await expect(table).toHaveCSS("border-bottom-width", "1px");
+  await expect(page.getByTestId("data-table-viewport")).toHaveCSS("overscroll-behavior-y", "none");
 
   const viewportMetrics = await page.getByTestId("data-table-viewport").evaluate((element) => ({
     clientHeight: element.clientHeight,
@@ -190,6 +281,44 @@ test("data table uses 1px outer radius and keeps viewport edge lines visible", a
   }));
   expect(viewportMetrics.scrollTop).toBe(0);
   expect(viewportMetrics.scrollHeight).toBeGreaterThan(viewportMetrics.clientHeight);
+  expect(diagnostics).toEqual([]);
+});
+
+test("column shrink clips overflowing component content inside the resized cell", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/");
+  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+
+  const table = page.getByTestId("component-example-button");
+  const resizeHandle = table.getByTestId("resize-button-component");
+  const handleBox = await resizeHandle.boundingBox();
+  expect(handleBox).not.toBeNull();
+
+  await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handleBox!.x - 260, handleBox!.y + handleBox!.height / 2);
+  await page.mouse.up();
+
+  const overflowMetrics = await table.getByTestId("cell-button-a-button-component").evaluate((cell) => {
+    const rect = cell.getBoundingClientRect();
+    const leakedTarget = document.elementFromPoint(rect.right + 6, rect.top + rect.height / 2);
+    const header = document.querySelector<HTMLElement>("[data-testid='header-button-component']");
+    const headerText = header?.querySelector<HTMLElement>(".kmsf-data-table__header-label");
+    const headerTextStyle = headerText ? window.getComputedStyle(headerText) : null;
+    const cellStyle = window.getComputedStyle(cell);
+
+    return {
+      cellOverflow: cellStyle.overflow,
+      headerOverflow: headerTextStyle?.overflow ?? null,
+      headerTextOverflow: headerTextStyle?.textOverflow ?? null,
+      leakedButtonText: leakedTarget?.closest(".kmsf-data-table__component-button")?.textContent ?? null,
+    };
+  });
+
+  expect(overflowMetrics.cellOverflow).toBe("hidden");
+  expect(overflowMetrics.headerOverflow).toBe("hidden");
+  expect(overflowMetrics.headerTextOverflow).toBe("ellipsis");
+  expect(overflowMetrics.leakedButtonText).toBeNull();
   expect(diagnostics).toEqual([]);
 });
 
