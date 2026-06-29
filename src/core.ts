@@ -299,11 +299,22 @@ export type KmsfDataTableColumn<TData, TValue = unknown> = {
   width?: number;
 };
 
+export type KmsfDataTableColumnGroup = {
+  children: string[];
+  hidden?: boolean;
+  id: string;
+  label: React.ReactNode;
+};
+
 export type KmsfDataTableRuntimeColumn<TData, TValue = unknown> = Omit<
   KmsfDataTableColumn<TData, TValue>,
   "id"
 > & {
   id: string;
+};
+
+export type KmsfDataTableRuntimeColumnGroup = Omit<KmsfDataTableColumnGroup, "children"> & {
+  children: string[];
 };
 
 export type KmsfEventColumn<TData, TValue = unknown> = {
@@ -319,8 +330,13 @@ export type KmsfColumnRuntimeState = {
   width?: number;
 };
 
+export type KmsfColumnGroupRuntimeState = {
+  hidden?: boolean;
+};
+
 export type KmsfColumnLayout = {
   columns: Record<string, KmsfColumnRuntimeState>;
+  groups?: Record<string, KmsfColumnGroupRuntimeState>;
   order: string[];
 };
 
@@ -337,6 +353,8 @@ export type KmsfSelectionState = {
 
 export type KmsfDataTableState<TData> = {
   columnOrder: string[];
+  columnGroups: KmsfDataTableRuntimeColumnGroup[];
+  columnGroupState: Record<string, KmsfColumnGroupRuntimeState>;
   columns: Array<KmsfDataTableRuntimeColumn<TData>>;
   columnState: Record<string, KmsfColumnRuntimeState>;
   getRowId: (row: TData, index: number) => KmsfRowId;
@@ -351,6 +369,7 @@ export type KmsfDataTableState<TData> = {
 
 export type KmsfDataTableStateInput<TData> = {
   columnLayout?: Partial<KmsfColumnLayout>;
+  columnGroups?: ReadonlyArray<KmsfDataTableColumnGroup>;
   columns: ReadonlyArray<KmsfDataTableColumn<TData>>;
   getRowId?: (row: TData, index: number) => KmsfRowId;
   pagination?: Partial<KmsfPaginationState>;
@@ -380,6 +399,25 @@ export type KmsfVirtualRows<TData> = {
   topSpacerHeight: number;
   totalHeight: number;
 };
+
+export type KmsfHeaderColumnCell<TData> = {
+  colSpan: 1;
+  column: KmsfDataTableRuntimeColumn<TData>;
+  columnId: string;
+  groupId?: string;
+  kind: "column";
+  rowSpan: 1 | 2;
+};
+
+export type KmsfHeaderGroupCell = {
+  colSpan: number;
+  group: KmsfDataTableRuntimeColumnGroup;
+  groupId: string;
+  kind: "group";
+  rowSpan: 1;
+};
+
+export type KmsfHeaderCell<TData> = KmsfHeaderColumnCell<TData> | KmsfHeaderGroupCell;
 
 export type KmsfCopiedRow<TData> = {
   kind: "row";
@@ -440,6 +478,8 @@ export type KmsfFillCellRangeOptions = {
   target: KmsfCellRange;
 };
 
+const KMSF_MIN_COLUMN_WIDTH = 50;
+
 function defaultGetRowId<TData>(_row: TData, index: number) {
   return index;
 }
@@ -453,6 +493,44 @@ function normalizeColumns<TData>(columns: ReadonlyArray<KmsfDataTableColumn<TDat
     ...column,
     id: column.id ?? column.field,
   }));
+}
+
+function normalizeColumnGroups<TData>(
+  columns: ReadonlyArray<KmsfDataTableRuntimeColumn<TData>>,
+  columnGroups: ReadonlyArray<KmsfDataTableColumnGroup> = [],
+) {
+  const knownColumnIds = new Set(columns.map((column) => column.id));
+  const usedColumnIds = new Set<string>();
+  const usedGroupIds = new Set<string>();
+  const groups: KmsfDataTableRuntimeColumnGroup[] = [];
+
+  for (const group of columnGroups) {
+    if (usedGroupIds.has(group.id)) {
+      continue;
+    }
+
+    const children = group.children.filter((columnId) => {
+      if (!knownColumnIds.has(columnId) || usedColumnIds.has(columnId)) {
+        return false;
+      }
+
+      usedColumnIds.add(columnId);
+      return true;
+    });
+
+    usedGroupIds.add(group.id);
+
+    if (children.length === 0) {
+      continue;
+    }
+
+    groups.push({
+      ...group,
+      children,
+    });
+  }
+
+  return groups;
 }
 
 function normalizeColumnState<TData>(
@@ -471,15 +549,84 @@ function normalizeColumnState<TData>(
   return state;
 }
 
+function normalizeColumnGroupState(
+  columnGroups: ReadonlyArray<KmsfDataTableRuntimeColumnGroup>,
+  layout?: Partial<KmsfColumnLayout>,
+) {
+  const state: Record<string, KmsfColumnGroupRuntimeState> = {};
+
+  for (const group of columnGroups) {
+    state[group.id] = {
+      hidden: layout?.groups?.[group.id]?.hidden ?? group.hidden,
+    };
+  }
+
+  return state;
+}
+
+function getColumnGroupIdMap(columnGroups: ReadonlyArray<KmsfDataTableRuntimeColumnGroup>) {
+  const map = new Map<string, string>();
+
+  for (const group of columnGroups) {
+    for (const columnId of group.children) {
+      map.set(columnId, group.id);
+    }
+  }
+
+  return map;
+}
+
+function findColumnGroupById(
+  columnGroups: ReadonlyArray<KmsfDataTableRuntimeColumnGroup>,
+  groupId: string,
+) {
+  return columnGroups.find((group) => group.id === groupId);
+}
+
 function normalizeColumnOrder<TData>(
   columns: ReadonlyArray<KmsfDataTableRuntimeColumn<TData>>,
   layout?: Partial<KmsfColumnLayout>,
+  columnGroups: ReadonlyArray<KmsfDataTableRuntimeColumnGroup> = [],
 ) {
   const knownIds = new Set(columns.map((column) => column.id));
   const ordered = (layout?.order ?? []).filter((id) => knownIds.has(id));
   const missing = columns.map((column) => column.id).filter((id) => !ordered.includes(id));
+  const flatOrder = [...ordered, ...missing];
 
-  return [...ordered, ...missing];
+  if (columnGroups.length === 0) {
+    return flatOrder;
+  }
+
+  const groupIdByColumnId = getColumnGroupIdMap(columnGroups);
+  const groupById = new Map(columnGroups.map((group) => [group.id, group]));
+  const emittedGroups = new Set<string>();
+  const nextOrder: string[] = [];
+
+  for (const columnId of flatOrder) {
+    const groupId = groupIdByColumnId.get(columnId);
+
+    if (!groupId) {
+      nextOrder.push(columnId);
+      continue;
+    }
+
+    if (emittedGroups.has(groupId)) {
+      continue;
+    }
+
+    const group = groupById.get(groupId);
+
+    if (!group) {
+      nextOrder.push(columnId);
+      continue;
+    }
+
+    const groupChildrenInOrder = flatOrder.filter((currentId) => group.children.includes(currentId));
+    nextOrder.push(...groupChildrenInOrder);
+    emittedGroups.add(groupId);
+  }
+
+  return nextOrder;
 }
 
 function createEmptySelection(): KmsfSelectionState {
@@ -691,6 +838,7 @@ function defaultCompare(left: unknown, right: unknown) {
 
 export function createKmsfDataTableState<TData>({
   columnLayout,
+  columnGroups,
   columns,
   getRowId = defaultGetRowId,
   pagination,
@@ -701,9 +849,12 @@ export function createKmsfDataTableState<TData>({
 }: KmsfDataTableStateInput<TData>): KmsfDataTableState<TData> {
   const nextRows = useRowsReference(rows);
   const nextColumns = normalizeColumns(columns);
+  const nextColumnGroups = normalizeColumnGroups(nextColumns, columnGroups);
 
   return {
-    columnOrder: normalizeColumnOrder(nextColumns, columnLayout),
+    columnOrder: normalizeColumnOrder(nextColumns, columnLayout, nextColumnGroups),
+    columnGroups: nextColumnGroups,
+    columnGroupState: normalizeColumnGroupState(nextColumnGroups, columnLayout),
     columns: nextColumns,
     columnState: normalizeColumnState(nextColumns, columnLayout),
     getRowId,
@@ -842,11 +993,141 @@ export function setKmsfColumnHidden<TData>(
   };
 }
 
+export function setKmsfColumnGroupHidden<TData>(
+  state: KmsfDataTableState<TData>,
+  groupId: string,
+  hidden: boolean,
+) {
+  if (!findColumnGroupById(state.columnGroups, groupId)) {
+    return state;
+  }
+
+  return {
+    ...state,
+    columnGroupState: {
+      ...state.columnGroupState,
+      [groupId]: {
+        ...state.columnGroupState[groupId],
+        hidden,
+      },
+    },
+  };
+}
+
+function getColumnWidth<TData>(
+  state: KmsfDataTableState<TData>,
+  column: KmsfDataTableRuntimeColumn<TData>,
+) {
+  return state.columnState[column.id]?.width ?? column.width ?? 100;
+}
+
+function getColumnMinWidth<TData>(column: KmsfDataTableRuntimeColumn<TData>) {
+  return Math.max(KMSF_MIN_COLUMN_WIDTH, column.minWidth ?? KMSF_MIN_COLUMN_WIDTH);
+}
+
+function getColumnMaxWidth<TData>(column: KmsfDataTableRuntimeColumn<TData>) {
+  return column.maxWidth ?? Number.POSITIVE_INFINITY;
+}
+
+function clampWidth(width: number, minWidth: number, maxWidth: number) {
+  return Math.min(maxWidth, Math.max(minWidth, width));
+}
+
+function distributeColumnGroupWidths<TData>(
+  state: KmsfDataTableState<TData>,
+  columns: Array<KmsfDataTableRuntimeColumn<TData>>,
+  targetWidth: number,
+) {
+  const widths = columns.map((column) =>
+    clampWidth(getColumnWidth(state, column), getColumnMinWidth(column), getColumnMaxWidth(column)),
+  );
+  const active = new Set(columns.map((_column, index) => index));
+  const minWidths = columns.map(getColumnMinWidth);
+  const maxWidths = columns.map(getColumnMaxWidth);
+  const boundedTargetWidth = clampWidth(
+    targetWidth,
+    minWidths.reduce((sum, width) => sum + width, 0),
+    maxWidths.reduce((sum, width) => sum + width, 0),
+  );
+
+  while (active.size > 0) {
+    const currentTotal = widths.reduce((sum, width) => sum + width, 0);
+    const delta = boundedTargetWidth - currentTotal;
+
+    if (Math.abs(delta) < 0.001) {
+      break;
+    }
+
+    const activeIndexes = [...active];
+    const activeWeight = activeIndexes.reduce((sum, index) => sum + Math.max(widths[index] ?? 0, 0), 0);
+    let clamped = false;
+
+    for (const index of activeIndexes) {
+      const width = widths[index] ?? 0;
+      const weight = activeWeight > 0 ? width / activeWeight : 1 / activeIndexes.length;
+      const nextWidth = width + delta * weight;
+      const clampedWidth = clampWidth(nextWidth, minWidths[index] ?? 0, maxWidths[index] ?? Number.POSITIVE_INFINITY);
+
+      widths[index] = clampedWidth;
+
+      if (Math.abs(clampedWidth - nextWidth) > 0.001) {
+        active.delete(index);
+        clamped = true;
+      }
+    }
+
+    if (!clamped) {
+      break;
+    }
+  }
+
+  return widths;
+}
+
+export function setKmsfColumnGroupWidth<TData>(
+  state: KmsfDataTableState<TData>,
+  groupId: string,
+  width: number,
+) {
+  const group = findColumnGroupById(state.columnGroups, groupId);
+
+  if (!group || state.columnGroupState[group.id]?.hidden === true) {
+    return state;
+  }
+
+  const childColumns = group.children
+    .map((columnId) => findColumn(state, columnId))
+    .filter((column): column is KmsfDataTableRuntimeColumn<TData> => Boolean(column))
+    .filter((column) => state.columnState[column.id]?.hidden !== true);
+
+  if (childColumns.length === 0) {
+    return state;
+  }
+
+  const widths = distributeColumnGroupWidths(state, childColumns, width);
+  const columnState = { ...state.columnState };
+
+  childColumns.forEach((column, index) => {
+    columnState[column.id] = {
+      ...columnState[column.id],
+      width: widths[index],
+    };
+  });
+
+  return {
+    ...state,
+    columnState,
+  };
+}
+
 export function moveKmsfColumn<TData>(
   state: KmsfDataTableState<TData>,
   columnId: string,
   targetIndex: number,
 ) {
+  const groupIdByColumnId = getColumnGroupIdMap(state.columnGroups);
+  const sourceGroupId = groupIdByColumnId.get(columnId);
+
   const current = state.columnOrder.filter((id) => id !== columnId);
 
   if (current.length === state.columnOrder.length) {
@@ -854,14 +1135,76 @@ export function moveKmsfColumn<TData>(
   }
 
   const nextIndex = Math.max(0, Math.min(targetIndex, current.length));
+
+  if (sourceGroupId) {
+    const sourceGroup = findColumnGroupById(state.columnGroups, sourceGroupId);
+
+    if (!sourceGroup) {
+      return state;
+    }
+
+    const groupChildrenInCurrent = current.filter((id) => sourceGroup.children.includes(id));
+    const groupStart = current.findIndex((id) => sourceGroup.children.includes(id));
+    const groupEnd = groupStart + groupChildrenInCurrent.length;
+
+    if (nextIndex < groupStart || nextIndex > groupEnd) {
+      return state;
+    }
+  } else if (state.columnGroups.length > 0) {
+    for (const group of state.columnGroups) {
+      const groupChildrenInCurrent = current.filter((id) => group.children.includes(id));
+
+      if (groupChildrenInCurrent.length === 0) {
+        continue;
+      }
+
+      const groupStart = current.findIndex((id) => group.children.includes(id));
+      const groupEnd = groupStart + groupChildrenInCurrent.length;
+
+      if (nextIndex > groupStart && nextIndex < groupEnd) {
+        return state;
+      }
+    }
+  }
+
   current.splice(nextIndex, 0, columnId);
 
   return { ...state, columnOrder: current };
 }
 
+export function moveKmsfColumnGroup<TData>(
+  state: KmsfDataTableState<TData>,
+  groupId: string,
+  targetIndex: number,
+) {
+  const group = findColumnGroupById(state.columnGroups, groupId);
+
+  if (!group) {
+    return state;
+  }
+
+  const groupChildren = state.columnOrder.filter((id) => group.children.includes(id));
+
+  if (groupChildren.length === 0) {
+    return state;
+  }
+
+  const current = state.columnOrder.filter((id) => !group.children.includes(id));
+  const nextIndex = Math.max(0, Math.min(targetIndex, current.length));
+  const nextOrder = [...current.slice(0, nextIndex), ...groupChildren, ...current.slice(nextIndex)];
+
+  return { ...state, columnOrder: nextOrder };
+}
+
 export function serializeKmsfColumnLayout<TData>(state: KmsfDataTableState<TData>): KmsfColumnLayout {
+  const groups =
+    state.columnGroups.length === 0
+      ? undefined
+      : Object.fromEntries(state.columnGroups.map((group) => [group.id, { ...state.columnGroupState[group.id] }]));
+
   return {
     columns: { ...state.columnState },
+    ...(groups ? { groups } : {}),
     order: [...state.columnOrder],
   };
 }
@@ -869,7 +1212,8 @@ export function serializeKmsfColumnLayout<TData>(state: KmsfDataTableState<TData
 export function applyKmsfColumnLayout<TData>(state: KmsfDataTableState<TData>, layout: KmsfColumnLayout) {
   return {
     ...state,
-    columnOrder: normalizeColumnOrder(state.columns, layout),
+    columnOrder: normalizeColumnOrder(state.columns, layout, state.columnGroups),
+    columnGroupState: normalizeColumnGroupState(state.columnGroups, layout),
     columnState: normalizeColumnState(state.columns, layout),
   };
 }
@@ -1000,10 +1344,105 @@ export function isKmsfCellInSelectedRange<TData>(state: KmsfDataTableState<TData
 }
 
 export function getKmsfVisibleColumns<TData>(state: KmsfDataTableState<TData>) {
+  const groupIdByColumnId = getColumnGroupIdMap(state.columnGroups);
+
   return state.columnOrder
     .map((columnId) => findColumn(state, columnId))
     .filter((column): column is KmsfDataTableRuntimeColumn<TData> => Boolean(column))
-    .filter((column) => state.columnState[column.id]?.hidden !== true);
+    .filter((column) => {
+      const groupId = groupIdByColumnId.get(column.id);
+
+      return state.columnState[column.id]?.hidden !== true && (!groupId || state.columnGroupState[groupId]?.hidden !== true);
+    });
+}
+
+export function getKmsfHeaderRows<TData>(state: KmsfDataTableState<TData>): Array<Array<KmsfHeaderCell<TData>>> {
+  const visibleColumns = getKmsfVisibleColumns(state);
+
+  if (state.columnGroups.length === 0) {
+    return [
+      visibleColumns.map((column) => ({
+        colSpan: 1,
+        column,
+        columnId: column.id,
+        kind: "column",
+        rowSpan: 1,
+      })),
+    ];
+  }
+
+  const visibleColumnIds = new Set(visibleColumns.map((column) => column.id));
+  const groupIdByColumnId = getColumnGroupIdMap(state.columnGroups);
+  const groupById = new Map(state.columnGroups.map((group) => [group.id, group]));
+  const emittedGroups = new Set<string>();
+  const parentRow: Array<KmsfHeaderCell<TData>> = [];
+  const childRow: Array<KmsfHeaderCell<TData>> = [];
+
+  for (const columnId of state.columnOrder) {
+    if (!visibleColumnIds.has(columnId)) {
+      continue;
+    }
+
+    const column = findColumn(state, columnId);
+
+    if (!column) {
+      continue;
+    }
+
+    const groupId = groupIdByColumnId.get(columnId);
+
+    if (!groupId) {
+      parentRow.push({
+        colSpan: 1,
+        column,
+        columnId: column.id,
+        kind: "column",
+        rowSpan: 2,
+      });
+      continue;
+    }
+
+    if (emittedGroups.has(groupId)) {
+      continue;
+    }
+
+    const group = groupById.get(groupId);
+
+    if (!group) {
+      continue;
+    }
+
+    const visibleGroupColumns = state.columnOrder
+      .filter((currentId) => group.children.includes(currentId) && visibleColumnIds.has(currentId))
+      .map((currentId) => findColumn(state, currentId))
+      .filter((currentColumn): currentColumn is KmsfDataTableRuntimeColumn<TData> => Boolean(currentColumn));
+
+    if (visibleGroupColumns.length === 0) {
+      emittedGroups.add(groupId);
+      continue;
+    }
+
+    parentRow.push({
+      colSpan: visibleGroupColumns.length,
+      group,
+      groupId,
+      kind: "group",
+      rowSpan: 1,
+    });
+    childRow.push(
+      ...visibleGroupColumns.map((currentColumn) => ({
+        colSpan: 1 as const,
+        column: currentColumn,
+        columnId: currentColumn.id,
+        groupId,
+        kind: "column" as const,
+        rowSpan: 1 as const,
+      })),
+    );
+    emittedGroups.add(groupId);
+  }
+
+  return [parentRow, childRow];
 }
 
 export function getKmsfSortedRowIndexes<TData>(state: KmsfDataTableState<TData>) {

@@ -18,6 +18,7 @@
 - 2026-06-05: 이벤트는 emitter 방식이 아니라 React prop 방식으로 제공한다. 상태 변경 이벤트는 `onChangeData`, `onChangeSelection`, `onChangeColumnLayout`, `onChangeSort`이고 사용자 액션 이벤트는 `onClickCell`, `onDoubleClickCell`, `onContextMenuCell`, `onKeyDownCell`, `onClickRow`, `onDoubleClickRow`, `onContextMenuRow`, `onKeyDownRow`다.
 - 2026-06-05: column schema는 `id`, `label`, `field`, `sort`, `props`, `format`, `header`로 통일한다. `id`는 optional이며 없으면 `field`를 id로 사용한다. `field`는 string이고 nested path를 지원한다.
 - 2026-06-05: column layout save/load와 sort/selection 제어는 ref method로 제공한다. `setSelectedRow(index)`, `setSelectedRows(indexes)`는 화면에 보이는 visible row index 기준이다.
+- 2026-06-28: 2 depth header는 flat `columns`와 별도 `columnGroups` API로 구현한다. `columnGroups[].label`을 사용하고, 최대 2 depth만 지원한다. Parent resize는 child width 비율 유지 + min/max clamp 재분배, parent move는 child block 이동, child group 밖 이동은 현재와 앞으로 모두 미지원이다. Parent hide/show는 child column 자체의 effective visibility에 반영하되 child hidden state와 group hidden state를 분리한다. Ungrouped column은 `rowSpan=2`로 표시한다.
 
 ## Context Compaction Checkpoint
 

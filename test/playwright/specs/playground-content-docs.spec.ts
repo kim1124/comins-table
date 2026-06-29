@@ -20,7 +20,7 @@ const featurePages = [
   ["기본", "@kmsf/data-table 기본 예제입니다."],
   ["CRUD 동작", "추가, 수정, 삭제, 초기화, 필터링"],
   ["테이블 사이즈", "300px, 500px, 브라우저 100%"],
-  ["Header 예제", "컬럼 위치와 너비 저장"],
+  ["Header 예제", "1Depth 컬럼"],
   ["대용량 데이터 표시", "대용량 데이터"],
   ["Td Cell 예제", "Td Cell 포맷"],
   ["Tr Row 예제", "Tr Row 스타일"],

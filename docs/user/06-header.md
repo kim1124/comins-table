@@ -29,6 +29,41 @@ tableRef.current?.setSortState({ columnId: "age", direction: "desc" });
 tableRef.current?.clearSort();
 ```
 
+## 2 Depth Header
+
+2 Depth Header는 기존 flat `columns`를 유지하고, 별도 `columnGroups`로 부모 header를 정의한다.
+
+```tsx
+<KmsfDataTable
+  columns={[
+    { id: "name", field: "name", label: "이름", sort: true },
+    { id: "age", field: "age", label: "나이", sort: true },
+    { id: "role", field: "role", label: "역할" },
+  ]}
+  columnGroups={[
+    {
+      id: "profile",
+      label: "프로필",
+      children: ["name", "age"],
+    },
+  ]}
+  data={data}
+/>
+```
+
+동작 기준:
+
+- 최대 2 Depth만 지원한다. Group 안에 group을 넣는 N-depth 구조는 지원하지 않는다.
+- Parent header는 `field`, `sort`, Cell/Header component slot을 갖지 않는다.
+- Parent resize는 child column width 비율을 유지하면서 child widths를 함께 변경한다.
+- Child `minWidth`/`maxWidth`에 걸리면 clamp 후 남은 width delta를 다른 child column에 재분배한다.
+- Parent move는 child columns를 하나의 block으로 이동한다.
+- Child column을 다른 group으로 이동하거나 group 밖으로 이동하는 동작은 지원하지 않는다.
+- Parent group hide/show는 header만 숨기는 것이 아니라 child columns 자체의 effective visibility를 변경한다.
+- Parent group을 다시 표시해도 child column의 개별 hidden 상태는 유지된다.
+- Group 없는 column은 parent row에서 `rowSpan=2`로 표시된다.
+- Header 전체 hide/show(`showHeader`)는 2 Depth와 별개이며 전체 header area를 표시하거나 제거한다.
+
 Header custom UI는 `header.renderer` 또는 `header.components`로 렌더링한다. `renderer`가 있으면 label과 components를 모두 대체한다.
 
 ```tsx
@@ -112,5 +147,6 @@ Playground 검증 기준:
 - Header sort 접근성은 mouse click, keyboard `Enter`/`Space`, `aria-sort`, sort indicator 상태를 함께 검증한다.
 - Resize는 width 변경, 최초 drag jump 없음, column move 미발생을 함께 확인한다.
 - Move는 1초 long-press, 이동 ghost, drop marker, 의도한 column order 변경을 함께 확인한다.
+- 2 Depth Header는 parent resize 비율 유지, parent block move, child group 밖 이동 미지원, ungrouped `rowSpan=2`, header/body leaf cell geometry alignment를 함께 확인한다.
 - Virtualized mode에서는 header/body가 다른 table이어도 resize 후 column left/width가 같아야 한다.
 - 사용자가 header 위치, resize, sort 표시 문제를 지적한 경우 Playwright assertion 외에 screenshot 또는 DOM geometry evidence를 report에 남긴다.

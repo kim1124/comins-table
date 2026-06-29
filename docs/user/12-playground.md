@@ -12,7 +12,7 @@ npm --workspace=@kmsf/data-table run dev
 - `기본`: `KmsfDataTable`, `data`, `columns`, `getRowId`, `onChangeData`, theme
 - `CRUD 동작`: 행 추가, 선택 행 수정, 선택 행 삭제, 필터 요약, table 우측 상단 pagination
 - `테이블 사이즈`: 높이 수동 지정, 상위 컨테이너 크기 따라가기, 브라우저 리사이즈 반응
-- `Header 예제`: show/hide, boundary resize, 1초 long-press reorder, keyboard sort, `aria-sort`, `getColumnLayout`, `setColumnLayout`, `onChangeColumnLayout`
+- `Header 예제`: Header 기본 기능, Header 숨김/표시, 컬럼 설정 저장/불러오기, 2중 Header 이동/리사이즈/숨김/표시
 - `대용량 데이터 표시`: header/body table split, virtualized 100000 row smoke and perf gate
 - `Td Cell 예제`: `cell.format`, `cell.tooltip`, `cell.props`, `cell.renderer`, `onClickCell`, `onDoubleClickCell`, `onContextMenuCell`, `onKeyDownCell`, clipboard guard
 - `컴포넌트 예제`: `button`, `input`, `checkbox`, `radio`, `select`, `toggle`, `progress`, Header `menu`, Cell `virtual-list`, custom `renderer`를 Header와 Cell에 적용한 독립 예제

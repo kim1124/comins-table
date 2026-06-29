@@ -216,10 +216,22 @@ test("general samples render thirty rows per page while large data remains virtu
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
 
-  for (const label of ["기본", "CRUD 동작", "Header 예제", "Td Cell 예제", "Tr Row 예제", "Context Menu 예제"]) {
+  for (const label of ["기본", "CRUD 동작", "Td Cell 예제", "Tr Row 예제", "Context Menu 예제"]) {
     await page.getByRole("button", { exact: true, name: label }).click();
     await expect(page.getByTestId("data-table-viewport")).toBeVisible();
     await expect(page.locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]")).toHaveCount(30);
+  }
+
+  await page.getByRole("button", { exact: true, name: "Header 예제" }).click();
+  for (const testId of [
+    "header-example-basic",
+    "header-example-visibility",
+    "header-example-layout",
+    "header-example-groups",
+  ]) {
+    await expect(
+      page.getByTestId(testId).locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
+    ).toHaveCount(30);
   }
 
   await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
@@ -248,15 +260,25 @@ test("header page keeps only requested actions and state outputs", async ({ page
   await page.goto("/");
   await page.getByRole("button", { exact: true, name: "Header 예제" }).click();
 
-  for (const label of ["표시", "숨김", "저장", "불러오기", "초기화"]) {
-    await expect(page.getByRole("button", { exact: true, name: label })).toBeVisible();
-  }
+  await expect(page.getByTestId("feature-option-heading").filter({ hasText: "Header 기본 기능" })).toBeVisible();
+  await expect(page.getByTestId("feature-option-heading").filter({ hasText: "Header 숨김 / 표시" })).toBeVisible();
+  await expect(page.getByTestId("feature-option-heading").filter({ hasText: "컬럼 설정 저장 / 불러오기" })).toBeVisible();
+  await expect(page.getByTestId("feature-option-heading").filter({ hasText: "2중 헤더 예제" })).toBeVisible();
+  await expect(page.getByTestId("header-example-basic").getByRole("button", { exact: true, name: "초기화" })).toBeVisible();
+  await expect(page.getByTestId("header-example-visibility").getByRole("button", { exact: true, name: "표시" })).toBeVisible();
+  await expect(page.getByTestId("header-example-visibility").getByRole("button", { exact: true, name: "숨김" })).toBeVisible();
+  await expect(page.getByTestId("header-example-layout").getByRole("button", { exact: true, name: "저장" })).toBeVisible();
+  await expect(page.getByTestId("header-example-layout").getByRole("button", { exact: true, name: "불러오기" })).toBeVisible();
+  await expect(page.getByTestId("header-example-layout").getByRole("button", { exact: true, name: "초기화" })).toBeVisible();
+  await expect(page.getByTestId("header-example-groups").getByRole("button", { exact: true, name: "그룹 숨김" })).toBeVisible();
+  await expect(page.getByTestId("header-example-groups").getByRole("button", { exact: true, name: "그룹 표시" })).toBeVisible();
+  await expect(page.getByTestId("header-example-groups").getByRole("button", { exact: true, name: "초기화" })).toBeVisible();
   await expect(page.getByRole("button", { exact: true, name: "복원" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Header components/u })).toHaveCount(0);
   await expect(page.getByTestId("header-component-table")).toHaveCount(0);
   await expect(page.getByTestId("header-proof-layout")).toHaveCount(0);
   await expect(page.getByTestId("header-proof-sort")).toHaveCount(0);
-  await expect(page.getByTestId("saved-layout-json")).toBeVisible();
+  await expect(page.getByTestId("header-example-layout").getByTestId("saved-layout-json")).toBeVisible();
   await expect(page.getByTestId("header-component-event")).toHaveCount(0);
   expect(diagnostics).toEqual([]);
 });

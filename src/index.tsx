@@ -13,11 +13,13 @@ import {
   getKmsfCellClassName,
   getKmsfCellStyle,
   getKmsfCellValue,
+  getKmsfHeaderRows,
   getKmsfSortedRowIndexes,
   getKmsfVisibleColumns,
   isKmsfCellDisabled,
   isKmsfCellInSelectedRange,
   moveKmsfColumn,
+  moveKmsfColumnGroup,
   moveKmsfRow,
   pasteKmsfCell,
   pasteKmsfCellRange,
@@ -28,6 +30,7 @@ import {
   selectRows,
   serializeKmsfColumnLayout,
   setKmsfColumnWidth,
+  setKmsfColumnGroupWidth,
   setKmsfSortState,
   updateKmsfRows,
 } from "./core";
@@ -44,7 +47,10 @@ import type {
   KmsfCopiedCellRange,
   KmsfCopiedRow,
   KmsfDataTableColumn,
+  KmsfDataTableColumnGroup,
   KmsfDataTableRuntimeColumn,
+  KmsfDataTableRuntimeColumnGroup,
+  KmsfHeaderCell,
   KmsfDataTableState,
   KmsfDataTableTheme,
   KmsfEventColumn,
@@ -61,7 +67,8 @@ type KmsfRowPropValue<TData, TValue> = TValue | ((row: TData, index: number) => 
 type KmsfColumnPointerInteraction = {
   active: boolean;
   cancelSort: boolean;
-  columnId: string;
+  id: string;
+  kind: "column" | "group";
   movedBeforeLongPress: boolean;
   startedAt: number;
   startX: number;
@@ -129,6 +136,7 @@ export type KmsfDataTableProps<TData> = {
   "buffer-size"?: number;
   cellSelection?: boolean;
   className?: string;
+  columnGroups?: Array<KmsfDataTableColumnGroup>;
   columns: Array<KmsfDataTableColumn<TData>>;
   data: readonly TData[];
   "data-testid"?: string;
@@ -424,6 +432,121 @@ function getEffectiveColumnMinWidth<TData>(column: KmsfDataTableRuntimeColumn<TD
   return Math.max(KMSF_MIN_COLUMN_WIDTH, column.minWidth ?? KMSF_MIN_COLUMN_WIDTH);
 }
 
+function getEffectiveColumnMaxWidth<TData>(column: KmsfDataTableRuntimeColumn<TData>) {
+  return column.maxWidth ?? Number.POSITIVE_INFINITY;
+}
+
+function getRuntimeColumnWidth<TData>(
+  state: KmsfDataTableState<TData>,
+  column: KmsfDataTableRuntimeColumn<TData>,
+) {
+  return state.columnState[column.id]?.width ?? column.width ?? 100;
+}
+
+function clampColumnWidth(width: number, minWidth: number, maxWidth: number) {
+  return Math.min(maxWidth, Math.max(minWidth, width));
+}
+
+function distributeRuntimeColumnWidths<TData>(
+  state: KmsfDataTableState<TData>,
+  columns: Array<KmsfDataTableRuntimeColumn<TData>>,
+  targetWidth: number,
+) {
+  const widths = columns.map((column) =>
+    clampColumnWidth(getRuntimeColumnWidth(state, column), getEffectiveColumnMinWidth(column), getEffectiveColumnMaxWidth(column)),
+  );
+  const active = new Set(columns.map((_column, index) => index));
+  const minWidths = columns.map(getEffectiveColumnMinWidth);
+  const maxWidths = columns.map(getEffectiveColumnMaxWidth);
+  const boundedTargetWidth = clampColumnWidth(
+    targetWidth,
+    minWidths.reduce((sum, width) => sum + width, 0),
+    maxWidths.reduce((sum, width) => sum + width, 0),
+  );
+
+  while (active.size > 0) {
+    const currentTotal = widths.reduce((sum, width) => sum + width, 0);
+    const delta = boundedTargetWidth - currentTotal;
+
+    if (Math.abs(delta) < 0.001) {
+      break;
+    }
+
+    const activeIndexes = [...active];
+    const activeWeight = activeIndexes.reduce((sum, index) => sum + Math.max(widths[index] ?? 0, 0), 0);
+    let clamped = false;
+
+    for (const index of activeIndexes) {
+      const width = widths[index] ?? 0;
+      const weight = activeWeight > 0 ? width / activeWeight : 1 / activeIndexes.length;
+      const nextWidth = width + delta * weight;
+      const clampedWidth = clampColumnWidth(nextWidth, minWidths[index] ?? 0, maxWidths[index] ?? Number.POSITIVE_INFINITY);
+
+      widths[index] = clampedWidth;
+
+      if (Math.abs(clampedWidth - nextWidth) > 0.001) {
+        active.delete(index);
+        clamped = true;
+      }
+    }
+
+    if (!clamped) {
+      break;
+    }
+  }
+
+  return widths;
+}
+
+function setColumnWidthInsideParentGroup<TData>(
+  state: KmsfDataTableState<TData>,
+  columnId: string,
+  width: number,
+) {
+  const group = state.columnGroups.find((candidate) => candidate.children.includes(columnId));
+
+  if (!group || state.columnGroupState[group.id]?.hidden === true) {
+    return setKmsfColumnWidth(state, columnId, width);
+  }
+
+  const childColumns = group.children
+    .map((childId) => state.columns.find((column) => column.id === childId))
+    .filter((column): column is KmsfDataTableRuntimeColumn<TData> => Boolean(column))
+    .filter((column) => state.columnState[column.id]?.hidden !== true);
+  const targetColumn = childColumns.find((column) => column.id === columnId);
+
+  if (!targetColumn) {
+    return setKmsfColumnWidth(state, columnId, width);
+  }
+
+  const siblingColumns = childColumns.filter((column) => column.id !== columnId);
+
+  if (siblingColumns.length === 0) {
+    const currentGroupWidth = getRuntimeColumnWidth(state, targetColumn);
+
+    return setKmsfColumnWidth(
+      state,
+      columnId,
+      clampColumnWidth(width, getEffectiveColumnMinWidth(targetColumn), Math.min(getEffectiveColumnMaxWidth(targetColumn), currentGroupWidth)),
+    );
+  }
+
+  const currentGroupWidth = childColumns.reduce((sum, column) => sum + getRuntimeColumnWidth(state, column), 0);
+  const siblingMinWidth = siblingColumns.reduce((sum, column) => sum + getEffectiveColumnMinWidth(column), 0);
+  const siblingMaxWidth = siblingColumns.reduce((sum, column) => sum + getEffectiveColumnMaxWidth(column), 0);
+  const minWidth = Math.max(getEffectiveColumnMinWidth(targetColumn), currentGroupWidth - siblingMaxWidth);
+  const maxWidth = Math.max(minWidth, Math.min(getEffectiveColumnMaxWidth(targetColumn), currentGroupWidth - siblingMinWidth));
+  const nextTargetWidth = clampColumnWidth(width, minWidth, maxWidth);
+  const nextSiblingWidths = distributeRuntimeColumnWidths(state, siblingColumns, currentGroupWidth - nextTargetWidth);
+  let next = setKmsfColumnWidth(state, columnId, nextTargetWidth);
+
+  siblingColumns.forEach((column, index) => {
+    next = setKmsfColumnWidth(next, column.id, nextSiblingWidths[index] ?? getRuntimeColumnWidth(next, column));
+  });
+
+  return next;
+}
+
 function setKmsfNestedInputValue<TData>(row: TData, field: string, value: string): TData {
   if (!row || typeof row !== "object") {
     return row;
@@ -526,6 +649,7 @@ function KmsfDataTableInner<TData>(
     "buffer-size": bufferSize,
     cellSelection = true,
     className,
+    columnGroups,
     columns,
     data,
     "data-testid": dataTestId,
@@ -571,6 +695,7 @@ function KmsfDataTableInner<TData>(
   const [containerHeight, setContainerHeight] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
   const [movingColumnId, setMovingColumnId] = useState<string | null>(null);
+  const [movingGroupId, setMovingGroupId] = useState<string | null>(null);
   const [columnMovePointer, setColumnMovePointer] = useState<{ x: number; y: number } | null>(null);
   const [columnMoveTargetId, setColumnMoveTargetId] = useState<string | null>(null);
   const [resizingColumnId, setResizingColumnId] = useState<string | null>(null);
@@ -578,6 +703,7 @@ function KmsfDataTableInner<TData>(
   const [scrollTop, setScrollTop] = useState(0);
   const [state, setState] = useState(() =>
     createKmsfDataTableState({
+      columnGroups,
       columns,
       getRowId,
       pagination,
@@ -587,7 +713,7 @@ function KmsfDataTableInner<TData>(
     }),
   );
   const stateRef = useRef(state);
-  const stateInputRef = useRef({ columns, data, getRowId, pagination, showHeader, theme });
+  const stateInputRef = useRef({ columnGroups, columns, data, getRowId, pagination, showHeader, theme });
   const virtualBufferSize = Math.max(0, Math.floor(Number.isFinite(bufferSize) ? Number(bufferSize) : 25));
 
   useEffect(() => {
@@ -595,6 +721,7 @@ function KmsfDataTableInner<TData>(
 
     if (
       previousInput.columns === columns &&
+      previousInput.columnGroups === columnGroups &&
       previousInput.data === data &&
       previousInput.getRowId === getRowId &&
       previousInput.pagination === pagination &&
@@ -604,10 +731,11 @@ function KmsfDataTableInner<TData>(
       return;
     }
 
-    stateInputRef.current = { columns, data, getRowId, pagination, showHeader, theme };
+    stateInputRef.current = { columnGroups, columns, data, getRowId, pagination, showHeader, theme };
     setState((current) => {
       const next = createKmsfDataTableState({
         columnLayout: serializeKmsfColumnLayout(current),
+        columnGroups,
         columns,
         getRowId,
         pagination: pagination ?? current.pagination,
@@ -619,7 +747,7 @@ function KmsfDataTableInner<TData>(
 
       return canPreserveSelection(current, next) ? { ...next, selection: current.selection } : next;
     });
-  }, [columns, data, getRowId, pagination, showHeader, theme]);
+  }, [columnGroups, columns, data, getRowId, pagination, showHeader, theme]);
 
   useEffect(() => {
     stateRef.current = state;
@@ -690,6 +818,7 @@ function KmsfDataTableInner<TData>(
   };
 
   const visibleColumns = useMemo(() => getKmsfVisibleColumns(state), [state]);
+  const headerRows = useMemo(() => getKmsfHeaderRows(state), [state]);
   const sortedRowIndexes = useMemo(() => (state.sort ? getKmsfSortedRowIndexes(state) : null), [state]);
   const visibleRowCount = sortedRowIndexes?.length ?? state.rows.length;
   const pageStartIndex = Math.max(0, state.pagination.pageIndex) * Math.max(1, state.pagination.pageSize);
@@ -865,6 +994,25 @@ function KmsfDataTableInner<TData>(
     });
   };
 
+  const getColumnMoveTargetId = (clientX: number, clientY: number) => {
+    const targetHeader = document
+      .elementFromPoint(clientX, clientY)
+      ?.closest<HTMLElement>("[data-kmsf-column-id], [data-kmsf-column-group-id]");
+
+    if (!targetHeader) {
+      return null;
+    }
+
+    if (targetHeader.dataset.kmsfColumnId) {
+      return targetHeader.dataset.kmsfColumnId;
+    }
+
+    const groupId = targetHeader.dataset.kmsfColumnGroupId;
+    const targetGroup = groupId ? stateRef.current.columnGroups.find((group) => group.id === groupId) : undefined;
+
+    return targetGroup?.children.find((childId) => visibleColumns.some((column) => column.id === childId)) ?? null;
+  };
+
   useImperativeHandle(
     ref,
     () => ({
@@ -927,6 +1075,7 @@ function KmsfDataTableInner<TData>(
 
     columnPointerInteractionRef.current = null;
     setMovingColumnId(null);
+    setMovingGroupId(null);
     setColumnMovePointer(null);
     setColumnMoveTargetId(null);
   };
@@ -945,12 +1094,14 @@ function KmsfDataTableInner<TData>(
       suppressedSortColumnIdRef.current = column.id;
       setColumnMovePointer({ x, y });
       setColumnMoveTargetId(column.id);
+      setMovingGroupId(null);
       setMovingColumnId(column.id);
     };
     const interaction: KmsfColumnPointerInteraction = {
       active: false,
       cancelSort: false,
-      columnId: column.id,
+      id: column.id,
+      kind: "column",
       movedBeforeLongPress: false,
       startedAt: performance.now(),
       startX: event.clientX,
@@ -958,7 +1109,7 @@ function KmsfDataTableInner<TData>(
       timer: window.setTimeout(() => {
         const current = columnPointerInteractionRef.current;
 
-        if (!current || current.columnId !== column.id || current.movedBeforeLongPress) {
+        if (!current || current.id !== column.id || current.kind !== "column" || current.movedBeforeLongPress) {
           return;
         }
 
@@ -969,7 +1120,7 @@ function KmsfDataTableInner<TData>(
     const handlePointerMove = (moveEvent: PointerEvent) => {
       const current = columnPointerInteractionRef.current;
 
-      if (!current || current.columnId !== column.id) {
+      if (!current || current.id !== column.id || current.kind !== "column") {
         return;
       }
 
@@ -991,11 +1142,7 @@ function KmsfDataTableInner<TData>(
         moveEvent.preventDefault();
         setColumnMovePointer({ x: moveEvent.clientX, y: moveEvent.clientY });
 
-        const targetHeader = document
-          .elementFromPoint(moveEvent.clientX, moveEvent.clientY)
-          ?.closest<HTMLElement>("[data-kmsf-column-id]");
-
-        setColumnMoveTargetId(targetHeader?.dataset.kmsfColumnId ?? null);
+        setColumnMoveTargetId(getColumnMoveTargetId(moveEvent.clientX, moveEvent.clientY));
       }
     };
 
@@ -1005,7 +1152,7 @@ function KmsfDataTableInner<TData>(
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
 
-      if (!current || current.columnId !== column.id) {
+      if (!current || current.id !== column.id || current.kind !== "column") {
         clearColumnPointerInteraction();
         return;
       }
@@ -1013,10 +1160,7 @@ function KmsfDataTableInner<TData>(
       window.clearTimeout(current.timer);
 
       if (current.active) {
-        const targetHeader = document
-          .elementFromPoint(upEvent.clientX, upEvent.clientY)
-          ?.closest<HTMLElement>("[data-kmsf-column-id]");
-        const targetColumnId = targetHeader?.dataset.kmsfColumnId;
+        const targetColumnId = getColumnMoveTargetId(upEvent.clientX, upEvent.clientY);
 
         if (targetColumnId) {
           const targetIndex = visibleColumns.findIndex((visibleColumn) => visibleColumn.id === targetColumnId);
@@ -1031,6 +1175,106 @@ function KmsfDataTableInner<TData>(
 
       if (current.cancelSort || current.active) {
         suppressedSortColumnIdRef.current = column.id;
+      }
+
+      clearColumnPointerInteraction();
+    };
+
+    clearColumnPointerInteraction();
+    columnPointerInteractionRef.current = interaction;
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+  };
+
+  const beginGroupPointerInteraction = (
+    event: React.PointerEvent<HTMLTableCellElement>,
+    group: KmsfDataTableRuntimeColumnGroup,
+  ) => {
+    if (event.button !== 0) {
+      return;
+    }
+
+    const activateGroupMove = (current: KmsfColumnPointerInteraction, x: number, y: number) => {
+      current.active = true;
+      current.cancelSort = true;
+      setColumnMovePointer({ x, y });
+      setColumnMoveTargetId(group.children[0] ?? null);
+      setMovingColumnId(null);
+      setMovingGroupId(group.id);
+    };
+    const interaction: KmsfColumnPointerInteraction = {
+      active: false,
+      cancelSort: false,
+      id: group.id,
+      kind: "group",
+      movedBeforeLongPress: false,
+      startedAt: performance.now(),
+      startX: event.clientX,
+      startY: event.clientY,
+      timer: window.setTimeout(() => {
+        const current = columnPointerInteractionRef.current;
+
+        if (!current || current.id !== group.id || current.kind !== "group" || current.movedBeforeLongPress) {
+          return;
+        }
+
+        activateGroupMove(current, current.startX, current.startY);
+      }, 1000),
+    };
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const current = columnPointerInteractionRef.current;
+
+      if (!current || current.id !== group.id || current.kind !== "group") {
+        return;
+      }
+
+      const distance = Math.hypot(moveEvent.clientX - current.startX, moveEvent.clientY - current.startY);
+
+      if (!current.active && performance.now() - current.startedAt >= 1000 && !current.movedBeforeLongPress) {
+        activateGroupMove(current, moveEvent.clientX, moveEvent.clientY);
+      }
+
+      if (!current.active && distance > 4) {
+        current.movedBeforeLongPress = true;
+        current.cancelSort = true;
+        window.clearTimeout(current.timer);
+        return;
+      }
+
+      if (current.active) {
+        moveEvent.preventDefault();
+        setColumnMovePointer({ x: moveEvent.clientX, y: moveEvent.clientY });
+
+        setColumnMoveTargetId(getColumnMoveTargetId(moveEvent.clientX, moveEvent.clientY));
+      }
+    };
+
+    const handlePointerUp = (upEvent: PointerEvent) => {
+      const current = columnPointerInteractionRef.current;
+
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+
+      if (!current || current.id !== group.id || current.kind !== "group") {
+        clearColumnPointerInteraction();
+        return;
+      }
+
+      window.clearTimeout(current.timer);
+
+      if (current.active) {
+        const targetColumnId = getColumnMoveTargetId(upEvent.clientX, upEvent.clientY);
+
+        if (targetColumnId) {
+          const targetIndex = visibleColumns.findIndex((visibleColumn) => visibleColumn.id === targetColumnId);
+
+          if (targetIndex >= 0) {
+            commitState((stateCurrent) => moveKmsfColumnGroup(stateCurrent, group.id, targetIndex), {
+              columnLayoutChanged: true,
+            });
+          }
+        }
       }
 
       clearColumnPointerInteraction();
@@ -1266,6 +1510,251 @@ function KmsfDataTableInner<TData>(
   const movingColumn = movingColumnId
     ? visibleColumns.find((visibleColumn) => visibleColumn.id === movingColumnId)
     : undefined;
+  const movingGroup = movingGroupId ? state.columnGroups.find((group) => group.id === movingGroupId) : undefined;
+  const movingHeaderLabel = movingColumn?.label ?? movingGroup?.label;
+
+  const renderHeaderCell = (cell: KmsfHeaderCell<TData>, fallbackIndex: number) => {
+    if (cell.kind === "group") {
+      return (
+        <th
+          className={[
+            "kmsf-data-table__th kmsf-data-table__group-th px-3 py-2 text-left font-semibold",
+            movingGroupId === cell.groupId ? "kmsf-column-moving" : undefined,
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          colSpan={cell.colSpan}
+          data-column-moving={movingGroupId === cell.groupId ? "true" : undefined}
+          data-kmsf-column-group-id={cell.groupId}
+          data-testid={`header-group-${cell.groupId}`}
+          key={`group-${cell.groupId}`}
+          onPointerDown={(event) => beginGroupPointerInteraction(event, cell.group)}
+          rowSpan={cell.rowSpan}
+          scope="colgroup"
+        >
+          <span aria-hidden="true" className="kmsf-column-drop-marker" />
+          <span className="kmsf-data-table__header-content" data-kmsf-header-body="true">
+            <span className="kmsf-data-table__header-label">{cell.group.label}</span>
+          </span>
+          <span
+            aria-hidden="true"
+            className="kmsf-data-table__resize"
+            data-resizing={resizingColumnId === cell.groupId ? "true" : undefined}
+            data-testid={`resize-group-${cell.groupId}`}
+            onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              const startX = event.clientX;
+              const measuredWidth = event.currentTarget.closest<HTMLTableCellElement>("th")?.getBoundingClientRect().width;
+              const visibleWidthSnapshot = new Map<string, number>();
+
+              for (const childId of cell.group.children) {
+                const visibleColumn = visibleColumns.find((column) => column.id === childId);
+
+                if (!visibleColumn) {
+                  continue;
+                }
+
+                const headerCell = Array.from(
+                  headerRef.current?.querySelectorAll<HTMLTableCellElement>("[data-kmsf-column-id]") ?? [],
+                ).find((element) => element.dataset.kmsfColumnId === visibleColumn.id);
+                const measuredColumnWidth = headerCell?.getBoundingClientRect().width;
+                const fallbackWidth = stateRef.current.columnState[visibleColumn.id]?.width ?? visibleColumn.width ?? 160;
+
+                visibleWidthSnapshot.set(
+                  visibleColumn.id,
+                  measuredColumnWidth && Number.isFinite(measuredColumnWidth) ? measuredColumnWidth : fallbackWidth,
+                );
+              }
+
+              const fallbackGroupWidth = [...visibleWidthSnapshot.values()].reduce((sum, width) => sum + width, 0);
+              const startWidth =
+                measuredWidth && Number.isFinite(measuredWidth) ? measuredWidth : Math.max(1, fallbackGroupWidth);
+              setResizingColumnId(cell.groupId);
+              const handlePointerMove = (moveEvent: PointerEvent) => {
+                commitState(
+                  (current) => {
+                    let next = current;
+
+                    for (const [visibleColumnId, visibleColumnWidth] of visibleWidthSnapshot) {
+                      next = setKmsfColumnWidth(next, visibleColumnId, visibleColumnWidth);
+                    }
+
+                    return setKmsfColumnGroupWidth(next, cell.groupId, startWidth + moveEvent.clientX - startX);
+                  },
+                  { columnLayoutChanged: true },
+                );
+              };
+              const handlePointerUp = () => {
+                setResizingColumnId(null);
+                window.removeEventListener("pointermove", handlePointerMove);
+                window.removeEventListener("pointerup", handlePointerUp);
+              };
+              window.addEventListener("pointermove", handlePointerMove);
+              window.addEventListener("pointerup", handlePointerUp);
+            }}
+          >
+            <span className="kmsf-data-table__resize-line" />
+          </span>
+        </th>
+      );
+    }
+
+    const column = cell.column;
+    const index = visibleColumns.findIndex((visibleColumn) => visibleColumn.id === column.id);
+    const safeIndex = index >= 0 ? index : fallbackIndex;
+    const columnState = state.columnState[column.id];
+    const headerProps = column.header?.props ?? {};
+    const sortIndicatorState = getSortIndicatorState(state.sort, column.id);
+    const sortIndicatorVisible = sortIndicatorState === "asc" || sortIndicatorState === "desc";
+    const headerClassName = [
+      "kmsf-data-table__th px-3 py-2 text-left font-semibold",
+      movingColumnId === column.id ? "kmsf-column-moving" : undefined,
+      headerProps.className,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const headerPayload = createHeaderComponentPayload(state, column, safeIndex);
+    const headerRendererBody = column.header?.renderer ? column.header.renderer(headerPayload) : null;
+    const headerLeftSlots = !column.header?.renderer
+      ? renderKmsfComponentSlots(column.header?.components, headerPayload, "left")
+      : [];
+    const headerRightSlots = !column.header?.renderer
+      ? renderKmsfComponentSlots(column.header?.components, headerPayload, "right")
+      : [];
+    const hasHeaderComponents = headerLeftSlots.length > 0 || headerRightSlots.length > 0;
+
+    return (
+      <th
+        {...headerProps}
+        className={headerClassName}
+        colSpan={cell.colSpan}
+        data-column-drop-target={columnMoveTargetId === column.id ? "true" : undefined}
+        data-column-moving={movingColumnId === column.id ? "true" : undefined}
+        data-kmsf-column-id={column.id}
+        data-kmsf-column-index={safeIndex}
+        data-sort-direction={state.sort?.columnId === column.id ? state.sort.direction : undefined}
+        data-sortable={column.sort ? "true" : "false"}
+        data-testid={`header-${column.id}`}
+        aria-sort={column.sort ? getAriaSortState(state.sort, column.id) : undefined}
+        key={`column-${column.id}`}
+        onClick={(event) => {
+          headerProps.onClick?.(event);
+
+          if (event.defaultPrevented || !column.sort) {
+            return;
+          }
+
+          activateHeaderSort(column);
+        }}
+        onKeyDown={(event) => {
+          headerProps.onKeyDown?.(event);
+
+          if (event.defaultPrevented || !column.sort) {
+            return;
+          }
+
+          if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
+            event.preventDefault();
+            activateHeaderSort(column);
+          }
+        }}
+        onPointerDown={(event) => beginHeaderPointerInteraction(event, column)}
+        rowSpan={cell.rowSpan}
+        scope="col"
+        style={{ width: columnState?.width ?? column.width, ...headerProps.style }}
+        tabIndex={column.sort ? 0 : undefined}
+      >
+        <span aria-hidden="true" className="kmsf-column-drop-marker" />
+        <span
+          className="kmsf-data-table__header-content"
+          data-kmsf-header-body="true"
+          data-kmsf-header-components={hasHeaderComponents ? "true" : undefined}
+          data-kmsf-sort-indicator-visible={sortIndicatorVisible ? "true" : undefined}
+        >
+          <span className="kmsf-data-table__header-slot" data-kmsf-header-slot="left">
+            {headerLeftSlots}
+          </span>
+          <span className="kmsf-data-table__header-label">
+            {column.header?.renderer ? headerRendererBody : column.label}
+          </span>
+          <span
+            aria-hidden="true"
+            className="kmsf-sort-indicator"
+            data-sort-state={sortIndicatorState}
+            data-sort-visible={sortIndicatorVisible ? "true" : undefined}
+            data-testid={`sort-indicator-${column.id}`}
+          >
+            <ArrowUp className="kmsf-sort-icon" focusable="false" size={14} strokeWidth={2.25} />
+          </span>
+          <span className="kmsf-data-table__header-slot" data-kmsf-header-slot="right">
+            {headerRightSlots}
+          </span>
+        </span>
+        <span
+          aria-hidden="true"
+          className="kmsf-data-table__resize"
+          data-resizing={resizingColumnId === column.id ? "true" : undefined}
+          data-testid={`resize-${column.id}`}
+          onClick={(event) => event.stopPropagation()}
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const startX = event.clientX;
+            const measuredWidth = event.currentTarget.closest<HTMLTableCellElement>("th")?.getBoundingClientRect().width;
+            const visibleWidthSnapshot = new Map<string, number>();
+
+            for (const visibleColumn of visibleColumns) {
+              const headerCell = Array.from(
+                headerRef.current?.querySelectorAll<HTMLTableCellElement>("[data-kmsf-column-id]") ?? [],
+              ).find((element) => element.dataset.kmsfColumnId === visibleColumn.id);
+              const measuredColumnWidth = headerCell?.getBoundingClientRect().width;
+              const fallbackWidth = stateRef.current.columnState[visibleColumn.id]?.width ?? visibleColumn.width ?? 160;
+
+              visibleWidthSnapshot.set(
+                visibleColumn.id,
+                measuredColumnWidth && Number.isFinite(measuredColumnWidth) ? measuredColumnWidth : fallbackWidth,
+              );
+            }
+
+            const startWidth =
+              visibleWidthSnapshot.get(column.id) ??
+              (measuredWidth && Number.isFinite(measuredWidth) ? measuredWidth : (columnState?.width ?? column.width ?? 160));
+            setResizingColumnId(column.id);
+            const handlePointerMove = (moveEvent: PointerEvent) => {
+              commitState(
+                (current) => {
+                  let next = current;
+
+                  for (const [visibleColumnId, visibleColumnWidth] of visibleWidthSnapshot) {
+                    next = setKmsfColumnWidth(next, visibleColumnId, visibleColumnWidth);
+                  }
+
+                  return setColumnWidthInsideParentGroup(
+                    next,
+                    column.id,
+                    Math.max(getEffectiveColumnMinWidth(column), startWidth + moveEvent.clientX - startX),
+                  );
+                },
+                { columnLayoutChanged: true },
+              );
+            };
+            const handlePointerUp = () => {
+              setResizingColumnId(null);
+              window.removeEventListener("pointermove", handlePointerMove);
+              window.removeEventListener("pointerup", handlePointerUp);
+            };
+            window.addEventListener("pointermove", handlePointerMove);
+            window.addEventListener("pointerup", handlePointerUp);
+          }}
+        >
+          <span className="kmsf-data-table__resize-line" />
+        </span>
+      </th>
+    );
+  };
+
   const renderColumnSizing = () => (
     <colgroup>
       {visibleColumns.map((column, index) => (
@@ -1326,169 +1815,13 @@ function KmsfDataTableInner<TData>(
             style={{ width: tableWidth }}
           >
             {renderColumnSizing()}
-          <thead className="kmsf-data-table__thead">
-            <tr>
-              {visibleColumns.map((column, index) => {
-                const columnState = state.columnState[column.id];
-                const headerProps = column.header?.props ?? {};
-	                const sortIndicatorState = getSortIndicatorState(state.sort, column.id);
-	                const sortIndicatorVisible = sortIndicatorState === "asc" || sortIndicatorState === "desc";
-                const headerClassName = [
-                  "kmsf-data-table__th px-3 py-2 text-left font-semibold",
-                  movingColumnId === column.id ? "kmsf-column-moving" : undefined,
-                  headerProps.className,
-                ]
-                  .filter(Boolean)
-                  .join(" ");
-                const headerPayload = createHeaderComponentPayload(state, column, index);
-                const headerRendererBody = column.header?.renderer ? column.header.renderer(headerPayload) : null;
-                const headerLeftSlots = !column.header?.renderer
-                  ? renderKmsfComponentSlots(column.header?.components, headerPayload, "left")
-                  : [];
-                const headerRightSlots = !column.header?.renderer
-                  ? renderKmsfComponentSlots(column.header?.components, headerPayload, "right")
-                  : [];
-                const hasHeaderComponents = headerLeftSlots.length > 0 || headerRightSlots.length > 0;
-
-                return (
-                  <th
-                    {...headerProps}
-                    className={headerClassName}
-                    data-column-drop-target={columnMoveTargetId === column.id ? "true" : undefined}
-                    data-column-moving={movingColumnId === column.id ? "true" : undefined}
-                    data-kmsf-column-index={index}
-	                    data-kmsf-column-id={column.id}
-	                    data-sortable={column.sort ? "true" : "false"}
-	                    data-sort-direction={state.sort?.columnId === column.id ? state.sort.direction : undefined}
-	                    data-testid={`header-${column.id}`}
-	                    aria-sort={column.sort ? getAriaSortState(state.sort, column.id) : undefined}
-	                    key={column.id}
-	                    onClick={(event) => {
-	                      headerProps.onClick?.(event);
-
-	                      if (event.defaultPrevented || !column.sort) {
-	                        return;
-	                      }
-
-	                      activateHeaderSort(column);
-	                    }}
-	                    onKeyDown={(event) => {
-	                      headerProps.onKeyDown?.(event);
-
-	                      if (event.defaultPrevented || !column.sort) {
-	                        return;
-	                      }
-
-	                      if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
-	                        event.preventDefault();
-	                        activateHeaderSort(column);
-	                      }
-	                    }}
-	                    onPointerDown={(event) => beginHeaderPointerInteraction(event, column)}
-	                    style={{ width: columnState?.width ?? column.width, ...headerProps.style }}
-	                    tabIndex={column.sort ? 0 : undefined}
-	                  >
-                    <span aria-hidden="true" className="kmsf-column-drop-marker" />
-	                    <span
-	                      className="kmsf-data-table__header-content"
-	                      data-kmsf-header-body="true"
-	                      data-kmsf-header-components={hasHeaderComponents ? "true" : undefined}
-	                      data-kmsf-sort-indicator-visible={sortIndicatorVisible ? "true" : undefined}
-	                    >
-                      <span
-                        className="kmsf-data-table__header-slot"
-                        data-kmsf-header-slot="left"
-                      >
-                        {headerLeftSlots}
-                      </span>
-                      <span className="kmsf-data-table__header-label">
-                        {column.header?.renderer ? headerRendererBody : column.label}
-                      </span>
-	                      <span
-	                        aria-hidden="true"
-	                        className="kmsf-sort-indicator"
-	                        data-sort-state={sortIndicatorState}
-	                        data-sort-visible={sortIndicatorVisible ? "true" : undefined}
-	                        data-testid={`sort-indicator-${column.id}`}
-	                      >
-                        <ArrowUp className="kmsf-sort-icon" focusable="false" size={14} strokeWidth={2.25} />
-                      </span>
-                      <span
-                        className="kmsf-data-table__header-slot"
-                        data-kmsf-header-slot="right"
-                      >
-                        {headerRightSlots}
-                      </span>
-                    </span>
-                    <span
-                      aria-hidden="true"
-                      className="kmsf-data-table__resize"
-                      data-resizing={resizingColumnId === column.id ? "true" : undefined}
-                      data-testid={`resize-${column.id}`}
-                      onClick={(event) => event.stopPropagation()}
-                      onPointerDown={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        const startX = event.clientX;
-                        const measuredWidth = event.currentTarget
-                          .closest<HTMLTableCellElement>("th")
-                          ?.getBoundingClientRect().width;
-                        const visibleWidthSnapshot = new Map<string, number>();
-
-                        for (const visibleColumn of visibleColumns) {
-                          const headerCell = Array.from(
-                            headerRef.current?.querySelectorAll<HTMLTableCellElement>("[data-kmsf-column-id]") ?? [],
-                          ).find((element) => element.dataset.kmsfColumnId === visibleColumn.id);
-                          const measuredColumnWidth = headerCell?.getBoundingClientRect().width;
-                          const fallbackWidth =
-                            stateRef.current.columnState[visibleColumn.id]?.width ?? visibleColumn.width ?? 160;
-
-                          visibleWidthSnapshot.set(
-                            visibleColumn.id,
-                            measuredColumnWidth && Number.isFinite(measuredColumnWidth) ? measuredColumnWidth : fallbackWidth,
-                          );
-                        }
-
-                        const startWidth =
-                          visibleWidthSnapshot.get(column.id) ??
-                          (measuredWidth && Number.isFinite(measuredWidth)
-                            ? measuredWidth
-                            : (columnState?.width ?? column.width ?? 160));
-                        setResizingColumnId(column.id);
-                        const handlePointerMove = (moveEvent: PointerEvent) => {
-                          commitState(
-                            (current) => {
-                              let next = current;
-
-                              for (const [visibleColumnId, visibleColumnWidth] of visibleWidthSnapshot) {
-                                next = setKmsfColumnWidth(next, visibleColumnId, visibleColumnWidth);
-                              }
-
-                              return setKmsfColumnWidth(
-                                next,
-                                column.id,
-	                                Math.max(getEffectiveColumnMinWidth(column), startWidth + moveEvent.clientX - startX),
-                              );
-                            },
-                            { columnLayoutChanged: true },
-                          );
-                        };
-                        const handlePointerUp = () => {
-                          setResizingColumnId(null);
-                          window.removeEventListener("pointermove", handlePointerMove);
-                          window.removeEventListener("pointerup", handlePointerUp);
-                        };
-                        window.addEventListener("pointermove", handlePointerMove);
-                        window.addEventListener("pointerup", handlePointerUp);
-                      }}
-                    >
-                      <span className="kmsf-data-table__resize-line" />
-                    </span>
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
+            <thead className="kmsf-data-table__thead">
+              {headerRows.map((headerRow, rowIndex) => (
+                <tr key={`header-row-${rowIndex}`}>
+                  {headerRow.map((cell, cellIndex) => renderHeaderCell(cell, cellIndex))}
+                </tr>
+              ))}
+            </thead>
           </table>
         </div>
       ) : null}
@@ -1817,14 +2150,14 @@ function KmsfDataTableInner<TData>(
           />
         ) : null}
       </div>
-      {movingColumn && columnMovePointer ? (
+      {movingHeaderLabel && columnMovePointer ? (
         <div
           aria-hidden="true"
           className="kmsf-column-move-ghost"
           data-testid="column-move-ghost"
           style={{ left: columnMovePointer.x + 12, top: columnMovePointer.y + 12 }}
         >
-          {movingColumn.label}
+          {movingHeaderLabel}
         </div>
       ) : null}
     </div>

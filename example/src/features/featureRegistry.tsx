@@ -61,7 +61,7 @@ export const featureRegistry: FeatureDefinition[] = [
       { description: "컬럼 위치와 너비 불러오기/초기화", example: "setColumnLayout(layout)", name: "setColumnLayout" },
       { description: "컬럼 resize/reorder 상태 변경 callback", example: "onChangeColumnLayout={setColumnLayout}", name: "onChangeColumnLayout" },
     ],
-    summary: "헤더 표시/숨김, 정렬, 컬럼 위치와 너비 저장 예제입니다.",
+    summary: "Header 기본 기능, 숨김/표시, 컬럼 설정 저장, 2중 헤더 예제입니다.",
   },
   {
     Component: BodyFeature,

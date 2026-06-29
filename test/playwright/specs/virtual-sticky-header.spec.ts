@@ -57,7 +57,7 @@ test("split header and body columns stay aligned in virtualized mode", async ({ 
   await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
 
   const alignment = await page.evaluate(() => {
-    const headers = [...document.querySelectorAll<HTMLElement>(".kmsf-data-table__header-table th")];
+    const headers = [...document.querySelectorAll<HTMLElement>(".kmsf-data-table__header-table th[data-kmsf-column-id]")];
     const cells = [
       ...document.querySelectorAll<HTMLElement>(
         ".kmsf-data-table__body-table tbody tr:not([aria-hidden='true']) td",
@@ -108,7 +108,7 @@ test("split header and body columns stay aligned after column resize", async ({ 
   expect(afterResize!.width).toBeGreaterThan(beforeResize!.width + 40);
 
   const alignment = await page.evaluate(() => {
-    const headers = [...document.querySelectorAll<HTMLElement>(".kmsf-data-table__header-table th")];
+    const headers = [...document.querySelectorAll<HTMLElement>(".kmsf-data-table__header-table th[data-kmsf-column-id]")];
     const cells = [
       ...document.querySelectorAll<HTMLElement>(
         ".kmsf-data-table__body-table tbody tr:not([aria-hidden='true']) td",
@@ -188,7 +188,7 @@ test("body viewport uses horizontal overflow for the wide data set and keeps scr
   expect(Math.abs(horizontalScrollSync.headerScrollLeft! - horizontalScrollSync.viewportScrollLeft)).toBeLessThan(1);
 
   const scrolledAlignment = await page.evaluate(() => {
-    const headers = [...document.querySelectorAll<HTMLElement>(".kmsf-data-table__header-table th")];
+    const headers = [...document.querySelectorAll<HTMLElement>(".kmsf-data-table__header-table th[data-kmsf-column-id]")];
     const cells = [
       ...document.querySelectorAll<HTMLElement>(
         ".kmsf-data-table__body-table tbody tr:not([aria-hidden='true']) td",

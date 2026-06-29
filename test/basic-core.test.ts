@@ -9,9 +9,12 @@ import {
   deleteKmsfRows,
   formatKmsfCellValue,
   getKmsfCellValue,
+  getKmsfHeaderRows,
   getKmsfPageRows,
+  getKmsfVisibleColumns,
   getKmsfVirtualRows,
   moveKmsfColumn,
+  moveKmsfColumnGroup,
   moveKmsfRow,
   pasteKmsfCell,
   pasteKmsfRow,
@@ -19,6 +22,8 @@ import {
   replaceKmsfRows,
   serializeKmsfColumnLayout,
   setKmsfColumnHidden,
+  setKmsfColumnGroupHidden,
+  setKmsfColumnGroupWidth,
   setKmsfHeaderVisible,
   setKmsfPagination,
   setKmsfColumnWidth,
@@ -136,6 +141,141 @@ describe("@kmsf/data-table basic core", () => {
     expect(restored.columnState.name?.hidden).toBe(true);
     expect(restored.columnOrder).toEqual(["age", "name", "profile.score"]);
     expect(queryKmsfRows(restored).map((row) => row.id)).toEqual(["a", "b"]);
+  });
+
+  it("normalizes 2-depth column groups without changing flat column tables", () => {
+    const flatState = createState();
+    const groupedState = createKmsfDataTableState<PersonRow>({
+      columnGroups: [
+        { children: ["name", "age"], id: "profile", label: "Profile" },
+        { children: ["missing", "age", "profile.score"], id: "metrics", label: "Metrics" },
+      ],
+      columns,
+      getRowId: (row) => row.id,
+      rows,
+    });
+
+    expect(flatState.columnGroups).toEqual([]);
+    expect(getKmsfHeaderRows(flatState)).toEqual([
+      [
+        expect.objectContaining({ colSpan: 1, columnId: "name", kind: "column", rowSpan: 1 }),
+        expect.objectContaining({ colSpan: 1, columnId: "age", kind: "column", rowSpan: 1 }),
+        expect.objectContaining({ colSpan: 1, columnId: "profile.score", kind: "column", rowSpan: 1 }),
+      ],
+    ]);
+    expect(groupedState.columnGroups).toEqual([
+      { children: ["name", "age"], id: "profile", label: "Profile" },
+      { children: ["profile.score"], id: "metrics", label: "Metrics" },
+    ]);
+    expect(getKmsfHeaderRows(groupedState)).toEqual([
+      [
+        expect.objectContaining({ colSpan: 2, groupId: "profile", kind: "group", rowSpan: 1 }),
+        expect.objectContaining({ colSpan: 1, groupId: "metrics", kind: "group", rowSpan: 1 }),
+      ],
+      [
+        expect.objectContaining({ colSpan: 1, columnId: "name", groupId: "profile", kind: "column", rowSpan: 1 }),
+        expect.objectContaining({ colSpan: 1, columnId: "age", groupId: "profile", kind: "column", rowSpan: 1 }),
+        expect.objectContaining({
+          colSpan: 1,
+          columnId: "profile.score",
+          groupId: "metrics",
+          kind: "column",
+          rowSpan: 1,
+        }),
+      ],
+    ]);
+  });
+
+  it("persists parent group visibility separately from child column visibility", () => {
+    const createGroupedState = () => createKmsfDataTableState<PersonRow>({
+      columnGroups: [{ children: ["name", "age"], id: "profile", label: "Profile" }],
+      columns,
+      getRowId: (row) => row.id,
+      rows,
+    });
+    let state = createGroupedState();
+
+    state = setKmsfColumnHidden(state, "age", true);
+    state = setKmsfColumnGroupHidden(state, "profile", true);
+
+    expect(getKmsfVisibleColumns(state).map((column) => column.id)).toEqual(["profile.score"]);
+
+    const layout = serializeKmsfColumnLayout(state);
+    const restored = applyKmsfColumnLayout(createGroupedState(), layout);
+    const shown = setKmsfColumnGroupHidden(restored, "profile", false);
+
+    expect(layout.groups?.profile?.hidden).toBe(true);
+    expect(restored.columnState.age?.hidden).toBe(true);
+    expect(shown.columnState.age?.hidden).toBe(true);
+    expect(getKmsfVisibleColumns(shown).map((column) => column.id)).toEqual(["name", "profile.score"]);
+  });
+
+  it("resizes parent groups while preserving child width ratios and respecting min/max constraints", () => {
+    let state = createKmsfDataTableState<PersonRow>({
+      columnGroups: [{ children: ["name", "age", "profile.score"], id: "profile", label: "Profile" }],
+      columns: [
+        { field: "name", label: "Name", minWidth: 80, width: 100 },
+        { field: "age", label: "Age", maxWidth: 260, width: 200 },
+        { field: "profile.score", label: "Score", width: 100 },
+      ],
+      getRowId: (row) => row.id,
+      rows,
+    });
+
+    state = setKmsfColumnGroupWidth(state, "profile", 600);
+
+    expect(state.columnState.name?.width).toBeCloseTo(170, 5);
+    expect(state.columnState.age?.width).toBe(260);
+    expect(state.columnState["profile.score"]?.width).toBeCloseTo(170, 5);
+
+    state = setKmsfColumnGroupWidth(state, "profile", 180);
+
+    expect(state.columnState.name?.width).toBe(80);
+    expect(state.columnState.age?.width).toBe(50);
+    expect(state.columnState["profile.score"]?.width).toBe(50);
+  });
+
+  it("moves parent groups as a block and prevents child columns from leaving their group", () => {
+    let state = createKmsfDataTableState<PersonRow>({
+      columnGroups: [{ children: ["name", "age"], id: "profile", label: "Profile" }],
+      columns: [
+        { field: "name", label: "Name" },
+        { field: "age", label: "Age" },
+        { field: "profile.score", label: "Score" },
+      ],
+      getRowId: (row) => row.id,
+      rows,
+    });
+
+    state = moveKmsfColumnGroup(state, "profile", 1);
+    expect(state.columnOrder).toEqual(["profile.score", "name", "age"]);
+
+    expect(moveKmsfColumn(state, "age", 0).columnOrder).toEqual(["profile.score", "name", "age"]);
+    expect(moveKmsfColumn(state, "age", 1).columnOrder).toEqual(["profile.score", "age", "name"]);
+  });
+
+  it("moves multiple parent groups without splitting children", () => {
+    let state = createKmsfDataTableState<PersonRow>({
+      columnGroups: [
+        { children: ["name", "age"], id: "profile", label: "Profile" },
+        { children: ["active", "locked"], id: "status", label: "Status" },
+      ],
+      columns: [
+        { field: "name", label: "Name" },
+        { field: "age", label: "Age" },
+        { field: "active", label: "Active" },
+        { field: "locked", label: "Locked" },
+        { field: "profile.score", label: "Score" },
+      ],
+      getRowId: (row) => row.id,
+      rows,
+    });
+
+    state = moveKmsfColumnGroup(state, "profile", 2);
+    expect(state.columnOrder).toEqual(["active", "locked", "name", "age", "profile.score"]);
+
+    state = moveKmsfColumnGroup(state, "profile", 5);
+    expect(state.columnOrder).toEqual(["active", "locked", "profile.score", "name", "age"]);
   });
 
   it("supports pagination and virtual row windows for 100000 rows", () => {

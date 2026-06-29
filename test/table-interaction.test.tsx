@@ -634,6 +634,87 @@ describe("@kmsf/data-table keyboard interaction", () => {
     expect(indicator.getAttribute("data-sort-state")).toBe("none");
   });
 
+  it("renders 2-depth column groups without parent sort behavior", () => {
+    const onChangeSort = vi.fn();
+    const element = renderTableElement(
+      <KmsfDataTable
+        columnGroups={[{ children: ["name", "age"], id: "profile", label: "Profile" }]}
+        columns={columns}
+        data={threeRows}
+        getRowId={(row) => row.id}
+        onChangeSort={onChangeSort}
+      />,
+    );
+    const headerRows = element.querySelectorAll("thead tr");
+    const groupHeader = element.querySelector("[data-testid='header-group-profile']")!;
+    const nameHeader = element.querySelector("[data-testid='header-name']")!;
+    const ageHeader = element.querySelector("[data-testid='header-age']")!;
+
+    expect(headerRows).toHaveLength(2);
+    expect(groupHeader.textContent).toContain("Profile");
+    expect(groupHeader.getAttribute("colspan")).toBe("2");
+    expect(groupHeader.getAttribute("scope")).toBe("colgroup");
+    expect(groupHeader.getAttribute("aria-sort")).toBeNull();
+    expect(groupHeader.getAttribute("tabindex")).toBeNull();
+    expect(nameHeader.closest("tr")).toBe(headerRows[1]);
+    expect(ageHeader.closest("tr")).toBe(headerRows[1]);
+
+    act(() => {
+      groupHeader.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onChangeSort).not.toHaveBeenCalled();
+    expect([...element.querySelectorAll("tbody tr")].map((row) => row.textContent)).toEqual([
+      "Alpha31",
+      "Beta42",
+      "Gamma27",
+    ]);
+  });
+
+  it("hides actual child columns through parent group layout state", () => {
+    const ref = createRef<KmsfDataTableRef<PersonRow>>();
+    const element = renderTableElement(
+      <KmsfDataTable
+        columnGroups={[{ children: ["name", "age"], id: "profile", label: "Profile" }]}
+        columns={[
+          { field: "name", label: "Name" },
+          { field: "age", label: "Age" },
+          { field: "profile.age", label: "Profile Age" },
+        ]}
+        data={apiRows}
+        getRowId={(row) => row.id}
+        ref={ref}
+      />,
+    );
+
+    act(() => {
+      ref.current?.setColumnLayout({
+        columns: { age: { hidden: true }, name: {}, "profile.age": {} },
+        groups: { profile: { hidden: true } },
+        order: ["name", "age", "profile.age"],
+      });
+    });
+
+    expect(element.querySelector("[data-testid='header-group-profile']")).toBeNull();
+    expect(element.querySelector("[data-testid='header-name']")).toBeNull();
+    expect(element.querySelector("[data-testid='header-age']")).toBeNull();
+    expect(element.querySelector("[data-testid='header-profile.age']")).not.toBeNull();
+    expect([...element.querySelectorAll("tbody tr")].map((row) => row.textContent)).toEqual(["31", "42"]);
+
+    act(() => {
+      ref.current?.setColumnLayout({
+        columns: { age: { hidden: true }, name: {}, "profile.age": {} },
+        groups: { profile: { hidden: false } },
+        order: ["name", "age", "profile.age"],
+      });
+    });
+
+    expect(element.querySelector("[data-testid='header-group-profile']")).not.toBeNull();
+    expect(element.querySelector("[data-testid='header-name']")).not.toBeNull();
+    expect(element.querySelector("[data-testid='header-age']")).toBeNull();
+    expect([...element.querySelectorAll("tbody tr")].map((row) => row.textContent)).toEqual(["Alpha31", "Beta42"]);
+  });
+
   it("exposes column layout, selection, and sort ref methods", () => {
     const ref = createRef<KmsfDataTableRef<PersonRow>>();
     const onChangeColumnLayout = vi.fn();

@@ -293,8 +293,9 @@ test("full audit keeps context menu counters within 10 percent @perf", async ({ 
 test("full audit keeps header row cell and size counters within 10 percent @perf", async ({ page }, testInfo) => {
   await runMemoryScenario(page, testInfo, "header-row-cell-size", async (currentPage) => {
     await openFeature(currentPage, "Header 예제", "header");
-    const ageHeader = currentPage.getByTestId("header-age");
-    const nameHeader = currentPage.getByTestId("header-name");
+    const basicHeaderExample = currentPage.getByTestId("header-example-basic");
+    const ageHeader = basicHeaderExample.getByTestId("header-age");
+    const nameHeader = basicHeaderExample.getByTestId("header-name");
     await ageHeader.click();
     const ageBox = await ageHeader.boundingBox();
     const nameBox = await nameHeader.boundingBox();

@@ -1,8 +1,8 @@
 # @kmsf/data-table
 
-KMSF-first React data table package. It provides a reusable `KmsfDataTable` component and framework-independent core helpers for rows, columns, layout, selection, clipboard, pagination, and virtualized rendering.
+`@kmsf/data-table`은 KMSF에서 재사용하기 위한 CSR 중심 React data table package다. `KmsfDataTable` 컴포넌트와 framework-independent core helper를 제공한다.
 
-## Install
+## 설치
 
 ```bash
 npm install @kmsf/data-table react react-dom
@@ -13,7 +13,7 @@ Peer dependencies:
 - `react`: `>=18.0.0 <20.0.0`
 - `react-dom`: `>=18.0.0 <20.0.0`
 
-## Quick Start
+## 빠른 시작
 
 ```tsx
 import { KmsfDataTable } from "@kmsf/data-table";
@@ -26,37 +26,42 @@ export function Example() {
 
   return (
     <KmsfDataTable<Row>
-      getRowId={(row) => row.id}
-      data={data}
-      onChangeData={setData}
       columns={[
         { field: "name", label: "Name" },
         { field: "value", label: "Value", sort: true },
       ]}
+      data={data}
+      getRowId={(row) => row.id}
+      onChangeData={setData}
     />
   );
 }
 ```
 
-## Implemented Features
+## 구현된 기능
 
-- Basic `KmsfDataTable` rendering with `data`, `columns`, and `getRowId`
-- Controlled external state flow with `data` and `onChangeData` for CSR applications
-- Row full refresh, add, update, delete, and query helpers
-- Pagination helpers and pagination props
-- Theme, density, table class, row class, header style, and cell style
-- Header show/hide, header formatting, boundary resize, 1-second long-press reorder, animated sort indicator, and column layout save/load
-- Row click, multi-row selection, double click, context menu callback, drag reorder, row copy, and row paste
-- Header and Cell `components` arrays with lightweight built-ins, Header-only menu popover, and Cell-only virtual list
-- Cell formatting, `cell.renderer`, optional `cellSelection={false}`, context menu callback, cell copy, and cell paste
-- Column-level `cell.props.copyable` and `cell.props.pasteable` guards
-- Single row, multi row, single cell, cell range, and clear selection helpers through `selectRow`, `selectRows`, `selectCell`, and `selectCellRange`
-- Multi-cell clipboard helpers and keyboard range copy/paste
-- Fill helper for copying one source cell value into a target range
-- Virtualized rendering path with split header/body tables for 100000 row smoke and perf tests
-- Public subpaths: `@kmsf/data-table/core`, `@kmsf/data-table/clipboard`, `@kmsf/data-table/selection`
+- `data`, `columns`, `getRowId` 기반 table rendering
+- `data`와 `onChangeData`를 통한 controlled CSR state flow: Controlled external state flow with `data` and `onChangeData`
+- row refresh, add, update, delete, query helper
+- pagination helper와 pagination props
+- theme, density, table/row/header/cell class와 style
+- header show/hide, formatting, boundary resize, long-press reorder, sort indicator
+- `columnGroups` 기반 2-depth header와 group width 조정 helper
+- column layout save/load: `getColumnLayout`, `setColumnLayout`, `onChangeColumnLayout`
+- row click, double click, context menu, drag reorder, copy/paste
+- single/multi row selection, single/range cell selection
+- keyboard row/cell copy/paste와 multi-cell clipboard helper
+- Header/Cell built-in component 배열
+- Header-only menu popover
+- Cell-only virtual list
+- `cell.renderer`, `cellSelection={false}`, copyable/pasteable guard
+- virtualized rendering path와 split header/body table 구조
+- public subpaths:
+  - `@kmsf/data-table/core`
+  - `@kmsf/data-table/clipboard`
+  - `@kmsf/data-table/selection`
 
-## User Docs
+## 사용자 문서
 
 - [Quick start](docs/user/01-quick-start.md)
 - [Data and CRUD](docs/user/02-data-and-crud.md)
@@ -73,25 +78,29 @@ export function Example() {
 
 ## Playground
 
-Run the local playground from the repository root:
+루트에서 실행:
 
 ```bash
 npm --workspace=@kmsf/data-table run dev
 ```
 
-The playground follows the `@kmsf/charts` docs shell: topbar, header-right view toggle, collapsible feature navigation, recreated center example content, and a main-content `옵션 가이드` view. Each feature page starts with a Korean title and description, then prioritizes the interactive table sample. It includes standalone `Context Menu 예제`, `컴포넌트 예제`, and `테이블 사이즈` pages for context-menu, built-in component, manual-height, parent-size, and browser-resize examples.
+기본 포트는 `4002`다.
 
-## Verification
+Playground는 feature navigation과 recreated content boundary를 사용한다. Context menu, built-in component, table size, header, row, cell, selection, virtualization 예제를 브라우저에서 확인할 수 있다.
+
+## 검증
 
 ```bash
+npm --workspace=@kmsf/data-table run lint
 npm --workspace=@kmsf/data-table run test:run
+npm --workspace=@kmsf/data-table run build
 npm --workspace=@kmsf/data-table run verify
 npm --workspace=@kmsf/data-table run verify:full
 npm --workspace=@kmsf/data-table run test:perf
 ```
 
-## Current Limits
+## 현재 제한
 
-- Dedicated external store adapter object is not shipped. Pass an external `useState`, Zustand, Redux, or other store state array directly through `data`, and reflect table-originated edits through `onChangeData`.
-- Visual Fill Handle UI is not implemented yet. `fillKmsfCellRange` is available as a core helper, but the Excel-like drag handle UI is deferred until its UX contract is confirmed.
-- The current implementation scope is CSR. Server-side row model, lazy-load row model, grouping, aggregation, pivoting, tree data, master/detail, export, charts integration, and AI assistant features are roadmap items outside the current core.
+- 전용 external store adapter 객체는 아직 제공하지 않는다. 외부 `useState`, Zustand, Redux 등에서 관리하는 배열을 `data`로 전달하고, table-originated 변경은 `onChangeData`에서 반영한다.
+- Excel-like Visual Fill Handle UI는 아직 제공하지 않는다. `fillKmsfCellRange` helper는 core에 있다.
+- server-side row model, lazy-load row model, grouping, aggregation, pivoting, tree data, master/detail, export, charts integration, AI assistant 기능은 현재 core 범위 밖이다.

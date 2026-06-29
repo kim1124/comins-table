@@ -20,7 +20,7 @@ test("playground renders Header and Cell component renderer examples", async ({ 
   await page.goto("/");
 
   await page.getByRole("button", { exact: true, name: "Header 예제" }).click();
-  await expect(page.getByTestId("feature-option-description").first()).toContainText("컬럼 위치와 너비 저장");
+  await expect(page.getByTestId("feature-option-description").first()).toContainText("1Depth 컬럼");
   await expect(page.getByRole("button", { name: "Header components 예제 표시" })).toHaveCount(0);
   await expect(page.getByTestId("header-renderer-example")).toHaveCount(0);
 

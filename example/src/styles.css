@@ -900,6 +900,26 @@ body {
   overflow-y: visible;
 }
 
+.feature-panel--header {
+  flex: 0 0 auto;
+  height: auto;
+  min-width: 0;
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+.header-example-showcase {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.header-example-showcase > section {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+}
+
 .component-showcase {
   display: grid;
   gap: 14px;
@@ -980,6 +1000,7 @@ body {
 }
 
 .feature-panel--components .feature-option-container,
+.feature-panel--header .feature-option-container,
 .component-example-section .feature-option-container {
   flex: 0 0 auto;
   height: auto;
@@ -1029,6 +1050,7 @@ body {
 }
 
 .feature-panel--components .feature-option-sample,
+.feature-panel--header .feature-option-sample,
 .component-example-section .feature-option-sample {
   flex: 0 0 auto;
   height: 500px;
@@ -1040,6 +1062,13 @@ body {
 .feature-option-sample__inner > .kmsf-data-table,
 .feature-option-sample__inner > .example-table.kmsf-data-table {
   flex: 1 1 auto;
+}
+
+.header-example-table.example-table.kmsf-data-table {
+  height: 100%;
+  max-height: 100%;
+  min-height: 300px;
+  width: 100%;
 }
 
 .feature-intro h1 {
