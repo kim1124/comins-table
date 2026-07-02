@@ -16,12 +16,12 @@ function collectBrowserDiagnostics(page: Page) {
   return diagnostics;
 }
 
-test("virtualized header stays sticky while scrolling one hundred thousand rows", async ({ page }) => {
+test("virtualized header stays sticky while scrolling one hundred thousand rows @perf", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "대용량 데이터 표시" }).click();
+  await page.goto("/performance/virtualization");
   await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
-  await page.getByRole("button", { name: "10만 행 로드" }).click();
+  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
   await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
   await expect(page.getByTestId("body-proof-virtualization")).toHaveCount(0);
 
@@ -48,12 +48,12 @@ test("virtualized header stays sticky while scrolling one hundred thousand rows"
   expect(diagnostics).toEqual([]);
 });
 
-test("split header and body columns stay aligned in virtualized mode", async ({ page }) => {
+test("split header and body columns stay aligned in virtualized mode @perf", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "대용량 데이터 표시" }).click();
+  await page.goto("/performance/virtualization");
   await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
-  await page.getByRole("button", { name: "10만 행 로드" }).click();
+  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
   await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
 
   const alignment = await page.evaluate(() => {
@@ -83,24 +83,25 @@ test("split header and body columns stay aligned in virtualized mode", async ({ 
   expect(diagnostics).toEqual([]);
 });
 
-test("split header and body columns stay aligned after column resize", async ({ page }) => {
+test("split header and body columns stay aligned after column resize @perf", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "대용량 데이터 표시" }).click();
+  await page.goto("/performance/virtualization");
   await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
-  await page.getByRole("button", { name: "10만 행 로드" }).click();
+  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
   await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
 
   const nameHeader = page.getByTestId("header-name");
   const resizeHandle = page.getByTestId("resize-name");
   const beforeResize = await nameHeader.boundingBox();
+  await resizeHandle.scrollIntoViewIfNeeded();
   const handleBox = await resizeHandle.boundingBox();
   expect(beforeResize).not.toBeNull();
   expect(handleBox).not.toBeNull();
 
   await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2);
   await page.mouse.down();
-  await page.mouse.move(handleBox!.x + handleBox!.width / 2 + 80, handleBox!.y + handleBox!.height / 2);
+  await page.mouse.move(handleBox!.x + handleBox!.width / 2 + 140, handleBox!.y + handleBox!.height / 2, { steps: 12 });
   await page.mouse.up();
 
   const afterResize = await nameHeader.boundingBox();
@@ -134,11 +135,11 @@ test("split header and body columns stay aligned after column resize", async ({ 
   expect(diagnostics).toEqual([]);
 });
 
-test("body viewport uses horizontal overflow for the wide data set and keeps scroll sync", async ({ page }) => {
+test("body viewport uses horizontal overflow for the wide data set and keeps scroll sync @perf", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "대용량 데이터 표시" }).click();
-  await page.getByRole("button", { name: "10만 행 로드" }).click();
+  await page.goto("/performance/virtualization");
+  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
   await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
 
   const viewport = page.getByTestId("data-table-viewport");

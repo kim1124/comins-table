@@ -44,13 +44,14 @@ async function dragHeader(page: Page, source: Locator, target: Locator) {
 test("playground verifies header resize, column position change, and layout restore", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "Header 예제" }).click();
+  await page.goto("/examples/header");
 
-  await expect(page.getByTestId("feature-sample-card")).toHaveCount(4);
+  await expect(page.getByTestId("feature-sample-card")).toHaveCount(3);
   await expect(page.getByTestId("header-example-basic")).toBeVisible();
   await expect(page.getByTestId("header-example-visibility")).toBeVisible();
   await expect(page.getByTestId("header-example-layout")).toBeVisible();
-  await expect(page.getByTestId("header-example-groups")).toBeVisible();
+  await expect(page.getByTestId("header-example-groups")).toHaveCount(0);
+  await expect(page.getByTestId("header-example-dynamic-columns")).toHaveCount(0);
 
   const basicExample = page.getByTestId("header-example-basic");
   await expect(basicExample.locator(".kmsf-data-table__header-table thead tr")).toHaveCount(1);
@@ -66,7 +67,7 @@ test("playground verifies header resize, column position change, and layout rest
   await page.waitForTimeout(1100);
   await page.mouse.move(nameBox!.x + nameBox!.width / 2, nameBox!.y + nameBox!.height / 2);
   await page.mouse.up();
-  await expect(basicExample.locator(".kmsf-data-table__header-table thead th[data-kmsf-column-id]").first()).toContainText("나이");
+  await expect(basicExample.locator(".kmsf-data-table__header-table thead th[data-kmsf-column-id]").first()).toContainText("Column2");
   await expect(page.getByTestId("layout-order")).toHaveCount(0);
 
   const handle = basicExample.getByTestId("resize-age");
@@ -82,7 +83,7 @@ test("playground verifies header resize, column position change, and layout rest
   await expect(page.getByTestId("layout-width-age")).toHaveCount(0);
 
   await basicExample.getByRole("button", { exact: true, name: "초기화" }).click();
-  await expect(basicExample.locator(".kmsf-data-table__header-table thead th[data-kmsf-column-id]").first()).toContainText("이름");
+  await expect(basicExample.locator(".kmsf-data-table__header-table thead th[data-kmsf-column-id]").first()).toContainText("Column1");
 
   expect(diagnostics).toEqual([]);
 });
@@ -90,16 +91,16 @@ test("playground verifies header resize, column position change, and layout rest
 test("playground verifies 2-depth parent resize ratio and minimum clamp", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "Header 예제" }).click();
+  await page.goto("/examples/column-groups");
 
   const groupExample = page.getByTestId("header-example-groups");
   await groupExample.scrollIntoViewIfNeeded();
   await expect(groupExample.locator(".kmsf-data-table__header-table thead tr")).toHaveCount(2);
-  await expect(groupExample.getByTestId("header-group-profile")).toContainText("프로필");
+  await expect(groupExample.getByTestId("header-group-profile")).toContainText("Header 그룹 1");
   await expect(groupExample.getByTestId("header-group-profile")).toHaveAttribute("scope", "colgroup");
   await expect(groupExample.getByTestId("header-group-profile")).not.toHaveAttribute("aria-sort", /.+/);
   await expect(groupExample.getByTestId("header-role")).toHaveAttribute("rowspan", "2");
-  await expect(groupExample.getByTestId("header-group-status")).toContainText("상태");
+  await expect(groupExample.getByTestId("header-group-status")).toContainText("Header 그룹 2");
 
   const nameHeader = groupExample.getByTestId("header-name");
   const ageHeader = groupExample.getByTestId("header-age");
@@ -153,7 +154,7 @@ test("playground verifies 2-depth parent resize ratio and minimum clamp", async 
 test("playground verifies 2-depth child resize stays inside its parent group", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "Header 예제" }).click();
+  await page.goto("/examples/column-groups");
 
   const groupExample = page.getByTestId("header-example-groups");
   await groupExample.scrollIntoViewIfNeeded();
@@ -203,7 +204,7 @@ test("playground verifies 2-depth child resize stays inside its parent group", a
 test("playground verifies 2-depth parent and child move constraints", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "Header 예제" }).click();
+  await page.goto("/examples/column-groups");
 
   const groupExample = page.getByTestId("header-example-groups");
   await groupExample.scrollIntoViewIfNeeded();
@@ -224,10 +225,17 @@ test("playground verifies 2-depth parent and child move constraints", async ({ p
   await dragHeader(page, groupExample.getByTestId("header-age"), roleHeader);
   await expect.poll(() => getVisualLeafOrder(groupExample)).toEqual(["name", "age", "active", "locked", "role"]);
 
-  await groupExample.getByRole("button", { exact: true, name: "그룹 숨김" }).click();
+  const profileGroup = groupExample.getByTestId("header-group-profile");
+  await expect(profileGroup).toHaveCSS("border-bottom-width", "0px");
+
+  const groupToggle = groupExample.getByRole("button", { exact: true, name: "Header 그룹 1 표시" });
+  await expect(groupToggle).toHaveAttribute("aria-pressed", "true");
+  await groupToggle.click();
+  await expect(groupToggle).toHaveAttribute("aria-pressed", "false");
   await expect(groupExample.getByTestId("header-group-profile")).toHaveCount(0);
   await expect(groupExample.getByTestId("header-name")).toHaveCount(0);
-  await groupExample.getByRole("button", { exact: true, name: "그룹 표시" }).click();
+  await groupToggle.click();
+  await expect(groupToggle).toHaveAttribute("aria-pressed", "true");
   await expect(groupExample.getByTestId("header-group-profile")).toBeVisible();
 
   expect(diagnostics).toEqual([]);
@@ -236,15 +244,90 @@ test("playground verifies 2-depth parent and child move constraints", async ({ p
 test("playground verifies header-wide show and hide removes the whole header area", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "Header 예제" }).click();
+  await page.goto("/examples/header");
 
   const visibilityExample = page.getByTestId("header-example-visibility");
+  const toggle = visibilityExample.getByRole("button", { exact: true, name: "Header 표시" });
+  await expect(visibilityExample.getByRole("button", { exact: true, name: "표시 컬럼" })).toHaveCount(0);
+  const columnSelect = visibilityExample.getByTestId("header-visibility-column-select-trigger");
+  await expect(columnSelect).toHaveClass(/ui-selectbox-trigger/u);
+  await expect(columnSelect).toContainText("5개 컬럼");
+  await columnSelect.click();
+  const ageOption = page.getByTestId("header-visibility-column-select-option-age");
+  await expect(ageOption).toBeVisible();
+  const hitTest = await ageOption.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+
+    return Boolean(hit?.closest("[data-testid='header-visibility-column-select-option-age']"));
+  });
+  expect(hitTest).toBe(true);
+  await page.getByRole("checkbox", { exact: true, name: "Column2" }).click();
+  await page.getByRole("checkbox", { exact: true, name: "Column4" }).click();
+  await page.keyboard.press("Escape");
+
+  await expect(columnSelect).toContainText("3개 컬럼");
+  await expect(visibilityExample.getByTestId("header-age")).toHaveCount(0);
+  await expect(visibilityExample.getByTestId("header-locked")).toHaveCount(0);
+  await expect(visibilityExample.getByTestId("cell-a-age")).toHaveCount(0);
+  await expect(visibilityExample.getByTestId("cell-a-locked")).toHaveCount(0);
+  await expect(visibilityExample.getByTestId("header-name")).toBeVisible();
+  await expect(visibilityExample.getByTestId("cell-a-name")).toBeVisible();
+
   await expect(visibilityExample.locator(".kmsf-data-table__header")).toBeVisible();
-  await visibilityExample.getByRole("button", { exact: true, name: "숨김" }).click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
   await expect(visibilityExample.locator(".kmsf-data-table__header")).toHaveCount(0);
   await expect(visibilityExample.locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]")).toHaveCount(30);
-  await visibilityExample.getByRole("button", { exact: true, name: "표시" }).click();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
   await expect(visibilityExample.locator(".kmsf-data-table__header")).toBeVisible();
+  await expect(visibilityExample.getByTestId("header-age")).toHaveCount(0);
+  await columnSelect.click();
+  await page.getByRole("checkbox", { exact: true, name: "Column2" }).click();
+  await page.getByRole("checkbox", { exact: true, name: "Column4" }).click();
+  await page.keyboard.press("Escape");
+  await expect(columnSelect).toContainText("5개 컬럼");
+  await expect(visibilityExample.getByTestId("header-age")).toBeVisible();
+  await expect(visibilityExample.getByTestId("header-locked")).toBeVisible();
+  await expect(visibilityExample.getByTestId("cell-a-age")).toBeVisible();
+  await expect(visibilityExample.getByTestId("cell-a-locked")).toBeVisible();
+
+  expect(diagnostics).toEqual([]);
+});
+
+test("playground verifies dynamic column visibility for column groups", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/examples/column-groups");
+
+  const dynamicExample = page.getByTestId("column-group-dynamic-columns");
+  await expect(dynamicExample).toBeVisible();
+  await expect(dynamicExample.getByRole("button", { exact: true, name: "표시 컬럼" })).toHaveCount(0);
+  await expect(dynamicExample.getByTestId("column-group-column-select-trigger")).toHaveClass(/ui-selectbox-trigger/u);
+  await expect(dynamicExample.getByTestId("column-group-column-select-trigger")).toContainText("5개 컬럼");
+  await expect(dynamicExample.getByTestId("dynamic-group-table").locator(".kmsf-data-table__header-table th[data-kmsf-column-id]")).toHaveCount(5);
+
+  await dynamicExample.getByTestId("column-group-column-select-trigger").click();
+  await expect(page.getByTestId("column-group-column-select-content")).toBeVisible();
+  await expect(page.getByRole("checkbox", { exact: true, name: "Column2" })).toBeChecked();
+  await page.getByTestId("column-group-column-select-option-age").click();
+  await page.getByTestId("column-group-column-select-option-active").click();
+  await expect(page.getByRole("checkbox", { exact: true, name: "Column2" })).not.toBeChecked();
+  await expect(page.getByRole("checkbox", { exact: true, name: "Column3" })).not.toBeChecked();
+  await page.keyboard.press("Escape");
+
+  await expect(dynamicExample.getByTestId("column-group-column-select-trigger")).toContainText("3개 컬럼");
+  await expect(dynamicExample.getByTestId("dynamic-group-table").getByTestId("header-age")).toHaveCount(0);
+  await expect(dynamicExample.getByTestId("dynamic-group-table").getByTestId("header-active")).toHaveCount(0);
+  await expect(dynamicExample.getByTestId("dynamic-group-table").getByTestId("cell-a-age")).toHaveCount(0);
+  await expect(dynamicExample.getByTestId("dynamic-group-table").getByTestId("cell-a-active")).toHaveCount(0);
+  await expect(dynamicExample.getByTestId("dynamic-group-table").getByTestId("header-group-profile")).toBeVisible();
+  await expect(dynamicExample.getByTestId("dynamic-group-table").getByTestId("header-group-status")).toBeVisible();
+  await dynamicExample.getByTestId("column-group-column-select-trigger").click();
+  await expect(page.getByRole("checkbox", { exact: true, name: "Column2" })).not.toBeChecked();
+  await expect(page.getByRole("checkbox", { exact: true, name: "Column3" })).not.toBeChecked();
+  await page.keyboard.press("Escape");
 
   expect(diagnostics).toEqual([]);
 });

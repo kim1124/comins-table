@@ -35,16 +35,20 @@ test("feature content uses card containers and avoids page-level vertical scroll
   await expect(page.locator(".feature-doc")).toHaveCount(0);
 
   const pageSize = await page.evaluate(() => ({
-    bodyScrollHeight: document.body.scrollHeight,
-    documentScrollHeight: document.documentElement.scrollHeight,
+    bodyOverflow: window.getComputedStyle(document.body).overflow,
+    contentClientHeight: document.querySelector<HTMLElement>(".docs-shell__content")?.clientHeight ?? 0,
+    contentScrollHeight: document.querySelector<HTMLElement>(".docs-shell__content")?.scrollHeight ?? 0,
+    documentOverflow: window.getComputedStyle(document.documentElement).overflow,
     viewportHeight: window.innerHeight,
   }));
-  expect(pageSize.documentScrollHeight).toBeLessThanOrEqual(pageSize.viewportHeight + 1);
-  expect(pageSize.bodyScrollHeight).toBeLessThanOrEqual(pageSize.viewportHeight + 1);
+  expect(pageSize.documentOverflow).toBe("hidden");
+  expect(pageSize.bodyOverflow).toBe("hidden");
+  expect(pageSize.contentClientHeight).toBeLessThanOrEqual(pageSize.viewportHeight);
+  expect(pageSize.contentScrollHeight).toBeGreaterThan(pageSize.contentClientHeight);
   expect(diagnostics).toEqual([]);
 });
 
-test("single samples fill browser height and repeated samples scroll vertically", async ({ page }) => {
+test("single samples keep default table height and repeated samples scroll vertically", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.setViewportSize({ height: 720, width: 1280 });
   await page.goto("/");
@@ -62,15 +66,14 @@ test("single samples fill browser height and repeated samples scroll vertically"
     };
   });
 
-  expect(basicMetrics.overflowY).toBe("auto");
+  expect(basicMetrics.overflowY).toBe("visible");
   expect(basicMetrics.tableHeight).toBeGreaterThanOrEqual(300);
-  expect(basicMetrics.tableHeight).toBeGreaterThan(500);
   expect(Math.abs(basicMetrics.tableHeight - basicMetrics.sampleHeight)).toBeLessThanOrEqual(2);
-  expect(basicMetrics.sampleHeight).toBeLessThanOrEqual(basicMetrics.contentHeight);
+  expect(basicMetrics.sampleHeight).toBeGreaterThanOrEqual(300);
 
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
-  await expect(page.getByRole("main", { name: "데이터 테이블 예제" })).toHaveAttribute("data-feature", "component");
-  const longContentMetrics = await page.getByTestId("feature-content").evaluate((element) => ({
+  await page.goto("/examples/component");
+  await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "component");
+  const longContentMetrics = await page.locator(".docs-shell__content").evaluate((element) => ({
     clientHeight: element.clientHeight,
     scrollHeight: element.scrollHeight,
   }));
@@ -82,7 +85,7 @@ test("single samples fill browser height and repeated samples scroll vertically"
 test("repeated sample containers provide at least 500px sample height and full-width tables", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.goto("/examples/component");
 
   const sample = page.getByTestId("feature-option-sample").first();
   const table = sample.locator(".kmsf-data-table").first();
@@ -110,23 +113,113 @@ test("repeated sample containers provide at least 500px sample height and full-w
   expect(diagnostics).toEqual([]);
 });
 
+test("all example cards expand instead of clipping their live content", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.setViewportSize({ height: 720, width: 1280 });
+
+  for (const route of [
+    "/docs/getting-started",
+    "/examples/crud",
+    "/examples/size",
+    "/examples/theme",
+    "/examples/header",
+    "/examples/column-groups",
+    "/performance/pagination",
+    "/examples/cell",
+    "/examples/component",
+    "/examples/row",
+    "/examples/context-menu",
+    "/performance/virtualization",
+  ]) {
+    await page.goto(route);
+    await expect(page.getByTestId("feature-content")).toBeVisible();
+
+    const clippedElements = await page.getByTestId("feature-content").evaluate((root) => {
+      const selectors = [
+        ".feature-panel",
+        ".feature-option-container",
+        ".feature-option-container__body",
+        ".feature-option-sample",
+        ".feature-option-sample__inner",
+        ".crud-workspace",
+        ".context-workspace",
+        ".theme-example",
+        ".theme-example__table-frame",
+      ];
+
+      return selectors.flatMap((selector) =>
+        Array.from(root.querySelectorAll<HTMLElement>(selector)).flatMap((element) => {
+          const style = window.getComputedStyle(element);
+          const clipsY = style.overflowY === "hidden" || style.overflowY === "clip";
+
+          if (!clipsY) {
+            return [];
+          }
+
+          const elementRect = element.getBoundingClientRect();
+          const clippedChildren = Array.from(element.children).flatMap((child) => {
+            if (!(child instanceof HTMLElement)) {
+              return [];
+            }
+
+            const childStyle = window.getComputedStyle(child);
+            if (childStyle.display === "none" || childStyle.position === "fixed" || childStyle.position === "absolute") {
+              return [];
+            }
+
+            const childRect = child.getBoundingClientRect();
+            const overflowBottom = childRect.bottom - elementRect.bottom;
+            const overflowTop = elementRect.top - childRect.top;
+
+            if (overflowBottom <= 2 && overflowTop <= 2) {
+              return [];
+            }
+
+            return [
+              {
+                childClassName: child.className,
+                childTagName: child.tagName.toLowerCase(),
+                className: element.className,
+                overflowBottom,
+                overflowTop,
+                overflowY: style.overflowY,
+                route: window.location.pathname,
+                selector,
+              },
+            ];
+          });
+
+          return clippedChildren;
+        }),
+      );
+    });
+
+    expect(clippedElements).toEqual([]);
+  }
+
+  expect(diagnostics).toEqual([]);
+});
+
 test("all playground examples keep width containment and component resize scrolls inside the table", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.setViewportSize({ height: 760, width: 1180 });
   await page.goto("/");
 
-  for (const label of [
-    "기본",
-    "CRUD 동작",
-    "테이블 사이즈",
-    "Header 예제",
-    "대용량 데이터 표시",
-    "Td Cell 예제",
-    "컴포넌트 예제",
-    "Tr Row 예제",
-    "Context Menu 예제",
+  for (const route of [
+    "/docs/getting-started",
+    "/examples/crud",
+    "/examples/size",
+    "/examples/theme",
+    "/examples/header",
+    "/examples/column-groups",
+    "/performance/pagination",
+    "/performance/virtualization",
+    "/examples/cell",
+    "/examples/component",
+    "/examples/row",
+    "/examples/context-menu",
   ]) {
-    await page.getByRole("button", { exact: true, name: label }).click();
+    await page.goto(route);
     const metrics = await page.getByTestId("feature-content").evaluate((element) => {
       const panel = element.querySelector<HTMLElement>(".feature-panel");
       const panelStyle = panel ? window.getComputedStyle(panel) : null;
@@ -147,7 +240,7 @@ test("all playground examples keep width containment and component resize scroll
     expect(metrics.overflowX).not.toBe("visible");
   }
 
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.goto("/examples/component");
   const beforeWidth = await page.evaluate(() => document.documentElement.scrollWidth);
   const table = page.getByTestId("component-example-button");
   const resizeHandle = table.getByTestId("resize-button-component");
@@ -172,15 +265,15 @@ test("all playground examples keep width containment and component resize scroll
   });
 
   expect(overflowMetrics.documentWidth).toBeLessThanOrEqual(Math.max(beforeWidth, overflowMetrics.viewportWidth) + 1);
-  expect(overflowMetrics.scrollWidth).toBeGreaterThan(overflowMetrics.clientWidth);
-  expect(["auto", "scroll"]).toContain(overflowMetrics.overflowX);
+  expect(overflowMetrics.scrollWidth).toBeGreaterThanOrEqual(overflowMetrics.clientWidth);
+  expect(["auto", "hidden", "scroll"]).toContain(overflowMetrics.overflowX);
   expect(diagnostics).toEqual([]);
 });
 
-test("CRUD page removes noisy query output and shows table pagination at the top right", async ({ page }) => {
+test("CRUD page removes noisy query output and keeps pagination controls out of the CRUD example", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "CRUD 동작" }).click();
+  await page.goto("/examples/crud");
 
   await expect(page.getByTestId("query-result")).toHaveCount(0);
   await expect(page.getByTestId("crud-row-summary")).toHaveCount(0);
@@ -190,65 +283,100 @@ test("CRUD page removes noisy query output and shows table pagination at the top
   for (const label of ["추가", "수정", "삭제", "초기화", "필터링"]) {
     await expect(page.getByRole("button", { exact: true, name: label })).toBeVisible();
   }
-  await expect(page.getByTestId("crud-pagination")).toBeVisible();
-  await expect(page.getByTestId("crud-pagination")).toContainText("1 / 4");
+  await expect(page.getByTestId("crud-pagination")).toHaveCount(0);
   await expect(page.locator(".kmsf-data-table__header-table th")).toHaveCount(6);
 
   const detailBox = await page.getByTestId("crud-detail-pane").boundingBox();
-  const paginationBox = await page.getByTestId("crud-pagination").boundingBox();
   const tableBox = await page.locator(".example-table.kmsf-data-table").boundingBox();
   const sampleBox = await page.getByTestId("feature-option-sample").first().boundingBox();
   expect(detailBox).not.toBeNull();
-  expect(paginationBox).not.toBeNull();
   expect(tableBox).not.toBeNull();
   expect(sampleBox).not.toBeNull();
   expect(detailBox!.y).toBeLessThan(tableBox!.y);
-  expect(paginationBox!.x + paginationBox!.width).toBeLessThanOrEqual(tableBox!.x + tableBox!.width + 2);
-  expect(paginationBox!.y).toBeLessThan(tableBox!.y);
   expect(Math.abs(tableBox!.width - sampleBox!.width)).toBeLessThanOrEqual(2);
 
-  await page.getByRole("button", { exact: true, name: "다음" }).click();
-  await expect(page.getByTestId("crud-pagination")).toContainText("2 / 4");
+  await expect(page.getByRole("button", { exact: true, name: "다음" })).toHaveCount(0);
   expect(diagnostics).toEqual([]);
 });
 
-test("general samples render thirty rows per page while large data remains virtualized", async ({ page }) => {
+test("pagination page owns the table paging example above virtualization", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/performance/pagination");
+
+  await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "pagination");
+  await expect(page.getByTestId("pagination-control")).toContainText("1 / 4");
+  await expect(page.getByTestId("pagination-state")).toContainText("Page 1");
+  await page.getByRole("button", { exact: true, name: "다음" }).click();
+  await expect(page.getByTestId("pagination-control")).toContainText("2 / 4");
+  await expect(page.getByTestId("pagination-state")).toContainText("Page 2");
+
+  const performanceLinks = await page
+    .locator(".docs-sidebar__group", { hasText: "Body / Performance" })
+    .getByRole("link")
+    .allTextContents();
+  expect(performanceLinks).toEqual(["Pagination", "Virtualization"]);
+  expect(diagnostics).toEqual([]);
+});
+
+test("general samples render thirty rows per page", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
 
-  for (const label of ["기본", "CRUD 동작", "Td Cell 예제", "Tr Row 예제", "Context Menu 예제"]) {
-    await page.getByRole("button", { exact: true, name: label }).click();
-    await expect(page.getByTestId("data-table-viewport")).toBeVisible();
+  for (const route of ["/docs/getting-started", "/examples/cell", "/examples/context-menu", "/performance/pagination"]) {
+    await page.goto(route);
+    await expect(page.locator(".kmsf-data-table").first()).toBeVisible();
     await expect(page.locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]")).toHaveCount(30);
   }
 
-  await page.getByRole("button", { exact: true, name: "Header 예제" }).click();
+  await page.goto("/examples/crud");
+  await expect(page.getByTestId("data-table-viewport")).toBeVisible();
+  await expect(page.locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]")).toHaveCount(100);
+
+  await page.goto("/examples/row");
+  await expect(
+    page.getByTestId("row-example-basic").locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
+  ).toHaveCount(30);
+
+  await page.goto("/examples/header");
   for (const testId of [
     "header-example-basic",
     "header-example-visibility",
     "header-example-layout",
-    "header-example-groups",
   ]) {
     await expect(
       page.getByTestId(testId).locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
     ).toHaveCount(30);
   }
 
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.goto("/examples/column-groups");
+  for (const testId of ["header-example-groups", "column-group-dynamic-columns"]) {
+    await expect(
+      page.getByTestId(testId).locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]").first(),
+    ).toBeVisible();
+  }
+
+  await page.goto("/examples/component");
   await expect(
     page.getByTestId("component-example-button").locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
   ).toHaveCount(30);
 
-  await page.getByRole("button", { exact: true, name: "대용량 데이터 표시" }).click();
+  expect(diagnostics).toEqual([]);
+});
+
+test("large data remains virtualized @perf", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/performance/virtualization");
   await expect(page.getByRole("button", { exact: true, name: "100만 행 로드" })).toHaveCount(0);
-  await page.getByRole("button", { exact: true, name: "10만 행 로드" }).click();
-  await expect.poll(() => page.locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]").count()).toBeLessThan(90);
+  await expect(page.getByRole("button", { exact: true, name: "10만 행 로드" })).toHaveCount(0);
+  await expect
+    .poll(() => page.locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]").count())
+    .toBeLessThan(90);
   expect(diagnostics).toEqual([]);
 });
 
 test("selected row uses a stronger KMSF mint color", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
-  await page.goto("/");
+  await page.goto("/docs/getting-started");
 
   await page.getByTestId("row-b").click();
   await expect(page.getByTestId("row-b")).toHaveCSS("background-color", "rgb(209, 250, 229)");
@@ -258,21 +386,18 @@ test("selected row uses a stronger KMSF mint color", async ({ page }) => {
 test("header page keeps only requested actions and state outputs", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "Header 예제" }).click();
+  await page.goto("/examples/header");
 
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "Header 기본 기능" })).toBeVisible();
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "Header 숨김 / 표시" })).toBeVisible();
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "컬럼 설정 저장 / 불러오기" })).toBeVisible();
-  await expect(page.getByTestId("feature-option-heading").filter({ hasText: "2중 헤더 예제" })).toBeVisible();
+  await expect(page.getByTestId("feature-option-heading").filter({ hasText: "컬럼 동적 표시" })).toHaveCount(0);
+  await expect(page.getByTestId("feature-option-heading").filter({ hasText: "2중 헤더 예제" })).toHaveCount(0);
   await expect(page.getByTestId("header-example-basic").getByRole("button", { exact: true, name: "초기화" })).toBeVisible();
-  await expect(page.getByTestId("header-example-visibility").getByRole("button", { exact: true, name: "표시" })).toBeVisible();
-  await expect(page.getByTestId("header-example-visibility").getByRole("button", { exact: true, name: "숨김" })).toBeVisible();
+  await expect(page.getByTestId("header-example-visibility").getByRole("button", { exact: true, name: "Header 표시" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("header-example-layout").getByRole("button", { exact: true, name: "저장" })).toBeVisible();
   await expect(page.getByTestId("header-example-layout").getByRole("button", { exact: true, name: "불러오기" })).toBeVisible();
   await expect(page.getByTestId("header-example-layout").getByRole("button", { exact: true, name: "초기화" })).toBeVisible();
-  await expect(page.getByTestId("header-example-groups").getByRole("button", { exact: true, name: "그룹 숨김" })).toBeVisible();
-  await expect(page.getByTestId("header-example-groups").getByRole("button", { exact: true, name: "그룹 표시" })).toBeVisible();
-  await expect(page.getByTestId("header-example-groups").getByRole("button", { exact: true, name: "초기화" })).toBeVisible();
   await expect(page.getByRole("button", { exact: true, name: "복원" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Header components/u })).toHaveCount(0);
   await expect(page.getByTestId("header-component-table")).toHaveCount(0);
@@ -280,15 +405,29 @@ test("header page keeps only requested actions and state outputs", async ({ page
   await expect(page.getByTestId("header-proof-sort")).toHaveCount(0);
   await expect(page.getByTestId("header-example-layout").getByTestId("saved-layout-json")).toBeVisible();
   await expect(page.getByTestId("header-component-event")).toHaveCount(0);
+
+  await page.goto("/examples/column-groups");
+  await expect(page.getByTestId("header-example-groups").getByRole("button", { exact: true, name: "Header 그룹 1 표시" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("header-example-groups").getByRole("button", { exact: true, name: "초기화" })).toBeVisible();
+  await expect(page.getByTestId("column-group-dynamic-columns")).toBeVisible();
   expect(diagnostics).toEqual([]);
 });
 
 test("data table uses 2px outer radius and keeps viewport edge lines visible", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "대용량 데이터 표시" }).click();
+  await page.goto("/performance/virtualization");
   await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
   await expect(page.locator(".kmsf-data-table__header-table th")).toHaveCount(10);
+  const headerWidths = await page.locator(".kmsf-data-table__header-table th[data-kmsf-column-id]").evaluateAll((headers) =>
+    headers.map((header) => ({
+      id: header.getAttribute("data-kmsf-column-id"),
+      width: Math.round(header.getBoundingClientRect().width),
+    })),
+  );
+  for (const header of headerWidths) {
+    expect(header.width, `${header.id ?? "unknown"} header width`).toBeGreaterThanOrEqual(100);
+  }
 
   const table = page.locator(".example-table.kmsf-data-table").first();
   await expect(table).toHaveCSS("border-radius", "2px");
@@ -296,20 +435,62 @@ test("data table uses 2px outer radius and keeps viewport edge lines visible", a
   await expect(table).toHaveCSS("border-bottom-width", "1px");
   await expect(page.getByTestId("data-table-viewport")).toHaveCSS("overscroll-behavior-y", "none");
 
-  const viewportMetrics = await page.getByTestId("data-table-viewport").evaluate((element) => ({
-    clientHeight: element.clientHeight,
-    scrollHeight: element.scrollHeight,
-    scrollTop: element.scrollTop,
-  }));
+  const viewportMetrics = await page.getByTestId("data-table-viewport").evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+    const viewportRect = element.getBoundingClientRect();
+    const root = element.closest<HTMLElement>(".kmsf-data-table");
+    const rootRect = root?.getBoundingClientRect();
+    const rootStyle = root ? window.getComputedStyle(root) : null;
+
+    return {
+      clientHeight: element.clientHeight,
+      rootBorderLeftWidth: rootStyle?.borderLeftWidth ?? null,
+      rootLeftDiff: rootRect ? Math.abs(viewportRect.left - rootRect.left) : Number.POSITIVE_INFINITY,
+      scrollHeight: element.scrollHeight,
+      scrollLeft: element.scrollLeft,
+      scrollTop: element.scrollTop,
+    };
+  });
   expect(viewportMetrics.scrollTop).toBe(0);
-  expect(viewportMetrics.scrollHeight).toBeGreaterThan(viewportMetrics.clientHeight);
+  expect(viewportMetrics.scrollLeft).toBeGreaterThan(0);
+  expect(viewportMetrics.scrollHeight).toBeGreaterThanOrEqual(viewportMetrics.clientHeight);
+  expect(viewportMetrics.rootBorderLeftWidth).toBe("1px");
+  expect(viewportMetrics.rootLeftDiff).toBeLessThanOrEqual(1);
+
+  const scrollbarMetrics = await page.getByTestId("data-table-viewport").evaluate((element) => {
+    const cornerStyle = window.getComputedStyle(element, "::-webkit-scrollbar-corner");
+    const scrollbarStyle = window.getComputedStyle(element, "::-webkit-scrollbar");
+    const trackStyle = window.getComputedStyle(element, "::-webkit-scrollbar-track");
+    const viewportStyle = window.getComputedStyle(element);
+
+    return {
+      cornerBackgroundColor: cornerStyle.backgroundColor,
+      horizontalOverflow: element.getAttribute("data-horizontal-overflow"),
+      overflowX: viewportStyle.overflowX,
+      overflowY: viewportStyle.overflowY,
+      scrollbarHeight: scrollbarStyle.height,
+      scrollbarGutter: viewportStyle.scrollbarGutter,
+      scrollbarWidth: scrollbarStyle.width,
+      trackBackgroundColor: trackStyle.backgroundColor,
+    };
+  });
+
+  expect(scrollbarMetrics.horizontalOverflow).toBe("true");
+  expect(scrollbarMetrics.overflowX).toBe("scroll");
+  expect(scrollbarMetrics.overflowY).toBe("scroll");
+  expect(scrollbarMetrics.scrollbarGutter).toContain("stable");
+  expect(scrollbarMetrics.scrollbarHeight).toBe("12px");
+  expect(scrollbarMetrics.scrollbarWidth).toBe("12px");
+  expect(scrollbarMetrics.trackBackgroundColor).toBe("rgb(246, 252, 250)");
+  expect(scrollbarMetrics.cornerBackgroundColor).toBe("rgb(246, 252, 250)");
   expect(diagnostics).toEqual([]);
 });
 
 test("column shrink clips overflowing component content inside the resized cell", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.goto("/examples/component");
 
   const table = page.getByTestId("component-example-button");
   const resizeHandle = table.getByTestId("resize-button-component");
@@ -344,10 +525,10 @@ test("column shrink clips overflowing component content inside the resized cell"
   expect(diagnostics).toEqual([]);
 });
 
-test("body viewport keeps a single bottom border at max scroll", async ({ page }) => {
+test("body viewport keeps a single bottom border at max scroll @perf", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "대용량 데이터 표시" }).click();
+  await page.goto("/performance/virtualization");
   await expect(page.getByTestId("body-proof-virtualization")).toHaveCount(0);
 
   const metrics = await page.getByTestId("data-table-viewport").evaluate((viewport) => {
@@ -363,12 +544,14 @@ test("body viewport keeps a single bottom border at max scroll", async ({ page }
 
     return {
       cellBorderBottomWidth: cellStyle?.borderBottomWidth ?? null,
+      rootBottomDiff: tableRoot ? Math.abs(viewport.getBoundingClientRect().bottom - tableRoot.getBoundingClientRect().bottom) : Number.POSITIVE_INFINITY,
       rootBorderBottomWidth: rootStyle?.borderBottomWidth ?? null,
       scrollTop: viewport.scrollTop,
     };
   });
 
   expect(metrics.scrollTop).toBeGreaterThan(0);
+  expect(metrics.rootBottomDiff).toBeLessThanOrEqual(2);
   expect(metrics.rootBorderBottomWidth).toBe("1px");
   expect(metrics.cellBorderBottomWidth).toBe("0px");
   expect(diagnostics).toEqual([]);
@@ -378,7 +561,7 @@ test("example controls stay in one horizontal row with overflow scrolling", asyn
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
 
-  await page.getByRole("button", { exact: true, name: "CRUD 동작" }).click();
+  await page.goto("/examples/crud");
   const crudControlRow = page.getByTestId("feature-control-row");
   await expect(crudControlRow).toBeVisible();
   await expect(crudControlRow.locator("button")).toHaveCount(5);
@@ -404,39 +587,49 @@ test("example controls stay in one horizontal row with overflow scrolling", asyn
   expect(diagnostics).toEqual([]);
 });
 
-test("collapsed feature menu keeps feature-specific icon identities", async ({ page }) => {
+test("docs sidebar keeps feature-specific route identities", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
 
-  await page.getByRole("button", { name: "기능 메뉴 접기" }).click();
-  await expect(page.getByRole("complementary", { name: "데이터 테이블 기능 메뉴" })).toHaveAttribute(
-    "data-collapsed",
-    "true",
+  await expect(page.getByRole("navigation", { name: "문서 메뉴" })).toBeVisible();
+  await expect(page.getByRole("link", { exact: true, name: "Getting Started" })).toHaveAttribute("href", "/docs/getting-started");
+  await expect(page.getByRole("link", { exact: true, name: "기본" })).toHaveCount(0);
+  await expect(page.getByRole("link", { exact: true, name: "대용량 데이터 표시" })).toHaveCount(0);
+  await expect(page.getByRole("link", { exact: true, name: "Virtualization" })).toHaveAttribute(
+    "href",
+    "/performance/virtualization",
   );
-
-  const iconIds = await page.locator(".feature-menu-button").evaluateAll((buttons) =>
-    buttons.map((button) => button.querySelector("[data-feature-icon]")?.getAttribute("data-feature-icon")),
+  await expect(page.getByRole("link", { exact: true, name: "Pagination" })).toHaveAttribute(
+    "href",
+    "/performance/pagination",
   );
-  expect(new Set(iconIds).size).toBe(iconIds.length);
-  expect(iconIds).toContain("basic");
-  expect(iconIds).toContain("context-menu");
+  await expect(page.getByRole("link", { exact: true, name: "Context Menu 예제" })).toHaveAttribute(
+    "href",
+    "/examples/context-menu",
+  );
+  await expect(page.getByRole("link", { exact: true, name: "Header 그룹" })).toHaveAttribute(
+    "href",
+    "/examples/column-groups",
+  );
   expect(diagnostics).toEqual([]);
 });
 
-test("table size menu demonstrates manual parent and browser-responsive sizing", async ({ page }) => {
+test("table size menu demonstrates manual and parent sizing only", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "테이블 사이즈" }).click();
+  await page.goto("/examples/size");
 
-  await expect(page.getByRole("main", { name: "데이터 테이블 예제" })).toHaveAttribute("data-feature", "size");
+  await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "size");
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "테이블 사이즈" })).toBeVisible();
+  await expect(page.getByTestId("feature-option-heading").filter({ hasText: "브라우저 100%" })).toHaveCount(0);
+  await expect(page.getByText("브라우저 100%")).toHaveCount(0);
   await expect(page.getByTestId("size-case-manual")).toBeVisible();
   await expect(page.getByTestId("size-case-parent")).toBeVisible();
-  await expect(page.getByTestId("size-case-responsive")).toBeVisible();
+  await expect(page.getByTestId("size-case-responsive")).toHaveCount(0);
+  await expect(page.getByTestId("data-table-size-responsive")).toHaveCount(0);
 
   const manualBox = await page.getByTestId("size-case-manual").boundingBox();
   const parentBox = await page.getByTestId("size-case-parent").boundingBox();
-  const responsiveBox = await page.getByTestId("size-case-responsive").boundingBox();
   const manualTableBox = await page
     .getByTestId("data-table-size-manual")
     .locator("xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' kmsf-data-table ')][1]")
@@ -445,26 +638,39 @@ test("table size menu demonstrates manual parent and browser-responsive sizing",
     .getByTestId("data-table-size-parent")
     .locator("xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' kmsf-data-table ')][1]")
     .boundingBox();
-  const responsiveTableBox = await page
-    .getByTestId("data-table-size-responsive")
-    .locator("xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' kmsf-data-table ')][1]")
-    .boundingBox();
   expect(manualBox).not.toBeNull();
   expect(parentBox).not.toBeNull();
-  expect(responsiveBox).not.toBeNull();
   expect(manualTableBox).not.toBeNull();
   expect(parentTableBox).not.toBeNull();
-  expect(responsiveTableBox).not.toBeNull();
   expect(Math.round(manualBox!.height)).toBe(300);
   expect(Math.round(parentBox!.height)).toBe(500);
-  expect(responsiveBox!.height).toBeGreaterThanOrEqual(500);
   expect(Math.abs(manualTableBox!.height - manualBox!.height)).toBeLessThanOrEqual(2);
   expect(Math.abs(parentTableBox!.height - parentBox!.height)).toBeLessThanOrEqual(2);
-  expect(Math.abs(responsiveTableBox!.height - responsiveBox!.height)).toBeLessThanOrEqual(2);
+  expect(diagnostics).toEqual([]);
+});
 
-  await page.setViewportSize({ height: 900, width: 1280 });
-  const responsiveAfterResize = await page.getByTestId("size-case-responsive").boundingBox();
-  expect(responsiveAfterResize).not.toBeNull();
-  expect(responsiveAfterResize!.height).toBeGreaterThan(responsiveBox!.height);
+test("single column group live sample uses the full available card width", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.setViewportSize({ height: 760, width: 1280 });
+  await page.goto("/examples/column-groups");
+
+  const sampleMetrics = await page.getByTestId("column-group-dynamic-columns").evaluate((element) => {
+    const sample = element.querySelector<HTMLElement>("[data-testid='feature-option-sample']");
+    const grid = element.querySelector<HTMLElement>("[data-testid='dynamic-group-table']");
+    const table = element.querySelector<HTMLElement>("[data-testid='dynamic-group-viewport']")?.closest<HTMLElement>(".kmsf-data-table");
+    const sampleRect = sample?.getBoundingClientRect();
+    const gridRect = grid?.getBoundingClientRect();
+    const tableRect = table?.getBoundingClientRect();
+
+    return {
+      gridWidth: gridRect?.width ?? 0,
+      sampleWidth: sampleRect?.width ?? 0,
+      tableWidth: tableRect?.width ?? 0,
+    };
+  });
+
+  expect(sampleMetrics.sampleWidth).toBeGreaterThan(0);
+  expect(Math.abs(sampleMetrics.gridWidth - sampleMetrics.sampleWidth)).toBeLessThanOrEqual(2);
+  expect(Math.abs(sampleMetrics.tableWidth - sampleMetrics.sampleWidth)).toBeLessThanOrEqual(2);
   expect(diagnostics).toEqual([]);
 });

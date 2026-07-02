@@ -1,8 +1,10 @@
 # @kmsf/data-table
 
-`@kmsf/data-table`은 KMSF에서 재사용하기 위한 CSR 중심 React data table package다. `KmsfDataTable` 컴포넌트와 framework-independent core helper를 제공한다.
+CSR-first React data table package for KMSF applications. `@kmsf/data-table` ships a reusable `KmsfDataTable` component plus framework-independent core helpers for rows, columns, layout, selection, clipboard, pagination, sorting, 2-depth headers, and virtualized rendering.
 
-## 설치
+It is designed for admin dashboards, internal tools, and data-heavy product screens where the application owns the data array and the table reports mutations through controlled callbacks.
+
+## Installation
 
 ```bash
 npm install @kmsf/data-table react react-dom
@@ -10,97 +12,218 @@ npm install @kmsf/data-table react react-dom
 
 Peer dependencies:
 
-- `react`: `>=18.0.0 <20.0.0`
-- `react-dom`: `>=18.0.0 <20.0.0`
+| Package | Version |
+| --- | --- |
+| `react` | `>=18.0.0 <20.0.0` |
+| `react-dom` | `>=18.0.0 <20.0.0` |
 
-## 빠른 시작
+Optional component skin:
 
 ```tsx
-import { KmsfDataTable } from "@kmsf/data-table";
+import "@kmsf/data-table/styles.css";
+```
+
+## Quick Start
+
+```tsx
 import { useState } from "react";
+import { KmsfDataTable, type KmsfDataTableColumn } from "@kmsf/data-table";
+import "@kmsf/data-table/styles.css";
 
-type Row = { id: string; name: string; value: number };
+type UserRow = {
+  active: boolean;
+  age: number;
+  id: string;
+  name: string;
+  role: string;
+};
 
-export function Example() {
-  const [data, setData] = useState<Row[]>([{ id: "a", name: "Alpha", value: 1 }]);
+const columns: Array<KmsfDataTableColumn<UserRow>> = [
+  { field: "name", label: "Name", sort: true },
+  { field: "age", label: "Age", sort: true },
+  { field: "role", label: "Role" },
+  {
+    field: "active",
+    label: "Active",
+    cell: {
+      format: ({ value }) => (value ? "Enabled" : "Disabled"),
+    },
+  },
+];
+
+export function UsersTable() {
+  const [data, setData] = useState<UserRow[]>([
+    { active: true, age: 31, id: "u-1", name: "Kim", role: "Admin" },
+  ]);
 
   return (
-    <KmsfDataTable<Row>
-      columns={[
-        { field: "name", label: "Name" },
-        { field: "value", label: "Value", sort: true },
-      ]}
+    <KmsfDataTable<UserRow>
+      columns={columns}
       data={data}
       getRowId={(row) => row.id}
       onChangeData={setData}
+      pagination={{ pageIndex: 0, pageSize: 30 }}
+      theme={{ density: "compact" }}
     />
   );
 }
 ```
 
-## 구현된 기능
+## Key Features
 
-- `data`, `columns`, `getRowId` 기반 table rendering
-- `data`와 `onChangeData`를 통한 controlled CSR state flow: Controlled external state flow with `data` and `onChangeData`
-- row refresh, add, update, delete, query helper
-- pagination helper와 pagination props
-- theme, density, table/row/header/cell class와 style
-- header show/hide, formatting, boundary resize, long-press reorder, sort indicator
-- `columnGroups` 기반 2-depth header와 group width 조정 helper
-- column layout save/load: `getColumnLayout`, `setColumnLayout`, `onChangeColumnLayout`
-- row click, double click, context menu, drag reorder, copy/paste
-- single/multi row selection, single/range cell selection
-- keyboard row/cell copy/paste와 multi-cell clipboard helper
-- Header/Cell built-in component 배열
-- Header-only menu popover
-- Cell-only virtual list
-- `cell.renderer`, `cellSelection={false}`, copyable/pasteable guard
-- virtualized rendering path와 split header/body table 구조
-- public subpaths:
-  - `@kmsf/data-table/core`
-  - `@kmsf/data-table/clipboard`
-  - `@kmsf/data-table/selection`
+- Controlled external state flow with `data` and `onChangeData` for CSR applications.
+- Column definitions with `field`, `id`, `label`, `sort`, `width`, `minWidth`, `maxWidth`, `props`, `header`, and `cell`.
+- Header show/hide, keyboard sort, `aria-sort`, animated sort indicator, resize, long-press reorder, and layout save/load.
+- 2-depth header grouping with `columnGroups`, parent resize, parent block move, parent hide/show, and ungrouped `rowSpan=2` columns.
+- Row click, double click, keyboard callback, context menu callback, row selection, row drag reorder, row copy, and row paste.
+- Cell formatting, cell renderer, cell events, optional `cellSelection={false}`, single cell selection, range selection, and drag range selection.
+- Clipboard helpers for row, cell, and multi-cell range copy/paste with `copyable`, `pasteable`, and `disabled` guards.
+- Pagination props and core pagination helpers.
+- Virtualized rendering for large row sets, including the current 100000-row smoke and performance gate.
+- CSS custom-property Theme support through `theme.className`, `theme.style`, and the shipped sample theme classes.
+- Header and Cell built-in components: `button`, `input`, `checkbox`, `radio`, `select`, `toggle`, `progress`, Header-only `menu`, and Cell-only `virtual-list`.
+- Framework-independent core helpers for state, sorting, pagination, layout, selection, clipboard, and virtual row calculation.
+- TypeScript types bundled through the package exports.
 
-## 사용자 문서
+## 2-Depth Header Example
 
-- [Quick start](docs/user/01-quick-start.md)
-- [Data and CRUD](docs/user/02-data-and-crud.md)
-- [Core state](docs/user/03-core-state.md)
-- [Styling](docs/user/04-styling.md)
-- [Pagination](docs/user/05-pagination.md)
-- [Header](docs/user/06-header.md)
-- [Row](docs/user/07-row.md)
-- [Cell](docs/user/08-cell.md)
-- [Clipboard](docs/user/09-clipboard.md)
-- [Selection](docs/user/10-selection.md)
-- [Virtualization](docs/user/11-virtualization.md)
-- [Playground](docs/user/12-playground.md)
+Use flat `columns` for leaf columns and a separate `columnGroups` prop for parent headers.
+
+```tsx
+<KmsfDataTable<UserRow>
+  columns={[
+    { id: "name", field: "name", label: "Name", sort: true, width: 160 },
+    { id: "age", field: "age", label: "Age", sort: true, width: 120 },
+    { id: "role", field: "role", label: "Role", width: 140 },
+  ]}
+  columnGroups={[
+    {
+      id: "profile",
+      label: "Profile",
+      children: ["name", "age"],
+    },
+  ]}
+  data={data}
+  getRowId={(row) => row.id}
+/>
+```
+
+2-depth behavior:
+
+- Maximum depth is 2. Nested groups are not supported.
+- Parent headers do not provide sort or Header/Cell component slots.
+- Parent resize updates child widths while preserving their current ratio and respecting `minWidth` / `maxWidth`.
+- Parent move moves all child columns as one block.
+- Child columns cannot be moved to another group or outside their group.
+- Parent hide/show changes effective child column visibility. Child hidden state remains independent when the parent is visible again.
+- Header-wide `showHeader` is separate from group visibility and removes or restores the whole header area.
+
+## Core Helpers
+
+The root export includes `KmsfDataTable` and all public core helpers. Stable subpaths are also available for narrower imports.
+
+```ts
+import {
+  createKmsfDataTableState,
+  addKmsfRows,
+  updateKmsfRows,
+  deleteKmsfRows,
+  queryKmsfRows,
+  setKmsfPagination,
+  setKmsfSortState,
+  serializeKmsfColumnLayout,
+  applyKmsfColumnLayout,
+  selectRow,
+  selectCell,
+  selectCellRange,
+  copyKmsfCellRange,
+  pasteKmsfCellRange,
+  fillKmsfCellRange,
+} from "@kmsf/data-table/core";
+```
+
+Available package exports:
+
+| Import | Purpose |
+| --- | --- |
+| `@kmsf/data-table` | React component, public types, and core exports |
+| `@kmsf/data-table/core` | Table state, row, column, layout, pagination, sorting, selection, clipboard, and virtualization helpers |
+| `@kmsf/data-table/clipboard` | Clipboard helper subset |
+| `@kmsf/data-table/selection` | Selection helper subset |
+| `@kmsf/data-table/styles.css` | Optional table shell, theme classes, and built-in component skin |
+
+## Important Props
+
+| Prop | Description |
+| --- | --- |
+| `data` | Controlled row array. Replace the array from outside when the source data changes. |
+| `columns` | Leaf column definitions. `field` supports nested paths. |
+| `columnGroups` | Optional 2-depth parent header definitions. |
+| `getRowId` | Stable row id resolver for selection, row movement, and callbacks. |
+| `onChangeData` | Called when table-originated actions mutate data, such as paste or row movement. |
+| `onChangeSelection` | Called when row, cell, or range selection changes. |
+| `onChangeColumnLayout` | Called when column width, order, or visibility changes. |
+| `onChangeSort` | Called when sort state changes. |
+| `pagination` | Controls page index and page size. |
+| `virtualized` | Enables the large-row window rendering path. |
+| `"buffer-size"` | Row buffer size above and below the virtualized viewport. Default is `25`. |
+| `rowHeight` | Visual row height and virtualized row-window calculation size. Keep CSS row-height tokens in sync when overriding table height styles. |
+| `theme` | Optional `className`, `style`, and `density` skin hook. Shipped classes include `kmsf-data-table-theme--basic`, `--dark`, `--skyblue`, `--mint`, `--gray`, and `--orange`. |
+| `showHeader` | Shows or removes the entire header area. |
+| `cellSelection` | Enables or disables cell and range selection visuals. |
+| `rowProps` | Supplies row-level class, style, disabled, and draggable behavior. |
+
+## Ref API
+
+```tsx
+const tableRef = useRef<KmsfDataTableRef<UserRow>>(null);
+
+tableRef.current?.getColumnLayout();
+tableRef.current?.setColumnLayout(savedLayout);
+tableRef.current?.getSortState();
+tableRef.current?.setSortState({ columnId: "age", direction: "desc" });
+tableRef.current?.clearSort();
+tableRef.current?.setSelectedRow(0);
+tableRef.current?.setSelectedRows([0, 1]);
+tableRef.current?.setMoveTargetRow(3, 1);
+```
 
 ## Playground
 
-루트에서 실행:
+Run the package playground from the repository root:
 
 ```bash
 npm --workspace=@kmsf/data-table run dev
 ```
 
-기본 포트는 `4002`다.
+The playground starts at `/docs/getting-started` and includes examples for CRUD, sizing, Theme, headers, 2-depth headers, large data virtualization, cells, rows, components, selection, clipboard, and context menus. Legacy `/examples/basic` and `/examples/body` URLs redirect to the current Getting Started and Virtualization pages. Repository documentation starts at `docs/user/01-quick-start.md`.
 
-Playground는 feature navigation과 recreated content boundary를 사용한다. Context menu, built-in component, table size, header, row, cell, selection, virtualization 예제를 브라우저에서 확인할 수 있다.
+## Verification
 
-## 검증
+Package scripts match `package.json`:
 
 ```bash
 npm --workspace=@kmsf/data-table run lint
 npm --workspace=@kmsf/data-table run test:run
 npm --workspace=@kmsf/data-table run build
 npm --workspace=@kmsf/data-table run verify
+npm --workspace=@kmsf/data-table run verify:e2e
 npm --workspace=@kmsf/data-table run verify:full
 npm --workspace=@kmsf/data-table run test:perf
 ```
 
-## 현재 제한
+## Current Scope
 
-- 전용 external store adapter 객체는 아직 제공하지 않는다. 외부 `useState`, Zustand, Redux 등에서 관리하는 배열을 `data`로 전달하고, table-originated 변경은 `onChangeData`에서 반영한다.
-- Excel-like Visual Fill Handle UI는 아직 제공하지 않는다. `fillKmsfCellRange` helper는 core에 있다.
-- server-side row model, lazy-load row model, grouping, aggregation, pivoting, tree data, master/detail, export, charts integration, AI assistant 기능은 현재 core 범위 밖이다.
+Implemented now:
+
+- CSR table rendering and controlled data updates.
+- Row, cell, selection, clipboard, pagination, sorting, layout, header, component, and virtualization behavior.
+- 2-depth visual column grouping through `columnGroups`.
+- CSS custom-property table Theme support through the shipped stylesheet.
+- Public helper subpaths for core, clipboard, and selection.
+
+Not implemented yet:
+
+- Dedicated external store adapter object. Use `data` plus `onChangeData` with `useState`, Zustand, Redux, or another store.
+- Excel-like Visual Fill Handle UI. The `fillKmsfCellRange` core helper is available, but drag-handle UX is deferred.
+- Server-side row model, lazy-load row model, row grouping, aggregation, pivoting, tree data, master/detail, export, charts integration, and AI assistant features.

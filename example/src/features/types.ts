@@ -5,11 +5,14 @@ export type FeatureId =
   | "basic-crud"
   | "body"
   | "cell"
+  | "column-groups"
   | "component"
   | "context-menu"
   | "header"
+  | "pagination"
   | "row"
-  | "size";
+  | "size"
+  | "theme";
 
 export type FeatureOption = {
   description: string;

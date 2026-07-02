@@ -20,16 +20,16 @@ test("row and cell context examples show selected data objects", async ({ page }
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
 
-  await page.getByRole("button", { exact: true, name: "Context Menu 예제" }).click();
+  await page.goto("/examples/context-menu");
   await page.getByTestId("row-a").click({ button: "right" });
   await expect(page.getByRole("menuitem", { name: "행 데이터 보기" })).toBeVisible();
   await expect(page.getByTestId("context-data-preview")).toContainText('"id": "a"');
-  await expect(page.getByTestId("context-data-preview")).toContainText('"name": "Alpha"');
+  await expect(page.getByTestId("context-data-preview")).toContainText('"name": "Data 1"');
 
   await page.getByTestId("cell-a-name").click({ button: "right" });
   await expect(page.getByRole("menuitem", { name: "셀 데이터 보기" })).toBeVisible();
   await expect(page.getByTestId("context-data-preview")).toContainText('"columnId": "name"');
-  await expect(page.getByTestId("context-data-preview")).toContainText('"value": "Alpha"');
+  await expect(page.getByTestId("context-data-preview")).toContainText('"value": "Data 1"');
 
   expect(diagnostics).toEqual([]);
 });

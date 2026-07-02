@@ -192,7 +192,8 @@ export function ComponentFeature() {
       cell: {},
       field,
       id: `${componentId}-component`,
-      label: "컴포넌트",
+      label: "Column2",
+      minWidth: 100,
       sort: true,
       width: 260,
     };
@@ -211,7 +212,7 @@ export function ComponentFeature() {
         components: [
           {
             onClick: ({ row }) => reportComponentEvent("Cell Button", String(row.id)),
-            props: ({ row }) => ({ children: `Row ${row.index + 1} Button` }),
+            props: ({ row }) => ({ children: `Data ${row.index + 1} Button` }),
             type: "button",
           },
         ],
@@ -402,7 +403,7 @@ export function ComponentFeature() {
         ],
       };
       componentColumn.cell = {
-        format: ({ value }) => `Cell 값:${String(value)}`,
+        format: ({ row }) => `Data ${row.index + 1}`,
       };
     }
 
@@ -447,34 +448,24 @@ export function ComponentFeature() {
     }
 
     return [
-      { field: "id", label: "Row ID", width: 150 },
+      {
+        cell: {
+          format: ({ row }) => `Data ${row.index + 1}`,
+        },
+        field: "id",
+        label: "Column1",
+        minWidth: 100,
+        width: 150,
+      },
       componentColumn,
       {
         cell: {
-          format: () => {
-            if (componentId === "virtual-list-more") {
-              return "Virtual List More";
-            }
-
-            if (componentId === "virtual-list-search") {
-              return "Virtual List Search";
-            }
-
-            return componentId === "input" ? "Input" : componentId;
-          },
-        },
-        field: "name",
-        id: `${componentId}-component-name`,
-        label: "컴포넌트 이름",
-        width: 160,
-      },
-      {
-        cell: {
-          format: ({ row }) => `${row.data.role} / ${row.data.active ? "활성" : "비활성"}`,
+          format: ({ row }) => `Data ${row.index + 1}`,
         },
         field: "role",
         id: `${componentId}-state`,
-        label: "상태",
+        label: "Column3",
+        minWidth: 100,
         width: 150,
       },
     ];

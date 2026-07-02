@@ -22,10 +22,10 @@ test("playground repeatedly destroys and recreates feature content without stale
   await page.goto("/");
 
   for (let index = 0; index < 30; index += 1) {
-    await page.getByRole("button", { name: "Header 예제" }).click();
-    await page.getByRole("button", { name: "대용량 데이터 표시" }).click();
-    await page.getByRole("button", { name: "Td Cell 예제" }).click();
-    await page.getByRole("button", { exact: true, name: "기본" }).click();
+    await page.getByRole("link", { exact: true, name: "Header 기본 기능" }).click();
+    await page.getByRole("link", { exact: true, name: "Virtualization" }).click();
+    await page.getByRole("link", { exact: true, name: "Td Cell 예제" }).click();
+    await page.getByRole("link", { exact: true, name: "Getting Started" }).click();
   }
 
   await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "basic");

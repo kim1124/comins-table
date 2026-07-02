@@ -45,6 +45,8 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "latest",
+    "prism-react-renderer": "^2.4.1",
+    "react-router": "^7.17.0",
     "typescript": "^6.0.3",
     "vite": "latest",
     "vitest": "latest"

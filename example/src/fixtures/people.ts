@@ -8,9 +8,9 @@ export type PersonRow = {
 };
 
 export const baseRows: PersonRow[] = [
-  { active: true, age: 31, id: "a", locked: "A-lock", name: "Alpha", role: "Owner" },
-  { active: false, age: 42, id: "b", locked: "B-lock", name: "Beta", role: "Editor" },
-  { active: false, age: 27, id: "c", locked: "C-lock", name: "Gamma", role: "Viewer" },
+  { active: true, age: 31, id: "a", locked: "Data 1", name: "Data 1", role: "Owner" },
+  { active: false, age: 42, id: "b", locked: "Data 2", name: "Data 2", role: "Editor" },
+  { active: false, age: 27, id: "c", locked: "Data 3", name: "Data 3", role: "Viewer" },
 ];
 
 export function cloneBaseRows() {
@@ -22,8 +22,8 @@ export function createRows(count: number): PersonRow[] {
     active: index % 2 === 0,
     age: index,
     id: `row-${index}`,
-    locked: `lock-${index}`,
-    name: `Row ${index}`,
+    locked: `Data ${index + 1}`,
+    name: `Data ${index + 1}`,
     role: index % 2 === 0 ? "Owner" : "Viewer",
   }));
 }
@@ -32,8 +32,8 @@ const virtualRowTemplate: PersonRow = {
   active: true,
   age: 0,
   id: "virtual-row",
-  locked: "virtual-lock",
-  name: "Virtual Row",
+  locked: "Data 1",
+  name: "Data 1",
   role: "Owner",
 };
 
@@ -49,8 +49,8 @@ export function createExampleRows(count = 100): PersonRow[] {
       active: index % 2 === 0,
       age: index,
       id: `row-${index}`,
-      locked: `lock-${index}`,
-      name: `Row ${index}`,
+      locked: `Data ${index + 1}`,
+      name: `Data ${index + 1}`,
       role: index % 2 === 0 ? "Owner" : "Viewer",
     });
   }

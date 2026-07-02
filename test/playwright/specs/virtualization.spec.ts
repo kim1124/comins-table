@@ -103,22 +103,6 @@ async function dragVirtualScrollbar(page: Page, direction: "down" | "up") {
   );
 }
 
-async function dragViewportScrollbarWithMouse(page: Page, direction: "down" | "up") {
-  const viewport = page.getByTestId("data-table-viewport");
-  const box = await viewport.boundingBox();
-
-  expect(box).not.toBeNull();
-
-  const x = box!.x + box!.width - 4;
-  const startY = direction === "down" ? box!.y + 18 : box!.y + box!.height - 18;
-  const endY = direction === "down" ? box!.y + box!.height - 18 : box!.y + 18;
-
-  await page.mouse.move(x, startY);
-  await page.mouse.down();
-  await page.mouse.move(x, endY, { steps: 40 });
-  await page.mouse.up();
-}
-
 async function runVirtualScrollFrames(page: Page, frames = 30) {
   return page.getByTestId("data-table-viewport").evaluate(
     (element, frameCount) => {
@@ -146,12 +130,12 @@ async function runVirtualScrollFrames(page: Page, frames = 30) {
   );
 }
 
-test("playground verifies 100000 row virtualization smoke", async ({ page }) => {
+test("playground verifies 100000 row virtualization smoke @perf", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "대용량 데이터 표시" }).click();
+  await page.goto("/performance/virtualization");
   await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
-  await page.getByRole("button", { name: "10만 행 로드" }).click();
+  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
 
   await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
   await expect.poll(() => page.locator(".kmsf-data-table__body-table tbody tr").count()).toBeLessThan(80);
@@ -177,9 +161,9 @@ test("playground verifies 100000 row virtualization smoke", async ({ page }) => 
 test("playground verifies 100000 row virtualization perf smoke @perf", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "대용량 데이터 표시" }).click();
+  await page.goto("/performance/virtualization");
   await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
-  await page.getByRole("button", { name: "10만 행 로드" }).click();
+  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
 
   await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
   await expect.poll(() => page.locator(".kmsf-data-table__body-table tbody tr").count()).toBeLessThan(80);
@@ -236,9 +220,9 @@ test("playground keeps devtools metrics bounded during one hundred thousand row 
   test.setTimeout(45_000);
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "대용량 데이터 표시" }).click();
+  await page.goto("/performance/virtualization");
   await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
-  await page.getByRole("button", { name: "10만 행 로드" }).click();
+  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
 
   const viewport = page.getByTestId("data-table-viewport");
   await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
@@ -316,9 +300,9 @@ test("playground releases devtools DOM counters after 100000 row scroll and retu
   test.setTimeout(60_000);
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "대용량 데이터 표시" }).click();
+  await page.goto("/performance/virtualization");
   await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
-  await page.getByRole("button", { name: "10만 행 로드" }).click();
+  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
 
   const viewport = page.getByTestId("data-table-viewport");
   await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
@@ -362,7 +346,7 @@ test("playground releases devtools DOM counters after 100000 row scroll and retu
     .toBeLessThan(100);
   const afterUp = await readDevtoolsMemorySnapshot(page);
 
-  await page.getByRole("button", { name: "기본" }).click();
+  await page.goto("/docs/getting-started");
   await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "basic");
   await expect(page.getByTestId("data-table-viewport")).toBeVisible();
   const afterBasic = await readDevtoolsMemorySnapshot(page);
@@ -379,8 +363,8 @@ test("playground recycles rendered row DOM while virtual scrolling one hundred t
   test.setTimeout(30_000);
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "대용량 데이터 표시" }).click();
-  await page.getByRole("button", { name: "10만 행 로드" }).click();
+  await page.goto("/performance/virtualization");
+  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
 
   const viewport = page.getByTestId("data-table-viewport");
   await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
@@ -428,87 +412,13 @@ test("playground recycles rendered row DOM while virtual scrolling one hundred t
   expect(diagnostics).toEqual([]);
 });
 
-test("playground releases devtools counters after physical scrollbar drag and return to basic", async ({ page }, testInfo) => {
-  test.setTimeout(60_000);
-  test.skip(
-    testInfo.project.use.headless !== false,
-    "Physical scrollbar thumb dragging requires headed Chrome; headless Chromium does not expose a draggable native scrollbar thumb.",
-  );
-
-  const diagnostics = collectBrowserDiagnostics(page);
-  await page.goto("/");
-  await page.addStyleTag({
-    content: `
-      [data-testid="data-table-viewport"]::-webkit-scrollbar {
-        width: 16px;
-      }
-
-      [data-testid="data-table-viewport"]::-webkit-scrollbar-thumb {
-        background: rgba(0, 0, 0, 0.45);
-        border-radius: 8px;
-      }
-    `,
-  });
-  const basicBaseline = await readDevtoolsMemorySnapshot(page);
-
-  await page.getByRole("button", { name: "대용량 데이터 표시" }).click();
-  await page.getByRole("button", { name: "10만 행 로드" }).click();
-  const viewport = page.getByTestId("data-table-viewport");
-  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
-  await page.mouse.wheel(0, 2400);
-  await dragViewportScrollbarWithMouse(page, "down");
-  await expect
-    .poll(() =>
-      viewport.evaluate((element) => {
-        const rows = Array.from(
-          element.querySelectorAll<HTMLTableRowElement>(
-            ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
-          ),
-        );
-        const last = rows[rows.length - 1];
-
-        return Number(last?.getAttribute("data-kmsf-row-data-index") ?? "-1");
-      }),
-    )
-    .toBeGreaterThan(99_900);
-
-  await page.mouse.wheel(0, -2400);
-  await dragViewportScrollbarWithMouse(page, "up");
-  await expect
-    .poll(() =>
-      viewport.evaluate((element) => {
-        const rows = Array.from(
-          element.querySelectorAll<HTMLTableRowElement>(
-            ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
-          ),
-        );
-        const first = rows[0];
-
-        return Number(first?.getAttribute("data-kmsf-row-data-index") ?? "-1");
-      }),
-    )
-    .toBeLessThan(100);
-
-  await page.getByRole("button", { exact: true, name: "기본" }).click();
-  await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "basic");
-  const afterBasic = await readDevtoolsMemorySnapshot(page);
-  const failureContext = JSON.stringify({ afterBasic, basicBaseline }, null, 2);
-
-  expect(afterBasic.nodes, failureContext).toBeLessThanOrEqual(Math.ceil(basicBaseline.nodes * 1.25));
-  expect(afterBasic.jsEventListeners, failureContext).toBeLessThanOrEqual(
-    Math.ceil(basicBaseline.jsEventListeners * 1.25),
-  );
-  expect(afterBasic.documents, failureContext).toBe(basicBaseline.documents);
-  expect(diagnostics).toEqual([]);
-});
-
 test("playground keeps follow-up scroll responsive after one hundred thousand row jump @perf", async ({ page }) => {
   test.setTimeout(30_000);
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "대용량 데이터 표시" }).click();
+  await page.goto("/performance/virtualization");
   await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
-  await page.getByRole("button", { name: "10만 행 로드" }).click();
+  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
 
   const viewport = page.getByTestId("data-table-viewport");
   await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);

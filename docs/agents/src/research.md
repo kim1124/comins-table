@@ -218,3 +218,180 @@
 - 기존 leaf column 기능을 유지하려면 internal model은 "visible leaf columns"와 "visible header rows"를 분리하는 쪽이 안전하다.
 - Parent resize/move/hide는 group state와 leaf state를 분리해야 요구사항을 충족할 수 있다.
 - 다음 단계는 `docs/agents/src/2026-06-28-2-depth-header-implementation-plan.md`에 따라 RED 테스트와 구현을 진행한다.
+
+## 2026-06-30 Theme Customization Research
+
+### 조사 범위
+
+- 사용자 목표는 `@kmsf/data-table`에서 CSS 값을 수정 또는 override해 페이지 reload 없이 즉시 스타일을 바꿀 수 있는 Theme 기능을 제공하는 것이다.
+- 샘플 테마 범위는 최초 구현에서 KMSF 기본, KMSF 다크, 빨강, 주황, 노랑, 초록, 파랑, 남색, 보라로 제한했다.
+- 2026-06-30 follow-up: 사용자 피드백에 따라 샘플 테마 범위를 Basic, Dark, Skyblue, Mint로 재정의한다.
+- 2026-06-30 follow-up: Header split 구분 문제를 해결하기 위해 샘플 테마 범위를 Basic, Dark, Skyblue, Mint, Gray, Orange로 재조정한다.
+- 2026-06-30 follow-up: Dark header는 어두운 초록색, Skyblue는 `#87CEEB`, Mint는 `#98FF98`, Gray는 `#bcbcbc`, Orange는 주황 계열을 기준으로 한다.
+- `tr` 높이는 virtualized row window 계산과 연결될 수 있으므로 playground 문서에 명시해야 한다.
+- 초기 조사는 repo facts와 사용자 요구사항으로 충분해 외부 웹 조사를 수행하지 않았다.
+- 2026-06-30 follow-up에서는 사용자가 제공한 ReactDataTable Theme 문서를 확인했고, theme/custom style을 CSS custom properties와 header/divider/striped row surface로 분리하는 방향을 참고했다.
+
+### 확인한 저장소 사실
+
+- `src/core.ts`는 이미 `KmsfDataTableTheme` 타입을 제공하며 현재 필드는 `className`, `density`, `style`이다.
+- `src/index.tsx`의 `KmsfDataTableProps`는 `theme?: KmsfDataTableTheme`, `style?: React.CSSProperties`, `className?: string`, `rowHeight?: number`를 제공한다.
+- root element는 `"kmsf-data-table"`에 `state.theme.className`, `className`, `state.theme.style`, `style`을 병합해 렌더링한다.
+- `theme.density`는 현재 font-size class 선택에만 사용된다.
+- 현재 `theme` prop identity가 변경되면 `createKmsfDataTableState`가 다시 호출된다. 이 경로는 selection 보존을 시도하지만, 테마 전환을 row/window/state 재생성과 분리하는 구조는 아니다.
+- `rowHeight` 기본값은 `36`이며 virtualized mode에서 `scrollHeight`, `startIndex`, `endIndex`, `renderOffset`, rendered row height 계산에 직접 사용된다.
+- body row와 cell은 inline style로 `height: rowHeight`를 받는다. 따라서 CSS에서 `tr`/`td` height만 override하면 virtualized 계산값과 실제 visual height가 불일치할 수 있다.
+- 패키지 export는 `./styles.css`를 제공하고 `package.json.files`에도 `styles.css`가 포함되어 있다.
+- 현재 package root `styles.css`는 built-in component skin 중심이다. table root, header, body viewport, th/td, selected row/cell, resize line, drop marker, move ghost, range selection 같은 table shell theme surface는 충분히 선언되어 있지 않다.
+- 현재 playground `example/src/styles.css`에는 `.kmsf-data-table`, `.kmsf-data-table__header`, `.kmsf-data-table__body-viewport`, `.kmsf-data-table__th`, `.kmsf-data-table__td`, `.kmsf-row-selected`, `.kmsf-cell-range-selected` 등 table shell 스타일과 CSS 변수 일부가 있다.
+- `docs/user/04-styling.md`는 `className`, `style`, `theme`, `rowProps`, `columns[].cell.props` 기반 styling을 짧게 설명하지만, 테마 변수 목록과 virtualization row height 주의사항은 충분히 다루지 않는다.
+- `docs/user/11-virtualization.md`는 `rowHeight={32}` 예제를 포함하지만, CSS height override와 `rowHeight` prop 동기화 계약은 명시하지 않는다.
+- 현재 docs playground route에는 Theme 전용 페이지가 없고, `/examples/basic` 설명과 feature registry option에 `theme`이 일부 언급되어 있다.
+- `test/public-api-boundary.test.ts`는 `styles.css` export와 component skin selector/variable을 public boundary로 검증한다. Theme CSS surface 확장 시 이 테스트를 보강해야 한다.
+
+### 설계 영향
+
+- Runtime theme switch는 Sass compile-time 변수가 아니라 CSS custom properties와 root class/style 변경을 중심으로 설계하는 것이 적합하다. 현재 package에는 Sass dependency가 없고, 사용자의 "reload 없이 즉시 변경" 요구와도 CSS custom properties가 더 직접적으로 맞는다.
+- package `styles.css`는 playground 전용 table shell CSS를 일부 흡수해 배포 가능한 기본 skin과 override 가능한 CSS 변수 표면을 제공해야 한다.
+- theme 전환은 root class 또는 root inline CSS variables 변경만으로 끝나야 하며, row data, column layout, virtual window 계산을 불필요하게 재생성하지 않아야 한다.
+- 기존 `theme.className`/`theme.style`로도 샘플 테마 적용은 가능하다. 새 public API를 최소화하려면 preset prop보다 CSS class 기반 sample theme가 더 낮은 리스크다.
+- API 편의성을 높이려면 `theme.preset` 또는 exported theme preset map을 추가할 수 있지만 이는 public API 변경이므로 ask-question/ask-plan 단계에서 결정해야 한다.
+- `rowHeight`는 테마에서 임의로 바꾸는 색상 변수와 다르게 취급해야 한다. Virtualized table에서 visual row height를 변경하려면 `rowHeight` prop과 CSS row/cell height token이 같은 값으로 맞아야 한다.
+- `--kmsf-data-table-row-height` 같은 CSS 변수는 문서/시각 표시에 유용하지만, virtualized 계산의 source of truth는 React `rowHeight` prop이어야 한다.
+- 기본 테마 샘플은 class selector 예: `.kmsf-data-table-theme--dark`, `.kmsf-data-table-theme--skyblue` 계열로 제공하면 사용자 override가 단순하고 즉시 전환이 가능하다.
+- 2026-06-30 follow-up: theme option은 버튼 나열 대신 Select Box로 노출한다.
+- 2026-06-30 follow-up: virtualized row 재사용을 고려해 row striping은 `nth-child`가 아니라 실제 visible row index 기반 parity attribute로 처리한다.
+- 2026-06-30 follow-up: Header/Cell/Row 구분은 `--kmsf-data-table-header-border`, `--kmsf-data-table-header-split-border`, `--kmsf-data-table-cell-border`, `--kmsf-data-table-row-border`로 분리해 사용자가 특정 영역 구분선만 override할 수 있게 한다.
+
+### 리스크
+
+- CSS만으로 `tr` height를 바꾸도록 허용하면 virtualized scroll offset, rendered range, bottom filler, scrollbar position이 어긋날 수 있다.
+- `theme` prop 변경이 현재 state input 변경으로 처리되는 구조를 그대로 두면, 단순 색상 변경에도 core state 재생성 비용이 발생할 수 있다.
+- package `styles.css`에 table shell selector를 추가하면 기존 playground CSS와 중복/우선순위 충돌이 생길 수 있다. playground CSS는 패키지 CSS를 import한 뒤 예제 layout 전용 CSS만 남기는 방식이 안전하다.
+- 다크/색상 테마는 selection, focus ring, resize handle, drop marker, sort indicator, component controls까지 대비가 충분해야 한다.
+- sample theme를 문서/테스트에 노출하면 snapshot성 CSS assertion이 과해질 수 있다. 자동 테스트는 대표 테마 전환과 CSS 변수 반영, rowHeight 계약, route unmount, row parity 배경을 중심으로 구성하는 것이 적절하다.
+
+### 추천 방향
+
+- 1차 구현은 새 dependency 없이 CSS custom properties 기반으로 진행한다.
+- public API는 우선 기존 `theme.className`, `theme.style`, `theme.density`, `rowHeight` 조합을 유지한다.
+- package `styles.css`에 table shell base variables와 sample theme class를 추가한다.
+- playground에는 Theme 전용 route를 추가하고 Select Box로 4개 샘플 className을 즉시 전환한다.
+- 문서에는 "색상/간격은 CSS 변수 override 가능, virtualized row height는 `rowHeight` prop과 CSS token을 함께 맞춰야 함"을 명시한다.
+- 성능 검증은 테마 전환 전후 rendered row count, route reload 없음, console error 없음, representative computed CSS 변경 확인을 포함한다.
+
+### 구현 전 결정 필요 항목
+
+- 2026-06-30 supervisor 결정으로 샘플 테마 적용 API는 `theme.className` 중심으로 유지한다. `theme.preset` public prop은 1차 구현에서 추가하지 않는다.
+- 2026-06-30 supervisor 결정으로 테마는 row height preset을 포함하지 않는다. 색상/표면/상태 스타일만 포함하고 rowHeight는 별도 prop 계약으로 유지한다.
+- 2026-06-30 supervisor 결정으로 package `styles.css`가 table shell 기본 skin까지 책임지는 방향으로 확장한다.
+- ask gate clear.
+
+## 2026-06-30 ReactDataTable-style Playground Research
+
+### 조사 범위
+
+- 사용자 목표는 `reactdatatable.com/docs/getting-started/` 문서 사이트를 기준으로 `@kmsf/data-table` playground 개선 가능성을 검토하는 것이다.
+- 이번 단계는 `ask-research` 범위이므로 구현 계획과 작업 순서는 확정하지 않는다.
+- 조사 대상은 외부 참조 문서의 정보 구조, 현재 playground shell, feature registry, 문서/옵션 가이드, Playwright 계약, user docs 계약이다.
+
+### 외부 참조 확인 사실
+
+- Source: https://reactdatatable.com/docs/getting-started/
+- 페이지는 playground라기보다 문서 사이트 구조다.
+- 상단 nav는 package brand, `Docs`, `Themes`, `API`, `Support`, GitHub, Sponsor, Search, `Get started` CTA로 구성된다.
+- 좌측 sidebar는 version switcher와 문서 카테고리 목차를 제공한다. 확인된 카테고리는 `Introduction`, `Columns`, `Editing`, `Rows`, `Interactivity`, `Styling`, `Import / Export`, `Advanced`, `Recipes`, `Reference`다.
+- 본문은 `Getting started`, `Installation`, `Minimal example`, `Common props at a glance`, `Row identity`, `TypeScript`, `Next steps` 순서로 읽히는 문서 중심 구성이다.
+- 코드 블록은 copy button을 포함하며, props 요약은 table로 제공된다.
+- 페이지 하단은 prev/next navigation과 footer를 제공한다.
+
+### 현재 저장소 확인 사실
+
+- 현재 playground entry는 `example/src/main.tsx`다.
+- 현재 shell은 `Tabs` 기반 `기능 예제` / `옵션 가이드` 전환, 상단 topbar, 좌측 collapsible `feature-aside`, 중앙 `example-content` 구조다.
+- feature 목록과 설명은 `example/src/features/featureRegistry.tsx`의 `featureRegistry`가 단일 소스다.
+- 기능 예제는 `FeatureSampleSection` card 구조로 제목/설명/sample 영역을 가진다.
+- 옵션 가이드는 `example/src/docs/dataTableOptionGuide.ts`와 `OptionGuideSection`으로 구성된다.
+- `docs/user/12-playground.md`는 현재 playground를 "상단 toggle + 왼쪽 collapsible feature Aside + 중앙 recreated Content" 계약으로 설명한다.
+- `FeatureDocsPanel` 컴포넌트는 존재하지만 현재 테스트는 오른쪽 docs panel이 없어야 한다고 검증한다.
+- 현재 Playwright는 `feature-option-*`, `feature-aside`, `workspace-tabs`, `docs-layout`, `feature-content`, feature label button, `기능 예제` / `옵션 가이드` tab에 강하게 결합되어 있다.
+- 현재 `html`, `body`, `#root`는 `height: 100%; overflow: hidden;`이고 `.example-content`가 세로 scroll을 담당한다.
+- 기본 table 높이 계약은 300px이며, 단일 sample은 남은 높이를 채우고 반복 sample page는 중앙 content 내부에서 scroll된다.
+
+### 적용 가능성
+
+- `reactdatatable.com`과 같은 docs shell 구성은 가능하다.
+- 단, 1:1 clone보다 "docs shell + live playground" 형태가 안전하다.
+- 기존 feature page를 문서 category 단위로 재분류하면 현재 `featureRegistry`를 재사용할 수 있다.
+- 현재 `OptionGuideSection`은 API reference 본문으로 이동하거나 `API` nav의 첫 화면으로 사용할 수 있다.
+- 현재 live example component는 유지 가능하며, 각 문서 본문 안에 "설명 + 코드 예제 + live demo" 순서로 배치하는 방향이 적합하다.
+
+### 권장 정보 구조 후보
+
+- Top nav:
+  - `Docs`
+  - `Examples`
+  - `API`
+  - `Performance`
+  - `Playground`
+- Sidebar category:
+  - `Introduction`: Getting Started, Installation, Quick Start
+  - `Columns`: Column Definition, Header, 2-depth Header, Resize, Reorder, Visibility
+  - `Rows`: CRUD, Row Interaction, Row Drag, Context Menu
+  - `Cells`: Formatting, Renderer, Built-in Components, Clipboard, Selection
+  - `Layout`: Size, Responsive Height, Pagination
+  - `Performance`: Virtualization, 100000-row gate, memory/perf notes
+  - `Reference`: Props, Ref API, Core Helpers, Package Exports
+- Main content:
+  - page title and short summary.
+  - installation or usage code when relevant.
+  - key props table.
+  - live example area.
+  - next/previous links.
+
+### 구현 영향 범위
+
+- `example/src/main.tsx`:
+  - current tab shell를 docs-style nav + docs sidebar + content area로 재구성해야 한다.
+  - 기존 mount/unmount lifecycle contract는 feature page key remount 방식으로 유지해야 한다.
+- `example/src/features/featureRegistry.tsx`:
+  - feature menu용 flat list에서 docs category/slug metadata를 추가하는 변경이 필요하다.
+- `example/src/components/*`:
+  - docs layout, docs sidebar, page header, code block, next/prev navigation, API table component 후보가 필요하다.
+- `example/src/styles.css`:
+  - sticky top nav, docs sidebar, article width, live demo section, mobile sidebar behavior를 추가해야 한다.
+  - 기존 table height 300px, `.example-content` scroll contract, body page scroll-free contract를 유지해야 한다.
+- `docs/user/12-playground.md`:
+  - playground shell 설명을 docs-style shell로 갱신해야 한다.
+- Playwright:
+  - `playground-layout-polish.spec.ts`
+  - `playground-content-docs.spec.ts`
+  - `user-playground-docs.spec.ts`
+  - feature별 button navigation test
+  - visual typography screenshot
+  - lifecycle soak
+
+### 리스크
+
+- 구조 변경 시 기존 Playwright selector와 text assertion이 다수 깨질 수 있다.
+- `FeatureDocsPanel`을 다시 노출하면 현재 "docs panel 없음" assertion과 충돌한다.
+- 검색 기능을 초기에 넣으면 indexing/data model이 별도 범위가 된다. 1차에서는 제외하거나 현재 page title/feature local filter 수준으로 제한하는 편이 안전하다.
+- 외부 페이지의 sponsor/version switcher/GitHub CTA는 `@kmsf/data-table` playground 목적과 직접 맞지 않는다. 그대로 모방하면 불필요한 UI가 된다.
+- live table demo가 article 안으로 들어가면 table height, overflow, mobile containment, virtual scroll 성능 gate를 다시 검증해야 한다.
+- 현재 `featureRegistry` label 기반 navigation은 한국어 버튼 텍스트에 test가 의존한다. slug 기반 navigation을 도입하면 backward-compatible alias 또는 test 갱신이 필요하다.
+
+### 미해결 Supervisor 결정
+
+- 기존 `기능 예제` / `옵션 가이드` tab을 완전히 제거할지, docs nav 안에서 `Examples`와 `API`로 흡수할지 결정이 필요하다.
+- 1차 구현에서 search를 제외할지, local page filter로 제공할지 결정이 필요하다.
+- top nav와 sidebar label을 한국어로 둘지, 참조 사이트처럼 영어 중심으로 둘지 결정이 필요하다.
+- 문서 page slug를 URL route/hash로 노출할지, 현재처럼 single-page state만 사용할지 결정이 필요하다.
+- docs sidebar category에 아직 미구현 기능을 노출할지, 구현된 기능만 노출할지 결정이 필요하다. 현재 package 정책상 구현된 기능만 1차 노출하는 쪽이 안전하다.
+
+### 연구 결론
+
+- 적용 가능성은 높다.
+- 권장 방향은 `reactdatatable.com`의 문서 사이트 구조를 그대로 복제하는 것이 아니라, KMSF 현재 기능과 검증 요구에 맞춘 "docs-style playground"다.
+- 1차 범위는 top nav, docs sidebar, article content, live demo integration, API/props summary, next/prev navigation으로 제한하는 것이 안전하다.
+- 검색, version switcher, sponsor CTA, 외부 link 중심 nav는 1차 범위에서 제외하는 편이 좋다.
+- 다음 단계는 `ask-plan`에서 위 미해결 결정사항을 닫고, Playwright 계약 갱신을 포함한 implementation plan을 작성하는 것이다.

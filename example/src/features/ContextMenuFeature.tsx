@@ -1,10 +1,8 @@
 import type React from "react";
 import { useMemo, useState } from "react";
-import { MousePointerClick } from "lucide-react";
 
 import { KmsfDataTable } from "../../../src";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
-import { ActionButton, FeatureControls } from "../components/FeatureControls";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { ContextMenu, type ContextMenuItem } from "../components/ui/context-menu";
 import { createGuardedColumns } from "../fixtures/columns";
@@ -42,7 +40,6 @@ function getContextMenuPosition(event: React.MouseEvent) {
 
 export function ContextMenuFeature() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
-  const [cellContextEnabled, setCellContextEnabled] = useState(true);
   const [selectedMenuLabel, setSelectedMenuLabel] = useState("");
   const [rows, setRows] = useState(() => createExampleRows(100));
   const columns = useMemo(() => createGuardedColumns(), []);
@@ -82,13 +79,6 @@ export function ContextMenuFeature() {
         id="context-menu"
         title="Context Menu 예제"
       >
-        <FeatureControls
-          actions={
-            <ActionButton icon={<MousePointerClick />} onClick={() => setCellContextEnabled((current) => !current)}>
-              Cell 컨텍스트 {cellContextEnabled ? "비활성화" : "활성화"}
-            </ActionButton>
-          }
-        />
         {selectedMenuLabel ? (
           <Alert data-testid="context-menu-alert">
             <AlertTitle>메뉴 선택</AlertTitle>
@@ -109,27 +99,23 @@ export function ContextMenuFeature() {
               data-testid="data-table-viewport"
               getRowId={(row) => row.id}
               onChangeData={setRows}
-              onContextMenuCell={
-                cellContextEnabled
-                  ? ({ column, event, row, value }) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      const rowData: ContextData = { kind: "row", row: row.data };
-                      const cellData: ContextData = { columnId: column.id, kind: "cell", row: row.data, value };
-                      const position = getContextMenuPosition(event);
+              onContextMenuCell={({ column, event, row, value }) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const rowData: ContextData = { kind: "row", row: row.data };
+                const cellData: ContextData = { columnId: column.id, kind: "cell", row: row.data, value };
+                const position = getContextMenuPosition(event);
 
-                      setContextMenu({
-                        data: cellData,
-                        items: [
-                          { data: rowData, label: "행 데이터 보기", section: "Row 메뉴" },
-                          { data: cellData, label: "셀 데이터 보기", section: "Cell 메뉴" },
-                        ],
-                        x: position.x,
-                        y: position.y,
-                      });
-                    }
-                  : undefined
-              }
+                setContextMenu({
+                  data: cellData,
+                  items: [
+                    { data: rowData, label: "행 데이터 보기", section: "Row 메뉴" },
+                    { data: cellData, label: "셀 데이터 보기", section: "Cell 메뉴" },
+                  ],
+                  x: position.x,
+                  y: position.y,
+                });
+              }}
               onContextMenuRow={({ event, row }) => {
                 event.preventDefault();
                 const rowData: ContextData = { kind: "row", row: row.data };
@@ -143,7 +129,6 @@ export function ContextMenuFeature() {
                 });
               }}
               pagination={{ pageIndex: 0, pageSize: 30 }}
-              rowProps={{ className: (row) => (row.role === "Owner" ? "row-owner" : undefined) }}
               theme={{ density: "compact" }}
             />
           </div>

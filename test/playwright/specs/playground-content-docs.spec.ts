@@ -17,22 +17,24 @@ function collectBrowserDiagnostics(page: Page) {
 }
 
 const featurePages = [
-  ["기본", "@kmsf/data-table 기본 예제입니다."],
-  ["CRUD 동작", "추가, 수정, 삭제, 초기화, 필터링"],
-  ["테이블 사이즈", "300px, 500px, 브라우저 100%"],
-  ["Header 예제", "1Depth 컬럼"],
-  ["대용량 데이터 표시", "대용량 데이터"],
-  ["Td Cell 예제", "Td Cell 포맷"],
-  ["Tr Row 예제", "Tr Row 스타일"],
-  ["Context Menu 예제", "우클릭"],
+  ["/docs/getting-started", "@kmsf/data-table 기본 예제입니다."],
+  ["/examples/crud", "추가, 수정, 삭제, 초기화, 필터링"],
+  ["/examples/size", "300px 고정 높이와 부모 컨테이너 500px"],
+  ["/examples/theme", "CSS 변수와 theme class"],
+  ["/examples/header", "1Depth 컬럼"],
+  ["/examples/column-groups", "2Depth Header"],
+  ["/performance/virtualization", "대용량 데이터"],
+  ["/examples/cell", "Td Cell 포맷"],
+  ["/examples/row", "Tr Row 스타일"],
+  ["/examples/context-menu", "우클릭"],
 ] as const;
 
 test("feature pages render Korean docs in the main content area", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
 
-  for (const [label, descriptionText] of featurePages) {
-    await page.getByRole("button", { exact: true, name: label }).click();
+  for (const [route, descriptionText] of featurePages) {
+    await page.goto(route);
     await expect(page.getByTestId("feature-option-description").first()).toContainText(descriptionText);
     await expect(page.getByTestId("feature-option-sample").first().locator(".kmsf-data-table").first()).toBeVisible();
   }

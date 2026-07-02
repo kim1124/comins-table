@@ -8,23 +8,23 @@ export const defaultColumnLayout = {
 
 export function createBaseColumns(): Array<KmsfDataTableColumn<PersonRow>> {
   return [
-    { field: "name", label: "이름", sort: true },
+    { field: "name", label: "Column1", minWidth: 100, sort: true },
     {
       cell: {
-        format: ({ value }) => `${String(value)} years`,
-        props: { style: { textAlign: "right" } },
+        format: ({ row }) => `Data ${row.index + 1}`,
       },
       field: "age",
-      label: "나이",
+      label: "Column2",
+      minWidth: 100,
       sort: true,
     },
     {
       cell: {
-        format: ({ value }) => <strong>{String(value)}</strong>,
-        props: { className: ({ value }) => (value === "Owner" ? "cell-owner" : undefined) },
+        format: ({ row }) => `Data ${row.index + 1}`,
       },
       field: "role",
-      label: "역할",
+      label: "Column3",
+      minWidth: 100,
     },
   ];
 }
@@ -40,7 +40,8 @@ export function createGuardedColumns(): Array<KmsfDataTableColumn<PersonRow>> {
         },
       },
       field: "locked",
-      label: "잠금",
+      label: "Column4",
+      minWidth: 100,
     },
   ];
 }

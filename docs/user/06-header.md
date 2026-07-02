@@ -63,6 +63,7 @@ tableRef.current?.clearSort();
 - Parent group을 다시 표시해도 child column의 개별 hidden 상태는 유지된다.
 - Group 없는 column은 parent row에서 `rowSpan=2`로 표시된다.
 - Header 전체 hide/show(`showHeader`)는 2 Depth와 별개이며 전체 header area를 표시하거나 제거한다.
+- 2 Depth parent header cell은 child header 상단 border와 선이 겹치지 않도록 하단 border를 출력하지 않는다.
 
 Header custom UI는 `header.renderer` 또는 `header.components`로 렌더링한다. `renderer`가 있으면 label과 components를 모두 대체한다.
 
@@ -144,6 +145,9 @@ Phase 2 Header components는 `button`, `input`, `checkbox`, `radio`, `select`, `
 Playground 검증 기준:
 
 - `헤더` 예제는 resize와 move를 같은 pointer 흐름에서 검증한다.
+- Header 숨김/표시 예제는 전체 Header area toggle과 컬럼별 Checkbox Select Box를 함께 제공한다. Select Box에서 선택 해제된 column id는 `columns` prop에서 제외되어 해당 컬럼 전체가 숨겨진다.
+- 2 Depth group 표시/숨김은 단일 toggle control로 검증한다.
+- 컬럼 동적 표시 예제는 Checkbox 목록형 Select Box에서 선택된 column id만 `columns` prop에 전달하며, 1Depth와 2Depth 모두 같은 동작을 확인한다.
 - Header sort 접근성은 mouse click, keyboard `Enter`/`Space`, `aria-sort`, sort indicator 상태를 함께 검증한다.
 - Resize는 width 변경, 최초 drag jump 없음, column move 미발생을 함께 확인한다.
 - Move는 1초 long-press, 이동 ghost, drop marker, 의도한 column order 변경을 함께 확인한다.

@@ -159,6 +159,119 @@ function KmsfInputComponent<TData, TValue>({
   );
 }
 
+function KmsfCheckboxComponent<TData, TValue>({
+  component,
+  payload,
+}: {
+  component: Extract<KmsfAnyComponentConfig<TData, TValue>, { type: "checkbox" }>;
+  payload: KmsfAnyComponentPayload<TData, TValue>;
+}) {
+  const props = resolveComponentProps<React.InputHTMLAttributes<HTMLInputElement>>(component.props, payload);
+  const { checked, defaultChecked, onChange, onClick, onKeyDown, onMouseDown, onPointerDown, style, ...inputProps } = props;
+  const [optimisticChecked, setOptimisticChecked] = useState(Boolean(checked ?? defaultChecked));
+
+  useEffect(() => {
+    if (checked !== undefined) {
+      setOptimisticChecked(Boolean(checked));
+    }
+  }, [checked]);
+
+  return (
+    <input
+      {...inputProps}
+      checked={optimisticChecked}
+      className={mergeClassName("kmsf-data-table__component", "kmsf-data-table__component-checkbox", props.className)}
+      onClick={(event) => {
+        onClick?.(event);
+        stopComponentEvent(event);
+      }}
+      onChange={(event) => {
+        onChange?.(event);
+        stopComponentEvent(event);
+        setOptimisticChecked(event.currentTarget.checked);
+        component.onCheckedChange?.({ ...payload, checked: event.currentTarget.checked } as never);
+      }}
+      onKeyDown={(event) => {
+        onKeyDown?.(event);
+        stopComponentEvent(event);
+      }}
+      onMouseDown={(event) => {
+        onMouseDown?.(event);
+        stopComponentEvent(event);
+      }}
+      onPointerDown={(event) => {
+        onPointerDown?.(event);
+        stopComponentEvent(event);
+      }}
+      style={{ height: 20, width: 20, ...style }}
+      type="checkbox"
+    />
+  );
+}
+
+function KmsfToggleComponent<TData, TValue>({
+  component,
+  payload,
+}: {
+  component: Extract<KmsfAnyComponentConfig<TData, TValue>, { type: "toggle" }>;
+  payload: KmsfAnyComponentPayload<TData, TValue>;
+}) {
+  const props = resolveComponentProps<React.ButtonHTMLAttributes<HTMLButtonElement> & { checked?: boolean }>(
+    component.props,
+    payload,
+  );
+  const { checked, ...buttonProps } = props;
+  const { onClick, onKeyDown, onMouseDown, onPointerDown, ...restButtonProps } = buttonProps;
+  const [optimisticChecked, setOptimisticChecked] = useState(Boolean(checked));
+
+  useEffect(() => {
+    if (checked !== undefined) {
+      setOptimisticChecked(Boolean(checked));
+    }
+  }, [checked]);
+
+  const buttonChildren =
+    typeof buttonProps.children === "string" && (buttonProps.children === "ON" || buttonProps.children === "OFF")
+      ? optimisticChecked
+        ? "ON"
+        : "OFF"
+      : buttonProps.children;
+
+  return (
+    <button
+      {...restButtonProps}
+      aria-pressed={optimisticChecked}
+      className={mergeClassName(
+        "kmsf-data-table__component",
+        "kmsf-data-table__component-toggle",
+        buttonProps.className,
+      )}
+      onClick={(event) => {
+        onClick?.(event);
+        stopComponentEvent(event);
+        const nextChecked = !optimisticChecked;
+        setOptimisticChecked(nextChecked);
+        component.onCheckedChange?.({ ...payload, checked: nextChecked } as never);
+      }}
+      onKeyDown={(event) => {
+        onKeyDown?.(event);
+        stopComponentEvent(event);
+      }}
+      onMouseDown={(event) => {
+        onMouseDown?.(event);
+        stopComponentEvent(event);
+      }}
+      onPointerDown={(event) => {
+        onPointerDown?.(event);
+        stopComponentEvent(event);
+      }}
+      type={buttonProps.type ?? "button"}
+    >
+      {buttonChildren}
+    </button>
+  );
+}
+
 function KmsfHeaderMenuComponent<TData, TValue>({
   component,
   payload,
@@ -713,42 +826,7 @@ export function renderKmsfBuiltInComponent<TData, TValue>(
   }
 
   if (component.type === "checkbox") {
-    const props = resolveComponentProps<React.InputHTMLAttributes<HTMLInputElement>>(component.props, payload);
-    const { onChange, onClick, onKeyDown, onMouseDown, onPointerDown, style, ...inputProps } = props;
-
-    return (
-      <input
-        {...inputProps}
-        className={mergeClassName(
-          "kmsf-data-table__component",
-          "kmsf-data-table__component-checkbox",
-          props.className,
-        )}
-        onClick={(event) => {
-          onClick?.(event);
-          stopComponentEvent(event);
-        }}
-        onChange={(event) => {
-          onChange?.(event);
-          stopComponentEvent(event);
-          component.onCheckedChange?.({ ...payload, checked: event.currentTarget.checked } as never);
-        }}
-        onKeyDown={(event) => {
-          onKeyDown?.(event);
-          stopComponentEvent(event);
-        }}
-        onMouseDown={(event) => {
-          onMouseDown?.(event);
-          stopComponentEvent(event);
-        }}
-        onPointerDown={(event) => {
-          onPointerDown?.(event);
-          stopComponentEvent(event);
-        }}
-        style={{ height: 20, width: 20, ...style }}
-        type="checkbox"
-      />
-    );
+    return <KmsfCheckboxComponent component={component} payload={payload} />;
   }
 
   if (component.type === "select") {
@@ -859,43 +937,7 @@ export function renderKmsfBuiltInComponent<TData, TValue>(
   }
 
   if (component.type === "toggle") {
-    const props = resolveComponentProps<React.ButtonHTMLAttributes<HTMLButtonElement> & { checked?: boolean }>(
-      component.props,
-      payload,
-    );
-    const { checked, ...buttonProps } = props;
-    const { onClick, onKeyDown, onMouseDown, onPointerDown, ...restButtonProps } = buttonProps;
-    const isChecked = Boolean(checked);
-
-    return (
-      <button
-        {...restButtonProps}
-        aria-pressed={isChecked}
-        className={mergeClassName(
-          "kmsf-data-table__component",
-          "kmsf-data-table__component-toggle",
-          buttonProps.className,
-        )}
-        onClick={(event) => {
-          onClick?.(event);
-          stopComponentEvent(event);
-          component.onCheckedChange?.({ ...payload, checked: !isChecked } as never);
-        }}
-        onKeyDown={(event) => {
-          onKeyDown?.(event);
-          stopComponentEvent(event);
-        }}
-        onMouseDown={(event) => {
-          onMouseDown?.(event);
-          stopComponentEvent(event);
-        }}
-        onPointerDown={(event) => {
-          onPointerDown?.(event);
-          stopComponentEvent(event);
-        }}
-        type={buttonProps.type ?? "button"}
-      />
-    );
+    return <KmsfToggleComponent component={component} payload={payload} />;
   }
 
   const props = resolveComponentProps<React.HTMLAttributes<HTMLDivElement> & { max?: number; value?: number }>(

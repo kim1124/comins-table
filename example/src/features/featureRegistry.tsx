@@ -2,11 +2,14 @@ import { BasicCrudFeature } from "./BasicCrudFeature";
 import { BasicFeature } from "./BasicFeature";
 import { BodyFeature } from "./BodyFeature";
 import { CellFeature } from "./CellFeature";
+import { ColumnGroupFeature } from "./ColumnGroupFeature";
 import { ComponentFeature } from "./ComponentFeature";
 import { ContextMenuFeature } from "./ContextMenuFeature";
 import { HeaderFeature } from "./HeaderFeature";
+import { PaginationFeature } from "./PaginationFeature";
 import { RowFeature } from "./RowFeature";
 import { SizeFeature } from "./SizeFeature";
+import { ThemeFeature } from "./ThemeFeature";
 import type { FeatureDefinition, FeatureId } from "./types";
 
 export const featureRegistry: FeatureDefinition[] = [
@@ -26,28 +29,38 @@ export const featureRegistry: FeatureDefinition[] = [
   },
   {
     Component: BasicCrudFeature,
-    description: "선택된 Row를 기준으로 추가, 수정, 삭제, 조회, 페이징을 확인하는 예제 페이지입니다.",
+    description: "선택된 Row를 기준으로 추가, 수정, 삭제, 조회를 확인하는 예제 페이지입니다.",
     id: "basic-crud",
     label: "CRUD 동작",
     options: [
       { description: "Row 추가, 수정, 삭제를 수행할 원본 배열", example: "useState(createExampleRows(100))", name: "data" },
       { description: "선택 상태 변경 callback", example: "onChangeSelection={syncSelection}", name: "onChangeSelection" },
       { description: "클릭한 Row를 수정 대상으로 지정", example: "onClickRow={({ row }) => ...}", name: "onClickRow" },
-      { description: "현재 페이지와 페이지 크기", example: "{ pageIndex, pageSize: 30 }", name: "pagination" },
     ],
-    summary: "선택 행 기준의 추가, 수정, 삭제, 초기화, 조회, 페이징 예제입니다.",
+    summary: "선택 행 기준의 추가, 수정, 삭제, 초기화, 조회 예제입니다.",
   },
   {
     Component: SizeFeature,
-    description: "테이블이 부모 크기와 브라우저 리사이즈에 반응하는 방식을 확인하는 예제 페이지입니다.",
+    description: "테이블이 수동 높이와 부모 크기를 따르는 방식을 확인하는 예제 페이지입니다.",
     id: "size",
     label: "테이블 사이즈",
     options: [
       { description: "높이를 수동으로 지정한 컨테이너", example: "height: 320px", name: "manual height" },
       { description: "상위 요소 크기를 따라가는 테이블", example: "height: 100%", name: "parent size" },
-      { description: "브라우저 높이에 반응하는 컨테이너", example: "height: clamp(..., 42vh, ...)", name: "responsive height" },
     ],
-    summary: "수동 높이, 상위 컨테이너 크기, 브라우저 리사이즈 반응 예제입니다.",
+    summary: "수동 높이와 상위 컨테이너 크기 예제입니다.",
+  },
+  {
+    Component: ThemeFeature,
+    description: "CSS 변수와 theme class로 테이블 스타일을 즉시 전환하는 예제 페이지입니다.",
+    id: "theme",
+    label: "Theme",
+    options: [
+      { description: "배포 CSS에 포함된 샘플 theme class", example: "kmsf-data-table-theme--skyblue", name: "theme.className" },
+      { description: "CSS 변수 override", example: "{ '--kmsf-data-table-header-split-border': '#278aa7' }", name: "theme.style" },
+      { description: "가상 스크롤 행 높이 계산 기준", example: "rowHeight={32}", name: "rowHeight" },
+    ],
+    summary: "Basic, Dark, Skyblue, Mint, Gray, Orange 샘플 테마와 rowHeight 계약 예제입니다.",
   },
   {
     Component: HeaderFeature,
@@ -61,7 +74,32 @@ export const featureRegistry: FeatureDefinition[] = [
       { description: "컬럼 위치와 너비 불러오기/초기화", example: "setColumnLayout(layout)", name: "setColumnLayout" },
       { description: "컬럼 resize/reorder 상태 변경 callback", example: "onChangeColumnLayout={setColumnLayout}", name: "onChangeColumnLayout" },
     ],
-    summary: "Header 기본 기능, 숨김/표시, 컬럼 설정 저장, 2중 헤더 예제입니다.",
+    summary: "Header 기본 기능, 숨김/표시, 컬럼 설정 저장 예제입니다.",
+  },
+  {
+    Component: ColumnGroupFeature,
+    description: "2Depth Header 그룹의 부모 이동, 부모 리사이즈, 자식 컬럼 표시/숨김을 확인하는 예제 페이지입니다.",
+    id: "column-groups",
+    label: "Header 그룹",
+    options: [
+      { description: "부모 Header와 자식 column id 연결", example: "columnGroups=[{ children: [...] }]", name: "columnGroups" },
+      { description: "부모 Header 리사이즈 시 자식 너비 비율 유지", example: "resize group header", name: "group resize" },
+      { description: "부모 Header 이동 시 자식 컬럼 묶음 이동", example: "drag group header", name: "group reorder" },
+      { description: "자식 컬럼을 columns prop에서 제외", example: "columns.filter(...)", name: "child visibility" },
+    ],
+    summary: "2Depth Header 그룹, 부모 이동/리사이즈, 자식 컬럼 표시/숨김 예제입니다.",
+  },
+  {
+    Component: PaginationFeature,
+    description: "pagination prop으로 pageIndex와 pageSize를 제어하는 예제 페이지입니다.",
+    id: "pagination",
+    label: "Pagination",
+    options: [
+      { description: "현재 페이지 index와 page size", example: "{ pageIndex, pageSize }", name: "pagination" },
+      { description: "외부 페이지 이동 버튼", example: "setPageIndex(next)", name: "pagination controls" },
+      { description: "페이지 이동 중에도 안정적인 Row ID", example: "getRowId={(row) => row.id}", name: "getRowId" },
+    ],
+    summary: "일반 데이터셋에서 pageIndex, pageSize, 외부 페이지 버튼을 확인하는 예제입니다.",
   },
   {
     Component: BodyFeature,
@@ -124,7 +162,6 @@ export const featureRegistry: FeatureDefinition[] = [
     options: [
       { description: "Row 우클릭 callback", example: "onContextMenuRow={...}", name: "onContextMenuRow" },
       { description: "Cell 우클릭 callback", example: "onContextMenuCell={...}", name: "onContextMenuCell" },
-      { description: "Cell 컨텍스트 메뉴 callback 활성화 여부", example: "cellContextEnabled", name: "cell context control" },
     ],
     summary: "행 또는 셀을 우클릭해 단일 행 선택과 callback 기반 컨텍스트 메뉴 데이터를 확인하는 예제입니다.",
   },

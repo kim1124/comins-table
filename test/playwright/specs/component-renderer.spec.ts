@@ -19,17 +19,17 @@ function collectBrowserDiagnostics(page: Page) {
 test("playground renders Header and Cell component renderer examples", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { exact: true, name: "Header 예제" }).click();
+  await page.goto("/examples/header");
   await expect(page.getByTestId("feature-option-description").first()).toContainText("1Depth 컬럼");
   await expect(page.getByRole("button", { name: "Header components 예제 표시" })).toHaveCount(0);
   await expect(page.getByTestId("header-renderer-example")).toHaveCount(0);
 
-  await page.getByRole("button", { exact: true, name: "Td Cell 예제" }).click();
+  await page.goto("/examples/cell");
   await expect(page.getByTestId("feature-option-description").first()).toContainText("cell.renderer");
   await expect(page.getByTestId("cell-renderer-a")).toContainText("renderer:");
   await expect(page.locator(".kmsf-data-table__component")).toHaveCount(0);
 
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.goto("/examples/component");
   await expect(page.getByTestId("component-example-button").locator(".kmsf-data-table__component-button").first()).toBeAttached();
   await expect(page.getByTestId("component-example-input").locator(".kmsf-data-table__component-input").first()).toBeAttached();
   await expect(page.getByTestId("component-example-checkbox").locator(".kmsf-data-table__component-checkbox").first()).toBeAttached();
@@ -42,7 +42,7 @@ test("playground renders Header and Cell component renderer examples", async ({ 
 test("built-in components use the exported KMSF mint skin without external UI dependencies", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.goto("/examples/component");
   const button = page.locator(".kmsf-data-table__component-button").first();
   const input = page.locator(".kmsf-data-table__component-input").first();
   const select = page.locator(".kmsf-data-table__component-select").first();
@@ -57,6 +57,7 @@ test("built-in components use the exported KMSF mint skin without external UI de
   await expect(select).toHaveCSS("border-radius", "0px");
   await expect(select).toHaveCSS("box-sizing", "border-box");
   await expect(checkbox).toHaveCSS("width", "20px");
+  await expect(checkbox).toHaveCSS("background-position", "50% 50%");
   await expect(radio).toHaveCSS("width", "20px");
   await expect(progress).toHaveCSS("background-color", "rgb(16, 185, 129)");
 
@@ -84,7 +85,7 @@ test("built-in components use the exported KMSF mint skin without external UI de
 test("input and select components fill their resized cell content box", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.goto("/examples/component");
   const inputExample = page.getByTestId("component-example-input");
   const selectExample = page.getByTestId("component-example-select");
 
@@ -141,7 +142,7 @@ test("input and select components fill their resized cell content box", async ({
 test("component column resize starts without a first-move width jump", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.goto("/examples/component");
 
   const table = page.getByTestId("component-example-button");
   const header = table.getByTestId("header-button-component");
@@ -166,7 +167,7 @@ test("component column resize starts without a first-move width jump", async ({ 
 test("header label and header components use separate non-overlapping zones", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.goto("/examples/component");
 
   const table = page.getByTestId("component-example-button");
   const header = table.getByTestId("header-button-component");
@@ -241,7 +242,7 @@ test("header label and header components use separate non-overlapping zones", as
 test("header right slot renders after the sort indicator", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.goto("/examples/component");
 
   const menuExample = page.getByTestId("component-example-menu");
   const header = menuExample.getByTestId("header-menu-component");
@@ -274,7 +275,7 @@ test("header right slot renders after the sort indicator", async ({ page }) => {
 test("unsorted headers do not reserve sort indicator space and stay centered", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.goto("/examples/component");
 
   const header = page.getByTestId("component-example-renderer").getByTestId("header-renderer-component");
   await expect(header).not.toHaveAttribute("data-sort-direction", /asc|desc/);
@@ -321,7 +322,7 @@ test("unsorted headers do not reserve sort indicator space and stay centered", a
 test("default built-in components are visually centered in their cell", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.goto("/examples/component");
 
   const componentChecks = [
     { control: ".kmsf-data-table__component-button", table: "button" },
@@ -357,8 +358,8 @@ test("default built-in components are visually centered in their cell", async ({
 test("playground exposes a dedicated Phase 1 component example page", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
-  await expect(page.getByTestId("feature-option-container").first()).toContainText("컴포넌트");
+  await page.goto("/examples/component");
+  await expect(page.getByTestId("feature-option-container").first()).toContainText("Column2");
   await expect(page.getByTestId("feature-option-description").first()).toContainText("cell.components");
   await expect(page.getByTestId("feature-option-description").first()).toContainText("header.components");
   await expect(page.getByText("Header와 Cell에서 클릭 이벤트를 받는 버튼 컴포넌트 예제입니다.")).toHaveCount(0);
@@ -404,7 +405,7 @@ test("playground exposes a dedicated Phase 1 component example page", async ({ p
 test("component examples isolate events and commit input or select changes intentionally", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.goto("/examples/component");
 
   const buttonExample = page.getByTestId("component-example-button");
   await buttonExample.locator("tbody .kmsf-data-table__component-button").first().click();
@@ -414,22 +415,32 @@ test("component examples isolate events and commit input or select changes inten
   await expect(page.getByTestId("component-event-alert")).toContainText("Header Button");
 
   const inputExample = page.getByTestId("component-example-input");
-  await expect(inputExample.getByRole("columnheader", { name: "컴포넌트 이름" })).toBeVisible();
+  await expect(inputExample.getByRole("columnheader", { name: "컴포넌트 이름" })).toHaveCount(0);
   await expect(inputExample.locator("tbody .kmsf-data-table__component-input")).toHaveCount(0);
-  await expect(inputExample.getByTestId("cell-input-a-input-component")).toContainText("Alpha");
+  await expect(inputExample.getByTestId("cell-input-a-input-component")).toContainText("Data 1");
   await inputExample.getByTestId("row-input-a").click();
   const cellInput = inputExample.locator("tbody .kmsf-data-table__component-input").first();
   await expect(cellInput).toBeVisible();
-  await expect(inputExample.getByTestId("cell-input-b-input-component")).toContainText("Beta");
-  await cellInput.fill("Alpha Draft");
-  await expect(page.getByTestId("component-event-alert")).not.toContainText("Alpha Draft");
+  await expect(inputExample.getByTestId("cell-input-b-input-component")).toContainText("Data 2");
+  await cellInput.fill("Data Draft");
+  await expect(page.getByTestId("component-event-alert")).not.toContainText("Data Draft");
   await cellInput.press("Enter");
   await expect(page.getByTestId("component-event-alert")).toContainText("Cell Input");
-  await expect(page.getByTestId("component-event-alert")).toContainText("Alpha Draft");
+  await expect(page.getByTestId("component-event-alert")).toContainText("Data Draft");
 
   const checkboxExample = page.getByTestId("component-example-checkbox");
-  await checkboxExample.locator("tbody .kmsf-data-table__component-checkbox").first().click();
+  const checkbox = checkboxExample.locator("tbody .kmsf-data-table__component-checkbox").first();
+  const checkboxBefore = await checkbox.isChecked();
+  await checkbox.click();
+  await expect(checkbox).toBeChecked({ checked: !checkboxBefore });
   await expect(page.getByTestId("row-checkbox-a")).not.toHaveAttribute("data-selected-row", "true");
+
+  const toggleExample = page.getByTestId("component-example-toggle");
+  const toggle = toggleExample.locator("tbody .kmsf-data-table__component-toggle").first();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  await expect(toggle).toHaveText("OFF");
 
   const radioExample = page.getByTestId("component-example-radio");
   await radioExample.locator("tbody .kmsf-data-table__component-radio input").nth(1).click();
@@ -450,7 +461,7 @@ test("component examples isolate events and commit input or select changes inten
 test("input and select body controls appear only for one selected row", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.goto("/examples/component");
 
   const inputExample = page.getByTestId("component-example-input");
   const selectExample = page.getByTestId("component-example-select");
@@ -462,12 +473,12 @@ test("input and select body controls appear only for one selected row", async ({
   await expect(inputExample.locator("tbody .kmsf-data-table__component-input")).toHaveCount(1);
   await expect(inputExample.getByTestId("cell-input-a-input-component").locator("input")).toBeVisible();
   await expect(inputExample.getByTestId("cell-input-b-input-component").locator("input")).toHaveCount(0);
-  await expect(inputExample.getByTestId("cell-input-b-input-component")).toContainText("Beta");
+  await expect(inputExample.getByTestId("cell-input-b-input-component")).toContainText("Data 2");
 
   await inputExample.getByTestId("row-input-b").click({ modifiers: ["ControlOrMeta"] });
   await expect(inputExample.locator("tbody .kmsf-data-table__component-input")).toHaveCount(0);
-  await expect(inputExample.getByTestId("cell-input-a-input-component")).toContainText("Alpha");
-  await expect(inputExample.getByTestId("cell-input-b-input-component")).toContainText("Beta");
+  await expect(inputExample.getByTestId("cell-input-a-input-component")).toContainText("Data 1");
+  await expect(inputExample.getByTestId("cell-input-b-input-component")).toContainText("Data 2");
 
   await selectExample.getByTestId("row-select-a").click();
   await expect(selectExample.locator("tbody .kmsf-data-table__component-select")).toHaveCount(1);
@@ -486,7 +497,7 @@ test("virtual-list component scrolls lower items and exposes more/search example
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
 
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.goto("/examples/component");
   const table = page.getByTestId("component-example-virtual-list");
   const dataTable = table.locator(".kmsf-data-table").first();
   const firstList = page.getByTestId("virtual-list-virtual-list-a-virtual-list-component");
@@ -560,7 +571,7 @@ test("component virtual-list keeps ten thousand item DOM bounded @perf", async (
   const diagnostics = collectBrowserDiagnostics(page);
 
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.goto("/examples/component");
   await expect(page.getByTestId("component-example-virtual-list")).toBeVisible();
 
   const totalVirtualItems = await page.locator("[data-kmsf-virtual-list-item='true']").count();
@@ -581,11 +592,11 @@ test("component virtual-list keeps ten thousand item DOM bounded @perf", async (
 test("virtual-list example survives playground destroy and recreate lifecycle", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.getByRole("link", { exact: true, name: "컴포넌트 예제" }).click();
   await expect(page.getByTestId("virtual-list-virtual-list-a-virtual-list-component")).toBeVisible();
-  await page.getByRole("button", { exact: true, name: "기본" }).click();
+  await page.getByRole("link", { exact: true, name: "Getting Started" }).click();
   await expect(page.getByTestId("component-example-virtual-list")).toHaveCount(0);
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.getByRole("link", { exact: true, name: "컴포넌트 예제" }).click();
   await expect(page.getByTestId("virtual-list-virtual-list-a-virtual-list-component")).toBeVisible();
 
   const lifecycle = await page.evaluate(() => window.__kmsfDataTableLifecycle);
@@ -598,7 +609,7 @@ test("virtual-list example survives playground destroy and recreate lifecycle", 
 test("header menu component opens a popover below the menu button without sorting", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.goto("/examples/component");
   const menuExample = page.getByTestId("component-example-menu");
   const header = page.getByTestId("header-menu-component");
   const trigger = menuExample.locator(".kmsf-data-table__component-menu-trigger").first();

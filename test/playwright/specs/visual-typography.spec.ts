@@ -26,7 +26,7 @@ test("captures data-table example visual typography screenshots", async ({ page 
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
   await page.waitForLoadState("networkidle");
-  await expect(page.getByRole("main", { name: "데이터 테이블 예제" })).toBeVisible();
+  await expect(page.getByRole("main")).toBeVisible();
   await expectBaseTypography(page);
   await expectNoRootHorizontalOverflow(page);
 
@@ -39,7 +39,7 @@ test("captures data-table example visual typography screenshots", async ({ page 
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(100);
-  await expect(page.getByRole("main", { name: "데이터 테이블 예제" })).toBeVisible();
+  await expect(page.getByRole("main")).toBeVisible();
   await expectBaseTypography(page);
   await expectNoRootHorizontalOverflow(page);
   await page.screenshot({

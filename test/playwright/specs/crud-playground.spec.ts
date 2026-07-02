@@ -19,9 +19,9 @@ function collectBrowserDiagnostics(page: Page) {
 test("CRUD example adds every click, updates active row JSON, and deletes selected rows", async ({ page, browserName }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
-  await page.getByRole("button", { exact: true, name: "CRUD 동작" }).click();
+  await page.goto("/examples/crud");
 
-  await expect(page.locator("tbody tr[data-testid^='row-']")).toHaveCount(30);
+  await expect(page.locator("tbody tr[data-testid^='row-']")).toHaveCount(100);
   await page.getByTestId("cell-b-name").click();
   await expect(page.getByTestId("selected-row-state")).toHaveCount(0);
   await expect(page.getByTestId("row-b")).toHaveAttribute("data-selected-row", "true");
@@ -32,23 +32,23 @@ test("CRUD example adds every click, updates active row JSON, and deletes select
 
   await page.getByRole("button", { exact: true, name: "추가" }).click();
   await page.getByRole("button", { exact: true, name: "추가" }).click();
-  await expect(page.locator("tbody tr[data-testid^='row-']")).toHaveCount(30);
+  await expect(page.locator("tbody tr[data-testid^='row-']")).toHaveCount(102);
   await expect(page.getByTestId("row-new-1")).toBeVisible();
   await expect(page.getByTestId("row-new-2")).toBeVisible();
 
   await page.getByTestId("row-b").click();
   await page.getByLabel("선택 행 JSON").fill(
-    '{"id":"changed-id","name":"베타 수정","age":44,"role":"검토자","active":true,"locked":"B-lock"}',
+    '{"id":"changed-id","name":"Data Changed","age":44,"role":"검토자","active":true,"locked":"Data Changed"}',
   );
   await page.getByRole("button", { exact: true, name: "수정" }).click();
   await expect(page.getByTestId("row-b")).toBeVisible();
-  await expect(page.getByTestId("cell-b-name")).toHaveText("베타 수정");
-  await expect(page.getByTestId("cell-b-age")).toHaveText("44 years");
+  await expect(page.getByTestId("cell-b-name")).toHaveText("Data Changed");
+  await expect(page.getByTestId("cell-b-age")).toHaveText("Data 4");
 
   await page.getByLabel("선택 행 JSON").fill("{잘못된 JSON");
   await page.getByRole("button", { exact: true, name: "수정" }).click();
   await expect(page.getByTestId("crud-error")).toContainText("JSON");
-  await expect(page.getByTestId("cell-b-name")).toHaveText("베타 수정");
+  await expect(page.getByTestId("cell-b-name")).toHaveText("Data Changed");
 
   const modifier = process.platform === "darwin" || browserName === "webkit" ? "Meta" : "Control";
   await page.getByTestId("row-a").click({ modifiers: [modifier] });

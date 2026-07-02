@@ -2,10 +2,20 @@ import { useState } from "react";
 
 import { KmsfDataTable, type KmsfDataTableColumn } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
+import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
+import { Button } from "../components/ui/button";
 import { createExampleRows, type PersonRow } from "../fixtures/people";
 
+type CellEventState = {
+  detail: string;
+  title: string;
+};
+
 export function CellFeature() {
-  const [eventLog, setEventLog] = useState("셀 이벤트 대기");
+  const [eventLog, setEventLog] = useState<CellEventState>({
+    detail: "셀을 클릭, 더블클릭, 우클릭하거나 키보드로 조작하면 마지막 이벤트가 표시됩니다.",
+    title: "셀 이벤트 대기",
+  });
   const [rows, setRows] = useState(() => createExampleRows(100));
   const columns: Array<KmsfDataTableColumn<PersonRow>> = [
     {
@@ -14,38 +24,48 @@ export function CellFeature() {
       },
       field: "name",
       id: "name",
-      label: "텍스트",
+      label: "Column1",
+      minWidth: 100,
       width: 100,
     },
     {
       cell: {
-        format: ({ value }) => `${String(value)} years`,
-        props: { style: { textAlign: "right" } },
+        format: ({ row }) => `Data ${row.index + 1}`,
       },
       field: "age",
       id: "age",
-      label: "포맷",
+      label: "Column2",
+      minWidth: 100,
       width: 100,
     },
     {
       cell: {
-        format: ({ value }) => <strong>{String(value)}</strong>,
-        props: { className: ({ value }) => (value === "Owner" ? "cell-owner" : undefined) },
+        format: ({ row }) => <strong>{`Data ${row.index + 1}`}</strong>,
+        props: {
+          className: ({ value }) => (value === "Owner" ? "cell-role-owner" : "cell-role-muted"),
+          style: ({ value }) => ({
+            textAlign: value === "Owner" ? "center" : "left",
+          }),
+        },
       },
       field: "role",
       id: "style",
-      label: "스타일",
+      label: "Column3",
+      minWidth: 100,
       width: 100,
     },
     {
       cell: {
-        renderer: ({ row, value }) => (
-          <span data-testid={`cell-renderer-${String(row.id)}`}>renderer:{String(value)}</span>
+        renderer: ({ row }) => (
+          <span data-testid={`cell-renderer-${String(row.id)}`}>
+            <Button size="default" variant="secondary">renderer:{`Data ${row.index + 1}`}</Button>
+          </span>
         ),
       },
       field: "name",
       id: "renderer",
-      label: "렌더러",
+      label: "Column4",
+      minWidth: 100,
       width: 100,
     },
     {
@@ -57,16 +77,18 @@ export function CellFeature() {
       },
       field: "locked",
       id: "locked",
-      label: "가드",
-      width: 100,
+      label: "Column5",
+      minWidth: 100,
+      width: 160,
     },
     {
       cell: {
-        format: ({ value }) => (value ? "활성" : "비활성"),
+        format: ({ row }) => `Data ${row.index + 1}`,
       },
       field: "active",
       id: "event",
-      label: "이벤트",
+      label: "Column6",
+      minWidth: 100,
       width: 100,
     },
   ];
@@ -74,35 +96,39 @@ export function CellFeature() {
   return (
     <section className="feature-panel">
       <FeatureSampleSection
-        description="Td Cell 포맷, 스타일, cell.renderer, onClickCell, onContextMenuCell, clipboard guard를 확인합니다."
+        description="Td Cell 포맷, 스타일, cell.renderer, onClickCell, onContextMenuCell, 복사/붙여넣기 차단 guard를 확인합니다."
         id="cell"
         title="Td Cell 예제"
       >
-        <pre className="state-output" data-testid="cell-event-log">
-          {eventLog}
-        </pre>
+        <Alert data-testid="cell-event-alert">
+          <AlertTitle>{eventLog.title}</AlertTitle>
+          <AlertDescription>{eventLog.detail}</AlertDescription>
+        </Alert>
         <KmsfDataTable
-          className="example-table"
+          className="example-table cell-style-example-table"
           columns={columns}
           data={rows}
           data-testid="data-table-viewport"
           getRowId={(row) => row.id}
           onChangeData={setRows}
           onClickCell={({ column, row }) => {
-            setEventLog(column.id === "locked" && row.id === "b" ? `차단된 셀:${String(row.id)}:${column.id}` : `셀 클릭:${String(row.id)}:${column.id}`);
+            setEventLog(
+              column.id === "locked" && row.id === "b"
+                ? { detail: `${String(row.id)} / ${column.id}`, title: "차단된 셀" }
+                : { detail: `${String(row.id)} / ${column.id}`, title: "셀 클릭" },
+            );
           }}
           onContextMenuCell={({ column, event, row }) => {
             event.preventDefault();
-            setEventLog(`셀 컨텍스트:${String(row.id)}:${column.id}`);
+            setEventLog({ detail: `${String(row.id)} / ${column.id}`, title: "셀 우클릭" });
           }}
           onDoubleClickCell={({ column, row }) => {
-            setEventLog(`셀 더블클릭:${String(row.id)}:${column.id}`);
+            setEventLog({ detail: `${String(row.id)} / ${column.id}`, title: "셀 더블클릭" });
           }}
           onKeyDownCell={({ column, event, row }) => {
-            setEventLog(`셀 키다운:${String(row.id)}:${column.id}:${event.key}`);
+            setEventLog({ detail: `${String(row.id)} / ${column.id} / ${event.key}`, title: "셀 키다운" });
           }}
           pagination={{ pageIndex: 0, pageSize: 30 }}
-          rowProps={{ className: (row) => (row.role === "Owner" ? "row-owner" : undefined) }}
           theme={{ density: "compact" }}
         />
       </FeatureSampleSection>

@@ -13,11 +13,11 @@ export function SizeFeature() {
     <section className="feature-panel feature-panel--size">
       <FeatureSampleSection
         className="feature-option-container--size"
-        description="300px, 500px, 브라우저 100% 기준으로 데이터 테이블 높이 반응을 확인합니다."
-        id="size"
+        description="300px 고정 높이와 부모 컨테이너 500px 높이를 테이블이 그대로 채우는지 확인합니다."
+        id="size-fixed"
         title="테이블 사이즈"
       >
-        <div className="size-example-grid">
+        <div className="size-example-grid size-example-grid--fixed">
           <section className="size-example">
             <h2>300px 고정</h2>
             <p>사용자가 지정한 높이 300px을 테이블이 그대로 채우는지 확인합니다.</p>
@@ -42,21 +42,6 @@ export function SizeFeature() {
                 columns={columns}
                 data={rows}
                 data-testid="data-table-size-parent"
-                getRowId={(row) => row.id}
-                pagination={{ pageIndex: 0, pageSize: 100 }}
-                theme={{ density: "compact" }}
-              />
-            </div>
-          </section>
-          <section className="size-example">
-            <h2>브라우저 100%</h2>
-            <p>브라우저 높이를 기준으로 컨테이너와 테이블이 같이 조정됩니다.</p>
-            <div className="size-case size-case--responsive" data-testid="size-case-responsive">
-              <KmsfDataTable
-                className="size-table"
-                columns={columns}
-                data={rows}
-                data-testid="data-table-size-responsive"
                 getRowId={(row) => row.id}
                 pagination={{ pageIndex: 0, pageSize: 100 }}
                 theme={{ density: "compact" }}

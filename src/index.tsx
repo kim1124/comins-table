@@ -228,6 +228,29 @@ function resolveRowProps<TData>(
   };
 }
 
+function getRowCustomBackground(style: React.CSSProperties | undefined) {
+  const background = style?.background ?? style?.backgroundColor;
+
+  return typeof background === "string" || typeof background === "number" ? background : undefined;
+}
+
+function getResolvedRowStyle(
+  rowHeight: number,
+  style: React.CSSProperties | undefined,
+  customBackground: string | number | undefined,
+) {
+  const resolvedStyle = { height: rowHeight, ...style };
+
+  if (customBackground === undefined) {
+    return resolvedStyle;
+  }
+
+  return {
+    ...resolvedStyle,
+    "--kmsf-data-table-row-custom-background": customBackground,
+  } as React.CSSProperties;
+}
+
 function createEventRow<TData>(entry: VisibleRowEntry<TData>): KmsfEventRow<TData> {
   return {
     data: entry.row,
@@ -713,7 +736,7 @@ function KmsfDataTableInner<TData>(
     }),
   );
   const stateRef = useRef(state);
-  const stateInputRef = useRef({ columnGroups, columns, data, getRowId, pagination, showHeader, theme });
+  const stateInputRef = useRef({ columnGroups, columns, data, getRowId, pagination, showHeader });
   const virtualBufferSize = Math.max(0, Math.floor(Number.isFinite(bufferSize) ? Number(bufferSize) : 25));
 
   useEffect(() => {
@@ -725,13 +748,12 @@ function KmsfDataTableInner<TData>(
       previousInput.data === data &&
       previousInput.getRowId === getRowId &&
       previousInput.pagination === pagination &&
-      previousInput.showHeader === showHeader &&
-      previousInput.theme === theme
+      previousInput.showHeader === showHeader
     ) {
       return;
     }
 
-    stateInputRef.current = { columnGroups, columns, data, getRowId, pagination, showHeader, theme };
+    stateInputRef.current = { columnGroups, columns, data, getRowId, pagination, showHeader };
     setState((current) => {
       const next = createKmsfDataTableState({
         columnLayout: serializeKmsfColumnLayout(current),
@@ -742,12 +764,12 @@ function KmsfDataTableInner<TData>(
         rows: data,
         showHeader,
         sort: current.sort,
-        theme: theme ?? current.theme,
+        theme: current.theme,
       });
 
       return canPreserveSelection(current, next) ? { ...next, selection: current.selection } : next;
     });
-  }, [columnGroups, columns, data, getRowId, pagination, showHeader, theme]);
+  }, [columnGroups, columns, data, getRowId, pagination, showHeader]);
 
   useEffect(() => {
     stateRef.current = state;
@@ -875,10 +897,11 @@ function KmsfDataTableInner<TData>(
     virtualized,
     visibleRowCount,
   ]);
+  const currentTheme = theme ?? state.theme;
   const densityClass =
-    state.theme.density === "compact"
+    currentTheme.density === "compact"
       ? "text-[11px]"
-      : state.theme.density === "spacious"
+      : currentTheme.density === "spacious"
         ? "text-[13px]"
         : "text-[length:var(--kmsf-font-size-base,12px)]";
   const columnWidths = useMemo(() => {
@@ -1802,11 +1825,11 @@ function KmsfDataTableInner<TData>(
 
   return (
     <div
-      className={["kmsf-data-table kmsf-typography-base h-full w-full overflow-hidden", densityClass, state.theme.className, className]
+      className={["kmsf-data-table kmsf-typography-base h-full w-full overflow-hidden", densityClass, currentTheme.className, className]
         .filter(Boolean)
         .join(" ")}
       data-show-header={state.showHeader ? "true" : undefined}
-      style={{ ...state.theme.style, ...style }}
+      style={{ ...currentTheme.style, ...style }}
     >
       {state.showHeader ? (
         <div className="kmsf-data-table__header" ref={headerRef}>
@@ -1855,6 +1878,7 @@ function KmsfDataTableInner<TData>(
             const rowRuntimeProps = resolveRowProps(rowProps, entry.row, entry.visibleIndex);
             const isRowSelected = state.selection.rowIds.includes(entry.rowId);
             const isViewportEndRow = emptyFillerHeight === 0 && entryIndex === rowWindow.entries.length - 1;
+            const rowCustomBackground = getRowCustomBackground(rowRuntimeProps.style);
             const rowRenderKey = virtualized ? `virtual-row-slot-${entryIndex}` : String(entry.rowId);
 
             return (
@@ -1878,7 +1902,9 @@ function KmsfDataTableInner<TData>(
                   .filter(Boolean)
                   .join(" ")}
 	                data-disabled={rowRuntimeProps.disabled ? "true" : undefined}
+	                data-kmsf-row-custom-background={rowCustomBackground === undefined ? undefined : "true"}
 	                data-kmsf-row-data-index={entry.dataIndex}
+	                data-kmsf-row-parity={entry.visibleIndex % 2 === 0 ? "even" : "odd"}
 	                data-row-draggable={rowRuntimeProps.draggable ? "true" : "false"}
 	                data-selected-row={isRowSelected ? "true" : undefined}
 	                data-testid={`row-${String(entry.rowId)}`}
@@ -1915,7 +1941,7 @@ function KmsfDataTableInner<TData>(
                   onDoubleClickRow?.(createRowPayload(event, entry));
                 }}
                 onKeyDown={(event) => handleRowKeyDown(event, entry, rowRuntimeProps.disabled)}
-                style={{ height: rowHeight, ...rowRuntimeProps.style }}
+                style={getResolvedRowStyle(rowHeight, rowRuntimeProps.style, rowCustomBackground)}
                 tabIndex={rowRuntimeProps.disabled ? -1 : 0}
               >
                 {visibleColumns.map((column, columnIndex) => {

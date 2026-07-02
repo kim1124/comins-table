@@ -4,75 +4,30 @@ import { Eye, EyeOff, RotateCcw, Save, Upload } from "lucide-react";
 import {
   KmsfDataTable,
   type KmsfColumnLayout,
-  type KmsfDataTableColumn,
   type KmsfDataTableRef,
 } from "../../../src";
 import { ActionButton, FeatureControls } from "../components/FeatureControls";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
-import { createBaseColumns, defaultColumnLayout } from "../fixtures/columns";
+import { MultiSelect } from "../components/ui/multi-select";
+import { createBaseColumns } from "../fixtures/columns";
+import { cloneDefaultLayout, createHeaderGroupColumns, dynamicColumnOptions } from "../fixtures/headerColumns";
 import { createExampleRows, type PersonRow } from "../fixtures/people";
-
-const headerColumnGroups = [
-  { children: ["name", "age"], id: "profile", label: "프로필" },
-  { children: ["active", "locked"], id: "status", label: "상태" },
-];
-
-function cloneDefaultLayout(): KmsfColumnLayout {
-  return {
-    columns: { ...defaultColumnLayout.columns },
-    groups: {},
-    order: [...defaultColumnLayout.order],
-  };
-}
-
-function cloneGroupLayout(): KmsfColumnLayout {
-  return {
-    columns: {},
-    groups: {},
-    order: ["name", "age", "active", "locked", "role"],
-  };
-}
-
-function createHeaderGroupColumns(): Array<KmsfDataTableColumn<PersonRow>> {
-  return [
-    { field: "name", label: "이름", minWidth: 80, sort: true, width: 160 },
-    {
-      cell: {
-        format: ({ value }) => `${String(value)} years`,
-        props: { style: { textAlign: "right" } },
-      },
-      field: "age",
-      label: "나이",
-      minWidth: 60,
-      sort: true,
-      width: 120,
-    },
-    {
-      cell: {
-        format: ({ value }) => (value ? "활성" : "비활성"),
-      },
-      field: "active",
-      label: "활성",
-      minWidth: 70,
-      width: 130,
-    },
-    { field: "locked", label: "잠금", minWidth: 80, width: 140 },
-    { field: "role", label: "역할", minWidth: 90, width: 140 },
-  ];
-}
 
 export function HeaderFeature() {
   const basicTableRef = useRef<KmsfDataTableRef<PersonRow>>(null);
   const layoutTableRef = useRef<KmsfDataTableRef<PersonRow>>(null);
-  const groupTableRef = useRef<KmsfDataTableRef<PersonRow>>(null);
   const [rows] = useState(() => createExampleRows(100));
   const columns = useMemo(() => createBaseColumns(), []);
-  const groupColumns = useMemo(() => createHeaderGroupColumns(), []);
+  const visibilityBaseColumns = useMemo(() => createHeaderGroupColumns(), []);
   const [, setBasicLayout] = useState<KmsfColumnLayout>(() => cloneDefaultLayout());
   const [layoutState, setLayoutState] = useState<KmsfColumnLayout>(() => cloneDefaultLayout());
-  const [groupLayout, setGroupLayout] = useState<KmsfColumnLayout>(() => cloneGroupLayout());
   const [savedLayout, setSavedLayout] = useState("");
   const [visibilityShowHeader, setVisibilityShowHeader] = useState(true);
+  const [visibilityColumnIds, setVisibilityColumnIds] = useState(() => dynamicColumnOptions.map((option) => option.value));
+  const visibilityColumns = useMemo(
+    () => visibilityBaseColumns.filter((column) => visibilityColumnIds.includes(String(column.id ?? column.field))),
+    [visibilityBaseColumns, visibilityColumnIds],
+  );
 
   const resetBasicLayout = () => {
     const nextLayout = cloneDefaultLayout();
@@ -85,12 +40,6 @@ export function HeaderFeature() {
     setSavedLayout("");
     setLayoutState(nextLayout);
     layoutTableRef.current?.setColumnLayout(nextLayout);
-  };
-
-  const resetGroupLayout = () => {
-    const nextLayout = cloneGroupLayout();
-    setGroupLayout(nextLayout);
-    groupTableRef.current?.setColumnLayout(nextLayout);
   };
 
   return (
@@ -130,20 +79,28 @@ export function HeaderFeature() {
             title="Header 숨김 / 표시"
           >
             <FeatureControls
+              options={
+                <MultiSelect
+                  data-testid="header-visibility-column-select"
+                  label="컬럼 선택"
+                  onChange={setVisibilityColumnIds}
+                  options={dynamicColumnOptions}
+                  values={visibilityColumnIds}
+                />
+              }
               actions={
-                <>
-                  <ActionButton icon={<Eye />} onClick={() => setVisibilityShowHeader(true)}>
-                    표시
-                  </ActionButton>
-                  <ActionButton icon={<EyeOff />} onClick={() => setVisibilityShowHeader(false)}>
-                    숨김
-                  </ActionButton>
-                </>
+                <ActionButton
+                  aria-pressed={visibilityShowHeader}
+                  icon={visibilityShowHeader ? <Eye /> : <EyeOff />}
+                  onClick={() => setVisibilityShowHeader((current) => !current)}
+                >
+                  Header 표시
+                </ActionButton>
               }
             />
             <KmsfDataTable
               className="example-table header-example-table"
-              columns={columns}
+              columns={visibilityColumns}
               data={rows}
               data-testid="header-visibility-viewport"
               getRowId={(row) => row.id}
@@ -201,61 +158,6 @@ export function HeaderFeature() {
           </FeatureSampleSection>
         </section>
 
-        <section data-testid="header-example-groups">
-          <FeatureSampleSection
-            description="2중 Header의 parent 이동, parent 리사이즈, group 숨김/표시를 확인합니다."
-            id="header-groups"
-            title="2중 헤더 예제"
-          >
-            <FeatureControls
-              actions={
-                <>
-                  <ActionButton
-                    icon={<EyeOff />}
-                    onClick={() => {
-                      const nextLayout = {
-                        ...groupLayout,
-                        groups: { ...groupLayout.groups, profile: { hidden: true } },
-                      };
-                      setGroupLayout(nextLayout);
-                      groupTableRef.current?.setColumnLayout(nextLayout);
-                    }}
-                  >
-                    그룹 숨김
-                  </ActionButton>
-                  <ActionButton
-                    icon={<Eye />}
-                    onClick={() => {
-                      const nextLayout = {
-                        ...groupLayout,
-                        groups: { ...groupLayout.groups, profile: { hidden: false } },
-                      };
-                      setGroupLayout(nextLayout);
-                      groupTableRef.current?.setColumnLayout(nextLayout);
-                    }}
-                  >
-                    그룹 표시
-                  </ActionButton>
-                  <ActionButton icon={<RotateCcw />} onClick={resetGroupLayout}>
-                    초기화
-                  </ActionButton>
-                </>
-              }
-            />
-            <KmsfDataTable
-              className="example-table header-example-table"
-              columnGroups={headerColumnGroups}
-              columns={groupColumns}
-              data={rows}
-              data-testid="header-groups-viewport"
-              getRowId={(row) => row.id}
-              onChangeColumnLayout={setGroupLayout}
-              pagination={{ pageIndex: 0, pageSize: 30 }}
-              ref={groupTableRef}
-              theme={{ density: "compact" }}
-            />
-          </FeatureSampleSection>
-        </section>
       </div>
     </section>
   );

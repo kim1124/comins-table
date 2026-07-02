@@ -1,102 +1,107 @@
 import { useMemo, useState } from "react";
-import { Database } from "lucide-react";
 
 import { KmsfDataTable, type KmsfDataTableColumn } from "../../../src";
-import { ActionButton, FeatureControls } from "../components/FeatureControls";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
-import { createExampleRows, createVirtualRows, type PersonRow } from "../fixtures/people";
-
-function formatBodyRole(index: number) {
-  return index % 2 === 0 ? "Owner" : "Viewer";
-}
+import { createVirtualRows, type PersonRow } from "../fixtures/people";
 
 export function BodyFeature() {
-  const [rows, setRows] = useState<PersonRow[]>(() => createExampleRows(100));
+  const [rows] = useState<PersonRow[]>(() => createVirtualRows(100_000));
   const columns = useMemo<Array<KmsfDataTableColumn<PersonRow>>>(
     () => [
       {
         cell: {
-          format: ({ row }) => `Row ${row.index}`,
+          format: ({ row }) => `Data ${row.index + 1}`,
         },
         field: "name",
-        label: "이름",
+        label: "Column1",
+        minWidth: 100,
         sort: true,
+        width: 100,
       },
       {
         cell: {
-          format: ({ row }) => `${row.index} years`,
-          props: { style: { textAlign: "right" } },
+          format: ({ row }) => `Data ${row.index + 1}`,
         },
         field: "age",
-        label: "나이",
+        label: "Column2",
+        minWidth: 100,
         sort: true,
+        width: 100,
       },
       {
         cell: {
-          format: ({ row }) => <strong>{formatBodyRole(row.index)}</strong>,
-          props: { className: ({ row }) => (formatBodyRole(row.index) === "Owner" ? "cell-owner" : undefined) },
+          format: ({ row }) => `Data ${row.index + 1}`,
         },
         field: "role",
-        label: "역할",
+        label: "Column3",
+        minWidth: 100,
+        width: 100,
       },
       {
         cell: {
-          format: ({ row }) => `row-${row.index}`,
+          format: ({ row }) => `Data ${row.index + 1}`,
         },
         field: "id",
-        label: "ID",
+        label: "Column4",
+        minWidth: 100,
         width: 140,
       },
       {
         cell: {
-          format: ({ row }) => (row.index % 2 === 0 ? "활성" : "비활성"),
+          format: ({ row }) => `Data ${row.index + 1}`,
         },
         field: "active",
-        label: "활성",
+        label: "Column5",
+        minWidth: 100,
         width: 120,
       },
       {
         cell: {
-          format: ({ row }) => `lock-${row.index}`,
+          format: ({ row }) => `Data ${row.index + 1}`,
         },
         field: "locked",
-        label: "잠금",
+        label: "Column6",
+        minWidth: 100,
         width: 160,
       },
       {
         cell: {
-          format: ({ row }) => `${formatBodyRole(row.index)}-${row.index + 1}`,
+          format: ({ row }) => `Data ${row.index + 1}`,
         },
         field: "role",
         id: "group",
-        label: "그룹",
+        label: "Column7",
+        minWidth: 100,
         width: 140,
       },
       {
         cell: {
-          format: ({ row }) => String((row.index + 1) * 10),
+          format: ({ row }) => `Data ${row.index + 1}`,
         },
         field: "age",
         id: "score",
-        label: "점수",
+        label: "Column8",
+        minWidth: 100,
         width: 120,
       },
       {
         cell: {
-          format: ({ row }) => (row.index % 2 === 0 ? "운영" : "대기"),
+          format: ({ row }) => `Data ${row.index + 1}`,
         },
         field: "active",
         id: "status",
-        label: "상태",
+        label: "Column9",
+        minWidth: 100,
         width: 120,
       },
       {
         cell: {
-          format: ({ row }) => `memo-${row.index + 1}`,
+          format: ({ row }) => `Data ${row.index + 1}`,
         },
         field: "name",
         id: "memo",
-        label: "메모",
+        label: "Column10",
+        minWidth: 100,
         width: 160,
       },
     ],
@@ -106,21 +111,12 @@ export function BodyFeature() {
   return (
     <section className="feature-panel">
       <FeatureSampleSection
-        description="virtualized, 대용량 data, pagination pageSize를 사용해 Header/Body split과 대용량 데이터 표시를 확인합니다."
+        description="대용량 데이터 10만 Row를 처음부터 로드하고 virtualized, 안정적인 getRowId, 전체 pageSize 계약으로 렌더링 Row 수가 제한되는지 확인합니다."
         id="body"
         title="대용량 데이터 표시"
       >
-        <FeatureControls
-          actions={
-            <>
-              <ActionButton icon={<Database />} onClick={() => setRows(createVirtualRows(100_000))}>
-                10만 행 로드
-              </ActionButton>
-            </>
-          }
-        />
         <KmsfDataTable
-          className="example-table"
+          className="example-table body-virtualization-table"
           columns={columns}
           data={rows}
           data-testid="data-table-viewport"

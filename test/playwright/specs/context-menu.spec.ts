@@ -20,7 +20,7 @@ test("playground shows callback-driven shadcn context menu examples", async ({ p
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
 
-  await page.getByRole("button", { exact: true, name: "Context Menu 예제" }).click();
+  await page.goto("/examples/context-menu");
   await expect(page.getByTestId("feature-option-description").first()).toContainText("우클릭");
   const modifier = process.platform === "darwin" || browserName === "webkit" ? "Meta" : "Control";
   await page.getByTestId("row-a").click();
@@ -53,12 +53,11 @@ test("playground shows callback-driven shadcn context menu examples", async ({ p
   await expect(page.getByTestId("context-menu-alert")).toContainText("셀 데이터 보기");
   await expect(page.getByTestId("context-menu-alert")).toContainText("메뉴를 선택했습니다");
 
-  await page.getByRole("button", { name: "Cell 컨텍스트 비활성화" }).click();
+  await expect(page.getByRole("button", { name: "Cell 컨텍스트 비활성화" })).toHaveCount(0);
   await page.getByTestId("cell-b-name").click({ button: "right" });
-  await expect(page.getByRole("menuitem", { name: "행 데이터 보기" })).toBeVisible();
-  await expect(page.getByText("Cell 메뉴", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("menuitem", { name: "셀 데이터 보기" })).toHaveCount(0);
-  await expect(page.getByTestId("context-data-preview")).not.toContainText('"columnId"');
+  await expect(page.getByText("Cell 메뉴", { exact: true })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "셀 데이터 보기" })).toBeVisible();
+  await expect(page.getByTestId("context-data-preview")).toContainText('"columnId": "name"');
 
   expect(diagnostics).toEqual([]);
 });
