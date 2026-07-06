@@ -34,6 +34,10 @@ describe("@kmsf/data-table public API boundary", () => {
     expect(core.selectKmsfRow).toBeUndefined();
     expect(core.selectKmsfCell).toBeUndefined();
     expect(selection.selectCellRange).toBeDefined();
+    expect(entry.exportKmsfRowsToCsv).toBeDefined();
+    expect(entry.exportKmsfRowsToJson).toBeDefined();
+    expect(core.exportKmsfRowsToCsv).toBeDefined();
+    expect(core.exportKmsfRowsToJson).toBeDefined();
     expect(entry.KmsfExcelExport).toBeUndefined();
     expect(entry.KmsfChartsPanel).toBeUndefined();
     expect(entry.KmsfAiAssistant).toBeUndefined();

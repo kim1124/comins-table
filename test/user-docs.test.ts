@@ -15,6 +15,10 @@ const userDocs = [
   "10-selection.md",
   "11-virtualization.md",
   "12-playground.md",
+  "13-loading-empty.md",
+  "14-export.md",
+  "15-infinite-scroll.md",
+  "16-lazy-load.md",
 ];
 
 const implementedTerms = [
@@ -52,6 +56,21 @@ const implementedTerms = [
   "setSelectedRows",
   "setMoveTargetRow",
   "rowProps.draggable",
+  "loading",
+  "emptyComponent",
+  "skeletonRowCount",
+  "exportKmsfRowsToCsv",
+  "exportKmsfRowsToJson",
+  "infiniteScroll",
+  "infiniteScrollThreshold",
+  "hasMoreRows",
+  "loadingMore",
+  "onLoadMore",
+  "lazyLoad",
+  "lazyLoadBatchSize",
+  "lazyLoadMode",
+  "lazyLoadThreshold",
+  "onLazyLoad",
 ];
 
 function readWorkspaceFile(path: string) {
@@ -109,5 +128,17 @@ describe("@kmsf/data-table user documentation contract", () => {
     expect(unavailableList).not.toContain("범위 선택 고도화");
     expect(unavailableList).not.toContain("multi-cell clipboard");
     expect(advancedFeature).toContain("시각적 Fill Handle UI");
+  });
+
+  it("documents the 100000-row virtualization performance contract", () => {
+    const virtualization = readWorkspaceFile("docs/user/11-virtualization.md");
+
+    expect(virtualization).toContain("100000");
+    expect(virtualization).toContain("Chrome DevTools Performance Monitor");
+    expect(virtualization).toContain("DOM Node");
+    expect(virtualization).toContain("JS heap");
+    expect(virtualization).toContain('"buffer-size"');
+    expect(virtualization).toContain("rowHeight");
+    expect(virtualization).toContain("--kmsf-data-table-row-height");
   });
 });

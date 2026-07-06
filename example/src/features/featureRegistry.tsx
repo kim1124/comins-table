@@ -5,7 +5,11 @@ import { CellFeature } from "./CellFeature";
 import { ColumnGroupFeature } from "./ColumnGroupFeature";
 import { ComponentFeature } from "./ComponentFeature";
 import { ContextMenuFeature } from "./ContextMenuFeature";
+import { ExportFeature } from "./ExportFeature";
 import { HeaderFeature } from "./HeaderFeature";
+import { InfiniteScrollFeature } from "./InfiniteScrollFeature";
+import { LazyLoadFeature } from "./LazyLoadFeature";
+import { LoadingStateFeature } from "./LoadingStateFeature";
 import { PaginationFeature } from "./PaginationFeature";
 import { RowFeature } from "./RowFeature";
 import { SizeFeature } from "./SizeFeature";
@@ -63,6 +67,19 @@ export const featureRegistry: FeatureDefinition[] = [
     summary: "Basic, Dark, Skyblue, Mint, Gray, Orange 샘플 테마와 rowHeight 계약 예제입니다.",
   },
   {
+    Component: LoadingStateFeature,
+    description: "초기 로딩, 재조회 로딩, 빈 데이터 상태에서 Header와 Body가 어떻게 표시되는지 확인하는 예제 페이지입니다.",
+    id: "loading",
+    label: "Loading / Empty State",
+    options: [
+      { description: "초기 로딩과 재조회 로딩을 구분하는 상태", example: "loading={isLoading}", name: "loading" },
+      { description: "초기 로딩 skeleton row 개수", example: "skeletonRowCount={5}", name: "skeletonRowCount" },
+      { description: "데이터가 없을 때 출력할 fallback", example: "emptyComponent={<Empty />}", name: "emptyComponent" },
+      { description: "기존 Row 위에 표시할 overlay", example: "loadingComponent={<Spinner />}", name: "loadingComponent" },
+    ],
+    summary: "초기 skeleton, 재조회 overlay, empty state와 Header 유지 예제입니다.",
+  },
+  {
     Component: HeaderFeature,
     description: "Header 포맷, 정렬, 스타일, 클래스, 레이아웃 저장을 확인하는 예제 페이지입니다.",
     id: "header",
@@ -112,6 +129,33 @@ export const featureRegistry: FeatureDefinition[] = [
       { description: "전체 Row를 대상으로 한 페이지 크기", example: "{ pageSize: rows.length }", name: "pagination" },
     ],
     summary: "10만 행을 대상으로 한 버추얼 스크롤 예제입니다.",
+  },
+  {
+    Component: InfiniteScrollFeature,
+    description: "스크롤 하단 근접 시 원격 API에서 offset/limit batch를 받아 Row를 추가하는 예제 페이지입니다.",
+    id: "infinite-scroll",
+    label: "Infinite Scroll",
+    options: [
+      { description: "append-mode Lazy Load 활성화", example: "lazyLoad", name: "lazyLoad" },
+      { description: "원격 API batch 크기", example: "lazyLoadBatchSize={40}", name: "lazyLoadBatchSize" },
+      { description: "하단에서 load trigger가 발생하는 거리", example: "lazyLoadThreshold={140}", name: "lazyLoadThreshold" },
+      { description: "offset, limit, signal로 원격 API 호출", example: "onLazyLoad={fetchRows}", name: "onLazyLoad" },
+    ],
+    summary: "원격 API batch를 append하는 infinite scroll 예제입니다.",
+  },
+  {
+    Component: LazyLoadFeature,
+    description: "onLazyLoad로 원격 datasource에서 offset/limit 기반 Row를 가져오는 예제 페이지입니다.",
+    id: "lazy-load",
+    label: "Lazy Load",
+    options: [
+      { description: "append-mode Lazy Load 활성화", example: "lazyLoad", name: "lazyLoad" },
+      { description: "한 번에 가져올 Row 수", example: "lazyLoadBatchSize={30}", name: "lazyLoadBatchSize" },
+      { description: "하단에서 load trigger가 발생하는 거리", example: "lazyLoadThreshold={140}", name: "lazyLoadThreshold" },
+      { description: "현재 지원하는 append mode", example: 'lazyLoadMode="append"', name: "lazyLoadMode" },
+      { description: "offset, limit, signal을 받아 Row와 total을 반환", example: "onLazyLoad={fetchRows}", name: "onLazyLoad" },
+    ],
+    summary: "DummyJSON 형태의 원격 API와 연결하는 append-mode Lazy Load 예제입니다.",
   },
   {
     Component: CellFeature,
@@ -164,6 +208,18 @@ export const featureRegistry: FeatureDefinition[] = [
       { description: "Cell 우클릭 callback", example: "onContextMenuCell={...}", name: "onContextMenuCell" },
     ],
     summary: "행 또는 셀을 우클릭해 단일 행 선택과 callback 기반 컨텍스트 메뉴 데이터를 확인하는 예제입니다.",
+  },
+  {
+    Component: ExportFeature,
+    description: "현재 rows와 export column 정의를 CSV 또는 JSON 문자열로 변환하는 helper 예제 페이지입니다.",
+    id: "export",
+    label: "Export Helper",
+    options: [
+      { description: "CSV 문자열 생성", example: "exportKmsfRowsToCsv({ columns, rows })", name: "exportKmsfRowsToCsv" },
+      { description: "JSON 문자열 생성", example: "exportKmsfRowsToJson({ columns, rows })", name: "exportKmsfRowsToJson" },
+      { description: "출력 순서와 Header 이름 override", example: "{ columnOrder, headerOverrides }", name: "export options" },
+    ],
+    summary: "CSV/JSON export helper 출력 예제입니다.",
   },
 ];
 

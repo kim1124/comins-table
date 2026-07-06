@@ -1668,6 +1668,13 @@ body {
   min-height: 500px;
 }
 
+.feature-panel--header .feature-option-sample__inner {
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .feature-option-sample > .kmsf-data-table,
 .feature-option-sample > .example-table.kmsf-data-table,
 .feature-option-sample__inner > .kmsf-data-table,
@@ -1678,7 +1685,7 @@ body {
 .header-example-table.example-table.kmsf-data-table {
   height: 100%;
   max-height: 100%;
-  min-height: 300px;
+  min-height: 0;
   width: 100%;
 }
 
@@ -2114,9 +2121,13 @@ body {
 
 .header-dynamic-grid {
   display: grid;
+  flex: 1 1 auto;
   gap: 12px;
   grid-template-columns: minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
   min-width: 0;
+  overflow: hidden;
 }
 
 .header-dynamic-grid > section {

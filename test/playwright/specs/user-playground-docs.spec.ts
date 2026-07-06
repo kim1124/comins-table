@@ -21,14 +21,18 @@ const featurePages = [
   { feature: "basic-crud", label: "CRUD 동작", route: "/examples/crud" },
   { feature: "size", label: "테이블 사이즈", route: "/examples/size" },
   { feature: "theme", label: "Theme", route: "/examples/theme" },
+  { feature: "loading", label: "Loading / Empty State", route: "/examples/loading" },
   { feature: "header", label: "Header 예제", route: "/examples/header" },
   { feature: "column-groups", label: "Header 그룹", route: "/examples/column-groups" },
   { feature: "pagination", label: "Pagination", route: "/performance/pagination" },
+  { feature: "infinite-scroll", label: "Infinite Scroll", route: "/performance/infinite-scroll" },
+  { feature: "lazy-load", label: "Lazy Load", route: "/performance/lazy-load" },
   { feature: "body", label: "대용량 데이터 표시", route: "/performance/virtualization" },
   { feature: "cell", label: "Td Cell 예제", route: "/examples/cell" },
   { feature: "component", label: "컴포넌트 예제", route: "/examples/component" },
   { feature: "row", label: "Tr Row 예제", route: "/examples/row" },
   { feature: "context-menu", label: "Context Menu 예제", route: "/examples/context-menu" },
+  { feature: "export", label: "Export Helper", route: "/examples/export" },
 ];
 
 test("user playground exposes every current feature page with recreated content", async ({ page }) => {

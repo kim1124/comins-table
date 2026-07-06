@@ -53,14 +53,14 @@ describe("@kmsf/data-table harness contract", () => {
 
   it("keeps playground documentation and remount contracts explicit", () => {
     const guide = readPackageFile("GUIDE.md");
-    const designDraft = readPackageFile("docs/agents/src/2026-05-28-data-table-feature-design-draft.md");
-    const examplePlan = readPackageFile("docs/agents/example/plan.md");
+    const readme = readPackageFile("README.md");
+    const playgroundDocs = readPackageFile("docs/user/12-playground.md");
 
     expect(guide).toContain("좌측 feature aside 20%");
     expect(guide).toContain("우측 data table example content 80%");
-    expect(designDraft).toContain("Playground And Documentation Environment");
-    expect(designDraft).toContain("Basic CRUD");
-    expect(designDraft).toContain("destroy하고 새 예제 content를 recreate");
-    expect(examplePlan).toContain("Basic -> Header -> Basic CRUD");
+    expect(readme).toContain("Playground");
+    expect(readme).toContain("CRUD");
+    expect(playgroundDocs).toContain("route 이동 시 이전 page와 live example subtree는 unmount");
+    expect(playgroundDocs).toContain("/examples/crud");
   });
 });

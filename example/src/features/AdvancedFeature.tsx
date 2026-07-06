@@ -6,7 +6,7 @@ const unavailable = [
   "별도 외부 store adapter 객체",
   "시각적 Fill Handle UI",
   "server-side row model",
-  "lazy-load row model",
+  "viewport datasource model",
   "그룹핑",
   "집계",
   "피벗",
@@ -32,7 +32,7 @@ export function AdvancedFeature() {
             <li key={item}>{item}</li>
           ))}
         </ul>
-        <p>후속 계획: docs/agents/src/2026-06-04-residual-risk-resolution-plan.md</p>
+        <p>후속 기능은 별도 승인된 계획과 검증 기준을 만든 뒤 진행합니다.</p>
       </div>
       <KmsfDataTable
         className="example-table"

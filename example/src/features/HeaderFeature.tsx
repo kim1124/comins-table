@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, EyeOff, RotateCcw, Save, Upload } from "lucide-react";
 
 import {
@@ -10,24 +10,73 @@ import { ActionButton, FeatureControls } from "../components/FeatureControls";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { MultiSelect } from "../components/ui/multi-select";
 import { createBaseColumns } from "../fixtures/columns";
-import { cloneDefaultLayout, createHeaderGroupColumns, dynamicColumnOptions } from "../fixtures/headerColumns";
+import { cloneDefaultLayout, cloneGroupLayout, createHeaderGroupColumns, dynamicColumnOptions } from "../fixtures/headerColumns";
 import { createExampleRows, type PersonRow } from "../fixtures/people";
+
+const allHeaderColumnIds = dynamicColumnOptions.map((option) => option.value);
+
+type HeaderLayoutSnapshot = {
+  columnIds: string[];
+  layout: KmsfColumnLayout;
+};
+
+function normalizeHeaderColumnIds(columnIds: unknown, fallbackColumnIds: string[]) {
+  if (!Array.isArray(columnIds)) {
+    return fallbackColumnIds;
+  }
+
+  const allowedIds = new Set(allHeaderColumnIds);
+
+  return columnIds.filter((columnId): columnId is string => typeof columnId === "string" && allowedIds.has(columnId));
+}
+
+function parseHeaderLayoutSnapshot(value: string): HeaderLayoutSnapshot {
+  const parsed = JSON.parse(value) as HeaderLayoutSnapshot | KmsfColumnLayout;
+
+  if (parsed && typeof parsed === "object" && "layout" in parsed) {
+    return {
+      columnIds: normalizeHeaderColumnIds(parsed.columnIds, allHeaderColumnIds),
+      layout: parsed.layout,
+    };
+  }
+
+  return {
+    columnIds: allHeaderColumnIds,
+    layout: parsed,
+  };
+}
 
 export function HeaderFeature() {
   const basicTableRef = useRef<KmsfDataTableRef<PersonRow>>(null);
   const layoutTableRef = useRef<KmsfDataTableRef<PersonRow>>(null);
+  const pendingLayoutRef = useRef<KmsfColumnLayout | null>(null);
   const [rows] = useState(() => createExampleRows(100));
   const columns = useMemo(() => createBaseColumns(), []);
   const visibilityBaseColumns = useMemo(() => createHeaderGroupColumns(), []);
+  const layoutBaseColumns = useMemo(() => createHeaderGroupColumns(), []);
   const [, setBasicLayout] = useState<KmsfColumnLayout>(() => cloneDefaultLayout());
-  const [layoutState, setLayoutState] = useState<KmsfColumnLayout>(() => cloneDefaultLayout());
+  const [layoutState, setLayoutState] = useState<KmsfColumnLayout>(() => cloneGroupLayout());
   const [savedLayout, setSavedLayout] = useState("");
   const [visibilityShowHeader, setVisibilityShowHeader] = useState(true);
   const [visibilityColumnIds, setVisibilityColumnIds] = useState(() => dynamicColumnOptions.map((option) => option.value));
+  const [layoutColumnIds, setLayoutColumnIds] = useState(() => [...allHeaderColumnIds]);
   const visibilityColumns = useMemo(
     () => visibilityBaseColumns.filter((column) => visibilityColumnIds.includes(String(column.id ?? column.field))),
     [visibilityBaseColumns, visibilityColumnIds],
   );
+  const layoutColumns = useMemo(
+    () => layoutBaseColumns.filter((column) => layoutColumnIds.includes(String(column.id ?? column.field))),
+    [layoutBaseColumns, layoutColumnIds],
+  );
+
+  useEffect(() => {
+    if (!pendingLayoutRef.current) {
+      return;
+    }
+
+    layoutTableRef.current?.setColumnLayout(pendingLayoutRef.current);
+    pendingLayoutRef.current = null;
+  }, [layoutColumns]);
 
   const resetBasicLayout = () => {
     const nextLayout = cloneDefaultLayout();
@@ -36,9 +85,11 @@ export function HeaderFeature() {
   };
 
   const resetSavedLayout = () => {
-    const nextLayout = cloneDefaultLayout();
+    const nextLayout = cloneGroupLayout();
     setSavedLayout("");
     setLayoutState(nextLayout);
+    setLayoutColumnIds([...allHeaderColumnIds]);
+    pendingLayoutRef.current = nextLayout;
     layoutTableRef.current?.setColumnLayout(nextLayout);
   };
 
@@ -118,18 +169,43 @@ export function HeaderFeature() {
             title="컬럼 설정 저장 / 불러오기"
           >
             <FeatureControls
+              options={
+                <MultiSelect
+                  data-testid="header-layout-column-select"
+                  label="컬럼 선택"
+                  onChange={setLayoutColumnIds}
+                  options={dynamicColumnOptions}
+                  values={layoutColumnIds}
+                />
+              }
               actions={
                 <>
-                  <ActionButton icon={<Save />} onClick={() => setSavedLayout(JSON.stringify(layoutState))}>
+                  <ActionButton
+                    icon={<Save />}
+                    onClick={() =>
+                      setSavedLayout(
+                        JSON.stringify(
+                          {
+                            columnIds: layoutColumnIds,
+                            layout: layoutState,
+                          } satisfies HeaderLayoutSnapshot,
+                          null,
+                          2,
+                        ),
+                      )
+                    }
+                  >
                     저장
                   </ActionButton>
                   <ActionButton
                     icon={<Upload />}
                     onClick={() => {
                       if (savedLayout) {
-                        const nextLayout = JSON.parse(savedLayout) as KmsfColumnLayout;
-                        setLayoutState(nextLayout);
-                        layoutTableRef.current?.setColumnLayout(nextLayout);
+                        const nextSnapshot = parseHeaderLayoutSnapshot(savedLayout);
+                        setLayoutColumnIds(nextSnapshot.columnIds);
+                        setLayoutState(nextSnapshot.layout);
+                        pendingLayoutRef.current = nextSnapshot.layout;
+                        layoutTableRef.current?.setColumnLayout(nextSnapshot.layout);
                       }
                     }}
                   >
@@ -146,7 +222,7 @@ export function HeaderFeature() {
             </pre>
             <KmsfDataTable
               className="example-table header-example-table"
-              columns={columns}
+              columns={layoutColumns}
               data={rows}
               data-testid="header-layout-viewport"
               getRowId={(row) => row.id}

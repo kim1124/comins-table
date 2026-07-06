@@ -443,6 +443,25 @@ export type KmsfCopiedCellRange = {
   text: string;
 };
 
+export type KmsfExportFormat = "csv" | "json";
+
+export type KmsfExportValueSource = "formatted" | "raw";
+
+export type KmsfExportColumn<TData> = {
+  format?: (row: TData, rowIndex: number) => unknown;
+  id?: string;
+  label?: string;
+  value: (row: TData, rowIndex: number) => unknown;
+};
+
+export type KmsfExportRowsOptions<TData> = {
+  columnOrder?: string[];
+  columns: Array<KmsfExportColumn<TData>>;
+  headerOverrides?: Record<string, string>;
+  rows: readonly TData[];
+  valueSource?: KmsfExportValueSource;
+};
+
 export type KmsfCellAddress = {
   columnId: string;
   rowId: KmsfRowId;
@@ -720,6 +739,8 @@ function createCellComponentParams<TData>(
   rowId: KmsfRowId,
   column: KmsfDataTableRuntimeColumn<TData>,
 ): KmsfCellComponentPayload<TData> {
+  const rowIndex = state.rowIds.indexOf(rowId);
+
   return {
     column: {
       definition: column,
@@ -730,10 +751,10 @@ function createCellComponentParams<TData>(
     },
     row: {
       data: row,
-      dataIndex: state.rows.indexOf(row),
+      dataIndex: rowIndex,
       disabled: false,
       id: rowId,
-      index: state.rowIds.indexOf(rowId),
+      index: rowIndex,
       selected: state.selection.rowIds.includes(rowId),
     },
     selection: {
@@ -1798,4 +1819,98 @@ export function fillKmsfCellRange<TData>(
     (currentState, cell) => pasteKmsfCell(currentState, cell, copied),
     state,
   );
+}
+
+function normalizeKmsfExportColumns<TData>({
+  columnOrder,
+  columns,
+}: Pick<KmsfExportRowsOptions<TData>, "columnOrder" | "columns">) {
+  if (!columnOrder?.length) {
+    return columns;
+  }
+
+  const columnsById = new Map(columns.map((column) => [column.id, column]));
+
+  return columnOrder
+    .map((id) => columnsById.get(id))
+    .filter((column): column is KmsfExportColumn<TData> => Boolean(column));
+}
+
+function stringifyKmsfExportValue(value: unknown) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value);
+  }
+
+  return JSON.stringify(value);
+}
+
+function escapeKmsfCsvCell(value: unknown) {
+  const text = stringifyKmsfExportValue(value);
+
+  return /[",\r\n]/u.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function getKmsfExportHeader<TData>(column: KmsfExportColumn<TData>, headerOverrides?: Record<string, string>) {
+  if (column.id && headerOverrides?.[column.id] !== undefined) {
+    return headerOverrides[column.id];
+  }
+
+  return column.label ?? column.id ?? "";
+}
+
+function getKmsfExportValue<TData>(
+  column: KmsfExportColumn<TData>,
+  row: TData,
+  rowIndex: number,
+  valueSource: KmsfExportValueSource,
+) {
+  if (valueSource === "formatted" && column.format) {
+    return column.format(row, rowIndex);
+  }
+
+  return column.value(row, rowIndex);
+}
+
+export function exportKmsfRowsToCsv<TData>({
+  columnOrder,
+  columns,
+  headerOverrides,
+  rows,
+  valueSource = "raw",
+}: KmsfExportRowsOptions<TData>) {
+  const exportColumns = normalizeKmsfExportColumns({ columnOrder, columns });
+  const lines = [
+    exportColumns.map((column) => escapeKmsfCsvCell(getKmsfExportHeader(column, headerOverrides))).join(","),
+    ...rows.map((row, rowIndex) =>
+      exportColumns.map((column) => escapeKmsfCsvCell(getKmsfExportValue(column, row, rowIndex, valueSource))).join(","),
+    ),
+  ];
+
+  return lines.join("\n");
+}
+
+export function exportKmsfRowsToJson<TData>({
+  columnOrder,
+  columns,
+  headerOverrides,
+  rows,
+  valueSource = "raw",
+}: KmsfExportRowsOptions<TData>) {
+  const exportColumns = normalizeKmsfExportColumns({ columnOrder, columns });
+  const data = rows.map((row, rowIndex) =>
+    Object.fromEntries(
+      exportColumns.map((column) => [
+        getKmsfExportHeader(column, headerOverrides),
+        getKmsfExportValue(column, row, rowIndex, valueSource),
+      ]),
+    ),
+  );
+
+  return JSON.stringify(data, null, 2);
 }

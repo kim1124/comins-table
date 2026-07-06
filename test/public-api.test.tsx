@@ -73,6 +73,66 @@ describe("@kmsf/data-table public API", () => {
     expect(<KmsfDataTable columns={columns} data={data} getRowId={(row) => row.id} />).toBeTruthy();
   });
 
+  it("accepts loading and empty state props", () => {
+    const columns = [{ field: "name", label: "Name" }];
+    const data = [{ id: "a", name: "Alpha" }];
+
+    expect(
+      <KmsfDataTable
+        columns={columns}
+        data={data}
+        emptyComponent={<span>데이터가 없습니다.</span>}
+        loading
+        loadingComponent={<span>불러오는 중입니다.</span>}
+        persistHeaderWhenEmpty
+        skeletonRowCount={3}
+      />,
+    ).toBeTruthy();
+  });
+
+  it("accepts controlled infinite scroll props", () => {
+    const columns = [{ field: "name", label: "Name" }];
+    const data = [{ id: "a", name: "Alpha" }];
+
+    expect(
+      <KmsfDataTable
+        columns={columns}
+        data={data}
+        getRowId={(row) => row.id}
+        hasMoreRows
+        infiniteScroll
+        infiniteScrollThreshold={160}
+        loadingMore={false}
+        onLoadMore={() => undefined}
+      />,
+    ).toBeTruthy();
+  });
+
+  it("accepts append-mode lazy load props", () => {
+    const columns = [{ field: "name", label: "Name" }];
+    const data = [{ id: "a", name: "Alpha" }];
+
+    expect(
+      <KmsfDataTable
+        columns={columns}
+        data={data}
+        getRowId={(row) => row.id}
+        lazyLoad
+        lazyLoadBatchSize={30}
+        lazyLoadMode="append"
+        lazyLoadThreshold={120}
+        onLazyLoad={async ({ limit, offset, reason, signal }) => {
+          expect(limit).toBe(30);
+          expect(offset).toBeGreaterThanOrEqual(0);
+          expect(["initial", "scroll", "refresh"]).toContain(reason);
+          expect(signal).toBeInstanceOf(AbortSignal);
+
+          return { rows: data, total: 1 };
+        }}
+      />,
+    ).toBeTruthy();
+  });
+
   it("rejects removed root-level format and props column API", () => {
     const data = [{ id: "a", name: "Alpha" }];
     const removed = [

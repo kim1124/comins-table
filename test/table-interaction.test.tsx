@@ -147,6 +147,244 @@ describe("@kmsf/data-table keyboard interaction", () => {
     expect(customRows.length).toBe(42);
   });
 
+  it("calls onLoadMore once when infinite scroll reaches the bottom threshold", () => {
+    const onLoadMore = vi.fn();
+    const element = renderTableElement(
+      <KmsfDataTable
+        columns={columns}
+        data={manyRows.slice(0, 20)}
+        data-testid="infinite-scroll-viewport"
+        getRowId={(row) => row.id}
+        hasMoreRows
+        infiniteScroll
+        infiniteScrollThreshold={80}
+        onLoadMore={onLoadMore}
+        pagination={{ pageIndex: 0, pageSize: 20 }}
+      />,
+    );
+    const viewport = element.querySelector<HTMLElement>("[data-testid='infinite-scroll-viewport']")!;
+
+    Object.defineProperties(viewport, {
+      clientHeight: { configurable: true, value: 300 },
+      scrollHeight: { configurable: true, value: 1000 },
+      scrollTop: { configurable: true, value: 610, writable: true },
+    });
+
+    act(() => {
+      viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+    });
+    expect(onLoadMore).toHaveBeenCalledTimes(0);
+
+    viewport.scrollTop = 650;
+    act(() => {
+      viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+    });
+    act(() => {
+      viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+    });
+
+    expect(onLoadMore).toHaveBeenCalledTimes(1);
+  });
+
+  it("blocks infinite load requests while loading or exhausted and renders a loading row", () => {
+    const onLoadMore = vi.fn();
+    const loadingElement = renderTableElement(
+      <KmsfDataTable
+        columns={columns}
+        data={manyRows.slice(0, 20)}
+        data-testid="infinite-scroll-viewport"
+        getRowId={(row) => row.id}
+        hasMoreRows
+        infiniteScroll
+        loadingMore
+        onLoadMore={onLoadMore}
+        pagination={{ pageIndex: 0, pageSize: 20 }}
+      />,
+    );
+    const loadingViewport = loadingElement.querySelector<HTMLElement>("[data-testid='infinite-scroll-viewport']")!;
+
+    expect(loadingElement.querySelector("[data-testid='data-table-infinite-loading-row']")).not.toBeNull();
+
+    Object.defineProperties(loadingViewport, {
+      clientHeight: { configurable: true, value: 300 },
+      scrollHeight: { configurable: true, value: 1000 },
+      scrollTop: { configurable: true, value: 900, writable: true },
+    });
+
+    act(() => {
+      loadingViewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+    });
+
+    expect(onLoadMore).toHaveBeenCalledTimes(0);
+
+    act(() => root?.unmount());
+    container?.remove();
+    root = undefined;
+    container = undefined;
+
+    const exhaustedElement = renderTableElement(
+      <KmsfDataTable
+        columns={columns}
+        data={manyRows.slice(0, 20)}
+        data-testid="infinite-scroll-viewport"
+        getRowId={(row) => row.id}
+        hasMoreRows={false}
+        infiniteScroll
+        onLoadMore={onLoadMore}
+        pagination={{ pageIndex: 0, pageSize: 20 }}
+      />,
+    );
+    const exhaustedViewport = exhaustedElement.querySelector<HTMLElement>("[data-testid='infinite-scroll-viewport']")!;
+
+    Object.defineProperties(exhaustedViewport, {
+      clientHeight: { configurable: true, value: 300 },
+      scrollHeight: { configurable: true, value: 1000 },
+      scrollTop: { configurable: true, value: 900, writable: true },
+    });
+
+    act(() => {
+      exhaustedViewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+    });
+
+    expect(onLoadMore).toHaveBeenCalledTimes(0);
+  });
+
+  it("loads initial lazy rows and renders the existing loading skeleton while pending", async () => {
+    let resolveLazyLoad: ((result: { rows: PersonRow[]; total: number }) => void) | undefined;
+    const onLazyLoad = vi.fn(
+      () =>
+        new Promise<{ rows: PersonRow[]; total: number }>((resolve) => {
+          resolveLazyLoad = resolve;
+        }),
+    );
+    const element = renderTableElement(
+      <KmsfDataTable
+        columns={columns}
+        data={[]}
+        getRowId={(row) => row.id}
+        lazyLoad
+        lazyLoadBatchSize={2}
+        onLazyLoad={onLazyLoad}
+        pagination={{ pageIndex: 0, pageSize: 2 }}
+        skeletonRowCount={2}
+      />,
+    );
+
+    expect(onLazyLoad).toHaveBeenCalledTimes(1);
+    expect(onLazyLoad).toHaveBeenLastCalledWith(
+      expect.objectContaining({ limit: 2, offset: 0, reason: "initial" }),
+    );
+    expect(onLazyLoad.mock.calls[0]?.[0].signal).toBeInstanceOf(AbortSignal);
+    expect(element.querySelectorAll("[data-testid='loading-skeleton-row']")).toHaveLength(2);
+
+    await act(async () => {
+      resolveLazyLoad?.({ rows, total: 2 });
+    });
+
+    expect(element.querySelector("[data-testid='row-a']")).not.toBeNull();
+    expect(element.querySelector("[data-testid='row-b']")).not.toBeNull();
+    expect(element.querySelector("[data-testid='loading-skeleton-row']")).toBeNull();
+  });
+
+  it("appends lazy rows near the bottom and blocks duplicate requests while pending", async () => {
+    let resolveInitial: ((result: { rows: PersonRow[]; total: number }) => void) | undefined;
+    let resolveAppend: ((result: { rows: PersonRow[]; total: number }) => void) | undefined;
+    const onLazyLoad = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<{ rows: PersonRow[]; total: number }>((resolve) => {
+            resolveInitial = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<{ rows: PersonRow[]; total: number }>((resolve) => {
+            resolveAppend = resolve;
+          }),
+      );
+    const element = renderTableElement(
+      <KmsfDataTable
+        columns={columns}
+        data={[]}
+        data-testid="lazy-load-viewport"
+        getRowId={(row) => row.id}
+        lazyLoad
+        lazyLoadBatchSize={2}
+        lazyLoadThreshold={80}
+        onLazyLoad={onLazyLoad}
+        pagination={{ pageIndex: 0, pageSize: 4 }}
+      />,
+    );
+
+    await act(async () => {
+      resolveInitial?.({ rows, total: 4 });
+    });
+
+    const viewport = element.querySelector<HTMLElement>("[data-testid='lazy-load-viewport']")!;
+    Object.defineProperties(viewport, {
+      clientHeight: { configurable: true, value: 300 },
+      scrollHeight: { configurable: true, value: 1000 },
+      scrollTop: { configurable: true, value: 650, writable: true },
+    });
+
+    act(() => {
+      viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+    });
+    act(() => {
+      viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+    });
+
+    expect(onLazyLoad).toHaveBeenCalledTimes(2);
+    expect(onLazyLoad).toHaveBeenLastCalledWith(
+      expect.objectContaining({ limit: 2, offset: 2, reason: "scroll" }),
+    );
+    expect(element.querySelector("[data-testid='data-table-infinite-loading-row']")).not.toBeNull();
+
+    await act(async () => {
+      resolveAppend?.({ rows: [{ age: 27, id: "c", name: "Gamma" }, { age: 24, id: "d", name: "Delta" }], total: 4 });
+    });
+
+    expect(element.querySelector("[data-testid='row-c']")).not.toBeNull();
+    expect(element.querySelector("[data-testid='row-d']")).not.toBeNull();
+    expect(element.querySelector("[data-testid='data-table-infinite-loading-row']")).toBeNull();
+  });
+
+  it("aborts pending lazy load requests on unmount and ignores stale results", async () => {
+    let capturedSignal: AbortSignal | undefined;
+    let resolveLazyLoad: ((result: { rows: PersonRow[]; total: number }) => void) | undefined;
+    const onLazyLoad = vi.fn(
+      ({ signal }) =>
+        new Promise<{ rows: PersonRow[]; total: number }>((resolve) => {
+          capturedSignal = signal;
+          resolveLazyLoad = resolve;
+        }),
+    );
+    const element = renderTableElement(
+      <KmsfDataTable
+        columns={columns}
+        data={[]}
+        getRowId={(row) => row.id}
+        lazyLoad
+        onLazyLoad={onLazyLoad}
+        pagination={{ pageIndex: 0, pageSize: 2 }}
+      />,
+    );
+
+    expect(onLazyLoad).toHaveBeenCalledTimes(1);
+
+    act(() => root?.unmount());
+    root = undefined;
+
+    expect(capturedSignal?.aborted).toBe(true);
+
+    await act(async () => {
+      resolveLazyLoad?.({ rows, total: 2 });
+    });
+
+    expect(element.querySelector("[data-testid='row-a']")).toBeNull();
+  });
+
   it("notifies onChangeData when internal interactions mutate data", () => {
     const onChangeData = vi.fn();
     const element = renderTableElement(

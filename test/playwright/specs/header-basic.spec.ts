@@ -297,6 +297,53 @@ test("playground verifies header-wide show and hide removes the whole header are
   expect(diagnostics).toEqual([]);
 });
 
+test("playground saves and restores layout column visibility", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/examples/header");
+
+  const layoutExample = page.getByTestId("header-example-layout");
+  const columnSelect = layoutExample.getByTestId("header-layout-column-select-trigger");
+  await expect(columnSelect).toHaveClass(/ui-selectbox-trigger/u);
+  await expect(columnSelect).toContainText("5개 컬럼");
+  await expect(layoutExample.getByTestId("header-age")).toBeVisible();
+  await expect(layoutExample.getByTestId("header-locked")).toBeVisible();
+
+  await columnSelect.click();
+  await expect(page.getByTestId("header-layout-column-select-content")).toBeVisible();
+  await page.getByTestId("header-layout-column-select-option-age").click();
+  await page.getByTestId("header-layout-column-select-option-locked").click();
+  await page.keyboard.press("Escape");
+
+  await expect(columnSelect).toContainText("3개 컬럼");
+  await expect(layoutExample.getByTestId("header-age")).toHaveCount(0);
+  await expect(layoutExample.getByTestId("header-locked")).toHaveCount(0);
+  await expect(layoutExample.getByTestId("cell-a-age")).toHaveCount(0);
+  await expect(layoutExample.getByTestId("cell-a-locked")).toHaveCount(0);
+
+  await layoutExample.getByRole("button", { exact: true, name: "저장" }).click();
+  const savedLayout = await layoutExample.getByTestId("saved-layout-json").textContent();
+  expect(savedLayout).toContain("\"columnIds\"");
+  const savedSnapshot = JSON.parse(savedLayout ?? "{}") as { columnIds?: string[] };
+  expect(savedSnapshot.columnIds).toEqual(["name", "active", "role"]);
+
+  await columnSelect.click();
+  await page.getByTestId("header-layout-column-select-option-age").click();
+  await page.getByTestId("header-layout-column-select-option-locked").click();
+  await page.keyboard.press("Escape");
+  await expect(columnSelect).toContainText("5개 컬럼");
+  await expect(layoutExample.getByTestId("header-age")).toBeVisible();
+  await expect(layoutExample.getByTestId("header-locked")).toBeVisible();
+
+  await layoutExample.getByRole("button", { exact: true, name: "불러오기" }).click();
+  await expect(columnSelect).toContainText("3개 컬럼");
+  await expect(layoutExample.getByTestId("header-age")).toHaveCount(0);
+  await expect(layoutExample.getByTestId("header-locked")).toHaveCount(0);
+  await expect(layoutExample.getByTestId("cell-a-age")).toHaveCount(0);
+  await expect(layoutExample.getByTestId("cell-a-locked")).toHaveCount(0);
+
+  expect(diagnostics).toEqual([]);
+});
+
 test("playground verifies dynamic column visibility for column groups", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/examples/column-groups");

@@ -314,7 +314,7 @@ test("pagination page owns the table paging example above virtualization", async
     .locator(".docs-sidebar__group", { hasText: "Body / Performance" })
     .getByRole("link")
     .allTextContents();
-  expect(performanceLinks).toEqual(["Pagination", "Virtualization"]);
+  expect(performanceLinks).toEqual(["Pagination", "Infinite Scroll", "Lazy Load", "Virtualization"]);
   expect(diagnostics).toEqual([]);
 });
 
@@ -410,6 +410,55 @@ test("header page keeps only requested actions and state outputs", async ({ page
   await expect(page.getByTestId("header-example-groups").getByRole("button", { exact: true, name: "Header 그룹 1 표시" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("header-example-groups").getByRole("button", { exact: true, name: "초기화" })).toBeVisible();
   await expect(page.getByTestId("column-group-dynamic-columns")).toBeVisible();
+  expect(diagnostics).toEqual([]);
+});
+
+test("header examples keep table body vertical scrolling available", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.setViewportSize({ height: 720, width: 1280 });
+  await page.goto("/examples/header");
+
+  for (const testId of [
+    "header-example-basic",
+    "header-example-visibility",
+    "header-example-layout",
+  ]) {
+    const metrics = await page
+      .getByTestId(testId)
+      .locator(".kmsf-data-table__body-viewport")
+      .evaluate((viewport) => {
+        const style = window.getComputedStyle(viewport);
+
+        return {
+          clientHeight: viewport.clientHeight,
+          overflowY: style.overflowY,
+          scrollHeight: viewport.scrollHeight,
+        };
+      });
+
+    expect(metrics.overflowY, `${testId} body overflow`).toBe("auto");
+    expect(metrics.scrollHeight, `${testId} body scrollHeight`).toBeGreaterThan(metrics.clientHeight + 1);
+  }
+
+  await page.goto("/examples/column-groups");
+  for (const testId of ["header-example-groups", "column-group-dynamic-columns"]) {
+    const metrics = await page
+      .getByTestId(testId)
+      .locator(".kmsf-data-table__body-viewport")
+      .evaluate((viewport) => {
+        const style = window.getComputedStyle(viewport);
+
+        return {
+          clientHeight: viewport.clientHeight,
+          overflowY: style.overflowY,
+          scrollHeight: viewport.scrollHeight,
+        };
+      });
+
+    expect(metrics.overflowY, `${testId} body overflow`).toBe("auto");
+    expect(metrics.scrollHeight, `${testId} body scrollHeight`).toBeGreaterThan(metrics.clientHeight + 1);
+  }
+
   expect(diagnostics).toEqual([]);
 });
 
@@ -602,6 +651,14 @@ test("docs sidebar keeps feature-specific route identities", async ({ page }) =>
   await expect(page.getByRole("link", { exact: true, name: "Pagination" })).toHaveAttribute(
     "href",
     "/performance/pagination",
+  );
+  await expect(page.getByRole("link", { exact: true, name: "Infinite Scroll" })).toHaveAttribute(
+    "href",
+    "/performance/infinite-scroll",
+  );
+  await expect(page.getByRole("link", { exact: true, name: "Lazy Load" })).toHaveAttribute(
+    "href",
+    "/performance/lazy-load",
   );
   await expect(page.getByRole("link", { exact: true, name: "Context Menu 예제" })).toHaveAttribute(
     "href",

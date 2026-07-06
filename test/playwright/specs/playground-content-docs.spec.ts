@@ -23,6 +23,8 @@ const featurePages = [
   ["/examples/theme", "CSS 변수와 theme class"],
   ["/examples/header", "1Depth 컬럼"],
   ["/examples/column-groups", "2Depth Header"],
+  ["/performance/infinite-scroll", "viewport 하단 근접"],
+  ["/performance/lazy-load", "append-mode public API"],
   ["/performance/virtualization", "대용량 데이터"],
   ["/examples/cell", "Td Cell 포맷"],
   ["/examples/row", "Tr Row 스타일"],
@@ -40,5 +42,36 @@ test("feature pages render Korean docs in the main content area", async ({ page 
   }
 
   await expect(page.getByRole("complementary", { name: "데이터 테이블 문서" })).toHaveCount(0);
+  expect(diagnostics).toEqual([]);
+});
+
+test("virtualization page explains the 100000-row performance contract", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/performance/virtualization");
+
+  const main = page.locator("main");
+  await expect(main).toContainText("100000");
+  await expect(main).toContainText("Chrome DevTools Performance Monitor");
+  await expect(main).toContainText("DOM Node");
+  await expect(main).toContainText("JS heap");
+  await expect(main).toContainText("rowHeight");
+  await expect(main).toContainText("buffer-size");
+
+  expect(diagnostics).toEqual([]);
+});
+
+test("ref api page documents ref type and visible-index semantics", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/api/ref");
+
+  const main = page.locator("main");
+  await expect(main).toContainText("KmsfDataTableRef<TData>");
+  await expect(main).toContainText("getColumnLayout");
+  await expect(main).toContainText("setColumnLayout");
+  await expect(main).toContainText("setSelectedRow");
+  await expect(main).toContainText("setMoveTargetRow");
+  await expect(main).toContainText("visible index");
+  await expect(main).not.toContainText("DataTableProps<T>");
+
   expect(diagnostics).toEqual([]);
 });

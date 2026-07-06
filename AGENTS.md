@@ -4,12 +4,12 @@
 
 - SCOPE: `@kmsf/data-table` package, `src`, `src/index.tsx`, `test`, `packages/data-table/reports`, `GUIDE.md`.
 - CONTEXT: Root `AGENTS.md`의 공통 process, skill, completion, reporting rule을 상속한다.
-- MUST: 세부 지식, 계획, 히스토리는 `docs/agents/README.md`를 따른다.
-- MUST: 하위 규칙은 `src/AGENTS.md`, `test/AGENTS.md`, `docs/agents/example/`를 따른다.
+- MUST: 하위 규칙은 `src/AGENTS.md`, `test/AGENTS.md`를 따른다.
+- MUST: Package documentation starts at `README.md`, `GUIDE.md`, and `docs/user/`.
 
 ## Implementation Rules
 
-- MUST: Review `docs/agents/src/2026-05-28-data-table-feature-design-draft.md` before changing table behavior or public API.
+- MUST: Review `README.md`, `GUIDE.md`, `docs/user/`, and existing source/tests before changing table behavior or public API.
 - DO NOT: introduce Next.js-only APIs.
 - MUST: Keep React and React DOM as peer dependencies.
 - MUST: Keep public exports discoverable from `src/index.tsx`.

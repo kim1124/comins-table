@@ -26,6 +26,12 @@ type DevtoolsMemorySnapshot = {
   nodes: number;
 };
 
+type RenderedRowSnapshot = {
+  firstDataIndex: number;
+  renderedRows: number;
+  scrollTop: number;
+};
+
 async function readDevtoolsMemorySnapshot(page: Page): Promise<DevtoolsMemorySnapshot> {
   const session = await page.context().newCDPSession(page);
 
@@ -49,6 +55,72 @@ async function readDevtoolsMemorySnapshot(page: Page): Promise<DevtoolsMemorySna
     jsHeapUsedSize: values.get("JSHeapUsedSize") ?? 0,
     liveElementCount,
     nodes,
+  };
+}
+
+async function readRenderedRowSnapshot(page: Page): Promise<RenderedRowSnapshot> {
+  return page.getByTestId("data-table-viewport").evaluate((element) => {
+    const rows = Array.from(
+      element.querySelectorAll<HTMLTableRowElement>(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
+    );
+    const first = rows[0];
+
+    return {
+      firstDataIndex: Number(first?.getAttribute("data-kmsf-row-data-index") ?? "-1"),
+      renderedRows: rows.length,
+      scrollTop: element.scrollTop,
+    };
+  });
+}
+
+async function measureWheelRowUpdateLatency(page: Page, deltaY: number, samples = 6) {
+  const durations: number[] = [];
+  let timeoutCount = 0;
+
+  for (let index = 0; index < samples; index += 1) {
+    const before = await readRenderedRowSnapshot(page);
+    const startedAt = performance.now();
+
+    await page.mouse.wheel(0, deltaY);
+
+    const changed = await page
+      .waitForFunction(
+        ({ previousFirstDataIndex, previousScrollTop }) => {
+          const element = document.querySelector<HTMLElement>('[data-testid="data-table-viewport"]');
+
+          if (!element) {
+            return false;
+          }
+
+          const first = element.querySelector<HTMLTableRowElement>(
+            ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+          );
+          const firstDataIndex = Number(first?.getAttribute("data-kmsf-row-data-index") ?? "-1");
+
+          return firstDataIndex !== previousFirstDataIndex || Math.abs(element.scrollTop - previousScrollTop) > 1;
+        },
+        { previousFirstDataIndex: before.firstDataIndex, previousScrollTop: before.scrollTop },
+        { timeout: 1200 },
+      )
+      .then(() => true)
+      .catch(() => false);
+
+    if (!changed) {
+      timeoutCount += 1;
+    }
+
+    durations.push(performance.now() - startedAt);
+    await page.waitForTimeout(20);
+  }
+
+  const sorted = [...durations].sort((left, right) => left - right);
+  const p95Index = Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1);
+
+  return {
+    average: durations.reduce((sum, duration) => sum + duration, 0) / durations.length,
+    max: Math.max(...durations),
+    p95: sorted[p95Index] ?? 0,
+    timeoutCount,
   };
 }
 
@@ -198,5 +270,44 @@ test("playground releases devtools counters after physical scrollbar drag and re
     Math.ceil(basicBaseline.jsEventListeners * 1.25),
   );
   expect(afterBasic.documents, failureContext).toBe(basicBaseline.documents);
+  expect(diagnostics).toEqual([]);
+});
+
+test("playground keeps wheel row updates responsive after physical scrollbar drag @perf", async ({ page }) => {
+  test.setTimeout(45_000);
+
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/performance/virtualization");
+  await page.addStyleTag({
+    content: `
+      [data-testid="data-table-viewport"]::-webkit-scrollbar {
+        width: 24px;
+      }
+
+      [data-testid="data-table-viewport"] {
+        overflow-y: scroll !important;
+        scrollbar-gutter: stable;
+      }
+
+      [data-testid="data-table-viewport"]::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.45);
+        border-radius: 8px;
+      }
+    `,
+  });
+
+  const viewport = page.getByTestId("data-table-viewport");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
+  await viewport.hover();
+
+  const baseline = await measureWheelRowUpdateLatency(page, 180);
+  await dragViewportScrollbarWithMouse(page, "down");
+  await expect.poll(() => readRenderedRowSnapshot(page).then((snapshot) => snapshot.firstDataIndex)).toBeGreaterThan(40_000);
+  const afterDrag = await measureWheelRowUpdateLatency(page, -180);
+  const failureContext = JSON.stringify({ afterDrag, baseline }, null, 2);
+
+  expect(afterDrag.timeoutCount, failureContext).toBe(0);
+  expect(afterDrag.average, failureContext).toBeLessThanOrEqual(Math.max(48, baseline.average * 1.35));
+  expect(afterDrag.p95, failureContext).toBeLessThanOrEqual(Math.max(72, baseline.p95 * 1.35));
   expect(diagnostics).toEqual([]);
 });

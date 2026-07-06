@@ -9,14 +9,10 @@ import {
   copyKmsfCellRange,
   copyKmsfRow,
   createKmsfDataTableState,
-  formatKmsfCellValue,
-  getKmsfCellClassName,
-  getKmsfCellStyle,
   getKmsfCellValue,
   getKmsfHeaderRows,
   getKmsfSortedRowIndexes,
   getKmsfVisibleColumns,
-  isKmsfCellDisabled,
   isKmsfCellInSelectedRange,
   moveKmsfColumn,
   moveKmsfColumnGroup,
@@ -42,7 +38,9 @@ import type {
   KmsfCellAddress,
   KmsfCellComponent,
   KmsfCellComponentPayload,
+  KmsfClipboardGuard,
   KmsfColumnLayout,
+  KmsfColumnProps,
   KmsfCopiedCell,
   KmsfCopiedCellRange,
   KmsfCopiedRow,
@@ -132,6 +130,20 @@ export type KmsfDataTableRef<TData = unknown> = {
   setSortState: (sort: KmsfSortState | null) => void;
 };
 
+export type KmsfLazyLoadReason = "initial" | "scroll" | "refresh";
+
+export type KmsfLazyLoadRequest = {
+  limit: number;
+  offset: number;
+  reason: KmsfLazyLoadReason;
+  signal: AbortSignal;
+};
+
+export type KmsfLazyLoadResult<TData> = {
+  rows: readonly TData[];
+  total?: number;
+};
+
 export type KmsfDataTableProps<TData> = {
   "buffer-size"?: number;
   cellSelection?: boolean;
@@ -140,7 +152,18 @@ export type KmsfDataTableProps<TData> = {
   columns: Array<KmsfDataTableColumn<TData>>;
   data: readonly TData[];
   "data-testid"?: string;
+  emptyComponent?: React.ReactNode;
   getRowId?: (row: TData, index: number) => KmsfRowId;
+  hasMoreRows?: boolean;
+  infiniteScroll?: boolean;
+  infiniteScrollThreshold?: number;
+  lazyLoad?: boolean;
+  lazyLoadBatchSize?: number;
+  lazyLoadMode?: "append";
+  lazyLoadThreshold?: number;
+  loading?: boolean;
+  loadingComponent?: React.ReactNode;
+  loadingMore?: boolean;
   onChangeColumnLayout?: (layout: KmsfColumnLayout) => void;
   onChangeData?: (data: TData[]) => void;
   onChangeSelection?: (selection: KmsfSelectionState) => void;
@@ -153,10 +176,14 @@ export type KmsfDataTableProps<TData> = {
   onDoubleClickRow?: (payload: KmsfRowEventPayload<TData>) => void;
   onKeyDownCell?: (payload: KmsfCellKeyboardEventPayload<TData>) => void;
   onKeyDownRow?: (payload: KmsfRowKeyboardEventPayload<TData>) => void;
+  onLazyLoad?: (request: KmsfLazyLoadRequest) => Promise<KmsfLazyLoadResult<TData>>;
+  onLoadMore?: () => void;
   pagination?: Partial<KmsfPaginationState>;
+  persistHeaderWhenEmpty?: boolean;
   rowHeight?: number;
   rowProps?: KmsfDataTableRowProps<TData>;
   showHeader?: boolean;
+  skeletonRowCount?: number;
   style?: React.CSSProperties;
   theme?: KmsfDataTableTheme;
   virtualized?: boolean;
@@ -337,6 +364,63 @@ function createCellComponentPayload<TData>(
     },
     value,
   };
+}
+
+function resolveRenderableCellProps<TData>(
+  column: KmsfDataTableRuntimeColumn<TData>,
+  payload: KmsfCellComponentPayload<TData>,
+): KmsfColumnProps<TData> | undefined {
+  const props = column.cell?.props;
+
+  return typeof props === "function" ? props(payload) : props;
+}
+
+function resolveRenderableCellGuard<TData>(
+  guard: KmsfClipboardGuard<TData> | undefined,
+  payload: KmsfCellComponentPayload<TData>,
+) {
+  if (guard === undefined) {
+    return true;
+  }
+
+  return typeof guard === "boolean" ? guard : guard(payload);
+}
+
+function isRenderableCellDisabled<TData>(
+  props: KmsfColumnProps<TData> | undefined,
+  payload: KmsfCellComponentPayload<TData>,
+) {
+  return props?.disabled !== undefined && resolveRenderableCellGuard(props.disabled, payload) === true;
+}
+
+function getRenderableCellClassName<TData>(
+  props: KmsfColumnProps<TData> | undefined,
+  payload: KmsfCellComponentPayload<TData>,
+) {
+  const className = props?.className;
+
+  return typeof className === "function" ? className(payload) : className;
+}
+
+function getRenderableCellStyle<TData>(
+  props: KmsfColumnProps<TData> | undefined,
+  payload: KmsfCellComponentPayload<TData>,
+) {
+  const style = props?.style;
+
+  return typeof style === "function" ? style(payload) : style;
+}
+
+function formatRenderableCellValue<TData>(
+  column: KmsfDataTableRuntimeColumn<TData>,
+  rawValue: unknown,
+  payload: KmsfCellComponentPayload<TData>,
+) {
+  if (column.cell?.format) {
+    return column.cell.format(payload);
+  }
+
+  return rawValue == null ? "" : String(rawValue);
 }
 
 function createHeaderComponentPayload<TData>(
@@ -676,7 +760,18 @@ function KmsfDataTableInner<TData>(
     columns,
     data,
     "data-testid": dataTestId,
+    emptyComponent,
     getRowId,
+    hasMoreRows = false,
+    infiniteScroll = false,
+    infiniteScrollThreshold = 160,
+    lazyLoad = false,
+    lazyLoadBatchSize = 30,
+    lazyLoadMode = "append",
+    lazyLoadThreshold,
+    loading = false,
+    loadingComponent,
+    loadingMore = false,
     onChangeColumnLayout,
     onChangeData,
     onChangeSelection,
@@ -689,10 +784,14 @@ function KmsfDataTableInner<TData>(
     onDoubleClickRow,
     onKeyDownCell,
     onKeyDownRow,
+    onLazyLoad,
+    onLoadMore,
     pagination,
+    persistHeaderWhenEmpty = true,
     rowHeight = 36,
     rowProps,
     showHeader = true,
+    skeletonRowCount,
     style,
     theme,
     virtualized = false,
@@ -706,6 +805,12 @@ function KmsfDataTableInner<TData>(
   const copiedRowRef = useRef<KmsfCopiedRow<TData> | null>(null);
   const columnPointerInteractionRef = useRef<KmsfColumnPointerInteraction | null>(null);
   const lastCellAnchorRef = useRef<KmsfCellAddress | null>(null);
+  const lazyAbortControllerRef = useRef<AbortController | null>(null);
+  const lazyLoadingReasonRef = useRef<KmsfLazyLoadReason | null>(null);
+  const lazyRequestIdRef = useRef(0);
+  const lazyRowsRef = useRef<readonly TData[]>(data);
+  const lazyTotalRowsRef = useRef<number | undefined>(undefined);
+  const lastLoadMoreRowCountRef = useRef<number | null>(null);
   const lastRowAnchorRef = useRef<KmsfRowId | null>(null);
   const rangeDragAnchorRef = useRef<KmsfCellAddress | null>(null);
   const rangeDragLastAddressRef = useRef<KmsfCellAddress | null>(null);
@@ -721,23 +826,116 @@ function KmsfDataTableInner<TData>(
   const [movingGroupId, setMovingGroupId] = useState<string | null>(null);
   const [columnMovePointer, setColumnMovePointer] = useState<{ x: number; y: number } | null>(null);
   const [columnMoveTargetId, setColumnMoveTargetId] = useState<string | null>(null);
+  const [lazyLoadingReason, setLazyLoadingReason] = useState<KmsfLazyLoadReason | null>(null);
+  const [lazyRows, setLazyRows] = useState<readonly TData[]>(data);
+  const [lazyTotalRows, setLazyTotalRows] = useState<number | undefined>(undefined);
   const [resizingColumnId, setResizingColumnId] = useState<string | null>(null);
   const [rowMoveState, setRowMoveState] = useState<KmsfRowMoveState | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
+  const effectiveData = lazyLoad ? lazyRows : data;
   const [state, setState] = useState(() =>
     createKmsfDataTableState({
       columnGroups,
       columns,
       getRowId,
       pagination,
-      rows: data,
+      rows: effectiveData,
       showHeader,
       theme,
     }),
   );
   const stateRef = useRef(state);
-  const stateInputRef = useRef({ columnGroups, columns, data, getRowId, pagination, showHeader });
+  const stateInputRef = useRef({ columnGroups, columns, data: effectiveData, getRowId, pagination, showHeader });
   const virtualBufferSize = Math.max(0, Math.floor(Number.isFinite(bufferSize) ? Number(bufferSize) : 25));
+  const resolvedLazyLoadBatchSize = Math.max(1, Math.floor(lazyLoadBatchSize));
+  const resolvedLazyLoadThreshold = Math.max(0, Math.floor(lazyLoadThreshold ?? infiniteScrollThreshold));
+
+  const requestLazyLoad = (reason: KmsfLazyLoadReason) => {
+    if (!lazyLoad || lazyLoadMode !== "append" || !onLazyLoad || lazyLoadingReasonRef.current) {
+      return;
+    }
+
+    const currentRowsLength = stateRef.current.rows.length;
+
+    if (reason === "scroll" && lazyTotalRowsRef.current !== undefined && currentRowsLength >= lazyTotalRowsRef.current) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const requestId = lazyRequestIdRef.current + 1;
+    const offset = reason === "scroll" ? currentRowsLength : 0;
+
+    lazyRequestIdRef.current = requestId;
+    lazyAbortControllerRef.current?.abort();
+    lazyAbortControllerRef.current = controller;
+    lazyLoadingReasonRef.current = reason;
+    setLazyLoadingReason(reason);
+
+    void onLazyLoad({
+      limit: resolvedLazyLoadBatchSize,
+      offset,
+      reason,
+      signal: controller.signal,
+    })
+      .then((result) => {
+        if (controller.signal.aborted || lazyRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        const nextRows = reason === "scroll" ? [...lazyRowsRef.current, ...result.rows] : [...result.rows];
+
+        lazyRowsRef.current = nextRows;
+        lazyTotalRowsRef.current = result.total;
+        setLazyRows(nextRows);
+        setLazyTotalRows(result.total);
+      })
+      .catch(() => {
+        // Error and retry UI are intentionally left to the consumer in this API pass.
+      })
+      .finally(() => {
+        if (lazyRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        lazyLoadingReasonRef.current = null;
+        lazyAbortControllerRef.current = null;
+        setLazyLoadingReason(null);
+      });
+  };
+
+  useEffect(() => {
+    lazyRowsRef.current = lazyRows;
+  }, [lazyRows]);
+
+  useEffect(() => {
+    lazyTotalRowsRef.current = lazyTotalRows;
+  }, [lazyTotalRows]);
+
+  useEffect(() => {
+    if (lazyLoad) {
+      return;
+    }
+
+    lazyRowsRef.current = data;
+    setLazyRows(data);
+    lazyTotalRowsRef.current = undefined;
+    setLazyTotalRows(undefined);
+  }, [data, lazyLoad]);
+
+  useEffect(() => {
+    if (!lazyLoad || !onLazyLoad) {
+      return undefined;
+    }
+
+    requestLazyLoad("initial");
+
+    return () => {
+      lazyRequestIdRef.current += 1;
+      lazyLoadingReasonRef.current = null;
+      lazyAbortControllerRef.current?.abort();
+      lazyAbortControllerRef.current = null;
+    };
+  }, [lazyLoad, onLazyLoad, resolvedLazyLoadBatchSize]);
 
   useEffect(() => {
     const previousInput = stateInputRef.current;
@@ -745,7 +943,7 @@ function KmsfDataTableInner<TData>(
     if (
       previousInput.columns === columns &&
       previousInput.columnGroups === columnGroups &&
-      previousInput.data === data &&
+      previousInput.data === effectiveData &&
       previousInput.getRowId === getRowId &&
       previousInput.pagination === pagination &&
       previousInput.showHeader === showHeader
@@ -753,7 +951,7 @@ function KmsfDataTableInner<TData>(
       return;
     }
 
-    stateInputRef.current = { columnGroups, columns, data, getRowId, pagination, showHeader };
+    stateInputRef.current = { columnGroups, columns, data: effectiveData, getRowId, pagination, showHeader };
     setState((current) => {
       const next = createKmsfDataTableState({
         columnLayout: serializeKmsfColumnLayout(current),
@@ -761,7 +959,7 @@ function KmsfDataTableInner<TData>(
         columns,
         getRowId,
         pagination: pagination ?? current.pagination,
-        rows: data,
+        rows: effectiveData,
         showHeader,
         sort: current.sort,
         theme: current.theme,
@@ -769,11 +967,17 @@ function KmsfDataTableInner<TData>(
 
       return canPreserveSelection(current, next) ? { ...next, selection: current.selection } : next;
     });
-  }, [columnGroups, columns, data, getRowId, pagination, showHeader]);
+  }, [columnGroups, columns, effectiveData, getRowId, pagination, showHeader]);
 
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  useEffect(() => {
+    if (lastLoadMoreRowCountRef.current !== null && lastLoadMoreRowCountRef.current !== state.rows.length) {
+      lastLoadMoreRowCountRef.current = null;
+    }
+  }, [state.rows.length]);
 
   useEffect(() => {
     return () => {
@@ -904,6 +1108,7 @@ function KmsfDataTableInner<TData>(
       : currentTheme.density === "spacious"
         ? "text-[13px]"
         : "text-[length:var(--kmsf-font-size-base,12px)]";
+  const selectedRowIdSet = useMemo(() => new Set(state.selection.rowIds), [state.selection.rowIds]);
   const columnWidths = useMemo(() => {
     const columnCount = visibleColumns.length;
 
@@ -959,8 +1164,25 @@ function KmsfDataTableInner<TData>(
   }, [columnWidthTotal, containerWidth]);
   const hasHorizontalOverflow =
     typeof columnWidthTotal === "number" && containerWidth > 0 ? columnWidthTotal > containerWidth + 1 : false;
-  const renderedRowsHeight = rowWindow.entries.length * rowHeight;
+  const lazyHasMoreRows = lazyLoad && (lazyTotalRows === undefined || visibleRowCount < lazyTotalRows);
+  const resolvedHasMoreRows = lazyLoad ? lazyHasMoreRows : hasMoreRows;
+  const resolvedLoading = loading || lazyLoadingReason === "initial" || lazyLoadingReason === "refresh";
+  const resolvedLoadingMore = loadingMore || lazyLoadingReason === "scroll";
+  const isEmpty = visibleRowCount === 0;
+  const shouldRenderSkeleton = resolvedLoading && isEmpty;
+  const shouldRenderEmpty = !resolvedLoading && isEmpty;
+  const shouldRenderInfiniteLoadingRow =
+    (infiniteScroll || lazyLoad) && resolvedLoadingMore && resolvedHasMoreRows && !isEmpty;
+  const resolvedSkeletonRowCount = Math.max(
+    1,
+    Math.floor(skeletonRowCount ?? Math.min(Math.max(1, state.pagination.pageSize), 5)),
+  );
+  const stateRowCount =
+    (shouldRenderSkeleton ? resolvedSkeletonRowCount : shouldRenderEmpty ? 1 : 0) +
+    (shouldRenderInfiniteLoadingRow ? 1 : 0);
+  const renderedRowsHeight = (rowWindow.entries.length + stateRowCount) * rowHeight;
   const emptyFillerHeight = virtualized ? 0 : Math.max(0, containerHeight - renderedRowsHeight);
+  const renderedHeaderVisible = state.showHeader && (persistHeaderWhenEmpty || !isEmpty || resolvedLoading);
 
   const isCopyPasteKey = (event: React.KeyboardEvent, key: "c" | "v") =>
     (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === key;
@@ -1792,10 +2014,46 @@ function KmsfDataTableInner<TData>(
       return Math.abs(current - next) > 0.5 ? next : current;
     });
   };
+  const requestInfiniteLoadIfNeeded = (bodyViewport: HTMLDivElement) => {
+    if (lazyLoad) {
+      if (!onLazyLoad || lazyLoadingReasonRef.current) {
+        return;
+      }
+
+      const remainingScroll = bodyViewport.scrollHeight - bodyViewport.scrollTop - bodyViewport.clientHeight;
+
+      if (remainingScroll <= resolvedLazyLoadThreshold) {
+        requestLazyLoad("scroll");
+      }
+
+      return;
+    }
+
+    if (!infiniteScroll || !hasMoreRows || loadingMore || !onLoadMore) {
+      return;
+    }
+
+    const safeThreshold = Math.max(0, infiniteScrollThreshold);
+    const remainingScroll = bodyViewport.scrollHeight - bodyViewport.scrollTop - bodyViewport.clientHeight;
+
+    if (remainingScroll > safeThreshold) {
+      return;
+    }
+
+    const currentRowCount = stateRef.current.rows.length;
+
+    if (lastLoadMoreRowCountRef.current === currentRowCount) {
+      return;
+    }
+
+    lastLoadMoreRowCountRef.current = currentRowCount;
+    onLoadMore();
+  };
   const handleBodyScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const bodyViewport = event.currentTarget;
 
     pendingScrollTopRef.current = bodyViewport.scrollTop;
+    requestInfiniteLoadIfNeeded(bodyViewport);
 
     if (scrollCommitTimeoutRef.current !== null) {
       window.clearTimeout(scrollCommitTimeoutRef.current);
@@ -1828,10 +2086,12 @@ function KmsfDataTableInner<TData>(
       className={["kmsf-data-table kmsf-typography-base h-full w-full overflow-hidden", densityClass, currentTheme.className, className]
         .filter(Boolean)
         .join(" ")}
-      data-show-header={state.showHeader ? "true" : undefined}
+      aria-busy={resolvedLoading || resolvedLoadingMore ? "true" : undefined}
+      data-loading={resolvedLoading || resolvedLoadingMore ? "true" : undefined}
+      data-show-header={renderedHeaderVisible ? "true" : undefined}
       style={{ ...currentTheme.style, ...style }}
     >
-      {state.showHeader ? (
+      {renderedHeaderVisible ? (
         <div className="kmsf-data-table__header" ref={headerRef}>
           <table
             className="kmsf-data-table__table kmsf-data-table__header-table min-w-full table-fixed"
@@ -1874,9 +2134,47 @@ function KmsfDataTableInner<TData>(
         >
           {renderColumnSizing()}
         <tbody>
+          {shouldRenderSkeleton
+            ? Array.from({ length: resolvedSkeletonRowCount }).map((_, skeletonIndex) => (
+                <tr
+                  aria-hidden="true"
+                  className="kmsf-data-table__tr kmsf-data-table__skeleton-row"
+                  data-kmsf-row-parity={skeletonIndex % 2 === 0 ? "even" : "odd"}
+                  data-testid="loading-skeleton-row"
+                  key={`loading-skeleton-${skeletonIndex}`}
+                  style={{ height: rowHeight }}
+                >
+                  {visibleColumns.length > 0 ? (
+                    visibleColumns.map((column) => (
+                      <td
+                        className="kmsf-data-table__td kmsf-data-table__skeleton-cell px-3 py-2"
+                        data-testid={`loading-skeleton-cell-${skeletonIndex}-${column.id}`}
+                        key={column.id}
+                        style={{ height: rowHeight }}
+                      >
+                        <span className="kmsf-data-table__skeleton-block" />
+                      </td>
+                    ))
+                  ) : (
+                    <td className="kmsf-data-table__td kmsf-data-table__skeleton-cell px-3 py-2">
+                      <span className="kmsf-data-table__skeleton-block" />
+                    </td>
+                  )}
+                </tr>
+              ))
+            : null}
+          {shouldRenderEmpty ? (
+            <tr className="kmsf-data-table__tr kmsf-data-table__empty-state-row" style={{ height: rowHeight }}>
+              <td className="kmsf-data-table__td kmsf-data-table__empty-state-cell" colSpan={Math.max(1, visibleColumns.length)}>
+                <div data-testid="data-table-empty-state" className="kmsf-data-table__empty-state">
+                  {emptyComponent ?? "표시할 데이터가 없습니다."}
+                </div>
+              </td>
+            </tr>
+          ) : null}
           {rowWindow.entries.map((entry, entryIndex) => {
             const rowRuntimeProps = resolveRowProps(rowProps, entry.row, entry.visibleIndex);
-            const isRowSelected = state.selection.rowIds.includes(entry.rowId);
+            const isRowSelected = selectedRowIdSet.has(entry.rowId);
             const isViewportEndRow = emptyFillerHeight === 0 && entryIndex === rowWindow.entries.length - 1;
             const rowCustomBackground = getRowCustomBackground(rowRuntimeProps.style);
             const rowRenderKey = virtualized ? `virtual-row-slot-${entryIndex}` : String(entry.rowId);
@@ -1901,13 +2199,13 @@ function KmsfDataTableInner<TData>(
                 ]
                   .filter(Boolean)
                   .join(" ")}
-	                data-disabled={rowRuntimeProps.disabled ? "true" : undefined}
-	                data-kmsf-row-custom-background={rowCustomBackground === undefined ? undefined : "true"}
-	                data-kmsf-row-data-index={entry.dataIndex}
-	                data-kmsf-row-parity={entry.visibleIndex % 2 === 0 ? "even" : "odd"}
-	                data-row-draggable={rowRuntimeProps.draggable ? "true" : "false"}
-	                data-selected-row={isRowSelected ? "true" : undefined}
-	                data-testid={`row-${String(entry.rowId)}`}
+                data-disabled={rowRuntimeProps.disabled ? "true" : undefined}
+                data-kmsf-row-custom-background={rowCustomBackground === undefined ? undefined : "true"}
+                data-kmsf-row-data-index={entry.dataIndex}
+                data-kmsf-row-parity={entry.visibleIndex % 2 === 0 ? "even" : "odd"}
+                data-row-draggable={rowRuntimeProps.draggable ? "true" : "false"}
+                data-selected-row={isRowSelected ? "true" : undefined}
+                data-testid={`row-${String(entry.rowId)}`}
                 draggable={false}
                 key={rowRenderKey}
                 onClick={(event) => {
@@ -1947,53 +2245,53 @@ function KmsfDataTableInner<TData>(
                 {visibleColumns.map((column, columnIndex) => {
                   const rawValue = getKmsfCellValue(state, entry.row, column.id);
                   const address = { columnId: column.id, rowId: entry.rowId };
-                  const cellDisabled =
-                    rowRuntimeProps.disabled || isKmsfCellDisabled(state, entry.row, entry.rowId, column);
-                  const cellClassName = toClassName(getKmsfCellClassName(state, entry.row, entry.rowId, column));
-                  const cellStyle = getKmsfCellStyle(state, entry.row, entry.rowId, column);
                   const isCellInRange = cellSelection && isKmsfCellInSelectedRange(state, address);
                   const isCellSelected =
                     cellSelection &&
                     state.selection.cell?.rowId === entry.rowId &&
                     state.selection.cell.columnId === column.id;
-	                  const cellPayload = createCellComponentPayload(
-	                    entry,
-	                    rowRuntimeProps.disabled,
+                  const cellPayload = createCellComponentPayload(
+                    entry,
+                    rowRuntimeProps.disabled,
                     isRowSelected,
                     state.selection.rowIds.length,
                     column,
                     columnIndex,
                     rawValue,
-	                  );
-	                  const hasCellComponents = Boolean(column.cell?.components?.length);
-	                  const formattedCellValue = formatKmsfCellValue(state, entry.row, entry.rowId, column);
-	                  const cellComponents = column.cell?.components?.map((component) => {
-	                    if (component.type !== "input") {
-	                      return component;
-	                    }
+                  );
+                  const cellProps = resolveRenderableCellProps(column, cellPayload);
+                  const cellDisabled = rowRuntimeProps.disabled || isRenderableCellDisabled(cellProps, cellPayload);
+                  const cellClassName = toClassName(getRenderableCellClassName(cellProps, cellPayload));
+                  const cellStyle = getRenderableCellStyle(cellProps, cellPayload);
+                  const hasCellComponents = Boolean(column.cell?.components?.length);
+                  const formattedCellValue = formatRenderableCellValue(column, rawValue, cellPayload);
+                  const cellComponents = column.cell?.components?.map((component) => {
+                    if (component.type !== "input") {
+                      return component;
+                    }
 
-	                    const onValueChange = component.onValueChange;
+                    const onValueChange = component.onValueChange;
 
-	                    return {
-	                      ...component,
-	                      onValueChange: (payload) => {
-	                        commitState((current) =>
-	                          updateKmsfRows(current, [
-	                            {
-	                              id: payload.row.id,
-	                              patch: (currentRow) =>
-	                                setKmsfNestedInputValue(currentRow, payload.column.field, payload.value),
-	                            },
-	                          ]),
-	                        );
-	                        onValueChange?.(payload);
-	                      },
-	                    } satisfies KmsfCellComponent<TData>;
-	                  });
-	                  const visibleCellComponents = getRenderableKmsfComponents(cellComponents, cellPayload);
-	                  const cellContent = column.cell?.renderer ? (
-	                    column.cell.renderer(cellPayload)
-	                  ) : hasCellComponents ? (
+                    return {
+                      ...component,
+                      onValueChange: (payload) => {
+                        commitState((current) =>
+                          updateKmsfRows(current, [
+                            {
+                              id: payload.row.id,
+                              patch: (currentRow) =>
+                                setKmsfNestedInputValue(currentRow, payload.column.field, payload.value),
+                            },
+                          ]),
+                        );
+                        onValueChange?.(payload);
+                      },
+                    } satisfies KmsfCellComponent<TData>;
+                  });
+                  const visibleCellComponents = getRenderableKmsfComponents(cellComponents, cellPayload);
+                  const cellContent = column.cell?.renderer ? (
+                    column.cell.renderer(cellPayload)
+                  ) : hasCellComponents ? (
                     renderKmsfContentWithComponents(formattedCellValue, cellComponents, cellPayload, {
                       showContent: false,
                     })
@@ -2157,6 +2455,18 @@ function KmsfDataTableInner<TData>(
               </Fragment>
             );
           })}
+          {shouldRenderInfiniteLoadingRow ? (
+            <tr className="kmsf-data-table__tr kmsf-data-table__infinite-loading-row" style={{ height: rowHeight }}>
+              <td
+                className="kmsf-data-table__td kmsf-data-table__infinite-loading-cell"
+                colSpan={Math.max(1, visibleColumns.length)}
+                data-testid="data-table-infinite-loading-row"
+              >
+                <span className="kmsf-data-table__loading-spinner" data-testid="data-table-infinite-loading-spinner" />
+                <span>데이터를 불러오는 중입니다.</span>
+              </td>
+            </tr>
+          ) : null}
           {emptyFillerHeight > 0 ? (
             <tr aria-hidden="true" className="kmsf-table-empty-filler">
               <td
@@ -2174,6 +2484,12 @@ function KmsfDataTableInner<TData>(
             className="kmsf-data-table__body-virtual-sizer"
             style={{ height: rowWindow.scrollHeight, width: tableWidth }}
           />
+        ) : null}
+        {resolvedLoading && !isEmpty ? (
+          <div className="kmsf-data-table__loading-overlay" data-testid="data-table-loading-overlay" role="status">
+            <span className="kmsf-data-table__loading-spinner" data-testid="data-table-loading-spinner" />
+            <span>{loadingComponent ?? "불러오는 중입니다."}</span>
+          </div>
         ) : null}
       </div>
       {movingHeaderLabel && columnMovePointer ? (

@@ -100,6 +100,23 @@ export const themeSamples: DocsCodeSample[] = [
   },
 ];
 
+export const loadingSamples: DocsCodeSample[] = [
+  {
+    code: `<DataTable
+  columns={columns}
+  data={isInitialLoading ? [] : rows}
+  emptyComponent={<span>표시할 데이터가 없습니다.</span>}
+  getRowId={(row) => row.id}
+  loading={isInitialLoading || isRefetching}
+  loadingComponent={<span>데이터를 갱신하는 중입니다.</span>}
+  persistHeaderWhenEmpty
+  skeletonRowCount={5}
+/>;`,
+    language: "tsx",
+    title: "Loading / Empty State",
+  },
+];
+
 export const headerSamples: DocsCodeSample[] = [
   {
     code: `const columns = [
@@ -139,17 +156,90 @@ const columnGroups = [
 
 export const bodySamples: DocsCodeSample[] = [
   {
-    code: `const rows = createVirtualRows(100_000);
+    code: `const rows = createVirtualRows(100000);
 
 <DataTable
   columns={columns}
   data={rows}
   getRowId={(row) => row.id}
+  buffer-size={25}
   pagination={{ pageIndex: 0, pageSize: rows.length }}
+  rowHeight={36}
   virtualized
 />;`,
     language: "tsx",
     title: "10만 행 가상 스크롤",
+  },
+];
+
+export const infiniteScrollSamples: DocsCodeSample[] = [
+  {
+    code: `const loadRows = async ({ offset, limit, signal }) => {
+  const params = new URLSearchParams({
+    delay: "500",
+    limit: String(limit),
+    select: "id,firstName,lastName,age,email,role",
+    skip: String(offset),
+  });
+  const response = await fetch(\`https://dummyjson.com/users?\${params}\`, { signal });
+  const result = await response.json();
+
+  return {
+    rows: result.users.map(toPersonRow),
+    total: result.total,
+  };
+};
+
+<DataTable
+  columns={columns}
+  data={[]}
+  getRowId={(row) => row.id}
+  lazyLoad
+  lazyLoadBatchSize={40}
+  lazyLoadThreshold={140}
+  onLazyLoad={loadRows}
+  pagination={{ pageIndex: 0, pageSize: 240 }}
+  virtualized
+/>;`,
+    language: "tsx",
+    title: "Remote infinite scroll",
+  },
+];
+
+export const lazyLoadSamples: DocsCodeSample[] = [
+  {
+    code: `const loadRows = async ({ offset, limit, reason, signal }) => {
+  const params = new URLSearchParams({
+    delay: "700",
+    limit: String(limit),
+    select: "id,firstName,lastName,age,email,role",
+    skip: String(offset),
+  });
+  const response = await fetch(\`https://dummyjson.com/users?\${params}\`, { signal });
+  const result = await response.json();
+
+  return {
+    rows: result.users.map(toPersonRow),
+    total: result.total,
+  };
+};
+
+<DataTable
+  columns={columns}
+  data={[]}
+  emptyComponent={<span>표시할 데이터가 없습니다.</span>}
+  getRowId={(row) => row.id}
+  lazyLoad
+  lazyLoadBatchSize={30}
+  lazyLoadMode="append"
+  lazyLoadThreshold={140}
+  onLazyLoad={loadRows}
+  pagination={{ pageIndex: 0, pageSize: 90 }}
+  skeletonRowCount={5}
+  virtualized
+/>;`,
+    language: "tsx",
+    title: "DummyJSON Lazy Load",
   },
 ];
 
@@ -242,6 +332,21 @@ export const contextMenuSamples: DocsCodeSample[] = [
   },
 ];
 
+export const exportSamples: DocsCodeSample[] = [
+  {
+    code: `const exportColumns = [
+  { id: "name", label: "Column1", value: (row) => row.name },
+  { id: "age", label: "Column2", value: (_row, index) => \`Data \${index + 1}\` },
+  { id: "role", label: "Column3", value: (row) => row.role },
+];
+
+const csv = exportKmsfRowsToCsv({ columns: exportColumns, rows });
+const json = exportKmsfRowsToJson({ columns: exportColumns, rows });`,
+    language: "ts",
+    title: "CSV / JSON helper",
+  },
+];
+
 export const apiSamples: DocsCodeSample[] = [
   {
     code: `type DataTableProps<T> = {
@@ -253,5 +358,33 @@ export const apiSamples: DocsCodeSample[] = [
 };`,
     language: "ts",
     title: "주요 Props",
+  },
+];
+
+export const refApiSamples: DocsCodeSample[] = [
+  {
+    code: `type KmsfDataTableRef<TData = unknown> = {
+  clearSort: () => void;
+  getColumnLayout: () => KmsfColumnLayout;
+  getSortState: () => KmsfSortState | null;
+  setColumnLayout: (layout: KmsfColumnLayout) => void;
+  setMoveTargetRow: (targetIdx: number, sourceIdx: number) => void;
+  setSelectedRow: (index: number) => void;
+  setSelectedRows: (indexes: number[]) => void;
+  setSortState: (sort: KmsfSortState | null) => void;
+};`,
+    language: "ts",
+    title: "Ref 타입",
+  },
+  {
+    code: `const tableRef = useRef<KmsfDataTableRef<UserRow>>(null);
+
+tableRef.current?.setSelectedRow(0);
+tableRef.current?.setSelectedRows([0, 2]);
+tableRef.current?.setMoveTargetRow(2, 0);
+tableRef.current?.setColumnLayout(savedLayout);
+tableRef.current?.clearSort();`,
+    language: "tsx",
+    title: "Ref 사용",
   },
 ];

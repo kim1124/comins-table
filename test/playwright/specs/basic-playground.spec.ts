@@ -51,6 +51,7 @@ test("playground uses charts-style docs shell and remounts content when switchin
     "Header 기본 기능",
     "Header 그룹",
     "Pagination",
+    "Lazy Load",
     "Virtualization",
     "Td Cell 예제",
     "컴포넌트 예제",

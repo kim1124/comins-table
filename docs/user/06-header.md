@@ -146,6 +146,7 @@ Playground 검증 기준:
 
 - `헤더` 예제는 resize와 move를 같은 pointer 흐름에서 검증한다.
 - Header 숨김/표시 예제는 전체 Header area toggle과 컬럼별 Checkbox Select Box를 함께 제공한다. Select Box에서 선택 해제된 column id는 `columns` prop에서 제외되어 해당 컬럼 전체가 숨겨진다.
+- Header 설정 저장/불러오기 예제는 column layout과 Select Box의 표시 column id를 함께 저장한다. 불러오기 시 column order/width와 숨김/표시 상태가 같이 복원된다.
 - 2 Depth group 표시/숨김은 단일 toggle control로 검증한다.
 - 컬럼 동적 표시 예제는 Checkbox 목록형 Select Box에서 선택된 column id만 `columns` prop에 전달하며, 1Depth와 2Depth 모두 같은 동작을 확인한다.
 - Header sort 접근성은 mouse click, keyboard `Enter`/`Space`, `aria-sort`, sort indicator 상태를 함께 검증한다.

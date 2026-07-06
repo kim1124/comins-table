@@ -10,7 +10,7 @@ The source workspace owns public exports and the React data table implementation
 
 ## Rules
 
-- MUST: the design draft in `docs/agents/src/2026-05-28-data-table-feature-design-draft.md` as the product contract before changing behavior.
+- MUST: `README.md`, `GUIDE.md`, `docs/user/`, and existing source/tests as the product contract before changing behavior.
 - MUST: public exports explicit in `src/index.tsx`.
 - DO NOT: introduce Next.js-only APIs.
 - MUST: React and React DOM as peer dependencies, not bundled runtime dependencies.

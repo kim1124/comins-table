@@ -367,4 +367,24 @@ describe("@kmsf/data-table basic core", () => {
     const sorted = sortKmsfRows(createState(), { columnId: "age", direction: "asc" });
     expect(sorted.rows.map((row) => row.name)).toEqual(["Alpha", "Beta"]);
   });
+
+  it("formats repeated row object payloads with the row id index", () => {
+    const sharedRow: PersonRow = { active: true, age: 10, id: "shared", name: "Shared" };
+    const repeatedRows = Array.from({ length: 3 }, () => sharedRow);
+    const state = createKmsfDataTableState<PersonRow>({
+      columns: [
+        {
+          cell: {
+            format: ({ row }) => `data:${row.dataIndex} visible:${row.index}`,
+          },
+          field: "name",
+          label: "Name",
+        },
+      ],
+      getRowId: (_row, index) => index,
+      rows: repeatedRows,
+    });
+
+    expect(formatKmsfCellValue(state, repeatedRows[2]!, 2, state.columns[0]!)).toBe("data:2 visible:2");
+  });
 });

@@ -17,15 +17,19 @@ npm --workspace=@kmsf/data-table run dev
 - `/examples/crud`: 행 추가, 선택 행 수정, 선택 행 삭제, 필터링, table 우측 상단 pagination
 - `/examples/size`: `300px` 기본 높이, 상위 컨테이너 `500px`, 브라우저 `100%` 반응 예제. 브라우저 `100%` 카드는 최대 높이 `700px`를 넘지 않는다.
 - `/examples/theme`: CSS custom properties, theme class, rowHeight 동기화 계약
-- `/examples/header`: 1Depth Header 이동, resize, 컬럼 설정 저장/불러오기, Header 표시 토글, Header 컬럼별 Checkbox Select Box 숨김/표시
+- `/examples/loading`: 초기 skeleton, 재조회 overlay, 빈 데이터 상태
+- `/examples/header`: 1Depth Header 이동, resize, 컬럼 설정 저장/불러오기, Header 표시 토글, Header 컬럼별 Checkbox Select Box 숨김/표시. 컬럼 설정 저장/불러오기는 컬럼 표시 상태도 함께 저장한다.
 - `/examples/column-groups`: 2Depth Header 이동, resize, 컬럼/그룹 숨김/표시. `/examples/header-groups`는 legacy URL 호환용 redirect로 유지한다.
 - `/examples/body`: legacy URL 호환용 redirect. 실제 화면은 `/performance/virtualization`으로 이동한다.
 - `/examples/cell`: `cell.format`, `cell.props`, `cell.renderer`, cell event Alert, clipboard guard
 - `/examples/component`: Header와 Cell에 적용되는 built-in component와 custom renderer. Component 예제는 렌더링 결과 중심으로 표시한다.
 - `/examples/row`: drag handle reorder, `rowProps.draggable`, row disabled, row custom formatting, row event Alert, row keyboard copy/paste
 - `/examples/context-menu`: callback 기반 row/cell context menu, 우클릭 단일 row selection, payload preview
+- `/examples/export`: `exportKmsfRowsToCsv`, `exportKmsfRowsToJson` helper 출력 예제
 - `/api/props`: 현재 구현된 props, events, ref/core 항목
 - `/api/ref`: 현재 구현된 ref method와 core helper 경계
+- `/performance/infinite-scroll`: 원격 API batch를 append하는 `lazyLoad`, `onLazyLoad` 기반 Infinite Scroll 예제
+- `/performance/lazy-load`: append-mode `lazyLoad`, `onLazyLoad`, Loading / Empty / Infinite Scroll 연동 예제
 - `/performance/virtualization`: 10만 Row 기본 로드, virtualized large-row 사용 기준과 검증 주의사항
 
 왼쪽 메뉴는 구현된 기능만 노출한다.
