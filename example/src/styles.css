@@ -1427,6 +1427,12 @@ body {
   overflow: hidden;
 }
 
+.feature-panel--virtualization {
+  flex: 0 0 auto;
+  height: auto;
+  overflow: visible;
+}
+
 .feature-panel > .example-table.kmsf-data-table {
   flex: 1 1 auto;
   height: 100%;
@@ -1440,6 +1446,23 @@ body {
   height: min(700px, max(500px, calc(100vh - 220px)));
   max-height: 700px;
   min-height: 500px;
+}
+
+.body-virtualization-table__event {
+  margin: 0 0 8px;
+  color: var(--kmsf-color-text-muted, #50635e);
+  font-size: 12px;
+}
+
+.body-virtualization-table__heavy-cell,
+.component-large-virtualization-table .kmsf-data-table__component-radio {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.component-large-virtualization-table .kmsf-data-table__component-virtual-list {
+  min-width: 150px;
 }
 
 .feature-panel--components {

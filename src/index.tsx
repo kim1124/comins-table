@@ -846,7 +846,7 @@ function KmsfDataTableInner<TData>(
   );
   const stateRef = useRef(state);
   const stateInputRef = useRef({ columnGroups, columns, data: effectiveData, getRowId, pagination, showHeader });
-  const virtualBufferSize = Math.max(0, Math.floor(Number.isFinite(bufferSize) ? Number(bufferSize) : 25));
+  const virtualBufferSize = Math.max(0, Math.floor(Number.isFinite(bufferSize) ? Number(bufferSize) : 10));
   const resolvedLazyLoadBatchSize = Math.max(1, Math.floor(lazyLoadBatchSize));
   const resolvedLazyLoadThreshold = Math.max(0, Math.floor(lazyLoadThreshold ?? infiniteScrollThreshold));
 

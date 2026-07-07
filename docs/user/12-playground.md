@@ -1,6 +1,6 @@
 # Playground
 
-Playground는 `@kmsf/data-table` 기능을 문서와 라이브 예제로 함께 확인하는 Vite 기반 문서 shell이다.
+Playground는 `@kmsf/data-table` 기능을 문서와 예제로 함께 확인하는 Vite 기반 문서 shell이다.
 상단 package navigation, 왼쪽 기능별 메뉴, 오른쪽 article content로 구성하며 React Router route 이동을 사용한다.
 
 ```bash
@@ -15,7 +15,7 @@ npm --workspace=@kmsf/data-table run dev
 - `/docs/getting-started`: 설치, CSS import, 첫 번째 DataTable 예제
 - `/examples/basic`: legacy URL 호환용 redirect. 실제 화면은 `/docs/getting-started`로 이동한다.
 - `/examples/crud`: 행 추가, 선택 행 수정, 선택 행 삭제, 필터링, table 우측 상단 pagination
-- `/examples/size`: `300px` 기본 높이, 상위 컨테이너 `500px`, 브라우저 `100%` 반응 예제. 브라우저 `100%` 카드는 최대 높이 `700px`를 넘지 않는다.
+- `/examples/size`: `300px` 기본 높이와 상위 컨테이너 `500px`를 따르는 테이블 높이 예제. 기존 브라우저 `100%` 예제 카드는 제거되었다.
 - `/examples/theme`: CSS custom properties, theme class, rowHeight 동기화 계약
 - `/examples/loading`: 초기 skeleton, 재조회 overlay, 빈 데이터 상태
 - `/examples/header`: 1Depth Header 이동, resize, 컬럼 설정 저장/불러오기, Header 표시 토글, Header 컬럼별 Checkbox Select Box 숨김/표시. 컬럼 설정 저장/불러오기는 컬럼 표시 상태도 함께 저장한다.
@@ -42,12 +42,12 @@ npm --workspace=@kmsf/data-table run dev
 
 - 기능 설명
 - 적용 코드 예제
-- 라이브 예제
+- 예제
 - 구현된 API 또는 검증 기준
 
 코드 예제는 `prism-react-renderer`로 표시한다.
-라이브 예제는 기존 feature component를 재사용한다.
-route 이동 시 이전 page와 live example subtree는 unmount되어야 하며, 이 동작은 Playwright lifecycle 검증 대상이다.
+예제는 기존 feature component를 재사용한다.
+route 이동 시 이전 page와 예제 subtree는 unmount되어야 하며, 이 동작은 Playwright lifecycle 검증 대상이다.
 
 ## Layout 계약
 

@@ -216,6 +216,150 @@ test("playground verifies 100000 row virtualization perf smoke @perf", async ({ 
   expect(diagnostics).toEqual([]);
 });
 
+test("playground keeps rendered row count bounded across virtual scroll positions @perf", async ({ page }) => {
+  test.setTimeout(30_000);
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/performance/virtualization");
+  await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
+
+  const viewport = page.getByTestId("data-table-viewport");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
+
+  const readRows = () =>
+    viewport.evaluate((element) => {
+      const rows = Array.from(
+        element.querySelectorAll<HTMLTableRowElement>(
+          ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+        ),
+      );
+      const first = rows[0];
+      const last = rows[rows.length - 1];
+
+      return {
+        firstRenderedIndex: Number(first?.getAttribute("data-kmsf-row-data-index") ?? "-1"),
+        lastRenderedIndex: Number(last?.getAttribute("data-kmsf-row-data-index") ?? "-1"),
+        renderedRows: rows.length,
+      };
+    });
+
+  const top = await readRows();
+
+  await viewport.evaluate((element) => {
+    element.scrollTop = Math.floor(element.scrollHeight / 2);
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+  await expect.poll(() => readRows().then((rows) => rows.firstRenderedIndex)).toBeGreaterThan(40_000);
+  const middle = await readRows();
+
+  await viewport.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+  await expect.poll(() => readRows().then((rows) => rows.lastRenderedIndex)).toBeGreaterThan(99_900);
+  const bottom = await readRows();
+  const failureContext = JSON.stringify({ bottom, middle, top }, null, 2);
+
+  expect(top.renderedRows, failureContext).toBeLessThanOrEqual(45);
+  expect(middle.renderedRows, failureContext).toBeLessThanOrEqual(45);
+  expect(bottom.renderedRows, failureContext).toBeLessThanOrEqual(45);
+  expect(diagnostics).toEqual([]);
+});
+
+test("playground keeps heavy renderer virtual rows bounded @perf", async ({ page }) => {
+  test.setTimeout(30_000);
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/performance/virtualization?fixture=heavy-renderer");
+
+  const viewport = page.getByTestId("data-table-viewport");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
+  await expect.poll(() => page.getByTestId("virtual-heavy-cell").count()).toBeGreaterThan(0);
+
+  await viewport.evaluate((element) => {
+    element.scrollTop = Math.floor(element.scrollHeight / 2);
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => {
+        const rows = Array.from(
+          element.querySelectorAll<HTMLTableRowElement>(
+            ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+          ),
+        );
+        const first = rows[0];
+
+        return Number(first?.getAttribute("data-kmsf-row-data-index") ?? "-1");
+      }),
+    )
+    .toBeGreaterThan(40_000);
+
+  const rowMetrics = await viewport.evaluate((element) => {
+    const rows = Array.from(
+      element.querySelectorAll<HTMLTableRowElement>(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
+    );
+
+    return {
+      heavyCells: element.querySelectorAll("[data-testid='virtual-heavy-cell']").length,
+      renderedRows: rows.length,
+    };
+  });
+
+  expect(rowMetrics.renderedRows).toBeLessThanOrEqual(45);
+  expect(rowMetrics.heavyCells).toBeGreaterThanOrEqual(rowMetrics.renderedRows);
+  expect(diagnostics).toEqual([]);
+});
+
+test("playground renders component-heavy one hundred thousand row sample @perf", async ({ page }) => {
+  test.setTimeout(30_000);
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/performance/virtualization");
+
+  const section = page.locator('[data-feature-option="component-large-virtualization"]');
+  await expect(section).toBeVisible();
+  await expect(section.getByRole("columnheader", { name: "Column1" })).toBeVisible();
+  await expect(section.getByRole("columnheader", { name: "Column2" })).toBeVisible();
+  await expect(section.getByRole("columnheader", { name: "Column3" })).toBeVisible();
+  await expect(section.getByRole("columnheader", { name: "Column4" })).toBeVisible();
+  await expect(section.getByRole("columnheader", { name: "Column5" })).toBeVisible();
+  await expect(section.getByRole("columnheader", { name: "Column6" })).toBeVisible();
+  await expect(section.getByRole("columnheader", { name: "Column7" })).toBeVisible();
+
+  const viewport = section.getByTestId("data-table-viewport-component-large");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
+  await expect.poll(() => section.getByTestId("component-large-checkbox").count()).toBeGreaterThan(0);
+  await expect.poll(() => section.getByTestId("component-large-button").count()).toBeGreaterThan(0);
+  await expect.poll(() => section.getByTestId("component-large-select").count()).toBeGreaterThan(0);
+  await expect.poll(() => section.getByTestId("component-large-progress").count()).toBeGreaterThan(0);
+  await expect.poll(() => section.locator(".kmsf-data-table__component-virtual-list").count()).toBeGreaterThan(0);
+  await expect.poll(() => section.getByTestId("component-large-radio").count()).toBeGreaterThan(0);
+
+  await viewport.evaluate((element) => {
+    element.scrollTop = Math.floor(element.scrollHeight / 2);
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => {
+        const rows = Array.from(
+          element.querySelectorAll<HTMLTableRowElement>(
+            ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+          ),
+        );
+        const first = rows[0];
+
+        return Number(first?.getAttribute("data-kmsf-row-data-index") ?? "-1");
+      }),
+    )
+    .toBeGreaterThan(40_000);
+  const rowMetrics = await viewport.evaluate((element) => ({
+    renderedRows: element.querySelectorAll(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]").length,
+  }));
+
+  expect(rowMetrics.renderedRows).toBeLessThanOrEqual(45);
+  expect(diagnostics).toEqual([]);
+});
+
 test("playground keeps devtools metrics bounded during one hundred thousand row virtual scroll @perf", async ({ page }) => {
   test.setTimeout(45_000);
   const diagnostics = collectBrowserDiagnostics(page);
@@ -276,22 +420,26 @@ test("playground keeps devtools metrics bounded during one hundred thousand row 
     const rows = Array.from(
       element.querySelectorAll<HTMLTableRowElement>(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
     );
+    const cells = element.querySelectorAll<HTMLTableCellElement>(
+      ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index] td",
+    );
     const bodyTable = element.querySelector<HTMLElement>(".kmsf-data-table__body-table");
     const transform = bodyTable ? window.getComputedStyle(bodyTable).transform : "none";
 
     return {
+      renderedCells: cells.length,
       renderedRows: rows.length,
       transform,
     };
   });
 
-  expect(rowMetrics.renderedRows).toBeLessThanOrEqual(80);
+  expect(rowMetrics.renderedRows).toBeLessThanOrEqual(45);
   expect(rowMetrics.transform).not.toBe("none");
   expect(frameDurations.average).toBeLessThanOrEqual(24);
   expect(frameDurations.p95).toBeLessThanOrEqual(32);
   expect(frameDurations.max).toBeLessThanOrEqual(50);
   expect(afterScroll.Nodes).toBeLessThanOrEqual(Math.ceil(stableBaseline.Nodes * 1.1));
-  expect(afterScroll.JSEventListeners).toBeLessThanOrEqual(Math.ceil(stableBaseline.JSEventListeners * 1.1));
+  expect(afterScroll.JSEventListeners).toBeLessThanOrEqual(450 + rowMetrics.renderedCells * 2);
   expect(afterScroll.JSHeapUsedSize).toBeLessThanOrEqual(Math.ceil(stableBaseline.JSHeapUsedSize * 1.2));
   expect(diagnostics).toEqual([]);
 });

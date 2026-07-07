@@ -60,7 +60,7 @@ describe("@kmsf/data-table harness contract", () => {
     expect(guide).toContain("우측 data table example content 80%");
     expect(readme).toContain("Playground");
     expect(readme).toContain("CRUD");
-    expect(playgroundDocs).toContain("route 이동 시 이전 page와 live example subtree는 unmount");
+    expect(playgroundDocs).toContain("route 이동 시 이전 page와 예제 subtree는 unmount");
     expect(playgroundDocs).toContain("/examples/crud");
   });
 });

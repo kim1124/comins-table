@@ -6,7 +6,7 @@ export const dataTableOptionGuide = [
       { description: "selection, row 이동, callback payload를 안정적으로 유지하기 위한 row id resolver입니다.", name: "getRowId" },
       { description: "cell 선택 이벤트와 스타일 적용 여부를 제어합니다.", name: "cellSelection" },
       { description: "대용량 row window rendering 경로를 활성화합니다.", name: "virtualized" },
-      { description: "virtualized body가 viewport 위/아래에 유지할 row buffer 크기입니다. 기본값은 25입니다.", name: "buffer-size" },
+      { description: "virtualized body가 viewport 위/아래에 유지할 row buffer 크기입니다. 기본값은 10입니다.", name: "buffer-size" },
       { description: "body viewport가 하단 threshold에 도달하면 controlled append load를 요청합니다.", name: "infiniteScroll" },
       { description: "하단에서 몇 px 이내에 들어왔을 때 onLoadMore를 호출할지 지정합니다. 기본값은 160입니다.", name: "infiniteScrollThreshold" },
       { description: "추가 row가 남아 있는지 나타냅니다. false이면 infinite load 요청을 중단합니다.", name: "hasMoreRows" },

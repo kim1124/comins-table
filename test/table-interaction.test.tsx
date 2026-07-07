@@ -133,8 +133,8 @@ describe("@kmsf/data-table keyboard interaction", () => {
     const defaultElement = renderTableElement(<KmsfDataTable {...defaultProps} />);
     const defaultRows = defaultElement.querySelectorAll("tbody tr[data-kmsf-row-data-index]");
 
-    expect(defaultRows.length).toBeGreaterThanOrEqual(32);
-    expect(defaultRows.length).toBeLessThanOrEqual(42);
+    expect(defaultRows.length).toBeGreaterThanOrEqual(17);
+    expect(defaultRows.length).toBeLessThanOrEqual(27);
 
     act(() => root?.unmount());
     container?.remove();

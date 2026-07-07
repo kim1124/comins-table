@@ -16,14 +16,14 @@ const data: Row[] = Array.from({ length: 100000 }, (_value, index) => ({
   columns={[{ field: "name", label: "Name" }]}
   data={data}
   getRowId={(row) => row.id}
-  buffer-size={25}
+  buffer-size={10}
   pagination={{ pageIndex: 0, pageSize: data.length }}
   rowHeight={32}
   virtualized
 />
 ```
 
-`"buffer-size"`는 virtualized body가 viewport 위/아래에 추가로 유지하는 row buffer 크기다. 기본값은 25이며, 빠른 스크롤에서 blank 구간을 줄이고 싶으면 20~30 수준에서 조정한다. buffer를 크게 잡으면 빠른 스크롤 blank 구간은 줄어들 수 있지만, 동시에 유지되는 DOM Node 수가 증가한다. 논리 높이가 매우 큰 경우 body scroll height는 브라우저 한계를 피하도록 bounded coordinate로 보정된다.
+`"buffer-size"`는 virtualized body가 viewport 위/아래에 추가로 유지하는 row buffer 크기다. 기본값은 10이며, 컴포넌트 Cell이나 custom renderer처럼 Cell 렌더 비용이 큰 테이블에서 불필요한 pre-render 비용을 줄이는 방향으로 맞춰져 있다. 빠른 스크롤에서 blank 구간을 줄여야 하는 경우 10~20 수준에서 먼저 조정하고, buffer를 크게 잡을수록 동시에 유지되는 DOM Node와 Cell 렌더 비용이 증가한다. 논리 높이가 매우 큰 경우 body scroll height는 브라우저 한계를 피하도록 bounded coordinate로 보정된다.
 
 `rowHeight`는 virtualized range, scroll height, render offset 계산의 기준값이다. Theme CSS에서 `tr` 또는 `td` 높이를 override할 수는 있지만, virtualized table에서는 visual height만 CSS로 바꾸면 scroll 위치와 실제 row 높이가 어긋날 수 있다. 행 높이를 바꾸는 경우 `rowHeight` prop과 `--kmsf-data-table-row-height`, `--kmsf-data-table-cell-height` 값을 같은 숫자로 맞춘다.
 

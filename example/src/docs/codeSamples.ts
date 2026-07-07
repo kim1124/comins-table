@@ -162,13 +162,36 @@ export const bodySamples: DocsCodeSample[] = [
   columns={columns}
   data={rows}
   getRowId={(row) => row.id}
-  buffer-size={25}
+  buffer-size={10}
   pagination={{ pageIndex: 0, pageSize: rows.length }}
   rowHeight={36}
   virtualized
 />;`,
     language: "tsx",
     title: "10만 행 가상 스크롤",
+  },
+  {
+    code: `const rows = createVirtualRows(100000);
+const overrides = useState({});
+
+<DataTable
+  columns={[
+    { field: "name", label: "Column1" },
+    { field: "active", label: "Column2", cell: { components: [{ type: "checkbox" }] } },
+    { field: "name", label: "Column3", cell: { components: [{ type: "button" }] } },
+    { field: "role", label: "Column4", cell: { renderer: ({ row }) => <select defaultValue={row.role}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> } },
+    { field: "age", label: "Column5", cell: { components: [{ type: "progress" }] } },
+    { field: "name", label: "Column6", cell: { components: [{ type: "virtual-list", items }] } },
+    { field: "role", label: "Column7", cell: { components: [{ type: "radio", options }] } },
+  ]}
+  data={rows}
+  getRowId={(_row, index) => index}
+  pagination={{ pageIndex: 0, pageSize: rows.length }}
+  rowHeight={112}
+  virtualized
+/>;`,
+    language: "tsx",
+    title: "컴포넌트 기반 10만 행 가상 스크롤",
   },
 ];
 

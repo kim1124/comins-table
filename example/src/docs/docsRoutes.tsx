@@ -286,6 +286,7 @@ export const docsPages: DocsPage[] = [
       "대용량 데이터는 `virtualized`와 안정적인 `getRowId`를 함께 사용하는 흐름을 기준으로 설명합니다.",
       "100000 Row 예제는 Chrome DevTools Performance Monitor에서 JS heap, DOM Node, listener 회수 상태를 확인하는 성능 검증 기준으로 사용합니다.",
       "`rowHeight`는 실제 Row 높이와 맞춰야 하며, `buffer-size`는 viewport 위아래에 유지할 Row 수를 결정합니다.",
+      "컴포넌트 기반 예제는 checkbox, button, select, progress, virtual list, radio Cell을 100000 Row와 함께 표시하며, 작은 override state로 상호작용 비용을 제한합니다.",
     ]),
     category: "Body / Performance",
     codeSamples: bodySamples,

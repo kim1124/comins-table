@@ -115,7 +115,7 @@ describe("@kmsf/data-table user documentation contract", () => {
     const optionGuide = readWorkspaceFile("example/src/docs/dataTableOptionGuide.ts");
     const advancedFeature = readWorkspaceFile("example/src/features/AdvancedFeature.tsx");
 
-    expect(readme).toContain("Controlled external state flow with `data` and `onChangeData`");
+    expect(readme).toContain("CSR 애플리케이션을 위한 `data`, `onChangeData` 기반 controlled state 흐름");
     expect(readme).toContain("CSR");
     expect(readme).toContain("Visual Fill Handle UI");
 
