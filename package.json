@@ -1,8 +1,16 @@
 {
-  "name": "@kmsf/data-table",
-  "version": "0.1.1",
-  "private": true,
+  "name": "comins-table",
+  "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kim1124/comins-table.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kim1124/comins-table/issues"
+  },
+  "homepage": "https://github.com/kim1124/comins-table#readme",
   "scripts": {
     "build": "vite build && tsc -p tsconfig.build.json",
     "dev": "vite --config vite.example.config.ts",
