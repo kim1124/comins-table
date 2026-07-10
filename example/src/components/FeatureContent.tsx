@@ -33,7 +33,7 @@ export function FeatureContent({ featureId }: { featureId: FeatureId }) {
 
   return (
     <section
-      aria-label="데이터 테이블 예제"
+      aria-label="Data table example"
       className="example-content"
       data-feature={feature.id}
       data-feature-label={feature.label}

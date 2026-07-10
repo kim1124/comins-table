@@ -3,35 +3,35 @@ import { ScrollArea } from "./ui/scroll-area";
 
 const docsByFeature: Record<string, Array<{ href: string; label: string }>> = {
   "basic-crud": [
-    { href: "./docs/user/04-basic-crud.md", label: "CRUD 동작" },
-    { href: "./docs/user/10-selection.md", label: "선택" },
+    { href: "./docs/user/02-data-and-crud.md", label: "Data and CRUD" },
+    { href: "./docs/user/10-selection.md", label: "Selection" },
   ],
-  body: [{ href: "./docs/user/11-virtualization.md", label: "버추얼 스크롤" }],
-  cell: [{ href: "./docs/user/08-cell.md", label: "Td Cell 예제" }],
-  "context-menu": [{ href: "./docs/user/12-playground.md", label: "플레이그라운드" }],
-  header: [{ href: "./docs/user/06-header.md", label: "Header 예제" }],
-  row: [{ href: "./docs/user/07-row.md", label: "Tr Row 예제" }],
+  body: [{ href: "./docs/user/11-virtualization.md", label: "Virtualization" }],
+  cell: [{ href: "./docs/user/08-cell.md", label: "Cells" }],
+  "context-menu": [{ href: "./docs/user/12-playground.md", label: "Playground" }],
+  header: [{ href: "./docs/user/06-header.md", label: "Headers" }],
+  row: [{ href: "./docs/user/07-row.md", label: "Rows" }],
 };
 
 export function FeatureDocsPanel({ feature }: { feature: FeatureDefinition }) {
   const docs = docsByFeature[feature.id] ?? [
     { href: "./README.md", label: "README" },
-    { href: "./docs/user/12-playground.md", label: "플레이그라운드" },
+    { href: "./docs/user/12-playground.md", label: "Playground" },
   ];
 
   return (
-    <aside aria-label="데이터 테이블 문서" className="docs-aside">
+    <aside aria-label="Data table docs" className="docs-aside">
       <div className="docs-heading">
         <p className="example-kicker">Docs</p>
         <h2>{feature.label}</h2>
       </div>
       <ScrollArea className="docs-scroll">
         <section className="docs-section">
-          <h3>기능 요약</h3>
+          <h3>Feature Summary</h3>
           <p>{feature.summary}</p>
         </section>
         <section className="docs-section">
-          <h3>관련 문서</h3>
+          <h3>Related Docs</h3>
           <ul>
             {docs.map((doc) => (
               <li key={doc.href}>

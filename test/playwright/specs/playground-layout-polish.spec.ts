@@ -652,7 +652,7 @@ test("docs sidebar keeps feature-specific route identities", async ({ page }) =>
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
 
-  await expect(page.getByRole("navigation", { name: "문서 메뉴" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Docs navigation" })).toBeVisible();
   await expect(page.getByRole("link", { exact: true, name: "Getting Started" })).toHaveAttribute("href", "/docs/getting-started");
   await expect(page.getByRole("link", { exact: true, name: "기본" })).toHaveCount(0);
   await expect(page.getByRole("link", { exact: true, name: "대용량 데이터 표시" })).toHaveCount(0);
@@ -672,11 +672,11 @@ test("docs sidebar keeps feature-specific route identities", async ({ page }) =>
     "href",
     "/performance/lazy-load",
   );
-  await expect(page.getByRole("link", { exact: true, name: "Context Menu 예제" })).toHaveAttribute(
+  await expect(page.getByRole("link", { exact: true, name: "Context Menu" })).toHaveAttribute(
     "href",
     "/examples/context-menu",
   );
-  await expect(page.getByRole("link", { exact: true, name: "Header 그룹" })).toHaveAttribute(
+  await expect(page.getByRole("link", { exact: true, name: "Header Groups" })).toHaveAttribute(
     "href",
     "/examples/column-groups",
   );

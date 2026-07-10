@@ -17,21 +17,21 @@ function collectBrowserDiagnostics(page: Page) {
 }
 
 const featurePages = [
-  { feature: "basic", label: "기본", route: "/docs/getting-started" },
-  { feature: "basic-crud", label: "CRUD 동작", route: "/examples/crud" },
-  { feature: "size", label: "테이블 사이즈", route: "/examples/size" },
+  { feature: "basic", label: "Basic", route: "/docs/getting-started" },
+  { feature: "basic-crud", label: "CRUD", route: "/examples/crud" },
+  { feature: "size", label: "Sizing", route: "/examples/size" },
   { feature: "theme", label: "Theme", route: "/examples/theme" },
   { feature: "loading", label: "Loading / Empty State", route: "/examples/loading" },
-  { feature: "header", label: "Header 예제", route: "/examples/header" },
-  { feature: "column-groups", label: "Header 그룹", route: "/examples/column-groups" },
+  { feature: "header", label: "Header Basics", route: "/examples/header" },
+  { feature: "column-groups", label: "Header Groups", route: "/examples/column-groups" },
   { feature: "pagination", label: "Pagination", route: "/performance/pagination" },
   { feature: "infinite-scroll", label: "Infinite Scroll", route: "/performance/infinite-scroll" },
   { feature: "lazy-load", label: "Lazy Load", route: "/performance/lazy-load" },
-  { feature: "body", label: "대용량 데이터 표시", route: "/performance/virtualization" },
-  { feature: "cell", label: "Td Cell 예제", route: "/examples/cell" },
-  { feature: "component", label: "컴포넌트 예제", route: "/examples/component" },
-  { feature: "row", label: "Tr Row 예제", route: "/examples/row" },
-  { feature: "context-menu", label: "Context Menu 예제", route: "/examples/context-menu" },
+  { feature: "body", label: "Virtualization", route: "/performance/virtualization" },
+  { feature: "cell", label: "Cells", route: "/examples/cell" },
+  { feature: "component", label: "Components", route: "/examples/component" },
+  { feature: "row", label: "Rows", route: "/examples/row" },
+  { feature: "context-menu", label: "Context Menu", route: "/examples/context-menu" },
   { feature: "export", label: "Export Helper", route: "/examples/export" },
 ];
 
@@ -60,7 +60,7 @@ test("user playground exposes every current feature page with recreated content"
 
   await page.goto("/examples/header");
   const headerMountId = await page.getByTestId("mount-id").textContent();
-  await page.getByRole("link", { exact: true, name: "CRUD 동작" }).click();
+  await page.getByRole("link", { exact: true, name: "CRUD" }).click();
   await expect.poll(() => page.evaluate(() => window.__cominsTableLastUnmount)).toBe(headerMountId);
 
   expect(diagnostics).toEqual([]);
@@ -74,12 +74,12 @@ test("user playground uses charts-style docs shell and shadcn-style action butto
   await expect(page.locator(".docs-top-nav")).toContainText("comins-table");
   await expect(page.locator(".workspace-tabs")).toHaveCount(0);
   await expect(page.locator(".workspace-tabs__bar")).toHaveCount(0);
-  await expect(page.getByRole("tablist", { name: "플레이그라운드 보기" })).toHaveCount(0);
-  await expect(page.getByRole("searchbox", { name: "전체 문서 검색" })).toBeVisible();
-  await expect(page.getByRole("link", { exact: true, name: "문서" })).toHaveCount(0);
+  await expect(page.getByRole("tablist", { name: "Playground view" })).toHaveCount(0);
+  await expect(page.getByRole("searchbox", { name: "Search all docs" })).toBeVisible();
+  await expect(page.getByRole("link", { exact: true, name: "Docs" })).toHaveCount(0);
   await expect(page.locator(".docs-shell__body")).toBeVisible();
   await expect(page.locator(".docs-sidebar")).toBeVisible();
-  await expect(page.getByRole("complementary", { name: "데이터 테이블 문서" })).toHaveCount(0);
+  await expect(page.getByRole("complementary", { name: "Data table docs" })).toHaveCount(0);
 
   await page.goto("/examples/crud");
   await expect(page.locator(".feature-controls button:not(.ui-button)")).toHaveCount(0);
@@ -125,7 +125,7 @@ test("option guide documents core helpers and ref methods", async ({ page }) => 
   await expect(page.locator(".docs-reference-list")).toContainText("core helper");
   await expect(page.locator(".docs-reference-list")).toContainText("data + onChangeData");
   await expect(page.locator(".docs-reference-list")).toContainText("CSR");
-  await expect(page.locator(".docs-reference-list")).not.toContainText("후속 기능");
+  await expect(page.locator(".docs-reference-list")).not.toContainText("Advanced Feature Roadmap");
   await expect(page.locator(".docs-reference-list")).not.toContainText("Visual Fill Handle UI");
 
   expect(diagnostics).toEqual([]);

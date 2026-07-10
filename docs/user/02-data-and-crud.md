@@ -1,6 +1,10 @@
 # Data And CRUD
 
-Core helper는 framework와 분리된 상태 모델을 제공한다. React component에서는 외부 `useState` 또는 store state 배열을 `data` prop에 직접 연결한다.
+Comins Table is designed around a controlled CSR data flow.
+
+- `data` is the current row array.
+- `onChangeData` receives the next row array after table-owned mutations such as paste or row movement.
+- Application actions can call `addCominsRows`, `updateCominsRows`, `deleteCominsRows`, and `queryCominsRows` from `comins-table/core` when a framework-independent state transition is useful.
 
 ```ts
 import {
@@ -9,18 +13,18 @@ import {
   deleteCominsRows,
   queryCominsRows,
   updateCominsRows,
-} from "comins-table";
+} from "comins-table/core";
 
 const state = createCominsTableState({
-  columns: [{ field: "name", label: "Name" }],
-  getRowId: (row: { id: string }) => row.id,
-  rows: [{ id: "a", name: "Alpha" }],
+  columns,
+  rows,
+  getRowId: (row) => row.id,
 });
 
-const added = addCominsRows(state, [{ id: "b", name: "Beta" }]);
-const updated = updateCominsRows(added, [{ id: "b", patch: { name: "Beta updated" } }]);
-const deleted = deleteCominsRows(updated, ["a"]);
-const result = queryCominsRows(deleted);
+const added = addCominsRows(state, [{ id: "p-2", name: "Beta" }]);
+const updated = updateCominsRows(added, [{ id: "p-2", patch: { name: "Beta updated" } }]);
+const deleted = deleteCominsRows(updated, ["p-1"]);
+const nextRows = queryCominsRows(deleted);
 ```
 
-React component에서 발생한 데이터 변경은 `onChangeData(nextData)`로 외부 상태에 반영한다.
+Use `onClickRow` and `onClickCell` when the UI needs to open an editor, context panel, or details view from row or cell interaction payloads.

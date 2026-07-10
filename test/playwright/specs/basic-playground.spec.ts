@@ -25,9 +25,9 @@ test("playground uses charts-style docs shell and remounts content when switchin
   const aside = page.locator(".docs-sidebar");
   const content = page.locator(".docs-shell__content");
   const featureContent = page.getByTestId("feature-content");
-  await expect(page.getByRole("navigation", { name: "문서 메뉴" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Docs navigation" })).toBeVisible();
   await expect(content).toBeVisible();
-  await expect(page.getByRole("complementary", { name: "데이터 테이블 문서" })).toHaveCount(0);
+  await expect(page.getByRole("complementary", { name: "Data table docs" })).toHaveCount(0);
   await expect(page.locator(".docs-top-nav")).toContainText("comins-table");
   await expect(page.locator(".workspace-tabs")).toHaveCount(0);
   await expect(page.locator(".workspace-tabs__bar")).toHaveCount(0);
@@ -45,18 +45,18 @@ test("playground uses charts-style docs shell and remounts content when switchin
 
   for (const label of [
     "Getting Started",
-    "CRUD 동작",
-    "테이블 사이즈",
+    "CRUD",
+    "Sizing",
     "Theme",
-    "Header 기본 기능",
-    "Header 그룹",
+    "Header Basics",
+    "Header Groups",
     "Pagination",
     "Lazy Load",
     "Virtualization",
-    "Td Cell 예제",
-    "컴포넌트 예제",
-    "Tr Row 예제",
-    "Context Menu 예제",
+    "Cells",
+    "Components",
+    "Rows",
+    "Context Menu",
   ]) {
     await expect(page.getByRole("link", { exact: true, name: label })).toBeVisible();
   }
@@ -66,16 +66,16 @@ test("playground uses charts-style docs shell and remounts content when switchin
   await expect(page.getByRole("link", { exact: true, name: "대용량 데이터 표시" })).toHaveCount(0);
 
   const firstMountId = await page.getByTestId("mount-id").textContent();
-  await page.getByRole("link", { exact: true, name: "CRUD 동작" }).click();
+  await page.getByRole("link", { exact: true, name: "CRUD" }).click();
   await expect(page.getByTestId("mount-id")).not.toHaveText(firstMountId ?? "");
   await expect.poll(() => page.evaluate(() => window.__cominsTableLastUnmount)).toBe(firstMountId);
 
-  await page.getByRole("link", { exact: true, name: "Header 기본 기능" }).click();
+  await page.getByRole("link", { exact: true, name: "Header Basics" }).click();
   await expect(featureContent).toHaveAttribute("data-feature", "header");
   const headerMountId = await page.getByTestId("mount-id").textContent();
   expect(headerMountId).not.toBe(firstMountId);
 
-  await page.getByRole("link", { exact: true, name: "CRUD 동작" }).click();
+  await page.getByRole("link", { exact: true, name: "CRUD" }).click();
   await expect(featureContent).toHaveAttribute("data-feature", "basic-crud");
   await expect
     .poll(() => page.evaluate(() => window.__cominsTableLastUnmount))

@@ -95,7 +95,7 @@ describe("comins-table user documentation contract", () => {
   it("keeps README aligned with the shipped playground and user docs", () => {
     const readme = readWorkspaceFile("README.md");
 
-    expect(readme).toContain("npm --workspace=comins-table run dev");
+    expect(readme).toContain("npm run dev");
     expect(readme).toContain("docs/user/01-quick-start.md");
     expect(readme).not.toContain("does not currently ship a browser example server");
   });
@@ -115,9 +115,9 @@ describe("comins-table user documentation contract", () => {
     const optionGuide = readWorkspaceFile("example/src/docs/dataTableOptionGuide.ts");
     const advancedFeature = readWorkspaceFile("example/src/features/AdvancedFeature.tsx");
 
-    expect(readme).toContain("CSR 애플리케이션을 위한 `data`, `onChangeData` 기반 controlled state 흐름");
+    expect(readme).toContain("CSR-focused controlled component");
     expect(readme).toContain("CSR");
-    expect(readme).toContain("Visual Fill Handle UI");
+    expect(readme).toContain("drag UX remains outside the first public release");
 
     expect(optionGuide).toContain("data + onChangeData");
     expect(optionGuide).toContain("CSR");
@@ -125,7 +125,7 @@ describe("comins-table user documentation contract", () => {
 
     const unavailableList = advancedFeature.match(/const unavailable = \[([\s\S]*?)\];/u)?.[1] ?? "";
 
-    expect(unavailableList).not.toContain("범위 선택 고도화");
+    expect(unavailableList).not.toContain("advanced range selection");
     expect(unavailableList).not.toContain("multi-cell clipboard");
     expect(advancedFeature).toContain("시각적 Fill Handle UI");
   });

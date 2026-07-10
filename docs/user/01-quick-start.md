@@ -1,29 +1,45 @@
 # Quick Start
 
-`CominsTable`의 React row 입력은 `data` 하나로 통일한다. 내부 copy/paste, row 이동, cell 편집성 동작으로 데이터 배열이 바뀌면 `onChangeData`로 다음 배열을 받는다.
+Install Comins Table with React and React DOM.
+
+```bash
+npm install comins-table react react-dom
+```
+
+Import the component and the optional default stylesheet.
 
 ```tsx
-import { CominsTable } from "comins-table";
 import { useState } from "react";
+import { CominsTable, type CominsTableColumn } from "comins-table";
+import "comins-table/styles.css";
 
-type Row = { id: string; name: string; role: string };
+type PersonRow = {
+  age: number;
+  id: string;
+  name: string;
+  role: string;
+};
 
-export function QuickStart() {
-  const [data, setData] = useState<Row[]>([{ id: "a", name: "Alpha", role: "Owner" }]);
+const columns: Array<CominsTableColumn<PersonRow>> = [
+  { field: "name", label: "Name", sort: true },
+  { field: "age", label: "Age", sort: true },
+  { field: "role", label: "Role" },
+];
+
+export function PeopleTable() {
+  const [data, setData] = useState<PersonRow[]>([
+    { age: 31, id: "p-1", name: "Alpha", role: "Admin" },
+  ]);
 
   return (
-    <CominsTable<Row>
-      columns={[
-        { field: "name", label: "Name", sort: true },
-        { field: "role", label: "Role" },
-      ]}
+    <CominsTable
+      columns={columns}
       data={data}
       getRowId={(row) => row.id}
       onChangeData={setData}
-      onClickCell={({ row, column, value }) => console.log(row.index, column.id, value)}
     />
   );
 }
 ```
 
-기본 column schema는 `field`, `label`, `id`, `sort`, `props`, `format`, `header`다. `id`가 없으면 `field`가 column id가 된다.
+`CominsTable` is controlled. Your application owns `data`; table-side edits call `onChangeData`, and your state update renders the next table state.

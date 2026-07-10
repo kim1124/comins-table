@@ -87,15 +87,15 @@ async function openFeature(page: Page, label: string, featureId: string) {
 
 async function warmMemoryBaseline(page: Page) {
   const sequence = [
-    ["CRUD 동작", "basic-crud"],
-    ["테이블 사이즈", "size"],
+    ["CRUD", "basic-crud"],
+    ["Sizing", "size"],
     ["Theme", "theme"],
-    ["Header 기본 기능", "header"],
+    ["Header Basics", "header"],
     ["Virtualization", "body"],
-    ["Td Cell 예제", "cell"],
-    ["컴포넌트 예제", "component"],
-    ["Tr Row 예제", "row"],
-    ["Context Menu 예제", "context-menu"],
+    ["Cells", "cell"],
+    ["Components", "component"],
+    ["Rows", "row"],
+    ["Context Menu", "context-menu"],
   ] as const;
 
   for (const [label, featureId] of sequence) {
@@ -234,7 +234,7 @@ test("full audit keeps 100000 row virtual scroll counters within 10 percent @per
 
 test("full audit keeps component column counters within 10 percent @perf", async ({ page }, testInfo) => {
   await runMemoryScenario(page, testInfo, "component-columns", async (currentPage) => {
-    await openFeature(currentPage, "컴포넌트 예제", "component");
+    await openFeature(currentPage, "Components", "component");
 
     const inputExample = currentPage.getByTestId("component-example-input");
     await inputExample.getByTestId("row-input-a").click();
@@ -277,7 +277,7 @@ test("full audit keeps component column counters within 10 percent @perf", async
 
 test("full audit keeps context menu counters within 10 percent @perf", async ({ page }, testInfo) => {
   await runMemoryScenario(page, testInfo, "context-menu", async (currentPage) => {
-    await openFeature(currentPage, "Context Menu 예제", "context-menu");
+    await openFeature(currentPage, "Context Menu", "context-menu");
 
     await currentPage.getByTestId("row-a").click({ button: "right" });
     await expect(currentPage.getByRole("menu", { name: "데이터 테이블 컨텍스트 메뉴" })).toBeVisible();
@@ -292,7 +292,7 @@ test("full audit keeps context menu counters within 10 percent @perf", async ({ 
 
 test("full audit keeps header row cell and size counters within 10 percent @perf", async ({ page }, testInfo) => {
   await runMemoryScenario(page, testInfo, "header-row-cell-size", async (currentPage) => {
-    await openFeature(currentPage, "Header 기본 기능", "header");
+    await openFeature(currentPage, "Header Basics", "header");
     const basicHeaderExample = currentPage.getByTestId("header-example-basic");
     const ageHeader = basicHeaderExample.getByTestId("header-age");
     const nameHeader = basicHeaderExample.getByTestId("header-name");
@@ -307,7 +307,7 @@ test("full audit keeps header row cell and size counters within 10 percent @perf
     await currentPage.mouse.move(nameBox!.x + nameBox!.width / 2, nameBox!.y + nameBox!.height / 2);
     await currentPage.mouse.up();
 
-    await openFeature(currentPage, "Tr Row 예제", "row");
+    await openFeature(currentPage, "Rows", "row");
     const rowBasicExample = currentPage.getByTestId("row-example-basic");
     const sourceBox = await rowBasicExample.getByTestId("row-drag-handle-c").boundingBox();
     const targetBox = await rowBasicExample.getByTestId("row-a").boundingBox();
@@ -318,7 +318,7 @@ test("full audit keeps header row cell and size counters within 10 percent @perf
     await currentPage.mouse.move(targetBox!.x + 12, targetBox!.y + 8, { steps: 8 });
     await currentPage.mouse.up();
 
-    await openFeature(currentPage, "Td Cell 예제", "cell");
+    await openFeature(currentPage, "Cells", "cell");
     await currentPage.getByTestId("cell-a-name").click();
     await currentPage.getByTestId("cell-b-name").click({ button: "right" });
     await currentPage.getByTestId("cell-a-name").hover();
@@ -326,7 +326,7 @@ test("full audit keeps header row cell and size counters within 10 percent @perf
     await currentPage.getByTestId("cell-b-age").hover();
     await currentPage.mouse.up();
 
-    await openFeature(currentPage, "테이블 사이즈", "size");
+    await openFeature(currentPage, "Sizing", "size");
     for (const tableId of ["data-table-size-manual", "data-table-size-parent"]) {
       await currentPage.getByTestId(tableId).evaluate((element) => {
         element.scrollTop = element.scrollHeight;
@@ -339,15 +339,15 @@ test("full audit keeps header row cell and size counters within 10 percent @perf
 test("full audit keeps feature lifecycle counters within 10 percent @perf", async ({ page }, testInfo) => {
   await runMemoryScenario(page, testInfo, "feature-lifecycle", async (currentPage) => {
     const sequence = [
-      ["CRUD 동작", "basic-crud"],
-      ["테이블 사이즈", "size"],
+      ["CRUD", "basic-crud"],
+      ["Sizing", "size"],
       ["Theme", "theme"],
-      ["Header 기본 기능", "header"],
+      ["Header Basics", "header"],
       ["Virtualization", "body"],
-      ["Td Cell 예제", "cell"],
-      ["컴포넌트 예제", "component"],
-      ["Tr Row 예제", "row"],
-      ["Context Menu 예제", "context-menu"],
+      ["Cells", "cell"],
+      ["Components", "component"],
+      ["Rows", "row"],
+      ["Context Menu", "context-menu"],
     ] as const;
 
     for (let round = 0; round < 5; round += 1) {

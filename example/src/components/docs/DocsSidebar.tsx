@@ -5,7 +5,7 @@ import { docsNavGroups } from "../../docs/docsRoutes";
 export function DocsSidebar() {
   return (
     <aside className="docs-sidebar">
-      <nav aria-label="문서 메뉴">
+      <nav aria-label="Docs navigation">
         {docsNavGroups.map((group) => (
           <section className="docs-sidebar__group" key={group.category}>
             <h2>{group.category}</h2>

@@ -4,15 +4,15 @@ export const installSamples: DocsCodeSample[] = [
   {
     code: "npm install comins-table",
     language: "bash",
-    title: "설치",
+    title: "Install",
   },
   {
-    code: `import { DataTable } from "comins-table";
+    code: `import { CominsTable } from "comins-table";
 import "comins-table/styles.css";
 
 const columns = [
-  { id: "name", field: "name", label: "이름", sort: true },
-  { id: "role", field: "role", label: "역할" },
+  { id: "name", field: "name", label: "Name", sort: true },
+  { id: "role", field: "role", label: "Role" },
 ];
 
 const data = [
@@ -21,10 +21,10 @@ const data = [
 ];
 
 export function Example() {
-  return <DataTable columns={columns} data={data} />;
+  return <CominsTable columns={columns} data={data} />;
 }`,
     language: "tsx",
-    title: "기본 테이블",
+    title: "Basic table",
   },
 ];
 
@@ -33,7 +33,7 @@ export const crudSamples: DocsCodeSample[] = [
     code: `const [rows, setRows] = useState(createExampleRows(100));
 const [selection, setSelection] = useState({ rowIndexes: [] });
 
-<DataTable
+<CominsTable
   columns={columns}
   data={rows}
   getRowId={(row) => row.id}
@@ -42,7 +42,7 @@ const [selection, setSelection] = useState({ rowIndexes: [] });
   selection={selection}
 />;`,
     language: "tsx",
-    title: "CRUD 상태 연결",
+    title: "Controlled CRUD state",
   },
 ];
 
@@ -57,7 +57,7 @@ export const sizeSamples: DocsCodeSample[] = [
   height: 100%;
 }`,
     language: "css",
-    title: "높이 컨테이너",
+    title: "Height container",
   },
 ];
 
@@ -65,7 +65,7 @@ export const themeSamples: DocsCodeSample[] = [
   {
     code: `import "comins-table/styles.css";
 
-<DataTable
+<CominsTable
   columns={columns}
   data={rows}
   rowHeight={32}
@@ -102,13 +102,13 @@ export const themeSamples: DocsCodeSample[] = [
 
 export const loadingSamples: DocsCodeSample[] = [
   {
-    code: `<DataTable
+    code: `<CominsTable
   columns={columns}
   data={isInitialLoading ? [] : rows}
-  emptyComponent={<span>표시할 데이터가 없습니다.</span>}
+  emptyComponent={<span>No rows to display.</span>}
   getRowId={(row) => row.id}
   loading={isInitialLoading || isRefetching}
-  loadingComponent={<span>데이터를 갱신하는 중입니다.</span>}
+  loadingComponent={<span>Refreshing rows.</span>}
   persistHeaderWhenEmpty
   skeletonRowCount={5}
 />;`,
@@ -120,37 +120,37 @@ export const loadingSamples: DocsCodeSample[] = [
 export const headerSamples: DocsCodeSample[] = [
   {
     code: `const columns = [
-  { id: "name", field: "name", label: "이름", sort: true },
-  { id: "role", field: "role", label: "역할" },
-  { id: "team", field: "team", label: "팀" },
+  { id: "name", field: "name", label: "Name", sort: true },
+  { id: "role", field: "role", label: "Role" },
+  { id: "team", field: "team", label: "Team" },
 ];
 
 const layout = tableRef.current?.getColumnLayout();
 tableRef.current?.setColumnLayout(layout);`,
     language: "tsx",
-    title: "Header 이동과 저장",
+    title: "Header move and persistence",
   },
 ];
 
 export const headerGroupSamples: DocsCodeSample[] = [
   {
     code: `const columns = [
-  { id: "name", field: "name", label: "이름" },
-  { id: "role", field: "role", label: "역할" },
-  { id: "team", field: "team", label: "팀" },
+  { id: "name", field: "name", label: "Name" },
+  { id: "role", field: "role", label: "Role" },
+  { id: "team", field: "team", label: "Team" },
 ];
 
 const columnGroups = [
   {
     id: "member",
-    label: "구성원",
+    label: "Member",
     children: ["name", "role", "team"],
   },
 ];
 
-<DataTable columns={columns} columnGroups={columnGroups} data={rows} />;`,
+<CominsTable columns={columns} columnGroups={columnGroups} data={rows} />;`,
     language: "tsx",
-    title: "2중 Header",
+    title: "Two-level header",
   },
 ];
 
@@ -158,7 +158,7 @@ export const bodySamples: DocsCodeSample[] = [
   {
     code: `const rows = createVirtualRows(100000);
 
-<DataTable
+<CominsTable
   columns={columns}
   data={rows}
   getRowId={(row) => row.id}
@@ -168,13 +168,13 @@ export const bodySamples: DocsCodeSample[] = [
   virtualized
 />;`,
     language: "tsx",
-    title: "10만 행 가상 스크롤",
+    title: "100000-row virtualization",
   },
   {
     code: `const rows = createVirtualRows(100000);
 const overrides = useState({});
 
-<DataTable
+<CominsTable
   columns={[
     { field: "name", label: "Column1" },
     { field: "active", label: "Column2", cell: { components: [{ type: "checkbox" }] } },
@@ -191,7 +191,7 @@ const overrides = useState({});
   virtualized
 />;`,
     language: "tsx",
-    title: "컴포넌트 기반 10만 행 가상 스크롤",
+    title: "100000-row component virtualization",
   },
 ];
 
@@ -217,8 +217,8 @@ const loadRows = useCallback(async ({ offset, limit, signal }) => {
 
 const refreshRows = () => setRefreshVersion((current) => current + 1);
 
-<Button onClick={refreshRows}>새로고침</Button>
-<DataTable
+<Button onClick={refreshRows}>Refresh</Button>
+<CominsTable
   columns={columns}
   data={[]}
   getRowId={(row) => row.id}
@@ -256,11 +256,11 @@ const loadRows = useCallback(async ({ offset, limit, reason, signal }) => {
 
 const refreshRows = () => setRefreshVersion((current) => current + 1);
 
-<Button onClick={refreshRows}>새로고침</Button>
-<DataTable
+<Button onClick={refreshRows}>Refresh</Button>
+<CominsTable
   columns={columns}
   data={[]}
-  emptyComponent={<span>표시할 데이터가 없습니다.</span>}
+  emptyComponent={<span>No rows to display.</span>}
   getRowId={(row) => row.id}
   lazyLoad
   lazyLoadBatchSize={30}
@@ -283,19 +283,19 @@ const pageSize = 30;
 const pageCount = Math.ceil(rows.length / pageSize);
 
 <Pagination>
-  <PaginationButton onClick={() => setPageIndex(0)}>첫 페이지</PaginationButton>
-  <PaginationButton onClick={() => setPageIndex((page) => Math.max(0, page - 1))}>이전 페이지</PaginationButton>
-  <PaginationButton onClick={() => setPageIndex((page) => Math.min(pageCount - 1, page + 1))}>다음 페이지</PaginationButton>
-  <PaginationButton onClick={() => setPageIndex(pageCount - 1)}>마지막 페이지</PaginationButton>
+  <PaginationButton onClick={() => setPageIndex(0)}>First page</PaginationButton>
+  <PaginationButton onClick={() => setPageIndex((page) => Math.max(0, page - 1))}>Previous page</PaginationButton>
+  <PaginationButton onClick={() => setPageIndex((page) => Math.min(pageCount - 1, page + 1))}>Next page</PaginationButton>
+  <PaginationButton onClick={() => setPageIndex(pageCount - 1)}>Last page</PaginationButton>
 </Pagination>
-<DataTable
+<CominsTable
   columns={columns}
   data={rows}
   getRowId={(row) => row.id}
   pagination={{ pageIndex, pageSize }}
 />;`,
     language: "tsx",
-    title: "외부 pagination 상태",
+    title: "External pagination state",
   },
 ];
 
@@ -305,7 +305,7 @@ export const cellSamples: DocsCodeSample[] = [
   {
     id: "status",
     field: "status",
-    label: "상태",
+    label: "Status",
     cell: {
       renderer: ({ value }) => <strong className="status-badge">{value}</strong>,
       props: {
@@ -326,20 +326,20 @@ export const componentSamples: DocsCodeSample[] = [
   {
     id: "done",
     field: "done",
-    label: "완료",
+    label: "Done",
     cell: {
       components: [{ type: "checkbox", checkedField: "done" }],
     },
   },
 ];`,
     language: "tsx",
-    title: "내장 컴포넌트",
+    title: "Built-in components",
   },
 ];
 
 export const rowSamples: DocsCodeSample[] = [
   {
-    code: `<DataTable
+    code: `<CominsTable
   columns={columns}
   data={rows}
   rowProps={{
@@ -356,7 +356,7 @@ export const rowSamples: DocsCodeSample[] = [
 
 export const contextMenuSamples: DocsCodeSample[] = [
   {
-    code: `<DataTable
+    code: `<CominsTable
   columns={columns}
   data={rows}
   onContextMenuRow={({ event, row }) => {
@@ -389,15 +389,15 @@ const json = exportCominsRowsToJson({ columns: exportColumns, rows });`,
 
 export const apiSamples: DocsCodeSample[] = [
   {
-    code: `type DataTableProps<T> = {
-  columns: DataTableColumn<T>[];
+    code: `type CominsTableProps<T> = {
+  columns: CominsTableColumn<T>[];
   data: T[];
   getRowId?: (row: T, index: number) => string;
   onChangeData?: (nextData: T[]) => void;
   virtualized?: boolean;
 };`,
     language: "ts",
-    title: "주요 Props",
+    title: "Core props",
   },
 ];
 
@@ -414,7 +414,7 @@ export const refApiSamples: DocsCodeSample[] = [
   setSortState: (sort: CominsSortState | null) => void;
 };`,
     language: "ts",
-    title: "Ref 타입",
+    title: "Ref type",
   },
   {
     code: `const tableRef = useRef<CominsTableRef<UserRow>>(null);
@@ -425,6 +425,6 @@ tableRef.current?.setMoveTargetRow(2, 0);
 tableRef.current?.setColumnLayout(savedLayout);
 tableRef.current?.clearSort();`,
     language: "tsx",
-    title: "Ref 사용",
+    title: "Ref usage",
   },
 ];

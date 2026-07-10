@@ -11,9 +11,9 @@ export function LiveExampleSection({ page }: LiveExampleSectionProps) {
   }
 
   return (
-    <section aria-label="예제" className="docs-live">
+    <section aria-label="Example" className="docs-live">
       <div className="docs-live__header">
-        <h2>예제</h2>
+        <h2>Example</h2>
       </div>
       <FeatureContent featureId={page.featureId} key={`${page.path}-${page.featureId}`} />
     </section>

@@ -1,22 +1,26 @@
 # Selection
 
-Selection은 row, cell, cell range를 지원한다. React ref method는 화면에 보이는 visible row index 기준으로 row selection을 설정한다.
+Selection supports row selection, single-cell selection, and range selection.
 
-```tsx
-const tableRef = useRef<CominsTableRef<Row>>(null);
-
-<CominsTable
-  ref={tableRef}
-  columns={[{ field: "name", label: "Name" }]}
-  data={data}
-  getRowId={(row) => row.id}
-  onChangeSelection={(selection) => setSelection(selection)}
-/>
-
-tableRef.current?.setSelectedRow(1);
-tableRef.current?.setSelectedRows([0, 2]);
+```ts
+import {
+  getCominsSelectedCellRange,
+  isCominsCellSelected,
+  isCominsRowSelected,
+  selectCell,
+  selectCellRange,
+  selectRow,
+} from "comins-table/selection";
 ```
 
-Core helper는 `selectRow`, `selectRows`, `selectCell`, `selectCellRange`, `getCominsSelectedCellRange`, `clearCominsSelection`을 제공한다. 이전 `selectCominsRow`, `selectCominsCell`, `selectCominsCellRange` 이름은 공개 API에서 제거했다.
+`selectRow`, `selectCell`, and `selectCellRange` update the core state. `getCominsSelectedCellRange` reads the active range.
 
-`cellSelection={false}`를 사용하면 cell/range selection state와 스타일을 적용하지 않는다. Row selection과 일반 cell event callback은 별개로 유지된다.
+React users can subscribe to `onChangeSelection` on `CominsTable`.
+
+```tsx
+<CominsTable
+  columns={columns}
+  data={data}
+  onChangeSelection={(selection) => setSelection(selection)}
+/>
+```

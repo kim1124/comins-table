@@ -31,7 +31,7 @@ const featurePages = [
   ["/examples/context-menu", "우클릭"],
 ] as const;
 
-test("feature pages render Korean docs in the main content area", async ({ page }) => {
+test("feature pages render docs in the main content area", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
 
@@ -41,7 +41,7 @@ test("feature pages render Korean docs in the main content area", async ({ page 
     await expect(page.getByTestId("feature-option-sample").first().locator(".comins-table").first()).toBeVisible();
   }
 
-  await expect(page.getByRole("complementary", { name: "데이터 테이블 문서" })).toHaveCount(0);
+  await expect(page.getByRole("complementary", { name: "Data table docs" })).toHaveCount(0);
   expect(diagnostics).toEqual([]);
 });
 

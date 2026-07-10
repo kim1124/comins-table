@@ -31,7 +31,7 @@ export function DocsTopNav() {
         <label className="example-search">
           <Search aria-hidden="true" size={16} />
           <input
-            aria-label="전체 문서 검색"
+            aria-label="Search all docs"
             onBlur={(event) => {
               if (event.relatedTarget instanceof Node && searchRef.current?.contains(event.relatedTarget)) {
                 return;
@@ -40,7 +40,7 @@ export function DocsTopNav() {
             }}
             onChange={(event) => setQuery(event.target.value)}
             onFocus={() => setFocused(true)}
-            placeholder="검색"
+            placeholder="Search"
             type="search"
             value={query}
           />
@@ -62,7 +62,7 @@ export function DocsTopNav() {
                 </button>
               ))
             ) : (
-              <p className="global-search-popup__empty">검색 결과가 없습니다.</p>
+              <p className="global-search-popup__empty">No results.</p>
             )}
           </div>
         ) : null}

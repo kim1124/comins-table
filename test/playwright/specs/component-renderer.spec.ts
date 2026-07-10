@@ -592,11 +592,11 @@ test("component virtual-list keeps ten thousand item DOM bounded @perf", async (
 test("virtual-list example survives playground destroy and recreate lifecycle", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("link", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.getByRole("link", { exact: true, name: "Components" }).click();
   await expect(page.getByTestId("virtual-list-virtual-list-a-virtual-list-component")).toBeVisible();
   await page.getByRole("link", { exact: true, name: "Getting Started" }).click();
   await expect(page.getByTestId("component-example-virtual-list")).toHaveCount(0);
-  await page.getByRole("link", { exact: true, name: "컴포넌트 예제" }).click();
+  await page.getByRole("link", { exact: true, name: "Components" }).click();
   await expect(page.getByTestId("virtual-list-virtual-list-a-virtual-list-component")).toBeVisible();
 
   const lifecycle = await page.evaluate(() => window.__cominsTableLifecycle);
