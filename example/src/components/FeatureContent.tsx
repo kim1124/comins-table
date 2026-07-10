@@ -14,7 +14,7 @@ export function FeatureContent({ featureId }: { featureId: FeatureId }) {
   const FeatureComponent = feature.Component;
 
   useEffect(() => {
-    const lifecycle = (window.__kmsfDataTableLifecycle ??= {
+    const lifecycle = (window.__cominsTableLifecycle ??= {
       activeMountCount: 0,
       mountCount: 0,
       unmountCount: 0,
@@ -22,12 +22,12 @@ export function FeatureContent({ featureId }: { featureId: FeatureId }) {
 
     lifecycle.activeMountCount += 1;
     lifecycle.mountCount += 1;
-    window.__kmsfDataTableActiveMount = mountId;
+    window.__cominsTableActiveMount = mountId;
 
     return () => {
       lifecycle.activeMountCount = Math.max(0, lifecycle.activeMountCount - 1);
       lifecycle.unmountCount += 1;
-      window.__kmsfDataTableLastUnmount = mountId;
+      window.__cominsTableLastUnmount = mountId;
     };
   }, [mountId]);
 
@@ -49,18 +49,18 @@ export function FeatureContent({ featureId }: { featureId: FeatureId }) {
 
 declare global {
   interface Window {
-    __kmsfDataTableActiveMount?: string;
-    __kmsfDataTableActiveRoute?: string;
-    __kmsfDataTableLastRouteUnmount?: {
+    __cominsTableActiveMount?: string;
+    __cominsTableActiveRoute?: string;
+    __cominsTableLastRouteUnmount?: {
       featureId?: FeatureId;
       routePath: string;
       unmountedAt: number;
     };
-    __kmsfDataTableLifecycle?: {
+    __cominsTableLifecycle?: {
       activeMountCount: number;
       mountCount: number;
       unmountCount: number;
     };
-    __kmsfDataTableLastUnmount?: string;
+    __cominsTableLastUnmount?: string;
   }
 }

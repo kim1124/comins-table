@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Funnel, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 
-import { KmsfDataTable, type KmsfDataTableColumn, type KmsfSelectionState } from "../../../src";
+import { CominsTable, type CominsTableColumn, type CominsSelectionState } from "../../../src";
 import { ActionButton, FeatureControls } from "../components/FeatureControls";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { createBaseColumns } from "../fixtures/columns";
@@ -19,7 +19,7 @@ export function BasicCrudFeature() {
     () => (ownersOnly ? rows.filter((row) => row.role === "Owner") : rows),
     [ownersOnly, rows],
   );
-  const columns = useMemo<Array<KmsfDataTableColumn<PersonRow>>>(
+  const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(
     () => [
       ...createBaseColumns(),
       {
@@ -44,7 +44,7 @@ export function BasicCrudFeature() {
     ],
     [],
   );
-  const syncSelection = (selection: KmsfSelectionState) => {
+  const syncSelection = (selection: CominsSelectionState) => {
     setSelectedRowIds(selection.rowIds.map(String));
   };
   const addRow = () => {
@@ -160,7 +160,7 @@ export function BasicCrudFeature() {
             ) : null}
           </div>
           <div className="crud-table-pane">
-            <KmsfDataTable
+            <CominsTable
               className="example-table"
               columns={columns}
               data={visibleRows}

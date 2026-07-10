@@ -1,4 +1,4 @@
-import type { KmsfDataTableColumn } from "../../../src";
+import type { CominsTableColumn } from "../../../src";
 import type { PersonRow } from "./people";
 
 export const defaultColumnLayout = {
@@ -6,7 +6,7 @@ export const defaultColumnLayout = {
   order: ["name", "age", "role"],
 };
 
-export function createBaseColumns(): Array<KmsfDataTableColumn<PersonRow>> {
+export function createBaseColumns(): Array<CominsTableColumn<PersonRow>> {
   return [
     { field: "name", label: "Column1", minWidth: 100, sort: true },
     {
@@ -29,7 +29,7 @@ export function createBaseColumns(): Array<KmsfDataTableColumn<PersonRow>> {
   ];
 }
 
-export function createGuardedColumns(): Array<KmsfDataTableColumn<PersonRow>> {
+export function createGuardedColumns(): Array<CominsTableColumn<PersonRow>> {
   return [
     ...createBaseColumns(),
     {

@@ -24,7 +24,7 @@ export function DocsTopNav() {
   return (
     <header className="docs-top-nav">
       <div className="docs-top-nav__brand">
-        <strong>@kmsf/data-table</strong>
+        <strong>comins-table</strong>
         <span>Docs Playground</span>
       </div>
       <div className="global-data-table-search" ref={searchRef}>

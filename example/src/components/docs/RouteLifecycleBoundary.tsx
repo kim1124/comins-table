@@ -10,10 +10,10 @@ interface RouteLifecycleBoundaryProps {
 
 export function RouteLifecycleBoundary({ children, featureId, routePath }: RouteLifecycleBoundaryProps) {
   useEffect(() => {
-    window.__kmsfDataTableActiveRoute = routePath;
+    window.__cominsTableActiveRoute = routePath;
 
     return () => {
-      window.__kmsfDataTableLastRouteUnmount = {
+      window.__cominsTableLastRouteUnmount = {
         featureId,
         routePath,
         unmountedAt: Date.now(),

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { KmsfDataTable, type KmsfDataTableColumn, type KmsfLazyLoadRequest } from "../../../src";
+import { CominsTable, type CominsTableColumn, type CominsLazyLoadRequest } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Button } from "../components/ui/button";
 import { createBaseColumns } from "../fixtures/columns";
@@ -13,12 +13,12 @@ export function LoadingStateFeature() {
   const [mode, setMode] = useState<LoadingMode>("initial");
   const [remoteMode, setRemoteMode] = useState<RemoteMode>("idle");
   const [remoteKey, setRemoteKey] = useState(0);
-  const columns = useMemo<Array<KmsfDataTableColumn<PersonRow>>>(() => createBaseColumns(), []);
+  const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(() => createBaseColumns(), []);
   const rows = useMemo(() => cloneBaseRows(), []);
   const remoteRows = useMemo(() => createRows(12), []);
   const tableRows = mode === "empty" || mode === "initial" ? [] : rows;
   const isLoading = mode === "initial" || mode === "refetch";
-  const loadRemoteRows = (request: KmsfLazyLoadRequest) =>
+  const loadRemoteRows = (request: CominsLazyLoadRequest) =>
     new Promise<{ rows: PersonRow[]; total: number }>((resolve) => {
       window.setTimeout(() => {
         if (remoteMode === "empty") {
@@ -62,7 +62,7 @@ export function LoadingStateFeature() {
             {mode}
           </span>
         </div>
-        <KmsfDataTable
+        <CominsTable
           className="example-table"
           columns={columns}
           data={tableRows}
@@ -96,7 +96,7 @@ export function LoadingStateFeature() {
         {remoteMode === "idle" ? (
           <div className="feature-empty-hint">Lazy Load 상태를 선택하면 원격 데이터 예제가 표시됩니다.</div>
         ) : (
-          <KmsfDataTable
+          <CominsTable
             key={remoteKey}
             className="example-table"
             columns={columns}

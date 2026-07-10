@@ -1,36 +1,36 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  addKmsfRows,
-  applyKmsfColumnLayout,
-  copyKmsfCell,
-  copyKmsfRow,
-  createKmsfDataTableState,
-  deleteKmsfRows,
-  formatKmsfCellValue,
-  getKmsfCellValue,
-  getKmsfHeaderRows,
-  getKmsfPageRows,
-  getKmsfVisibleColumns,
-  getKmsfVirtualRows,
-  moveKmsfColumn,
-  moveKmsfColumnGroup,
-  moveKmsfRow,
-  pasteKmsfCell,
-  pasteKmsfRow,
-  queryKmsfRows,
-  replaceKmsfRows,
-  serializeKmsfColumnLayout,
-  setKmsfColumnHidden,
-  setKmsfColumnGroupHidden,
-  setKmsfColumnGroupWidth,
-  setKmsfHeaderVisible,
-  setKmsfPagination,
-  setKmsfColumnWidth,
-  setKmsfSortState,
-  setKmsfTableTheme,
-  sortKmsfRows,
-  updateKmsfRows,
+  addCominsRows,
+  applyCominsColumnLayout,
+  copyCominsCell,
+  copyCominsRow,
+  createCominsTableState,
+  deleteCominsRows,
+  formatCominsCellValue,
+  getCominsCellValue,
+  getCominsHeaderRows,
+  getCominsPageRows,
+  getCominsVisibleColumns,
+  getCominsVirtualRows,
+  moveCominsColumn,
+  moveCominsColumnGroup,
+  moveCominsRow,
+  pasteCominsCell,
+  pasteCominsRow,
+  queryCominsRows,
+  replaceCominsRows,
+  serializeCominsColumnLayout,
+  setCominsColumnHidden,
+  setCominsColumnGroupHidden,
+  setCominsColumnGroupWidth,
+  setCominsHeaderVisible,
+  setCominsPagination,
+  setCominsColumnWidth,
+  setCominsSortState,
+  setCominsTableTheme,
+  sortCominsRows,
+  updateCominsRows,
 } from "../src";
 
 type PersonRow = {
@@ -62,21 +62,21 @@ const rows: PersonRow[] = [
 ];
 
 function createState() {
-  return createKmsfDataTableState<PersonRow>({
+  return createCominsTableState<PersonRow>({
     columns,
     getRowId: (row) => row.id,
     rows,
   });
 }
 
-describe("@kmsf/data-table basic core", () => {
+describe("comins-table basic core", () => {
   it("normalizes column ids from fields and reads nested field values", () => {
     const state = createState();
 
     expect(state.columns[0]?.id).toBe("name");
     expect(state.columns[2]?.id).toBe("profile.score");
     expect(state.columns[0]?.label).toBe("Name");
-    expect(getKmsfCellValue(state, rows[0], "profile.score")).toBe(8);
+    expect(getCominsCellValue(state, rows[0], "profile.score")).toBe(8);
   });
 
   it("treats incoming row arrays as immutable references", () => {
@@ -84,7 +84,7 @@ describe("@kmsf/data-table basic core", () => {
       { active: true, age: 31, id: "a", name: "Alpha", profile: { score: 8 } },
       { active: false, age: 42, id: "b", name: "Beta", profile: { score: 4 } },
     ];
-    const state = createKmsfDataTableState<PersonRow>({
+    const state = createCominsTableState<PersonRow>({
       columns,
       getRowId: (row) => row.id,
       rows: inputRows,
@@ -93,10 +93,10 @@ describe("@kmsf/data-table basic core", () => {
 
     expect(state.rows).toBe(inputRows);
 
-    const replaced = replaceKmsfRows(state, replacementRows);
+    const replaced = replaceCominsRows(state, replacementRows);
     expect(replaced.rows).toBe(replacementRows);
 
-    const updated = updateKmsfRows(state, [{ id: "a", patch: { name: "Updated Alpha" } }]);
+    const updated = updateCominsRows(state, [{ id: "a", patch: { name: "Updated Alpha" } }]);
     expect(updated.rows).not.toBe(inputRows);
     expect(inputRows[0]?.name).toBe("Alpha");
     expect(updated.rows[0]?.name).toBe("Updated Alpha");
@@ -105,34 +105,34 @@ describe("@kmsf/data-table basic core", () => {
   it("supports full refresh, partial update, CRUD, query, and theme updates", () => {
     let state = createState();
 
-    state = addKmsfRows(state, [{ age: 27, id: "c", name: "Gamma", profile: { score: 9 } }]);
-    state = updateKmsfRows(state, [{ id: "b", patch: { active: true, age: 43 } }]);
-    state = deleteKmsfRows(state, ["a"]);
-    state = setKmsfTableTheme(state, {
+    state = addCominsRows(state, [{ age: 27, id: "c", name: "Gamma", profile: { score: 9 } }]);
+    state = updateCominsRows(state, [{ id: "b", patch: { active: true, age: 43 } }]);
+    state = deleteCominsRows(state, ["a"]);
+    state = setCominsTableTheme(state, {
       className: "rounded-md border",
       density: "compact",
       style: { color: "rgb(17, 24, 39)" },
     });
 
-    expect(queryKmsfRows(state).map((row) => row.id)).toEqual(["b", "c"]);
-    expect(queryKmsfRows(state, (row) => row.active === true).map((row) => row.id)).toEqual(["b"]);
+    expect(queryCominsRows(state).map((row) => row.id)).toEqual(["b", "c"]);
+    expect(queryCominsRows(state, (row) => row.active === true).map((row) => row.id)).toEqual(["b"]);
     expect(state.theme).toMatchObject({ className: "rounded-md border", density: "compact" });
 
-    state = replaceKmsfRows(state, [{ age: 19, id: "z", name: "Zeta" }]);
+    state = replaceCominsRows(state, [{ age: 19, id: "z", name: "Zeta" }]);
 
-    expect(queryKmsfRows(state)).toEqual([{ age: 19, id: "z", name: "Zeta" }]);
+    expect(queryCominsRows(state)).toEqual([{ age: 19, id: "z", name: "Zeta" }]);
   });
 
   it("persists header visibility, width, and column order", () => {
     let state = createState();
 
-    state = setKmsfColumnWidth(state, "age", 144);
-    state = setKmsfColumnHidden(state, "name", true);
-    state = moveKmsfColumn(state, "age", 0);
-    state = moveKmsfRow(state, "b", 0);
+    state = setCominsColumnWidth(state, "age", 144);
+    state = setCominsColumnHidden(state, "name", true);
+    state = moveCominsColumn(state, "age", 0);
+    state = moveCominsRow(state, "b", 0);
 
-    const layout = serializeKmsfColumnLayout(state);
-    const restored = applyKmsfColumnLayout(createState(), layout);
+    const layout = serializeCominsColumnLayout(state);
+    const restored = applyCominsColumnLayout(createState(), layout);
 
     expect(layout.order).toEqual(["age", "name", "profile.score"]);
     expect(layout).not.toHaveProperty("rowIds");
@@ -140,12 +140,12 @@ describe("@kmsf/data-table basic core", () => {
     expect(restored.columnState.age?.width).toBe(144);
     expect(restored.columnState.name?.hidden).toBe(true);
     expect(restored.columnOrder).toEqual(["age", "name", "profile.score"]);
-    expect(queryKmsfRows(restored).map((row) => row.id)).toEqual(["a", "b"]);
+    expect(queryCominsRows(restored).map((row) => row.id)).toEqual(["a", "b"]);
   });
 
   it("normalizes 2-depth column groups without changing flat column tables", () => {
     const flatState = createState();
-    const groupedState = createKmsfDataTableState<PersonRow>({
+    const groupedState = createCominsTableState<PersonRow>({
       columnGroups: [
         { children: ["name", "age"], id: "profile", label: "Profile" },
         { children: ["missing", "age", "profile.score"], id: "metrics", label: "Metrics" },
@@ -156,7 +156,7 @@ describe("@kmsf/data-table basic core", () => {
     });
 
     expect(flatState.columnGroups).toEqual([]);
-    expect(getKmsfHeaderRows(flatState)).toEqual([
+    expect(getCominsHeaderRows(flatState)).toEqual([
       [
         expect.objectContaining({ colSpan: 1, columnId: "name", kind: "column", rowSpan: 1 }),
         expect.objectContaining({ colSpan: 1, columnId: "age", kind: "column", rowSpan: 1 }),
@@ -167,7 +167,7 @@ describe("@kmsf/data-table basic core", () => {
       { children: ["name", "age"], id: "profile", label: "Profile" },
       { children: ["profile.score"], id: "metrics", label: "Metrics" },
     ]);
-    expect(getKmsfHeaderRows(groupedState)).toEqual([
+    expect(getCominsHeaderRows(groupedState)).toEqual([
       [
         expect.objectContaining({ colSpan: 2, groupId: "profile", kind: "group", rowSpan: 1 }),
         expect.objectContaining({ colSpan: 1, groupId: "metrics", kind: "group", rowSpan: 1 }),
@@ -187,7 +187,7 @@ describe("@kmsf/data-table basic core", () => {
   });
 
   it("persists parent group visibility separately from child column visibility", () => {
-    const createGroupedState = () => createKmsfDataTableState<PersonRow>({
+    const createGroupedState = () => createCominsTableState<PersonRow>({
       columnGroups: [{ children: ["name", "age"], id: "profile", label: "Profile" }],
       columns,
       getRowId: (row) => row.id,
@@ -195,23 +195,23 @@ describe("@kmsf/data-table basic core", () => {
     });
     let state = createGroupedState();
 
-    state = setKmsfColumnHidden(state, "age", true);
-    state = setKmsfColumnGroupHidden(state, "profile", true);
+    state = setCominsColumnHidden(state, "age", true);
+    state = setCominsColumnGroupHidden(state, "profile", true);
 
-    expect(getKmsfVisibleColumns(state).map((column) => column.id)).toEqual(["profile.score"]);
+    expect(getCominsVisibleColumns(state).map((column) => column.id)).toEqual(["profile.score"]);
 
-    const layout = serializeKmsfColumnLayout(state);
-    const restored = applyKmsfColumnLayout(createGroupedState(), layout);
-    const shown = setKmsfColumnGroupHidden(restored, "profile", false);
+    const layout = serializeCominsColumnLayout(state);
+    const restored = applyCominsColumnLayout(createGroupedState(), layout);
+    const shown = setCominsColumnGroupHidden(restored, "profile", false);
 
     expect(layout.groups?.profile?.hidden).toBe(true);
     expect(restored.columnState.age?.hidden).toBe(true);
     expect(shown.columnState.age?.hidden).toBe(true);
-    expect(getKmsfVisibleColumns(shown).map((column) => column.id)).toEqual(["name", "profile.score"]);
+    expect(getCominsVisibleColumns(shown).map((column) => column.id)).toEqual(["name", "profile.score"]);
   });
 
   it("resizes parent groups while preserving child width ratios and respecting min/max constraints", () => {
-    let state = createKmsfDataTableState<PersonRow>({
+    let state = createCominsTableState<PersonRow>({
       columnGroups: [{ children: ["name", "age", "profile.score"], id: "profile", label: "Profile" }],
       columns: [
         { field: "name", label: "Name", minWidth: 80, width: 100 },
@@ -222,13 +222,13 @@ describe("@kmsf/data-table basic core", () => {
       rows,
     });
 
-    state = setKmsfColumnGroupWidth(state, "profile", 600);
+    state = setCominsColumnGroupWidth(state, "profile", 600);
 
     expect(state.columnState.name?.width).toBeCloseTo(170, 5);
     expect(state.columnState.age?.width).toBe(260);
     expect(state.columnState["profile.score"]?.width).toBeCloseTo(170, 5);
 
-    state = setKmsfColumnGroupWidth(state, "profile", 180);
+    state = setCominsColumnGroupWidth(state, "profile", 180);
 
     expect(state.columnState.name?.width).toBe(80);
     expect(state.columnState.age?.width).toBe(50);
@@ -236,7 +236,7 @@ describe("@kmsf/data-table basic core", () => {
   });
 
   it("moves parent groups as a block and prevents child columns from leaving their group", () => {
-    let state = createKmsfDataTableState<PersonRow>({
+    let state = createCominsTableState<PersonRow>({
       columnGroups: [{ children: ["name", "age"], id: "profile", label: "Profile" }],
       columns: [
         { field: "name", label: "Name" },
@@ -247,15 +247,15 @@ describe("@kmsf/data-table basic core", () => {
       rows,
     });
 
-    state = moveKmsfColumnGroup(state, "profile", 1);
+    state = moveCominsColumnGroup(state, "profile", 1);
     expect(state.columnOrder).toEqual(["profile.score", "name", "age"]);
 
-    expect(moveKmsfColumn(state, "age", 0).columnOrder).toEqual(["profile.score", "name", "age"]);
-    expect(moveKmsfColumn(state, "age", 1).columnOrder).toEqual(["profile.score", "age", "name"]);
+    expect(moveCominsColumn(state, "age", 0).columnOrder).toEqual(["profile.score", "name", "age"]);
+    expect(moveCominsColumn(state, "age", 1).columnOrder).toEqual(["profile.score", "age", "name"]);
   });
 
   it("moves multiple parent groups without splitting children", () => {
-    let state = createKmsfDataTableState<PersonRow>({
+    let state = createCominsTableState<PersonRow>({
       columnGroups: [
         { children: ["name", "age"], id: "profile", label: "Profile" },
         { children: ["active", "locked"], id: "status", label: "Status" },
@@ -271,10 +271,10 @@ describe("@kmsf/data-table basic core", () => {
       rows,
     });
 
-    state = moveKmsfColumnGroup(state, "profile", 2);
+    state = moveCominsColumnGroup(state, "profile", 2);
     expect(state.columnOrder).toEqual(["active", "locked", "name", "age", "profile.score"]);
 
-    state = moveKmsfColumnGroup(state, "profile", 5);
+    state = moveCominsColumnGroup(state, "profile", 5);
     expect(state.columnOrder).toEqual(["active", "locked", "profile.score", "name", "age"]);
   });
 
@@ -284,15 +284,15 @@ describe("@kmsf/data-table basic core", () => {
       id: `row-${index}`,
       name: `Row ${index}`,
     }));
-    const state = createKmsfDataTableState<PersonRow>({
+    const state = createCominsTableState<PersonRow>({
       columns,
       getRowId: (row) => row.id,
       pagination: { pageIndex: 2, pageSize: 25 },
       rows: largeRows,
     });
 
-    const pageRows = getKmsfPageRows(state);
-    const virtualRows = getKmsfVirtualRows(state, {
+    const pageRows = getCominsPageRows(state);
+    const virtualRows = getCominsVirtualRows(state, {
       overscan: 2,
       rowHeight: 20,
       scrollTop: 2_000,
@@ -309,28 +309,28 @@ describe("@kmsf/data-table basic core", () => {
   it("updates header visibility and pagination in the table store", () => {
     let state = createState();
 
-    state = setKmsfHeaderVisible(state, false);
-    state = setKmsfPagination(state, { pageIndex: 1, pageSize: 1 });
+    state = setCominsHeaderVisible(state, false);
+    state = setCominsPagination(state, { pageIndex: 1, pageSize: 1 });
 
     expect(state.showHeader).toBe(false);
-    expect(getKmsfPageRows(state)).toEqual([
+    expect(getCominsPageRows(state)).toEqual([
       { active: false, age: 42, id: "b", name: "Beta", profile: { score: 4 } },
     ]);
   });
 
   it("supports row reorder, row copy-paste, and cell copy-paste", () => {
-    let state = addKmsfRows(createState(), [{ age: 27, id: "c", name: "Gamma", profile: { score: 9 } }]);
+    let state = addCominsRows(createState(), [{ age: 27, id: "c", name: "Gamma", profile: { score: 9 } }]);
 
-    state = moveKmsfRow(state, "c", 0);
-    expect(queryKmsfRows(state).map((row) => row.id)).toEqual(["c", "a", "b"]);
+    state = moveCominsRow(state, "c", 0);
+    expect(queryCominsRows(state).map((row) => row.id)).toEqual(["c", "a", "b"]);
 
-    const copiedRow = copyKmsfRow(state, "a");
-    state = pasteKmsfRow(state, copiedRow, {
+    const copiedRow = copyCominsRow(state, "a");
+    state = pasteCominsRow(state, copiedRow, {
       getNewRowId: (row) => `${row.id}-copy`,
       mode: "append",
     });
 
-    expect(queryKmsfRows(state).at(-1)).toEqual({
+    expect(queryCominsRows(state).at(-1)).toEqual({
       active: true,
       age: 31,
       id: "a-copy",
@@ -338,16 +338,16 @@ describe("@kmsf/data-table basic core", () => {
       profile: { score: 8 },
     });
 
-    const copiedCell = copyKmsfCell(state, { columnId: "name", rowId: "b" });
-    state = pasteKmsfCell(state, { columnId: "name", rowId: "c" }, copiedCell);
+    const copiedCell = copyCominsCell(state, { columnId: "name", rowId: "b" });
+    state = pasteCominsCell(state, { columnId: "name", rowId: "c" }, copiedCell);
 
-    expect(queryKmsfRows(state)[0]?.name).toBe("Beta");
+    expect(queryCominsRows(state)[0]?.name).toBe("Beta");
     expect(copiedCell.text).toBe("Beta");
 
-    const replaceRow = copyKmsfRow(state, "a-copy");
-    state = pasteKmsfRow(state, replaceRow, { mode: "replace", targetRowId: "b" });
+    const replaceRow = copyCominsRow(state, "a-copy");
+    state = pasteCominsRow(state, replaceRow, { mode: "replace", targetRowId: "b" });
 
-    expect(queryKmsfRows(state).find((row) => row.id === "b")).toEqual({
+    expect(queryCominsRows(state).find((row) => row.id === "b")).toEqual({
       active: true,
       age: 31,
       id: "b",
@@ -359,19 +359,19 @@ describe("@kmsf/data-table basic core", () => {
   it("formats cells and sorts rows by a single column", () => {
     let state = createState();
 
-    expect(formatKmsfCellValue(state, rows[0], "a", state.columns[1]!)).toBe("31 years");
+    expect(formatCominsCellValue(state, rows[0], "a", state.columns[1]!)).toBe("31 years");
 
-    state = setKmsfSortState(state, { columnId: "age", direction: "desc" });
-    expect(getKmsfPageRows(state).map((row) => row.name)).toEqual(["Beta", "Alpha"]);
+    state = setCominsSortState(state, { columnId: "age", direction: "desc" });
+    expect(getCominsPageRows(state).map((row) => row.name)).toEqual(["Beta", "Alpha"]);
 
-    const sorted = sortKmsfRows(createState(), { columnId: "age", direction: "asc" });
+    const sorted = sortCominsRows(createState(), { columnId: "age", direction: "asc" });
     expect(sorted.rows.map((row) => row.name)).toEqual(["Alpha", "Beta"]);
   });
 
   it("formats repeated row object payloads with the row id index", () => {
     const sharedRow: PersonRow = { active: true, age: 10, id: "shared", name: "Shared" };
     const repeatedRows = Array.from({ length: 3 }, () => sharedRow);
-    const state = createKmsfDataTableState<PersonRow>({
+    const state = createCominsTableState<PersonRow>({
       columns: [
         {
           cell: {
@@ -385,6 +385,6 @@ describe("@kmsf/data-table basic core", () => {
       rows: repeatedRows,
     });
 
-    expect(formatKmsfCellValue(state, repeatedRows[2]!, 2, state.columns[0]!)).toBe("data:2 visible:2");
+    expect(formatCominsCellValue(state, repeatedRows[2]!, 2, state.columns[0]!)).toBe("data:2 visible:2");
   });
 });

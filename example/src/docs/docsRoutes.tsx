@@ -231,7 +231,7 @@ export const docsPages: DocsPage[] = [
   },
   {
     body: paragraphs([
-      "`KmsfDataTableRef<TData>`는 외부 명령형 제어가 필요한 selection, sort, layout, row movement 작업만 제공합니다.",
+      "`CominsTableRef<TData>`는 외부 명령형 제어가 필요한 selection, sort, layout, row movement 작업만 제공합니다.",
       "`setSelectedRow`, `setSelectedRows`, `setMoveTargetRow`는 현재 정렬과 pagination이 반영된 visible index 기준으로 동작합니다.",
       "데이터 변경은 Ref가 직접 소유하지 않고 `data`와 `onChangeData`의 controlled flow로 전달됩니다.",
     ]),

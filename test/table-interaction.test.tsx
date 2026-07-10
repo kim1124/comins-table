@@ -5,7 +5,7 @@ import { act, createRef } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { KmsfDataTable, type KmsfDataTableProps, type KmsfDataTableRef } from "../src";
+import { CominsTable, type CominsTableProps, type CominsTableRef } from "../src";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -61,13 +61,13 @@ afterEach(() => {
   container = undefined;
 });
 
-function renderTable(props: Partial<KmsfDataTableProps<PersonRow>> = {}) {
+function renderTable(props: Partial<CominsTableProps<PersonRow>> = {}) {
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
 
   act(() => {
-    root?.render(<KmsfDataTable columns={columns} data={rows} getRowId={(row) => row.id} {...props} />);
+    root?.render(<CominsTable columns={columns} data={rows} getRowId={(row) => row.id} {...props} />);
   });
 
   return container;
@@ -97,18 +97,18 @@ function pressControlKey(element: Element, key: "c" | "v") {
   });
 }
 
-describe("@kmsf/data-table keyboard interaction", () => {
-  it("applies the shared KMSF typography class and 12px base text class", () => {
+describe("comins-table keyboard interaction", () => {
+  it("applies the shared COMINS typography class and 12px base text class", () => {
     const element = renderTable();
-    const table = element.querySelector(".kmsf-data-table");
+    const table = element.querySelector(".comins-table");
 
-    expect(table?.className).toContain("kmsf-typography-base");
-    expect(table?.className).toContain("text-[length:var(--kmsf-font-size-base,12px)]");
+    expect(table?.className).toContain("comins-typography-base");
+    expect(table?.className).toContain("text-[length:var(--comins-font-size-base,12px)]");
   });
 
   it("renders the redesigned field and label column API", () => {
     const element = renderTableElement(
-      <KmsfDataTable columns={apiColumns} data={apiRows} getRowId={(row) => row.id} />,
+      <CominsTable columns={apiColumns} data={apiRows} getRowId={(row) => row.id} />,
     );
 
     expect(element.querySelector("[data-testid='header-name']")?.textContent).toContain("Name");
@@ -118,20 +118,20 @@ describe("@kmsf/data-table keyboard interaction", () => {
   });
 
   it("accepts buffer-size and uses a practical default virtualized row buffer", () => {
-    const defaultProps: KmsfDataTableProps<PersonRow> = {
+    const defaultProps: CominsTableProps<PersonRow> = {
       columns,
       data: manyRows,
       getRowId: (row) => row.id,
       rowHeight: 20,
       virtualized: true,
     };
-    const customProps: KmsfDataTableProps<PersonRow> = {
+    const customProps: CominsTableProps<PersonRow> = {
       ...defaultProps,
       "buffer-size": 30,
     };
 
-    const defaultElement = renderTableElement(<KmsfDataTable {...defaultProps} />);
-    const defaultRows = defaultElement.querySelectorAll("tbody tr[data-kmsf-row-data-index]");
+    const defaultElement = renderTableElement(<CominsTable {...defaultProps} />);
+    const defaultRows = defaultElement.querySelectorAll("tbody tr[data-comins-row-data-index]");
 
     expect(defaultRows.length).toBeGreaterThanOrEqual(17);
     expect(defaultRows.length).toBeLessThanOrEqual(27);
@@ -141,8 +141,8 @@ describe("@kmsf/data-table keyboard interaction", () => {
     root = undefined;
     container = undefined;
 
-    const customElement = renderTableElement(<KmsfDataTable {...customProps} />);
-    const customRows = customElement.querySelectorAll("tbody tr[data-kmsf-row-data-index]");
+    const customElement = renderTableElement(<CominsTable {...customProps} />);
+    const customRows = customElement.querySelectorAll("tbody tr[data-comins-row-data-index]");
 
     expect(customRows.length).toBe(42);
   });
@@ -150,7 +150,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
   it("calls onLoadMore once when infinite scroll reaches the bottom threshold", () => {
     const onLoadMore = vi.fn();
     const element = renderTableElement(
-      <KmsfDataTable
+      <CominsTable
         columns={columns}
         data={manyRows.slice(0, 20)}
         data-testid="infinite-scroll-viewport"
@@ -189,7 +189,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
   it("blocks infinite load requests while loading or exhausted and renders a loading row", () => {
     const onLoadMore = vi.fn();
     const loadingElement = renderTableElement(
-      <KmsfDataTable
+      <CominsTable
         columns={columns}
         data={manyRows.slice(0, 20)}
         data-testid="infinite-scroll-viewport"
@@ -223,7 +223,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
     container = undefined;
 
     const exhaustedElement = renderTableElement(
-      <KmsfDataTable
+      <CominsTable
         columns={columns}
         data={manyRows.slice(0, 20)}
         data-testid="infinite-scroll-viewport"
@@ -258,7 +258,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
         }),
     );
     const element = renderTableElement(
-      <KmsfDataTable
+      <CominsTable
         columns={columns}
         data={[]}
         getRowId={(row) => row.id}
@@ -304,7 +304,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
           }),
       );
     const element = renderTableElement(
-      <KmsfDataTable
+      <CominsTable
         columns={columns}
         data={[]}
         data-testid="lazy-load-viewport"
@@ -361,7 +361,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
         }),
     );
     const element = renderTableElement(
-      <KmsfDataTable
+      <CominsTable
         columns={columns}
         data={[]}
         getRowId={(row) => row.id}
@@ -388,7 +388,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
   it("notifies onChangeData when internal interactions mutate data", () => {
     const onChangeData = vi.fn();
     const element = renderTableElement(
-      <KmsfDataTable
+      <CominsTable
         columns={apiColumns}
         data={apiRows}
         getRowId={(row) => row.id}
@@ -409,7 +409,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
 
   it("renders from data prop as the primary external state source", () => {
     const element = renderTableElement(
-      <KmsfDataTable columns={columns} data={rows} getRowId={(row) => row.id} />,
+      <CominsTable columns={columns} data={rows} getRowId={(row) => row.id} />,
     );
 
     expect(element.querySelector("[data-testid='cell-a-name']")?.textContent).toBe("Alpha");
@@ -419,7 +419,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
   it("notifies onChangeData when internal interactions mutate controlled data", () => {
     const onChangeData = vi.fn();
     const element = renderTableElement(
-      <KmsfDataTable
+      <CominsTable
         columns={columns}
         data={rows}
         getRowId={(row) => row.id}
@@ -468,7 +468,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
 
     act(() => {
       root?.render(
-        <KmsfDataTable
+        <CominsTable
           columns={columns}
           data={rows}
           getRowId={(row) => row.id}
@@ -515,7 +515,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
     });
 
     expect(rowA.getAttribute("data-selected-row")).toBe("true");
-    expect(rowA.className).toContain("kmsf-row-selected");
+    expect(rowA.className).toContain("comins-row-selected");
     expect(cellA.getAttribute("data-selected")).toBe("true");
   });
 
@@ -538,7 +538,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
   it("supports Ctrl/Cmd row toggles, Shift row ranges, sort-stable selection, and data replacement reset", () => {
     const onChangeSelection = vi.fn();
     const element = renderTableElement(
-      <KmsfDataTable
+      <CominsTable
         columns={columns}
         data={threeRows}
         getRowId={(row) => row.id}
@@ -571,7 +571,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
 
     act(() => {
       root?.render(
-        <KmsfDataTable
+        <CominsTable
           columns={columns}
           data={[{ age: 50, id: "z", name: "Zeta" }]}
           getRowId={(row) => row.id}
@@ -633,7 +633,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
 
     act(() => {
       root?.render(
-        <KmsfDataTable
+        <CominsTable
           columns={columns}
           data={rows}
           getRowId={(row) => row.id}
@@ -679,7 +679,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
 
     act(() => {
       root?.render(
-        <KmsfDataTable
+        <CominsTable
           columns={[
             {
               cell: {
@@ -704,7 +704,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
     const onClickRow = vi.fn();
     const onChangeData = vi.fn();
     const element = renderTableElement(
-      <KmsfDataTable
+      <CominsTable
         columns={columns}
         data={rows}
         getRowId={(row) => row.id}
@@ -742,7 +742,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
   it("applies column props and blocks disabled cell interactions", () => {
     const onClickCell = vi.fn();
     const element = renderTableElement(
-      <KmsfDataTable
+      <CominsTable
         columns={[
           {
             field: "name",
@@ -788,7 +788,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
   it("sorts through header click and reports sort changes", () => {
     const onChangeSort = vi.fn();
     const element = renderTableElement(
-      <KmsfDataTable columns={columns} data={threeRows} getRowId={(row) => row.id} onChangeSort={onChangeSort} />,
+      <CominsTable columns={columns} data={threeRows} getRowId={(row) => row.id} onChangeSort={onChangeSort} />,
     );
     const ageHeader = element.querySelector("[data-testid='header-age']")!;
 
@@ -817,7 +817,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
 
   it("exposes aria-sort and keyboard activation for sortable headers", () => {
     const element = renderTableElement(
-      <KmsfDataTable columns={columns} data={threeRows} getRowId={(row) => row.id} />,
+      <CominsTable columns={columns} data={threeRows} getRowId={(row) => row.id} />,
     );
     const ageHeader = element.querySelector("[data-testid='header-age']")!;
     const nameHeader = element.querySelector("[data-testid='header-name']")!;
@@ -846,7 +846,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
 
   it("renders animated sort indicator state for the full sort cycle", () => {
     const element = renderTableElement(
-      <KmsfDataTable columns={columns} data={threeRows} getRowId={(row) => row.id} />,
+      <CominsTable columns={columns} data={threeRows} getRowId={(row) => row.id} />,
     );
     const ageHeader = element.querySelector("[data-testid='header-age']")!;
     const indicator = element.querySelector("[data-testid='sort-indicator-age']")!;
@@ -875,7 +875,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
   it("renders 2-depth column groups without parent sort behavior", () => {
     const onChangeSort = vi.fn();
     const element = renderTableElement(
-      <KmsfDataTable
+      <CominsTable
         columnGroups={[{ children: ["name", "age"], id: "profile", label: "Profile" }]}
         columns={columns}
         data={threeRows}
@@ -910,9 +910,9 @@ describe("@kmsf/data-table keyboard interaction", () => {
   });
 
   it("hides actual child columns through parent group layout state", () => {
-    const ref = createRef<KmsfDataTableRef<PersonRow>>();
+    const ref = createRef<CominsTableRef<PersonRow>>();
     const element = renderTableElement(
-      <KmsfDataTable
+      <CominsTable
         columnGroups={[{ children: ["name", "age"], id: "profile", label: "Profile" }]}
         columns={[
           { field: "name", label: "Name" },
@@ -954,12 +954,12 @@ describe("@kmsf/data-table keyboard interaction", () => {
   });
 
   it("exposes column layout, selection, and sort ref methods", () => {
-    const ref = createRef<KmsfDataTableRef<PersonRow>>();
+    const ref = createRef<CominsTableRef<PersonRow>>();
     const onChangeColumnLayout = vi.fn();
     const onChangeSelection = vi.fn();
     const onChangeSort = vi.fn();
     const element = renderTableElement(
-      <KmsfDataTable
+      <CominsTable
         columns={columns}
         data={threeRows}
         getRowId={(row) => row.id}
@@ -1003,11 +1003,11 @@ describe("@kmsf/data-table keyboard interaction", () => {
   });
 
   it("moves rows by visible indexes through setMoveTargetRow and clears active sort", () => {
-    const ref = createRef<KmsfDataTableRef<PersonRow>>();
+    const ref = createRef<CominsTableRef<PersonRow>>();
     const onChangeData = vi.fn();
     const onChangeSort = vi.fn();
     const element = renderTableElement(
-      <KmsfDataTable
+      <CominsTable
         columns={columns}
         data={threeRows}
         getRowId={(row) => row.id}
@@ -1048,7 +1048,7 @@ describe("@kmsf/data-table keyboard interaction", () => {
   it("blocks row drag through rowProps.draggable without disabling row click", () => {
     const onClickRow = vi.fn();
     const element = renderTableElement(
-      <KmsfDataTable
+      <CominsTable
         columns={columns}
         data={threeRows}
         getRowId={(row) => row.id}

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { KmsfDataTable } from "../../../src";
+import { CominsTable } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { createBaseColumns } from "../fixtures/columns";
 import { createExampleRows } from "../fixtures/people";
@@ -22,7 +22,7 @@ export function SizeFeature() {
             <h2>300px 고정</h2>
             <p>사용자가 지정한 높이 300px을 테이블이 그대로 채우는지 확인합니다.</p>
             <div className="size-case size-case--manual" data-testid="size-case-manual">
-              <KmsfDataTable
+              <CominsTable
                 className="size-table"
                 columns={columns}
                 data={rows}
@@ -37,7 +37,7 @@ export function SizeFeature() {
             <h2>상위 컨테이너 500px</h2>
             <p>상위 컨테이너 높이 500px을 테이블이 100%로 사용하는지 확인합니다.</p>
             <div className="size-case size-case--parent" data-testid="size-case-parent">
-              <KmsfDataTable
+              <CominsTable
                 className="size-table"
                 columns={columns}
                 data={rows}

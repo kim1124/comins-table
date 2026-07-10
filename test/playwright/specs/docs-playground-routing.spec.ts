@@ -4,7 +4,7 @@ test.describe("docs playground routing", () => {
   test("loads the getting started route directly", async ({ page }) => {
     await page.goto("/docs/getting-started");
 
-    await expect(page.getByRole("banner")).toContainText("@kmsf/data-table");
+    await expect(page.getByRole("banner")).toContainText("comins-table");
     await expect(page.getByRole("navigation", { name: "문서 메뉴" })).toBeVisible();
     await expect(page.getByRole("main")).toContainText("시작하기");
     await expect(page.getByRole("main")).toContainText("예제");
@@ -40,7 +40,7 @@ test.describe("docs playground routing", () => {
     await page.goto("/docs/getting-started");
 
     await page.evaluate(() => {
-      window.__kmsfDataTableLastUnmount = undefined;
+      window.__cominsTableLastUnmount = undefined;
     });
 
     await page.getByRole("link", { name: "Header 그룹" }).click();
@@ -49,7 +49,7 @@ test.describe("docs playground routing", () => {
     await expect
       .poll(async () =>
         page.evaluate(() => {
-          const lastUnmount = window.__kmsfDataTableLastUnmount;
+          const lastUnmount = window.__cominsTableLastUnmount;
           return typeof lastUnmount === "string" ? lastUnmount.split("-").at(0) : lastUnmount?.featureId;
         }),
       )

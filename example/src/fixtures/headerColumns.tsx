@@ -1,4 +1,4 @@
-import type { KmsfColumnLayout, KmsfDataTableColumn } from "../../../src";
+import type { CominsColumnLayout, CominsTableColumn } from "../../../src";
 import { defaultColumnLayout } from "./columns";
 import type { PersonRow } from "./people";
 
@@ -15,7 +15,7 @@ export const dynamicColumnOptions = [
   { label: "Column5", value: "role" },
 ];
 
-export function cloneDefaultLayout(): KmsfColumnLayout {
+export function cloneDefaultLayout(): CominsColumnLayout {
   return {
     columns: { ...defaultColumnLayout.columns },
     groups: {},
@@ -23,7 +23,7 @@ export function cloneDefaultLayout(): KmsfColumnLayout {
   };
 }
 
-export function cloneGroupLayout(): KmsfColumnLayout {
+export function cloneGroupLayout(): CominsColumnLayout {
   return {
     columns: {},
     groups: {},
@@ -31,7 +31,7 @@ export function cloneGroupLayout(): KmsfColumnLayout {
   };
 }
 
-export function createHeaderGroupColumns(): Array<KmsfDataTableColumn<PersonRow>> {
+export function createHeaderGroupColumns(): Array<CominsTableColumn<PersonRow>> {
   return [
     { field: "name", label: "Column1", minWidth: 100, sort: true, width: 160 },
     {

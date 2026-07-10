@@ -42,7 +42,7 @@ test("user playground exposes every current feature page with recreated content"
   const firstMountId = await page.getByTestId("mount-id").textContent();
   await page.getByRole("link", { exact: true, name: "Getting Started" }).click();
   await expect(page.getByTestId("mount-id")).not.toHaveText(firstMountId ?? "");
-  await expect.poll(() => page.evaluate(() => window.__kmsfDataTableLastUnmount)).toBe(firstMountId);
+  await expect.poll(() => page.evaluate(() => window.__cominsTableLastUnmount)).toBe(firstMountId);
 
   for (const item of featurePages) {
     await page.goto(item.route);
@@ -54,14 +54,14 @@ test("user playground exposes every current feature page with recreated content"
     if (item.feature === "size") {
       await expect(page.getByTestId("data-table-size-manual")).toBeVisible();
     } else {
-      await expect(page.locator(".kmsf-data-table").first()).toBeVisible();
+      await expect(page.locator(".comins-table").first()).toBeVisible();
     }
   }
 
   await page.goto("/examples/header");
   const headerMountId = await page.getByTestId("mount-id").textContent();
   await page.getByRole("link", { exact: true, name: "CRUD 동작" }).click();
-  await expect.poll(() => page.evaluate(() => window.__kmsfDataTableLastUnmount)).toBe(headerMountId);
+  await expect.poll(() => page.evaluate(() => window.__cominsTableLastUnmount)).toBe(headerMountId);
 
   expect(diagnostics).toEqual([]);
 });
@@ -71,7 +71,7 @@ test("user playground uses charts-style docs shell and shadcn-style action butto
   await page.goto("/");
 
   await expect(page.locator(".docs-shell")).toBeVisible();
-  await expect(page.locator(".docs-top-nav")).toContainText("@kmsf/data-table");
+  await expect(page.locator(".docs-top-nav")).toContainText("comins-table");
   await expect(page.locator(".workspace-tabs")).toHaveCount(0);
   await expect(page.locator(".workspace-tabs__bar")).toHaveCount(0);
   await expect(page.getByRole("tablist", { name: "플레이그라운드 보기" })).toHaveCount(0);

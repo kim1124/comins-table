@@ -2,13 +2,13 @@ import type { DocsCodeSample } from "./types";
 
 export const installSamples: DocsCodeSample[] = [
   {
-    code: "npm install @kmsf/data-table",
+    code: "npm install comins-table",
     language: "bash",
     title: "설치",
   },
   {
-    code: `import { DataTable } from "@kmsf/data-table";
-import "@kmsf/data-table/styles.css";
+    code: `import { DataTable } from "comins-table";
+import "comins-table/styles.css";
 
 const columns = [
   { id: "name", field: "name", label: "이름", sort: true },
@@ -53,7 +53,7 @@ export const sizeSamples: DocsCodeSample[] = [
   min-height: 300px;
 }
 
-.table-frame > .kmsf-data-table {
+.table-frame > .comins-table {
   height: 100%;
 }`,
     language: "css",
@@ -63,16 +63,16 @@ export const sizeSamples: DocsCodeSample[] = [
 
 export const themeSamples: DocsCodeSample[] = [
   {
-    code: `import "@kmsf/data-table/styles.css";
+    code: `import "comins-table/styles.css";
 
 <DataTable
   columns={columns}
   data={rows}
   rowHeight={32}
   theme={{
-    className: "kmsf-data-table-theme--dark",
+    className: "comins-table-theme--dark",
     style: {
-      "--kmsf-data-table-row-height": "32px",
+      "--comins-table-row-height": "32px",
     },
   }}
   virtualized
@@ -82,17 +82,17 @@ export const themeSamples: DocsCodeSample[] = [
   },
   {
     code: `.my-contrast-table {
-  --kmsf-data-table-accent: #f43f5e;
-  --kmsf-data-table-accent-foreground: #fff7ed;
-  --kmsf-data-table-cell-border: #fbbf24;
-  --kmsf-data-table-header-background: #111827;
-  --kmsf-data-table-header-border: #f43f5e;
-  --kmsf-data-table-header-color: #fde68a;
-  --kmsf-data-table-header-split-border: #fbbf24;
-  --kmsf-data-table-row-border: #7c2d12;
-  --kmsf-data-table-row-even-background: #2f0f5f;
-  --kmsf-data-table-row-odd-background: #fff7ed;
-  --kmsf-data-table-row-selected-background: #f43f5e;
+  --comins-table-accent: #f43f5e;
+  --comins-table-accent-foreground: #fff7ed;
+  --comins-table-cell-border: #fbbf24;
+  --comins-table-header-background: #111827;
+  --comins-table-header-border: #f43f5e;
+  --comins-table-header-color: #fde68a;
+  --comins-table-header-split-border: #fbbf24;
+  --comins-table-row-border: #7c2d12;
+  --comins-table-row-even-background: #2f0f5f;
+  --comins-table-row-odd-background: #fff7ed;
+  --comins-table-row-selected-background: #f43f5e;
   font-family: Georgia, "Times New Roman", serif;
 }`,
     language: "css",
@@ -380,8 +380,8 @@ export const exportSamples: DocsCodeSample[] = [
   { id: "role", label: "Column3", value: (row) => row.role },
 ];
 
-const csv = exportKmsfRowsToCsv({ columns: exportColumns, rows });
-const json = exportKmsfRowsToJson({ columns: exportColumns, rows });`,
+const csv = exportCominsRowsToCsv({ columns: exportColumns, rows });
+const json = exportCominsRowsToJson({ columns: exportColumns, rows });`,
     language: "ts",
     title: "CSV / JSON helper",
   },
@@ -403,21 +403,21 @@ export const apiSamples: DocsCodeSample[] = [
 
 export const refApiSamples: DocsCodeSample[] = [
   {
-    code: `type KmsfDataTableRef<TData = unknown> = {
+    code: `type CominsTableRef<TData = unknown> = {
   clearSort: () => void;
-  getColumnLayout: () => KmsfColumnLayout;
-  getSortState: () => KmsfSortState | null;
-  setColumnLayout: (layout: KmsfColumnLayout) => void;
+  getColumnLayout: () => CominsColumnLayout;
+  getSortState: () => CominsSortState | null;
+  setColumnLayout: (layout: CominsColumnLayout) => void;
   setMoveTargetRow: (targetIdx: number, sourceIdx: number) => void;
   setSelectedRow: (index: number) => void;
   setSelectedRows: (indexes: number[]) => void;
-  setSortState: (sort: KmsfSortState | null) => void;
+  setSortState: (sort: CominsSortState | null) => void;
 };`,
     language: "ts",
     title: "Ref 타입",
   },
   {
-    code: `const tableRef = useRef<KmsfDataTableRef<UserRow>>(null);
+    code: `const tableRef = useRef<CominsTableRef<UserRow>>(null);
 
 tableRef.current?.setSelectedRow(0);
 tableRef.current?.setSelectedRows([0, 2]);

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { KmsfDataTable, type KmsfDataTableColumn, type KmsfVirtualListItem } from "../../../src";
+import { CominsTable, type CominsTableColumn, type CominsVirtualListItem } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { createVirtualRows, type PersonRow } from "../fixtures/people";
 
@@ -15,7 +15,7 @@ const roleOptions = [
   { label: "Viewer", value: "Viewer" },
 ];
 
-const componentLargeVirtualItems: KmsfVirtualListItem[] = Array.from({ length: 1_000 }, (_value, index) => ({
+const componentLargeVirtualItems: CominsVirtualListItem[] = Array.from({ length: 1_000 }, (_value, index) => ({
   label: `Item ${index + 1}`,
   value: `item-${index + 1}`,
 }));
@@ -28,9 +28,9 @@ export function BodyFeature() {
     () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("fixture") === "heavy-renderer",
     [],
   );
-  const columns = useMemo<Array<KmsfDataTableColumn<PersonRow>>>(
+  const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(
     () => {
-      const createCell = (columnNumber: number): KmsfDataTableColumn<PersonRow>["cell"] =>
+      const createCell = (columnNumber: number): CominsTableColumn<PersonRow>["cell"] =>
         useHeavyRenderer
           ? {
               renderer: ({ row }) => (
@@ -125,7 +125,7 @@ export function BodyFeature() {
     },
     [useHeavyRenderer],
   );
-  const componentColumns = useMemo<Array<KmsfDataTableColumn<PersonRow>>>(
+  const componentColumns = useMemo<Array<CominsTableColumn<PersonRow>>>(
     () => [
       {
         cell: {
@@ -187,7 +187,7 @@ export function BodyFeature() {
             return (
               <select
                 aria-label={`Data ${row.index + 1} select`}
-                className="kmsf-data-table__component kmsf-data-table__component-select"
+                className="comins-table__component comins-table__component-select"
                 data-testid="component-large-select"
                 onChange={(event) => {
                   const nextValue = event.currentTarget.value;
@@ -295,7 +295,7 @@ export function BodyFeature() {
         id="body"
         title="대용량 데이터 표시"
       >
-        <KmsfDataTable
+        <CominsTable
           className="example-table body-virtualization-table"
           columns={columns}
           data={rows}
@@ -314,7 +314,7 @@ export function BodyFeature() {
         <p className="body-virtualization-table__event" data-testid="component-large-event">
           {componentEvent}
         </p>
-        <KmsfDataTable
+        <CominsTable
           className="example-table body-virtualization-table component-large-virtualization-table"
           columns={componentColumns}
           data={rows}

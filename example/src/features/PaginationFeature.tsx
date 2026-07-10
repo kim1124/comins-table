@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 
-import { KmsfDataTable } from "../../../src";
+import { CominsTable } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Pagination, PaginationButton, PaginationContent, PaginationItem } from "../components/ui/pagination";
 import { createBaseColumns } from "../fixtures/columns";
@@ -80,7 +80,7 @@ export function PaginationFeature() {
             Page {safePageIndex + 1} / Size {pageSize}
           </span>
         </div>
-        <KmsfDataTable
+        <CominsTable
           className="example-table"
           columns={columns}
           data={rows}

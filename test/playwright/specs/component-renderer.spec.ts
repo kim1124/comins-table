@@ -27,28 +27,28 @@ test("playground renders Header and Cell component renderer examples", async ({ 
   await page.goto("/examples/cell");
   await expect(page.getByTestId("feature-option-description").first()).toContainText("cell.renderer");
   await expect(page.getByTestId("cell-renderer-a")).toContainText("renderer:");
-  await expect(page.locator(".kmsf-data-table__component")).toHaveCount(0);
+  await expect(page.locator(".comins-table__component")).toHaveCount(0);
 
   await page.goto("/examples/component");
-  await expect(page.getByTestId("component-example-button").locator(".kmsf-data-table__component-button").first()).toBeAttached();
-  await expect(page.getByTestId("component-example-input").locator(".kmsf-data-table__component-input").first()).toBeAttached();
-  await expect(page.getByTestId("component-example-checkbox").locator(".kmsf-data-table__component-checkbox").first()).toBeAttached();
-  await expect(page.getByTestId("component-example-radio").locator(".kmsf-data-table__component-radio").first()).toBeAttached();
-  await expect(page.getByTestId("component-example-select").locator(".kmsf-data-table__component-select").first()).toBeAttached();
-  await expect(page.getByTestId("component-example-toggle").locator(".kmsf-data-table__component-toggle").first()).toBeAttached();
-  await expect(page.getByTestId("component-example-progress").locator(".kmsf-data-table__component-progress").first()).toBeAttached();
+  await expect(page.getByTestId("component-example-button").locator(".comins-table__component-button").first()).toBeAttached();
+  await expect(page.getByTestId("component-example-input").locator(".comins-table__component-input").first()).toBeAttached();
+  await expect(page.getByTestId("component-example-checkbox").locator(".comins-table__component-checkbox").first()).toBeAttached();
+  await expect(page.getByTestId("component-example-radio").locator(".comins-table__component-radio").first()).toBeAttached();
+  await expect(page.getByTestId("component-example-select").locator(".comins-table__component-select").first()).toBeAttached();
+  await expect(page.getByTestId("component-example-toggle").locator(".comins-table__component-toggle").first()).toBeAttached();
+  await expect(page.getByTestId("component-example-progress").locator(".comins-table__component-progress").first()).toBeAttached();
 });
 
-test("built-in components use the exported KMSF mint skin without external UI dependencies", async ({ page }) => {
+test("built-in components use the exported COMINS mint skin without external UI dependencies", async ({ page }) => {
   await page.goto("/");
 
   await page.goto("/examples/component");
-  const button = page.locator(".kmsf-data-table__component-button").first();
-  const input = page.locator(".kmsf-data-table__component-input").first();
-  const select = page.locator(".kmsf-data-table__component-select").first();
-  const checkbox = page.locator(".kmsf-data-table__component-checkbox").first();
-  const radio = page.locator(".kmsf-data-table__component-radio input").first();
-  const progress = page.locator(".kmsf-data-table__component-progress > span").first();
+  const button = page.locator(".comins-table__component-button").first();
+  const input = page.locator(".comins-table__component-input").first();
+  const select = page.locator(".comins-table__component-select").first();
+  const checkbox = page.locator(".comins-table__component-checkbox").first();
+  const radio = page.locator(".comins-table__component-radio input").first();
+  const progress = page.locator(".comins-table__component-progress > span").first();
 
   await expect(button).toHaveCSS("background-color", "rgb(209, 250, 229)");
   await expect(button).toHaveCSS("border-radius", "6px");
@@ -62,7 +62,7 @@ test("built-in components use the exported KMSF mint skin without external UI de
   await expect(progress).toHaveCSS("background-color", "rgb(16, 185, 129)");
 
   const inputWidth = await input.evaluate((element) => {
-    const slot = element.closest(".kmsf-data-table__component-slot");
+    const slot = element.closest(".comins-table__component-slot");
 
     return {
       component: element.getBoundingClientRect().width,
@@ -70,7 +70,7 @@ test("built-in components use the exported KMSF mint skin without external UI de
     };
   });
   const selectWidth = await select.evaluate((element) => {
-    const slot = element.closest(".kmsf-data-table__component-slot");
+    const slot = element.closest(".comins-table__component-slot");
 
     return {
       component: element.getBoundingClientRect().width,
@@ -89,16 +89,16 @@ test("input and select components fill their resized cell content box", async ({
   const inputExample = page.getByTestId("component-example-input");
   const selectExample = page.getByTestId("component-example-select");
 
-  await expect(inputExample.locator("tbody .kmsf-data-table__component-input")).toHaveCount(0);
-  await expect(selectExample.locator("tbody .kmsf-data-table__component-select")).toHaveCount(0);
+  await expect(inputExample.locator("tbody .comins-table__component-input")).toHaveCount(0);
+  await expect(selectExample.locator("tbody .comins-table__component-select")).toHaveCount(0);
   await inputExample.getByTestId("row-input-a").click();
   await selectExample.getByTestId("row-select-a").click();
 
   for (const example of [inputExample, selectExample]) {
-    const control = example.locator("tbody .kmsf-data-table__component-input, tbody .kmsf-data-table__component-select").first();
+    const control = example.locator("tbody .comins-table__component-input, tbody .comins-table__component-select").first();
     await expect(control).toBeVisible();
     const initial = await control.evaluate((element) => {
-      const cell = element.closest<HTMLElement>(".kmsf-data-table__td");
+      const cell = element.closest<HTMLElement>(".comins-table__td");
       const cellStyle = cell ? window.getComputedStyle(cell) : null;
       const cellWidth =
         (cell?.getBoundingClientRect().width ?? 0) -
@@ -122,8 +122,8 @@ test("input and select components fill their resized cell content box", async ({
   await page.mouse.move(handleBox!.x + 120, handleBox!.y + handleBox!.height / 2);
   await page.mouse.up();
 
-  const resized = await inputExample.locator("tbody .kmsf-data-table__component-input").first().evaluate((element) => {
-    const cell = element.closest<HTMLElement>(".kmsf-data-table__td");
+  const resized = await inputExample.locator("tbody .comins-table__component-input").first().evaluate((element) => {
+    const cell = element.closest<HTMLElement>(".comins-table__td");
     const cellStyle = cell ? window.getComputedStyle(cell) : null;
     const cellWidth =
       (cell?.getBoundingClientRect().width ?? 0) -
@@ -171,21 +171,21 @@ test("header label and header components use separate non-overlapping zones", as
 
   const table = page.getByTestId("component-example-button");
   const header = table.getByTestId("header-button-component");
-  const leftSlot = header.locator(".kmsf-data-table__header-slot[data-kmsf-header-slot='left']");
-  await expect(header.locator(".kmsf-data-table__header-label")).toBeVisible();
+  const leftSlot = header.locator(".comins-table__header-slot[data-comins-header-slot='left']");
+  await expect(header.locator(".comins-table__header-label")).toBeVisible();
   await expect(leftSlot).toBeVisible();
-  await expect(leftSlot.locator(".kmsf-data-table__component-button")).toBeVisible();
+  await expect(leftSlot.locator(".comins-table__component-button")).toBeVisible();
 
   const assertHeaderZones = async () => {
     const metrics = await header.evaluate((element) => {
       const th = element.getBoundingClientRect();
       const leftSlot = element
-        .querySelector<HTMLElement>(".kmsf-data-table__header-slot[data-kmsf-header-slot='left']")
+        .querySelector<HTMLElement>(".comins-table__header-slot[data-comins-header-slot='left']")
         ?.getBoundingClientRect();
-      const label = element.querySelector<HTMLElement>(".kmsf-data-table__header-label")?.getBoundingClientRect();
-      const indicator = element.querySelector<HTMLElement>(".kmsf-sort-indicator")?.getBoundingClientRect();
+      const label = element.querySelector<HTMLElement>(".comins-table__header-label")?.getBoundingClientRect();
+      const indicator = element.querySelector<HTMLElement>(".comins-sort-indicator")?.getBoundingClientRect();
       const rightSlot = element
-        .querySelector<HTMLElement>(".kmsf-data-table__header-slot[data-kmsf-header-slot='right']")
+        .querySelector<HTMLElement>(".comins-table__header-slot[data-comins-header-slot='right']")
         ?.getBoundingClientRect();
 
       return {
@@ -214,8 +214,8 @@ test("header label and header components use separate non-overlapping zones", as
   await header.click();
   await expect(header).toHaveAttribute("data-sort-direction", "asc");
   const sortedMetrics = await header.evaluate((element) => {
-    const label = element.querySelector<HTMLElement>(".kmsf-data-table__header-label")?.getBoundingClientRect();
-    const indicator = element.querySelector<HTMLElement>(".kmsf-sort-indicator")?.getBoundingClientRect();
+    const label = element.querySelector<HTMLElement>(".comins-table__header-label")?.getBoundingClientRect();
+    const indicator = element.querySelector<HTMLElement>(".comins-sort-indicator")?.getBoundingClientRect();
 
     return {
       gap: (indicator?.left ?? 0) - (label?.right ?? 0),
@@ -246,16 +246,16 @@ test("header right slot renders after the sort indicator", async ({ page }) => {
 
   const menuExample = page.getByTestId("component-example-menu");
   const header = menuExample.getByTestId("header-menu-component");
-  const rightSlot = header.locator(".kmsf-data-table__header-slot[data-kmsf-header-slot='right']");
-  await expect(rightSlot.locator(".kmsf-data-table__component-menu-trigger")).toBeVisible();
+  const rightSlot = header.locator(".comins-table__header-slot[data-comins-header-slot='right']");
+  await expect(rightSlot.locator(".comins-table__component-menu-trigger")).toBeVisible();
   await header.click();
   await expect(header).toHaveAttribute("data-sort-direction", "asc");
 
   const metrics = await header.evaluate((element) => {
-    const label = element.querySelector<HTMLElement>(".kmsf-data-table__header-label")?.getBoundingClientRect();
-    const indicator = element.querySelector<HTMLElement>(".kmsf-sort-indicator")?.getBoundingClientRect();
+    const label = element.querySelector<HTMLElement>(".comins-table__header-label")?.getBoundingClientRect();
+    const indicator = element.querySelector<HTMLElement>(".comins-sort-indicator")?.getBoundingClientRect();
     const rightSlot = element
-      .querySelector<HTMLElement>(".kmsf-data-table__header-slot[data-kmsf-header-slot='right']")
+      .querySelector<HTMLElement>(".comins-table__header-slot[data-comins-header-slot='right']")
       ?.getBoundingClientRect();
 
     return {
@@ -281,10 +281,10 @@ test("unsorted headers do not reserve sort indicator space and stay centered", a
   await expect(header).not.toHaveAttribute("data-sort-direction", /asc|desc/);
 
   const unsorted = await header.evaluate((element) => {
-    const label = element.querySelector<HTMLElement>(".kmsf-data-table__header-label")?.getBoundingClientRect();
-    const content = element.querySelector<HTMLElement>(".kmsf-data-table__header-content")?.getBoundingClientRect();
-    const indicator = element.querySelector<HTMLElement>(".kmsf-sort-indicator")?.getBoundingClientRect();
-    const indicatorStyle = window.getComputedStyle(element.querySelector<HTMLElement>(".kmsf-sort-indicator")!);
+    const label = element.querySelector<HTMLElement>(".comins-table__header-label")?.getBoundingClientRect();
+    const content = element.querySelector<HTMLElement>(".comins-table__header-content")?.getBoundingClientRect();
+    const indicator = element.querySelector<HTMLElement>(".comins-sort-indicator")?.getBoundingClientRect();
+    const indicatorStyle = window.getComputedStyle(element.querySelector<HTMLElement>(".comins-sort-indicator")!);
 
     return {
       contentCenter: ((content?.left ?? 0) + (content?.right ?? 0)) / 2,
@@ -301,9 +301,9 @@ test("unsorted headers do not reserve sort indicator space and stay centered", a
   await header.click();
   await expect(header).toHaveAttribute("data-sort-direction", "asc");
   const sorted = await header.evaluate((element) => {
-    const label = element.querySelector<HTMLElement>(".kmsf-data-table__header-label")?.getBoundingClientRect();
-    const indicator = element.querySelector<HTMLElement>(".kmsf-sort-indicator")?.getBoundingClientRect();
-    const indicatorStyle = window.getComputedStyle(element.querySelector<HTMLElement>(".kmsf-sort-indicator")!);
+    const label = element.querySelector<HTMLElement>(".comins-table__header-label")?.getBoundingClientRect();
+    const indicator = element.querySelector<HTMLElement>(".comins-sort-indicator")?.getBoundingClientRect();
+    const indicatorStyle = window.getComputedStyle(element.querySelector<HTMLElement>(".comins-sort-indicator")!);
 
     return {
       gap: (indicator?.left ?? 0) - (label?.right ?? 0),
@@ -325,18 +325,18 @@ test("default built-in components are visually centered in their cell", async ({
   await page.goto("/examples/component");
 
   const componentChecks = [
-    { control: ".kmsf-data-table__component-button", table: "button" },
-    { control: ".kmsf-data-table__component-checkbox", table: "checkbox" },
-    { control: ".kmsf-data-table__component-radio", table: "radio" },
-    { control: ".kmsf-data-table__component-toggle", table: "toggle" },
-    { control: ".kmsf-data-table__component-progress", table: "progress" },
+    { control: ".comins-table__component-button", table: "button" },
+    { control: ".comins-table__component-checkbox", table: "checkbox" },
+    { control: ".comins-table__component-radio", table: "radio" },
+    { control: ".comins-table__component-toggle", table: "toggle" },
+    { control: ".comins-table__component-progress", table: "progress" },
   ];
 
   for (const check of componentChecks) {
     const control = page.getByTestId(`component-example-${check.table}`).locator(`tbody ${check.control}`).first();
     await expect(control).toBeVisible();
     const metrics = await control.evaluate((element) => {
-      const cell = element.closest<HTMLElement>(".kmsf-data-table__td");
+      const cell = element.closest<HTMLElement>(".comins-table__td");
       const cellRect = cell?.getBoundingClientRect();
       const style = cell ? window.getComputedStyle(cell) : null;
       const controlRect = element.getBoundingClientRect();
@@ -387,18 +387,18 @@ test("playground exposes a dedicated Phase 1 component example page", async ({ p
     expect(box?.height).toBeGreaterThanOrEqual(500);
   }
 
-  await expect(page.getByTestId("component-example-button").locator(".kmsf-data-table__component-button").first()).toBeAttached();
-  await expect(page.getByTestId("component-example-input").locator(".kmsf-data-table__component-input").first()).toBeAttached();
-  await expect(page.getByTestId("component-example-checkbox").locator(".kmsf-data-table__component-checkbox").first()).toBeAttached();
-  await expect(page.getByTestId("component-example-radio").locator(".kmsf-data-table__component-radio").first()).toBeAttached();
-  await expect(page.getByTestId("component-example-select").locator(".kmsf-data-table__component-select").first()).toBeAttached();
-  await expect(page.getByTestId("component-example-toggle").locator(".kmsf-data-table__component-toggle").first()).toBeAttached();
-  await expect(page.getByTestId("component-example-progress").locator(".kmsf-data-table__component-progress").first()).toBeAttached();
-  await expect(page.getByTestId("component-example-menu").locator(".kmsf-data-table__component-menu-trigger").first()).toBeAttached();
-  await expect(page.getByTestId("component-example-virtual-list").locator(".kmsf-data-table__component-virtual-list").first()).toBeAttached();
-  await expect(page.getByTestId("component-example-virtual-list-more").locator(".kmsf-data-table__component-virtual-list-more").first()).toBeAttached();
-  await expect(page.getByTestId("component-example-virtual-list-search").locator(".kmsf-data-table__component-virtual-list").first()).toBeAttached();
-  await expect(page.getByTestId("component-example-virtual-list-search").locator(".kmsf-data-table__component-virtual-list-search")).toHaveCount(0);
+  await expect(page.getByTestId("component-example-button").locator(".comins-table__component-button").first()).toBeAttached();
+  await expect(page.getByTestId("component-example-input").locator(".comins-table__component-input").first()).toBeAttached();
+  await expect(page.getByTestId("component-example-checkbox").locator(".comins-table__component-checkbox").first()).toBeAttached();
+  await expect(page.getByTestId("component-example-radio").locator(".comins-table__component-radio").first()).toBeAttached();
+  await expect(page.getByTestId("component-example-select").locator(".comins-table__component-select").first()).toBeAttached();
+  await expect(page.getByTestId("component-example-toggle").locator(".comins-table__component-toggle").first()).toBeAttached();
+  await expect(page.getByTestId("component-example-progress").locator(".comins-table__component-progress").first()).toBeAttached();
+  await expect(page.getByTestId("component-example-menu").locator(".comins-table__component-menu-trigger").first()).toBeAttached();
+  await expect(page.getByTestId("component-example-virtual-list").locator(".comins-table__component-virtual-list").first()).toBeAttached();
+  await expect(page.getByTestId("component-example-virtual-list-more").locator(".comins-table__component-virtual-list-more").first()).toBeAttached();
+  await expect(page.getByTestId("component-example-virtual-list-search").locator(".comins-table__component-virtual-list").first()).toBeAttached();
+  await expect(page.getByTestId("component-example-virtual-list-search").locator(".comins-table__component-virtual-list-search")).toHaveCount(0);
   await expect(page.getByTestId("component-example-renderer")).toContainText("사용자 renderer");
 });
 
@@ -408,18 +408,18 @@ test("component examples isolate events and commit input or select changes inten
   await page.goto("/examples/component");
 
   const buttonExample = page.getByTestId("component-example-button");
-  await buttonExample.locator("tbody .kmsf-data-table__component-button").first().click();
+  await buttonExample.locator("tbody .comins-table__component-button").first().click();
   await expect(page.getByTestId("component-event-alert")).toContainText("Cell Button");
   await expect(page.getByTestId("row-button-a")).not.toHaveAttribute("data-selected-row", "true");
-  await buttonExample.locator("thead .kmsf-data-table__component-button").first().click();
+  await buttonExample.locator("thead .comins-table__component-button").first().click();
   await expect(page.getByTestId("component-event-alert")).toContainText("Header Button");
 
   const inputExample = page.getByTestId("component-example-input");
   await expect(inputExample.getByRole("columnheader", { name: "컴포넌트 이름" })).toHaveCount(0);
-  await expect(inputExample.locator("tbody .kmsf-data-table__component-input")).toHaveCount(0);
+  await expect(inputExample.locator("tbody .comins-table__component-input")).toHaveCount(0);
   await expect(inputExample.getByTestId("cell-input-a-input-component")).toContainText("Data 1");
   await inputExample.getByTestId("row-input-a").click();
-  const cellInput = inputExample.locator("tbody .kmsf-data-table__component-input").first();
+  const cellInput = inputExample.locator("tbody .comins-table__component-input").first();
   await expect(cellInput).toBeVisible();
   await expect(inputExample.getByTestId("cell-input-b-input-component")).toContainText("Data 2");
   await cellInput.fill("Data Draft");
@@ -429,28 +429,28 @@ test("component examples isolate events and commit input or select changes inten
   await expect(page.getByTestId("component-event-alert")).toContainText("Data Draft");
 
   const checkboxExample = page.getByTestId("component-example-checkbox");
-  const checkbox = checkboxExample.locator("tbody .kmsf-data-table__component-checkbox").first();
+  const checkbox = checkboxExample.locator("tbody .comins-table__component-checkbox").first();
   const checkboxBefore = await checkbox.isChecked();
   await checkbox.click();
   await expect(checkbox).toBeChecked({ checked: !checkboxBefore });
   await expect(page.getByTestId("row-checkbox-a")).not.toHaveAttribute("data-selected-row", "true");
 
   const toggleExample = page.getByTestId("component-example-toggle");
-  const toggle = toggleExample.locator("tbody .kmsf-data-table__component-toggle").first();
+  const toggle = toggleExample.locator("tbody .comins-table__component-toggle").first();
   await expect(toggle).toHaveAttribute("aria-pressed", "true");
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
   await expect(toggle).toHaveText("OFF");
 
   const radioExample = page.getByTestId("component-example-radio");
-  await radioExample.locator("tbody .kmsf-data-table__component-radio input").nth(1).click();
+  await radioExample.locator("tbody .comins-table__component-radio input").nth(1).click();
   await expect(page.getByTestId("row-radio-a")).not.toHaveAttribute("data-selected-row", "true");
 
   const selectExample = page.getByTestId("component-example-select");
-  await expect(selectExample.locator("tbody .kmsf-data-table__component-select")).toHaveCount(0);
+  await expect(selectExample.locator("tbody .comins-table__component-select")).toHaveCount(0);
   await expect(selectExample.getByTestId("cell-select-a-select-component")).toContainText("Owner");
   await selectExample.getByTestId("row-select-a").click();
-  const select = selectExample.locator("tbody .kmsf-data-table__component-select").first();
+  const select = selectExample.locator("tbody .comins-table__component-select").first();
   await expect(select).toBeVisible();
   await select.selectOption("Viewer");
   await expect(page.getByTestId("component-event-alert")).toContainText("Cell Select");
@@ -466,28 +466,28 @@ test("input and select body controls appear only for one selected row", async ({
   const inputExample = page.getByTestId("component-example-input");
   const selectExample = page.getByTestId("component-example-select");
 
-  await expect(inputExample.locator("tbody .kmsf-data-table__component-input")).toHaveCount(0);
-  await expect(selectExample.locator("tbody .kmsf-data-table__component-select")).toHaveCount(0);
+  await expect(inputExample.locator("tbody .comins-table__component-input")).toHaveCount(0);
+  await expect(selectExample.locator("tbody .comins-table__component-select")).toHaveCount(0);
 
   await inputExample.getByTestId("row-input-a").click();
-  await expect(inputExample.locator("tbody .kmsf-data-table__component-input")).toHaveCount(1);
+  await expect(inputExample.locator("tbody .comins-table__component-input")).toHaveCount(1);
   await expect(inputExample.getByTestId("cell-input-a-input-component").locator("input")).toBeVisible();
   await expect(inputExample.getByTestId("cell-input-b-input-component").locator("input")).toHaveCount(0);
   await expect(inputExample.getByTestId("cell-input-b-input-component")).toContainText("Data 2");
 
   await inputExample.getByTestId("row-input-b").click({ modifiers: ["ControlOrMeta"] });
-  await expect(inputExample.locator("tbody .kmsf-data-table__component-input")).toHaveCount(0);
+  await expect(inputExample.locator("tbody .comins-table__component-input")).toHaveCount(0);
   await expect(inputExample.getByTestId("cell-input-a-input-component")).toContainText("Data 1");
   await expect(inputExample.getByTestId("cell-input-b-input-component")).toContainText("Data 2");
 
   await selectExample.getByTestId("row-select-a").click();
-  await expect(selectExample.locator("tbody .kmsf-data-table__component-select")).toHaveCount(1);
+  await expect(selectExample.locator("tbody .comins-table__component-select")).toHaveCount(1);
   await expect(selectExample.getByTestId("cell-select-a-select-component").locator("select")).toBeVisible();
   await expect(selectExample.getByTestId("cell-select-b-select-component").locator("select")).toHaveCount(0);
   await expect(selectExample.getByTestId("cell-select-b-select-component")).toContainText("Editor");
 
   await selectExample.getByTestId("row-select-b").click({ modifiers: ["ControlOrMeta"] });
-  await expect(selectExample.locator("tbody .kmsf-data-table__component-select")).toHaveCount(0);
+  await expect(selectExample.locator("tbody .comins-table__component-select")).toHaveCount(0);
   await expect(selectExample.getByTestId("cell-select-a-select-component")).toContainText("Owner");
   await expect(selectExample.getByTestId("cell-select-b-select-component")).toContainText("Editor");
   expect(diagnostics).toEqual([]);
@@ -499,11 +499,11 @@ test("virtual-list component scrolls lower items and exposes more/search example
 
   await page.goto("/examples/component");
   const table = page.getByTestId("component-example-virtual-list");
-  const dataTable = table.locator(".kmsf-data-table").first();
+  const dataTable = table.locator(".comins-table").first();
   const firstList = page.getByTestId("virtual-list-virtual-list-a-virtual-list-component");
 
   await expect(firstList).toBeVisible();
-  await expect(firstList.locator("[data-kmsf-virtual-list-item='true']")).toHaveCount(5);
+  await expect(firstList.locator("[data-comins-virtual-list-item='true']")).toHaveCount(5);
   await expect(firstList).toContainText("검색-5");
   await expect(firstList).not.toContainText("검색-6");
   await expect(page.getByTestId("virtual-list-overflow-virtual-list-a-virtual-list-component")).toContainText("...");
@@ -511,9 +511,9 @@ test("virtual-list component scrolls lower items and exposes more/search example
   const heights = await dataTable.evaluate((element) => {
     const style = window.getComputedStyle(element);
     return {
-      cell: style.getPropertyValue("--kmsf-data-table-cell-height").trim(),
-      header: style.getPropertyValue("--kmsf-data-table-header-height").trim(),
-      row: style.getPropertyValue("--kmsf-data-table-row-height").trim(),
+      cell: style.getPropertyValue("--comins-table-cell-height").trim(),
+      header: style.getPropertyValue("--comins-table-header-height").trim(),
+      row: style.getPropertyValue("--comins-table-row-height").trim(),
     };
   });
 
@@ -527,12 +527,12 @@ test("virtual-list component scrolls lower items and exposes more/search example
   await expect(page.getByTestId("row-virtual-list-more-a")).toHaveAttribute("data-selected-row", "true");
   await expect.poll(() => moreButton.evaluate((element) => element.tagName)).toBe("BUTTON");
   await moreButton.click();
-  await expect(moreList).toHaveAttribute("data-kmsf-virtual-list-expanded", "true");
+  await expect(moreList).toHaveAttribute("data-comins-virtual-list-expanded", "true");
   await expect(page.getByTestId("row-virtual-list-more-a")).toHaveAttribute("data-selected-row", "true");
-  const expandedItemCount = await moreList.locator("[data-kmsf-virtual-list-item='true']").count();
+  const expandedItemCount = await moreList.locator("[data-comins-virtual-list-item='true']").count();
   expect(expandedItemCount).toBeGreaterThan(0);
   expect(expandedItemCount).toBeLessThan(30);
-  await moreList.locator(".kmsf-data-table__component-virtual-list-items").evaluate((element) => {
+  await moreList.locator(".comins-table__component-virtual-list-items").evaluate((element) => {
     element.scrollTop = element.scrollHeight;
     element.dispatchEvent(new Event("scroll", { bubbles: true }));
   });
@@ -542,27 +542,27 @@ test("virtual-list component scrolls lower items and exposes more/search example
   await expect(page.getByTestId("virtual-list-search-virtual-list-search-a-virtual-list-search-component")).toHaveCount(0);
   await expect(page.getByTestId("row-virtual-list-search-a")).not.toHaveAttribute("data-selected-row", "true");
   const searchList = page.getByTestId("virtual-list-virtual-list-search-a-virtual-list-search-component");
-  await searchList.locator(".kmsf-data-table__component-virtual-list-items").evaluate((element) => {
+  await searchList.locator(".comins-table__component-virtual-list-items").evaluate((element) => {
     element.scrollTop = element.scrollHeight;
     element.dispatchEvent(new Event("scroll", { bubbles: true }));
   });
   await expect(searchList).not.toContainText("검색-10000");
-  await expect(searchList.locator("[data-kmsf-virtual-list-item='true']")).toHaveCount(5);
+  await expect(searchList.locator("[data-comins-virtual-list-item='true']")).toHaveCount(5);
 
   await page.getByTestId("cell-virtual-list-search-a-id").click();
   const search = page.getByTestId("virtual-list-search-virtual-list-search-a-virtual-list-search-component");
   await expect(search).toBeEnabled();
   await search.fill("검색-9999");
   await expect(searchList).toContainText("검색-9999");
-  await expect(searchList.locator("[data-kmsf-virtual-list-item='true']")).toHaveCount(1);
+  await expect(searchList.locator("[data-comins-virtual-list-item='true']")).toHaveCount(1);
 
-  await searchList.locator("[data-kmsf-virtual-list-item='true']").first().click();
+  await searchList.locator("[data-comins-virtual-list-item='true']").first().click();
   await expect(searchList.locator("[aria-selected='true']")).toContainText("검색-9999");
   await expect(page.getByTestId("component-event-log")).toContainText("Virtual List 클릭:검색-9999");
 
   await page.getByTestId("cell-virtual-list-search-b-id").click({ modifiers: ["ControlOrMeta"] });
   await expect(page.getByTestId("virtual-list-search-virtual-list-search-a-virtual-list-search-component")).toHaveCount(0);
-  await expect(searchList.locator("[data-kmsf-virtual-list-item='true']")).toHaveCount(5);
+  await expect(searchList.locator("[data-comins-virtual-list-item='true']")).toHaveCount(5);
   await expect(page.getByTestId("virtual-list-overflow-virtual-list-search-a-virtual-list-search-component")).toContainText("...");
   expect(diagnostics).toEqual([]);
 });
@@ -574,11 +574,11 @@ test("component virtual-list keeps ten thousand item DOM bounded @perf", async (
   await page.goto("/examples/component");
   await expect(page.getByTestId("component-example-virtual-list")).toBeVisible();
 
-  const totalVirtualItems = await page.locator("[data-kmsf-virtual-list-item='true']").count();
+  const totalVirtualItems = await page.locator("[data-comins-virtual-list-item='true']").count();
   const nodeCount = await page.evaluate(() => document.querySelectorAll("*").length);
   const t0 = performance.now();
 
-  await page.getByTestId("component-example-checkbox").locator("tbody .kmsf-data-table__component-checkbox").first().click();
+  await page.getByTestId("component-example-checkbox").locator("tbody .comins-table__component-checkbox").first().click();
   await expect(page.getByTestId("component-event-alert")).toContainText("Cell Checkbox");
 
   const checkboxMs = performance.now() - t0;
@@ -599,7 +599,7 @@ test("virtual-list example survives playground destroy and recreate lifecycle", 
   await page.getByRole("link", { exact: true, name: "컴포넌트 예제" }).click();
   await expect(page.getByTestId("virtual-list-virtual-list-a-virtual-list-component")).toBeVisible();
 
-  const lifecycle = await page.evaluate(() => window.__kmsfDataTableLifecycle);
+  const lifecycle = await page.evaluate(() => window.__cominsTableLifecycle);
 
   expect(lifecycle?.activeMountCount).toBe(1);
   expect(lifecycle?.mountCount ?? 0).toBeGreaterThanOrEqual(3);
@@ -612,7 +612,7 @@ test("header menu component opens a popover below the menu button without sortin
   await page.goto("/examples/component");
   const menuExample = page.getByTestId("component-example-menu");
   const header = page.getByTestId("header-menu-component");
-  const trigger = menuExample.locator(".kmsf-data-table__component-menu-trigger").first();
+  const trigger = menuExample.locator(".comins-table__component-menu-trigger").first();
 
   await expect(header).not.toHaveAttribute("data-sort-direction", /asc|desc/);
   await trigger.scrollIntoViewIfNeeded();

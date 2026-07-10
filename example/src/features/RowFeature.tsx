@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { KmsfDataTable, type KmsfDataTableColumn } from "../../../src";
+import { CominsTable, type CominsTableColumn } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { createBaseColumns } from "../fixtures/columns";
@@ -11,8 +11,8 @@ type RowEventState = {
   title: string;
 };
 
-const rowColumns: Array<KmsfDataTableColumn<PersonRow>> = createBaseColumns();
-const styledRowColumns: Array<KmsfDataTableColumn<PersonRow>> = rowColumns.map((column) =>
+const rowColumns: Array<CominsTableColumn<PersonRow>> = createBaseColumns();
+const styledRowColumns: Array<CominsTableColumn<PersonRow>> = rowColumns.map((column) =>
   column.id === "name" || column.field === "name"
     ? {
         ...column,
@@ -52,7 +52,7 @@ export function RowFeature() {
           id="row-basic"
           title="기본"
         >
-          <KmsfDataTable
+          <CominsTable
             className="example-table"
             columns={rowColumns}
             data={basicRows}
@@ -74,7 +74,7 @@ export function RowFeature() {
           id="row-disabled"
           title="Row 잠금"
         >
-          <KmsfDataTable
+          <CominsTable
             className="example-table"
             columns={rowColumns}
             data={disabledRows}
@@ -95,7 +95,7 @@ export function RowFeature() {
           id="row-styling"
           title="Row 스타일링"
         >
-          <KmsfDataTable
+          <CominsTable
             className="example-table row-style-example-table"
             columns={styledRowColumns}
             data={stylingRows}
@@ -121,7 +121,7 @@ export function RowFeature() {
             <AlertTitle>{eventLog.title}</AlertTitle>
             <AlertDescription>{eventLog.detail}</AlertDescription>
           </Alert>
-          <KmsfDataTable
+          <CominsTable
             className="example-table"
             columns={rowColumns}
             data={eventRows}

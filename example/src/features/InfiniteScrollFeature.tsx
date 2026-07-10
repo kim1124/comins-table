@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { RotateCcw } from "lucide-react";
 
-import { KmsfDataTable, type KmsfDataTableColumn, type KmsfLazyLoadRequest } from "../../../src";
+import { CominsTable, type CominsTableColumn, type CominsLazyLoadRequest } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Button } from "../components/ui/button";
 import type { PersonRow } from "../fixtures/people";
@@ -36,7 +36,7 @@ function toPersonRow(user: DummyUser): PersonRow {
   };
 }
 
-function buildInfiniteScrollUrl(request: KmsfLazyLoadRequest) {
+function buildInfiniteScrollUrl(request: CominsLazyLoadRequest) {
   const params = new URLSearchParams({
     delay: "500",
     limit: String(request.limit),
@@ -50,7 +50,7 @@ function buildInfiniteScrollUrl(request: KmsfLazyLoadRequest) {
 export function InfiniteScrollFeature() {
   const [status, setStatus] = useState({ loaded: 0, total: 0 });
   const [refreshVersion, setRefreshVersion] = useState(0);
-  const columns = useMemo<Array<KmsfDataTableColumn<PersonRow>>>(
+  const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(
     () => [
       {
         field: "name",
@@ -82,7 +82,7 @@ export function InfiniteScrollFeature() {
     [],
   );
   const loadRows = useCallback(
-    async (request: KmsfLazyLoadRequest) => {
+    async (request: CominsLazyLoadRequest) => {
       const response = await fetch(buildInfiniteScrollUrl(request), { signal: request.signal });
       const result = (await response.json()) as DummyUsersResponse;
       const rows = result.users.map(toPersonRow);
@@ -114,7 +114,7 @@ export function InfiniteScrollFeature() {
             Loaded {status.loaded} / {status.total}
           </span>
         </div>
-        <KmsfDataTable
+        <CominsTable
           className="example-table"
           columns={columns}
           data={[]}

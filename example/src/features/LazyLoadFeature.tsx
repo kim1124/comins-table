@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { RotateCcw } from "lucide-react";
 
-import { KmsfDataTable, type KmsfDataTableColumn, type KmsfLazyLoadRequest } from "../../../src";
+import { CominsTable, type CominsTableColumn, type CominsLazyLoadRequest } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Button } from "../components/ui/button";
 import type { PersonRow } from "../fixtures/people";
@@ -36,7 +36,7 @@ function toPersonRow(user: DummyUser): PersonRow {
   };
 }
 
-function buildLazyLoadUrl(request: KmsfLazyLoadRequest) {
+function buildLazyLoadUrl(request: CominsLazyLoadRequest) {
   const params = new URLSearchParams({
     delay: "700",
     limit: String(request.limit),
@@ -50,7 +50,7 @@ function buildLazyLoadUrl(request: KmsfLazyLoadRequest) {
 export function LazyLoadFeature() {
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [status, setStatus] = useState({ loaded: 0, total: 0 });
-  const columns = useMemo<Array<KmsfDataTableColumn<PersonRow>>>(
+  const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(
     () => [
       { field: "name", label: "Column1", minWidth: 100, width: 180 },
       { field: "age", label: "Column2", minWidth: 100, width: 120 },
@@ -60,7 +60,7 @@ export function LazyLoadFeature() {
     [],
   );
   const loadRows = useCallback(
-    async (request: KmsfLazyLoadRequest) => {
+    async (request: CominsLazyLoadRequest) => {
       const response = await fetch(buildLazyLoadUrl(request), { signal: request.signal });
       const result = (await response.json()) as DummyUsersResponse;
       const rows = result.users.map(toPersonRow);
@@ -94,7 +94,7 @@ export function LazyLoadFeature() {
             Loaded {status.loaded} / {status.total}
           </span>
         </div>
-        <KmsfDataTable
+        <CominsTable
           className="example-table"
           columns={columns}
           data={[]}

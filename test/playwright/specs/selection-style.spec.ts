@@ -82,6 +82,6 @@ test("same-column cell drag selects a range without reordering rows", async ({ p
 
   await expect(page.getByTestId("cell-a-name")).toHaveAttribute("data-range-selected", "true");
   await expect(page.getByTestId("cell-b-name")).toHaveAttribute("data-range-selected", "true");
-  await expect(page.locator(".kmsf-data-table__body-table tbody tr").first().locator("td").first()).toHaveText("Data 1");
+  await expect(page.locator(".comins-table__body-table tbody tr").first().locator("td").first()).toHaveText("Data 1");
   expect(diagnostics).toEqual([]);
 });

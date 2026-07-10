@@ -8,8 +8,8 @@ test("loading example shows skeleton, overlay, and empty states without hiding t
   await page.getByRole("button", { exact: true, name: "초기 로딩" }).click();
   await expect(page.getByTestId("loading-skeleton-row")).toHaveCount(5);
   await expect(
-    page.getByTestId("loading-skeleton-row").first().locator(".kmsf-data-table__skeleton-block").first(),
-  ).toHaveCSS("animation-name", "kmsf-data-table-skeleton-shimmer");
+    page.getByTestId("loading-skeleton-row").first().locator(".comins-table__skeleton-block").first(),
+  ).toHaveCSS("animation-name", "comins-table-skeleton-shimmer");
   await expect(page.getByRole("columnheader", { exact: true, name: "Column1" })).toBeVisible();
 
   await page.getByRole("button", { exact: true, name: "재조회 로딩" }).click();
@@ -18,7 +18,7 @@ test("loading example shows skeleton, overlay, and empty states without hiding t
   await expect(page.getByTestId("data-table-loading-spinner")).toBeVisible();
   await expect(page.getByTestId("data-table-loading-spinner")).toHaveCSS(
     "animation-name",
-    "kmsf-data-table-spin",
+    "comins-table-spin",
   );
   await expect(page.getByRole("columnheader", { exact: true, name: "Column1" })).toBeVisible();
 

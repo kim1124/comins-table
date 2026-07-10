@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { KmsfDataTable, kmsfDataTablePackage } from "../src";
+import { CominsTable, cominsTablePackage } from "../src";
 
-describe("@kmsf/data-table public API", () => {
+describe("comins-table public API", () => {
   it("exports the package marker and table component", () => {
-    expect(kmsfDataTablePackage).toBe("@kmsf/data-table");
-    expect(KmsfDataTable).toBeTruthy();
+    expect(cominsTablePackage).toBe("comins-table");
+    expect(CominsTable).toBeTruthy();
   });
 
   it("removes legacy row input and legacy callback props from the TypeScript surface", () => {
@@ -13,13 +13,13 @@ describe("@kmsf/data-table public API", () => {
 
     const removedPropAssertions = [
       // @ts-expect-error rows was removed in the API redesign.
-      <KmsfDataTable columns={columns} rows={data} />,
+      <CominsTable columns={columns} rows={data} />,
       // @ts-expect-error defaultRows was removed in the API redesign.
-      <KmsfDataTable columns={columns} defaultRows={data} data={data} />,
+      <CominsTable columns={columns} defaultRows={data} data={data} />,
       // @ts-expect-error defaultData was removed in the API redesign.
-      <KmsfDataTable columns={columns} defaultData={data} data={data} />,
+      <CominsTable columns={columns} defaultData={data} data={data} />,
       // @ts-expect-error onDataChange was renamed to onChangeData.
-      <KmsfDataTable columns={columns} data={data} onDataChange={() => undefined} />,
+      <CominsTable columns={columns} data={data} onDataChange={() => undefined} />,
     ];
 
     expect(removedPropAssertions).toHaveLength(4);
@@ -70,7 +70,7 @@ describe("@kmsf/data-table public API", () => {
     ];
     const data = [{ id: "a", name: "Alpha" }];
 
-    expect(<KmsfDataTable columns={columns} data={data} getRowId={(row) => row.id} />).toBeTruthy();
+    expect(<CominsTable columns={columns} data={data} getRowId={(row) => row.id} />).toBeTruthy();
   });
 
   it("accepts loading and empty state props", () => {
@@ -78,7 +78,7 @@ describe("@kmsf/data-table public API", () => {
     const data = [{ id: "a", name: "Alpha" }];
 
     expect(
-      <KmsfDataTable
+      <CominsTable
         columns={columns}
         data={data}
         emptyComponent={<span>데이터가 없습니다.</span>}
@@ -95,7 +95,7 @@ describe("@kmsf/data-table public API", () => {
     const data = [{ id: "a", name: "Alpha" }];
 
     expect(
-      <KmsfDataTable
+      <CominsTable
         columns={columns}
         data={data}
         getRowId={(row) => row.id}
@@ -113,7 +113,7 @@ describe("@kmsf/data-table public API", () => {
     const data = [{ id: "a", name: "Alpha" }];
 
     expect(
-      <KmsfDataTable
+      <CominsTable
         columns={columns}
         data={data}
         getRowId={(row) => row.id}
@@ -136,7 +136,7 @@ describe("@kmsf/data-table public API", () => {
   it("rejects removed root-level format and props column API", () => {
     const data = [{ id: "a", name: "Alpha" }];
     const removed = [
-      <KmsfDataTable
+      <CominsTable
         columns={[
           {
             field: "name",
@@ -147,7 +147,7 @@ describe("@kmsf/data-table public API", () => {
         ]}
         data={data}
       />,
-      <KmsfDataTable
+      <CominsTable
         columns={[
           {
             field: "name",
@@ -158,7 +158,7 @@ describe("@kmsf/data-table public API", () => {
         ]}
         data={data}
       />,
-      <KmsfDataTable
+      <CominsTable
         columns={[
           {
             field: "name",
@@ -171,7 +171,7 @@ describe("@kmsf/data-table public API", () => {
         ]}
         data={data}
       />,
-      <KmsfDataTable
+      <CominsTable
         columns={[
           {
             field: "name",
@@ -184,7 +184,7 @@ describe("@kmsf/data-table public API", () => {
         ]}
         data={data}
       />,
-      <KmsfDataTable
+      <CominsTable
         columns={[
           {
             field: "name",

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { exportKmsfRowsToCsv, exportKmsfRowsToJson, KmsfDataTable, type KmsfExportColumn } from "../../../src";
+import { exportCominsRowsToCsv, exportCominsRowsToJson, CominsTable, type CominsExportColumn } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Button } from "../components/ui/button";
 import { createBaseColumns } from "../fixtures/columns";
@@ -8,7 +8,7 @@ import { cloneBaseRows, type PersonRow } from "../fixtures/people";
 
 type ExportMode = "csv" | "json";
 
-const exportColumns: Array<KmsfExportColumn<PersonRow>> = [
+const exportColumns: Array<CominsExportColumn<PersonRow>> = [
   { id: "name", label: "Column1", value: (row) => row.name },
   { id: "age", label: "Column2", value: (_row, rowIndex) => `Data ${rowIndex + 1}` },
   { id: "role", label: "Column3", value: (row) => row.role },
@@ -21,13 +21,13 @@ export function ExportFeature() {
   const output = useMemo(() => {
     const options = { columns: exportColumns, rows };
 
-    return mode === "csv" ? exportKmsfRowsToCsv(options) : exportKmsfRowsToJson(options);
+    return mode === "csv" ? exportCominsRowsToCsv(options) : exportCominsRowsToJson(options);
   }, [mode, rows]);
 
   return (
     <section className="feature-panel">
       <FeatureSampleSection
-        description="exportKmsfRowsToCsv와 exportKmsfRowsToJson은 현재 data 배열과 column value getter를 받아 dependency-free 문자열을 생성합니다."
+        description="exportCominsRowsToCsv와 exportCominsRowsToJson은 현재 data 배열과 column value getter를 받아 dependency-free 문자열을 생성합니다."
         id="export"
         title="Export Helper"
       >
@@ -42,7 +42,7 @@ export function ExportFeature() {
             {mode.toUpperCase()}
           </span>
         </div>
-        <KmsfDataTable
+        <CominsTable
           className="example-table"
           columns={tableColumns}
           data={rows}

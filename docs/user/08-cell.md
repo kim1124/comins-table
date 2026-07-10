@@ -3,7 +3,7 @@
 Cell 값은 `field`로 읽고, `cell.format`, `cell.components`, `cell.renderer`로 ReactNode를 렌더링할 수 있다. Nested path도 지원한다.
 
 ```tsx
-<KmsfDataTable
+<CominsTable
   cellSelection={false}
   columns={[
     { field: "name", label: "Name" },
@@ -116,7 +116,7 @@ Cell click은 cell selection과 함께 해당 row도 선택한다. `Ctrl`/`Cmd`/
 
 `cellSelection={false}`는 cell/range selection state, `data-selected`, range style을 비활성화한다. 일반 `onClickCell`, `onDoubleClickCell`, `onContextMenuCell`, `onKeyDownCell` callback과 row selection은 유지한다.
 Playground의 `Td Cell 예제`는 `cellSelection` 토글 대신 포맷, 스타일, renderer, 복사/붙여넣기 차단 guard, cell event callback 중심으로 구성한다.
-Cell styling 예제는 기본 KMSF mint 톤과 구분되도록 어두운 배경, 노란색 텍스트, serif/monospace font, 두꺼운 left border, uppercase 스타일을 사용한다.
+Cell styling 예제는 기본 COMINS mint 톤과 구분되도록 어두운 배경, 노란색 텍스트, serif/monospace font, 두꺼운 left border, uppercase 스타일을 사용한다.
 
 같은 column 안에서 cell을 세로로 drag하면 row reorder가 아니라 cell range selection으로 처리한다. Row reorder는 Row drag handle에서만 수행한다.
 

@@ -2,21 +2,21 @@ import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "re
 import type React from "react";
 
 import type {
-  KmsfCellComponentConfig,
-  KmsfCellComponentPayload,
-  KmsfDataTableComponentOption,
-  KmsfDataTableMenuItem,
-  KmsfHeaderComponentConfig,
-  KmsfHeaderComponentPayload,
-  KmsfVirtualListItem,
+  CominsCellComponentConfig,
+  CominsCellComponentPayload,
+  CominsTableComponentOption,
+  CominsTableMenuItem,
+  CominsHeaderComponentConfig,
+  CominsHeaderComponentPayload,
+  CominsVirtualListItem,
 } from "./core";
 
-type KmsfAnyComponentPayload<TData, TValue> =
-  | KmsfCellComponentPayload<TData, TValue>
-  | KmsfHeaderComponentPayload<TData, TValue>;
-type KmsfAnyComponentConfig<TData, TValue> =
-  | KmsfCellComponentConfig<TData, TValue>
-  | KmsfHeaderComponentConfig<TData, TValue>;
+type CominsAnyComponentPayload<TData, TValue> =
+  | CominsCellComponentPayload<TData, TValue>
+  | CominsHeaderComponentPayload<TData, TValue>;
+type CominsAnyComponentConfig<TData, TValue> =
+  | CominsCellComponentConfig<TData, TValue>
+  | CominsHeaderComponentConfig<TData, TValue>;
 
 function mergeClassName(...values: Array<string | undefined>) {
   return values.filter(Boolean).join(" ");
@@ -29,21 +29,21 @@ function resolveComponentProps<TProps>(value: unknown, payload: unknown): TProps
 function resolveComponentOptions(value: unknown, payload: unknown) {
   return (
     typeof value === "function"
-      ? (value as (payload: unknown) => KmsfDataTableComponentOption[])(payload)
+      ? (value as (payload: unknown) => CominsTableComponentOption[])(payload)
       : value
-  ) as KmsfDataTableComponentOption[];
+  ) as CominsTableComponentOption[];
 }
 
 function resolveComponentMenuItems(value: unknown, payload: unknown) {
   return (
-    typeof value === "function" ? (value as (payload: unknown) => KmsfDataTableMenuItem[])(payload) : value
-  ) as KmsfDataTableMenuItem[];
+    typeof value === "function" ? (value as (payload: unknown) => CominsTableMenuItem[])(payload) : value
+  ) as CominsTableMenuItem[];
 }
 
 function resolveVirtualListItems(value: unknown, payload: unknown) {
   return (
-    typeof value === "function" ? (value as (payload: unknown) => KmsfVirtualListItem[])(payload) : value
-  ) as KmsfVirtualListItem[];
+    typeof value === "function" ? (value as (payload: unknown) => CominsVirtualListItem[])(payload) : value
+  ) as CominsVirtualListItem[];
 }
 
 function toSearchableText(value: React.ReactNode): string {
@@ -59,8 +59,8 @@ function toSearchableText(value: React.ReactNode): string {
 }
 
 function isMenuSelectableItem(
-  item: KmsfDataTableMenuItem,
-): item is Extract<KmsfDataTableMenuItem, { value: string | number | boolean }> {
+  item: CominsTableMenuItem,
+): item is Extract<CominsTableMenuItem, { value: string | number | boolean }> {
   return item.type !== "divider" && item.type !== "label";
 }
 
@@ -81,12 +81,12 @@ function toComponentInputValue(value: unknown) {
   return value === undefined || value === null ? "" : String(value);
 }
 
-function KmsfInputComponent<TData, TValue>({
+function CominsInputComponent<TData, TValue>({
   component,
   payload,
 }: {
-  component: Extract<KmsfAnyComponentConfig<TData, TValue>, { type: "input" }>;
-  payload: KmsfAnyComponentPayload<TData, TValue>;
+  component: Extract<CominsAnyComponentConfig<TData, TValue>, { type: "input" }>;
+  payload: CominsAnyComponentPayload<TData, TValue>;
 }) {
   const props = resolveComponentProps<React.InputHTMLAttributes<HTMLInputElement>>(component.props, payload);
   const {
@@ -122,7 +122,7 @@ function KmsfInputComponent<TData, TValue>({
   return (
     <input
       {...inputProps}
-      className={mergeClassName("kmsf-data-table__component", "kmsf-data-table__component-input", props.className)}
+      className={mergeClassName("comins-table__component", "comins-table__component-input", props.className)}
       onBlur={(event) => {
         onBlur?.(event);
         stopComponentEvent(event);
@@ -159,12 +159,12 @@ function KmsfInputComponent<TData, TValue>({
   );
 }
 
-function KmsfCheckboxComponent<TData, TValue>({
+function CominsCheckboxComponent<TData, TValue>({
   component,
   payload,
 }: {
-  component: Extract<KmsfAnyComponentConfig<TData, TValue>, { type: "checkbox" }>;
-  payload: KmsfAnyComponentPayload<TData, TValue>;
+  component: Extract<CominsAnyComponentConfig<TData, TValue>, { type: "checkbox" }>;
+  payload: CominsAnyComponentPayload<TData, TValue>;
 }) {
   const props = resolveComponentProps<React.InputHTMLAttributes<HTMLInputElement>>(component.props, payload);
   const { checked, defaultChecked, onChange, onClick, onKeyDown, onMouseDown, onPointerDown, style, ...inputProps } = props;
@@ -180,7 +180,7 @@ function KmsfCheckboxComponent<TData, TValue>({
     <input
       {...inputProps}
       checked={optimisticChecked}
-      className={mergeClassName("kmsf-data-table__component", "kmsf-data-table__component-checkbox", props.className)}
+      className={mergeClassName("comins-table__component", "comins-table__component-checkbox", props.className)}
       onClick={(event) => {
         onClick?.(event);
         stopComponentEvent(event);
@@ -209,12 +209,12 @@ function KmsfCheckboxComponent<TData, TValue>({
   );
 }
 
-function KmsfToggleComponent<TData, TValue>({
+function CominsToggleComponent<TData, TValue>({
   component,
   payload,
 }: {
-  component: Extract<KmsfAnyComponentConfig<TData, TValue>, { type: "toggle" }>;
-  payload: KmsfAnyComponentPayload<TData, TValue>;
+  component: Extract<CominsAnyComponentConfig<TData, TValue>, { type: "toggle" }>;
+  payload: CominsAnyComponentPayload<TData, TValue>;
 }) {
   const props = resolveComponentProps<React.ButtonHTMLAttributes<HTMLButtonElement> & { checked?: boolean }>(
     component.props,
@@ -242,8 +242,8 @@ function KmsfToggleComponent<TData, TValue>({
       {...restButtonProps}
       aria-pressed={optimisticChecked}
       className={mergeClassName(
-        "kmsf-data-table__component",
-        "kmsf-data-table__component-toggle",
+        "comins-table__component",
+        "comins-table__component-toggle",
         buttonProps.className,
       )}
       onClick={(event) => {
@@ -272,12 +272,12 @@ function KmsfToggleComponent<TData, TValue>({
   );
 }
 
-function KmsfHeaderMenuComponent<TData, TValue>({
+function CominsHeaderMenuComponent<TData, TValue>({
   component,
   payload,
 }: {
-  component: Extract<KmsfHeaderComponentConfig<TData, TValue>, { type: "menu" }>;
-  payload: KmsfHeaderComponentPayload<TData, TValue>;
+  component: Extract<CominsHeaderComponentConfig<TData, TValue>, { type: "menu" }>;
+  payload: CominsHeaderComponentPayload<TData, TValue>;
 }) {
   const [open, setOpen] = useState(false);
   const menuId = useId();
@@ -375,7 +375,7 @@ function KmsfHeaderMenuComponent<TData, TValue>({
   const menu = open ? (
     <span
       aria-label="Header menu"
-      className="kmsf-data-table__component-menu-popover"
+      className="comins-table__component-menu-popover"
       id={menuId}
       ref={menuRef}
       role="menu"
@@ -386,7 +386,7 @@ function KmsfHeaderMenuComponent<TData, TValue>({
           return (
             <span
               aria-orientation="horizontal"
-              className="kmsf-data-table__component-menu-divider"
+              className="comins-table__component-menu-divider"
               key={`divider-${index}`}
               role="separator"
             />
@@ -395,7 +395,7 @@ function KmsfHeaderMenuComponent<TData, TValue>({
 
         if (item.type === "label") {
           return (
-            <span className="kmsf-data-table__component-menu-label" key={`label-${index}`} role="presentation">
+            <span className="comins-table__component-menu-label" key={`label-${index}`} role="presentation">
               {item.label}
             </span>
           );
@@ -403,7 +403,7 @@ function KmsfHeaderMenuComponent<TData, TValue>({
 
         return (
           <button
-            className="kmsf-data-table__component-menu-item"
+            className="comins-table__component-menu-item"
             disabled={item.disabled}
             key={`${String(item.value)}-${index}`}
             onClick={(event) => {
@@ -430,14 +430,14 @@ function KmsfHeaderMenuComponent<TData, TValue>({
   ) : null;
 
   return (
-    <span className="kmsf-data-table__component kmsf-data-table__component-menu">
+    <span className="comins-table__component comins-table__component-menu">
       <button
         {...props}
         aria-controls={open ? menuId : undefined}
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={props["aria-label"] ?? "Header menu"}
-        className={mergeClassName("kmsf-data-table__component-menu-trigger", props.className)}
+        className={mergeClassName("comins-table__component-menu-trigger", props.className)}
         onClick={(event) => {
           preventAndStopComponentEvent(event);
           requestOpen(!open, event);
@@ -468,12 +468,12 @@ function KmsfHeaderMenuComponent<TData, TValue>({
   );
 }
 
-function KmsfCellVirtualListComponent<TData, TValue>({
+function CominsCellVirtualListComponent<TData, TValue>({
   component,
   payload,
 }: {
-  component: Extract<KmsfCellComponentConfig<TData, TValue>, { type: "virtual-list" }>;
-  payload: KmsfCellComponentPayload<TData, TValue>;
+  component: Extract<CominsCellComponentConfig<TData, TValue>, { type: "virtual-list" }>;
+  payload: CominsCellComponentPayload<TData, TValue>;
 }) {
   const props = resolveComponentProps<
     React.HTMLAttributes<HTMLDivElement> & {
@@ -593,12 +593,12 @@ function KmsfCellVirtualListComponent<TData, TValue>({
   const listId = `${String(payload.row.id)}-${payload.column.id}`;
   const rootStyle = {
     ...style,
-    "--kmsf-data-table-virtual-list-item-height": `${itemHeight}px`,
+    "--comins-table-virtual-list-item-height": `${itemHeight}px`,
     height: height ?? style?.height ?? defaultHeight,
   } as React.CSSProperties;
 
   const selectItem = (
-    item: KmsfVirtualListItem,
+    item: CominsVirtualListItem,
     itemIndex: number,
     event: React.MouseEvent<HTMLButtonElement> | React.KeyboardEvent<HTMLButtonElement>,
   ) => {
@@ -614,9 +614,9 @@ function KmsfCellVirtualListComponent<TData, TValue>({
     <div
       {...rootProps}
       aria-label={rootProps["aria-label"] ?? "Virtual list"}
-      className={mergeClassName("kmsf-data-table__component", "kmsf-data-table__component-virtual-list", rootProps.className)}
-      data-kmsf-virtual-list-expanded={virtualized ? "true" : undefined}
-      data-kmsf-virtual-list-visible-count={renderedEntries.length}
+      className={mergeClassName("comins-table__component", "comins-table__component-virtual-list", rootProps.className)}
+      data-comins-virtual-list-expanded={virtualized ? "true" : undefined}
+      data-comins-virtual-list-visible-count={renderedEntries.length}
       data-testid={`virtual-list-${listId}`}
       onClick={(event) => {
         rootProps.onClick?.(event);
@@ -655,7 +655,7 @@ function KmsfCellVirtualListComponent<TData, TValue>({
       style={rootStyle}
     >
       <div
-        className="kmsf-data-table__component-virtual-list-items"
+        className="comins-table__component-virtual-list-items"
         onScroll={(event) => {
           stopComponentEvent(event);
           setScrollTop(event.currentTarget.scrollTop);
@@ -666,13 +666,13 @@ function KmsfCellVirtualListComponent<TData, TValue>({
         role="presentation"
       >
         {topSpacerHeight > 0 ? (
-          <span aria-hidden="true" className="kmsf-data-table__component-virtual-list-spacer" style={{ height: topSpacerHeight }} />
+          <span aria-hidden="true" className="comins-table__component-virtual-list-spacer" style={{ height: topSpacerHeight }} />
         ) : null}
         {renderedEntries.map(({ item, itemIndex }) => (
           <button
             aria-selected={selectedValue === item.value}
-            className="kmsf-data-table__component-virtual-list-item"
-            data-kmsf-virtual-list-item="true"
+            className="comins-table__component-virtual-list-item"
+            data-comins-virtual-list-item="true"
             disabled={item.disabled}
             key={`${String(item.value)}-${itemIndex}`}
             onClick={(event) => {
@@ -701,23 +701,23 @@ function KmsfCellVirtualListComponent<TData, TValue>({
             role="option"
             type="button"
           >
-            <span className="kmsf-data-table__component-virtual-list-item-label">{item.label}</span>
+            <span className="comins-table__component-virtual-list-item-label">{item.label}</span>
           </button>
         ))}
         {bottomSpacerHeight > 0 ? (
           <span
             aria-hidden="true"
-            className="kmsf-data-table__component-virtual-list-spacer"
+            className="comins-table__component-virtual-list-spacer"
             style={{ height: bottomSpacerHeight }}
           />
         ) : null}
       </div>
-      <div className="kmsf-data-table__component-virtual-list-controls">
+      <div className="comins-table__component-virtual-list-controls">
         {showOverflowControl ? (
           moreEnabled ? (
             <button
               aria-label="전체 목록 보기"
-              className="kmsf-data-table__component-virtual-list-overflow kmsf-data-table__component-virtual-list-more"
+              className="comins-table__component-virtual-list-overflow comins-table__component-virtual-list-more"
               data-testid={`virtual-list-overflow-${listId}`}
               onClick={(event) => {
                 preventAndStopComponentEvent(event);
@@ -733,7 +733,7 @@ function KmsfCellVirtualListComponent<TData, TValue>({
           ) : (
             <span
               aria-hidden="true"
-              className="kmsf-data-table__component-virtual-list-overflow kmsf-data-table__component-virtual-list-more"
+              className="comins-table__component-virtual-list-overflow comins-table__component-virtual-list-more"
               data-testid={`virtual-list-overflow-${listId}`}
             >
               ...
@@ -743,7 +743,7 @@ function KmsfCellVirtualListComponent<TData, TValue>({
         {searchEnabled ? (
           <input
             aria-label={`${rootProps["aria-label"] ?? "Virtual list"} 검색`}
-            className="kmsf-data-table__component-virtual-list-search"
+            className="comins-table__component-virtual-list-search"
             data-testid={`virtual-list-search-${listId}`}
             onChange={(event) => {
               stopComponentEvent(event);
@@ -762,27 +762,27 @@ function KmsfCellVirtualListComponent<TData, TValue>({
   );
 }
 
-export function renderKmsfBuiltInComponent<TData, TValue>(
-  component: KmsfCellComponentConfig<TData, TValue>,
-  payload: KmsfCellComponentPayload<TData, TValue>,
+export function renderCominsBuiltInComponent<TData, TValue>(
+  component: CominsCellComponentConfig<TData, TValue>,
+  payload: CominsCellComponentPayload<TData, TValue>,
 ): React.ReactNode;
-export function renderKmsfBuiltInComponent<TData, TValue>(
-  component: KmsfHeaderComponentConfig<TData, TValue>,
-  payload: KmsfHeaderComponentPayload<TData, TValue>,
+export function renderCominsBuiltInComponent<TData, TValue>(
+  component: CominsHeaderComponentConfig<TData, TValue>,
+  payload: CominsHeaderComponentPayload<TData, TValue>,
 ): React.ReactNode;
-export function renderKmsfBuiltInComponent<TData, TValue>(
-  component: KmsfAnyComponentConfig<TData, TValue>,
-  payload: KmsfAnyComponentPayload<TData, TValue>,
+export function renderCominsBuiltInComponent<TData, TValue>(
+  component: CominsAnyComponentConfig<TData, TValue>,
+  payload: CominsAnyComponentPayload<TData, TValue>,
 ): React.ReactNode {
   if (component.type === "menu") {
-    return <KmsfHeaderMenuComponent component={component} payload={payload as KmsfHeaderComponentPayload<TData, TValue>} />;
+    return <CominsHeaderMenuComponent component={component} payload={payload as CominsHeaderComponentPayload<TData, TValue>} />;
   }
 
   if (component.type === "virtual-list") {
     return (
-      <KmsfCellVirtualListComponent
+      <CominsCellVirtualListComponent
         component={component}
-        payload={payload as KmsfCellComponentPayload<TData, TValue>}
+        payload={payload as CominsCellComponentPayload<TData, TValue>}
       />
     );
   }
@@ -795,8 +795,8 @@ export function renderKmsfBuiltInComponent<TData, TValue>(
       <button
         {...buttonProps}
         className={mergeClassName(
-          "kmsf-data-table__component",
-          "kmsf-data-table__component-button",
+          "comins-table__component",
+          "comins-table__component-button",
           props.className,
         )}
         onClick={(event) => {
@@ -822,11 +822,11 @@ export function renderKmsfBuiltInComponent<TData, TValue>(
   }
 
   if (component.type === "input") {
-    return <KmsfInputComponent component={component} payload={payload} />;
+    return <CominsInputComponent component={component} payload={payload} />;
   }
 
   if (component.type === "checkbox") {
-    return <KmsfCheckboxComponent component={component} payload={payload} />;
+    return <CominsCheckboxComponent component={component} payload={payload} />;
   }
 
   if (component.type === "select") {
@@ -838,8 +838,8 @@ export function renderKmsfBuiltInComponent<TData, TValue>(
       <select
         {...selectProps}
         className={mergeClassName(
-          "kmsf-data-table__component",
-          "kmsf-data-table__component-select",
+          "comins-table__component",
+          "comins-table__component-select",
           props.className,
         )}
         onClick={(event) => {
@@ -879,17 +879,17 @@ export function renderKmsfBuiltInComponent<TData, TValue>(
     >(component.props, payload);
     const options = resolveComponentOptions(component.options, payload);
     const selectedValue =
-      props.value ?? ("value" in payload ? (payload as KmsfCellComponentPayload<TData, TValue>).value : undefined);
+      props.value ?? ("value" in payload ? (payload as CominsCellComponentPayload<TData, TValue>).value : undefined);
     const groupName =
       "row" in payload
-        ? `${payload.column.id}-${String((payload as KmsfCellComponentPayload<TData, TValue>).row.id)}-radio`
+        ? `${payload.column.id}-${String((payload as CominsCellComponentPayload<TData, TValue>).row.id)}-radio`
         : `${payload.column.id}-header-radio`;
     const { value: _value, ...divProps } = props;
 
     return (
       <div
         {...divProps}
-        className={mergeClassName("kmsf-data-table__component", "kmsf-data-table__component-radio", divProps.className)}
+        className={mergeClassName("comins-table__component", "comins-table__component-radio", divProps.className)}
         onClick={(event) => {
           divProps.onClick?.(event);
           stopComponentEvent(event);
@@ -937,7 +937,7 @@ export function renderKmsfBuiltInComponent<TData, TValue>(
   }
 
   if (component.type === "toggle") {
-    return <KmsfToggleComponent component={component} payload={payload} />;
+    return <CominsToggleComponent component={component} payload={payload} />;
   }
 
   const props = resolveComponentProps<React.HTMLAttributes<HTMLDivElement> & { max?: number; value?: number }>(
@@ -954,7 +954,7 @@ export function renderKmsfBuiltInComponent<TData, TValue>(
       aria-valuemax={max}
       aria-valuemin={0}
       aria-valuenow={value}
-      className={mergeClassName("kmsf-data-table__component", "kmsf-data-table__component-progress", props.className)}
+      className={mergeClassName("comins-table__component", "comins-table__component-progress", props.className)}
       onClick={stopComponentEvent}
       onKeyDown={stopComponentEvent}
       onMouseDown={stopComponentEvent}

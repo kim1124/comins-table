@@ -10,8 +10,8 @@ test("cell page demonstrates formatting styling and events", async ({ page }) =>
   await expect(page.getByTestId("feature-options")).toHaveCount(0);
   await expect(page.getByTestId("feature-controls")).toHaveCount(0);
   await expect(page.getByTestId("cell-selection-state")).toHaveCount(0);
-  await expect(page.locator(".kmsf-data-table__component")).toHaveCount(0);
-  await expect(page.locator(".kmsf-data-table__header-table th")).toHaveCount(6);
+  await expect(page.locator(".comins-table__component")).toHaveCount(0);
+  await expect(page.locator(".comins-table__header-table th")).toHaveCount(6);
   await expect(page.getByTestId("header-locked")).toContainText("Column5");
   await expect(page.getByTestId("cell-b-age")).toHaveText("Data 2");
   await expect(page.getByTestId("cell-b-age")).not.toHaveCSS("background-color", "rgb(17, 24, 39)");
@@ -36,7 +36,7 @@ test("cell page demonstrates formatting styling and events", async ({ page }) =>
   expect(styleFingerprint.textTransform).toBe("uppercase");
 
   const geometry = await page.getByTestId("data-table-viewport").evaluate((viewport) => {
-    const headers = Array.from(document.querySelectorAll<HTMLElement>(".kmsf-data-table__header-table th"));
+    const headers = Array.from(document.querySelectorAll<HTMLElement>(".comins-table__header-table th"));
 
     return {
       hasHorizontalOverflow: viewport.getAttribute("data-horizontal-overflow"),
@@ -126,7 +126,7 @@ test("cell page column resize clamps at the playground 100px minimum", async ({ 
 
   const cellMetrics = await page.getByTestId("cell-a-name").evaluate((element) => {
     const rect = element.getBoundingClientRect();
-    const value = element.querySelector<HTMLElement>(".kmsf-data-table__cell-value");
+    const value = element.querySelector<HTMLElement>(".comins-table__cell-value");
 
     return {
       cellRight: rect.right,
@@ -215,5 +215,5 @@ test("style demo classes do not leak into non-styling examples", async ({ page }
   await expect(crudOwnerName).not.toHaveCSS("text-transform", "uppercase");
 
   await page.goto("/performance/virtualization");
-  await expect(page.locator(".kmsf-data-table__td.cell-owner")).toHaveCount(0);
+  await expect(page.locator(".comins-table__td.cell-owner")).toHaveCount(0);
 });

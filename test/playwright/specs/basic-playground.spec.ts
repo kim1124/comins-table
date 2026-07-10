@@ -28,7 +28,7 @@ test("playground uses charts-style docs shell and remounts content when switchin
   await expect(page.getByRole("navigation", { name: "문서 메뉴" })).toBeVisible();
   await expect(content).toBeVisible();
   await expect(page.getByRole("complementary", { name: "데이터 테이블 문서" })).toHaveCount(0);
-  await expect(page.locator(".docs-top-nav")).toContainText("@kmsf/data-table");
+  await expect(page.locator(".docs-top-nav")).toContainText("comins-table");
   await expect(page.locator(".workspace-tabs")).toHaveCount(0);
   await expect(page.locator(".workspace-tabs__bar")).toHaveCount(0);
   await expect(page.getByRole("tablist", { name: "플레이그라운드 보기" })).toHaveCount(0);
@@ -68,7 +68,7 @@ test("playground uses charts-style docs shell and remounts content when switchin
   const firstMountId = await page.getByTestId("mount-id").textContent();
   await page.getByRole("link", { exact: true, name: "CRUD 동작" }).click();
   await expect(page.getByTestId("mount-id")).not.toHaveText(firstMountId ?? "");
-  await expect.poll(() => page.evaluate(() => window.__kmsfDataTableLastUnmount)).toBe(firstMountId);
+  await expect.poll(() => page.evaluate(() => window.__cominsTableLastUnmount)).toBe(firstMountId);
 
   await page.getByRole("link", { exact: true, name: "Header 기본 기능" }).click();
   await expect(featureContent).toHaveAttribute("data-feature", "header");
@@ -78,7 +78,7 @@ test("playground uses charts-style docs shell and remounts content when switchin
   await page.getByRole("link", { exact: true, name: "CRUD 동작" }).click();
   await expect(featureContent).toHaveAttribute("data-feature", "basic-crud");
   await expect
-    .poll(() => page.evaluate(() => window.__kmsfDataTableLastUnmount))
+    .poll(() => page.evaluate(() => window.__cominsTableLastUnmount))
     .toBe(headerMountId);
 
   await page.goto("/api/props");
@@ -93,14 +93,14 @@ test("playground verifies row and cell Ctrl+C Ctrl+V interactions in a browser",
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
 
-  const bodyRows = page.locator(".kmsf-data-table__body-table tbody tr");
+  const bodyRows = page.locator(".comins-table__body-table tbody tr");
   await bodyRows.nth(0).focus();
   await page.keyboard.press(process.platform === "darwin" ? "Meta+C" : "Control+C");
   await bodyRows.nth(1).focus();
   await page.keyboard.press(process.platform === "darwin" ? "Meta+V" : "Control+V");
   await expect(bodyRows.nth(2).locator("td").first()).toHaveText("Data 1");
 
-  const cells = page.locator(".kmsf-data-table__body-table tbody td");
+  const cells = page.locator(".comins-table__body-table tbody td");
   await cells.nth(2).focus();
   await page.keyboard.press(process.platform === "darwin" ? "Meta+C" : "Control+C");
   await cells.nth(0).focus();
@@ -157,7 +157,7 @@ test("basic page table expands to the available browser height", async ({ page }
 
   await expect(page.getByTestId("sample-row-count")).toHaveCount(0);
 
-  const tableBox = await page.locator(".example-table.kmsf-data-table").first().boundingBox();
+  const tableBox = await page.locator(".example-table.comins-table").first().boundingBox();
   const sampleBox = await page.getByTestId("feature-option-sample").first().boundingBox();
   expect(tableBox).not.toBeNull();
   expect(sampleBox).not.toBeNull();

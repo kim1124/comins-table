@@ -5,7 +5,7 @@ import { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { KmsfDataTable, type KmsfDataTableColumn, type KmsfDataTableRef } from "../src";
+import { CominsTable, type CominsTableColumn, type CominsTableRef } from "../src";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -99,9 +99,9 @@ function render(element: ReactElement) {
   return container;
 }
 
-describe("@kmsf/data-table component renderer API", () => {
+describe("comins-table component renderer API", () => {
   it("uses cell renderer before components and format", () => {
-    const columns: Array<KmsfDataTableColumn<Row>> = [
+    const columns: Array<CominsTableColumn<Row>> = [
       {
         field: "name",
         label: "Name",
@@ -117,7 +117,7 @@ describe("@kmsf/data-table component renderer API", () => {
         },
       },
     ];
-    const element = render(<KmsfDataTable columns={columns} data={baseRows} getRowId={(row) => row.id} />);
+    const element = render(<CominsTable columns={columns} data={baseRows} getRowId={(row) => row.id} />);
 
     expect(element.querySelector("[data-testid='custom-name']")?.textContent).toBe("renderer:Alpha");
     expect(element.textContent).not.toContain("component:Alpha");
@@ -125,7 +125,7 @@ describe("@kmsf/data-table component renderer API", () => {
   });
 
   it("renders cell components without formatted value by direction order", () => {
-    const columns: Array<KmsfDataTableColumn<Row>> = [
+    const columns: Array<CominsTableColumn<Row>> = [
       {
         field: "name",
         label: "Name",
@@ -148,18 +148,18 @@ describe("@kmsf/data-table component renderer API", () => {
         },
       },
     ];
-    const element = render(<KmsfDataTable columns={columns} data={baseRows} getRowId={(row) => row.id} />);
+    const element = render(<CominsTable columns={columns} data={baseRows} getRowId={(row) => row.id} />);
     const cell = element.querySelector("[data-testid='cell-a-name']");
 
     expect(cell?.textContent).toBe("leftright");
     expect(cell?.textContent).not.toContain("format:Alpha");
-    expect(cell?.querySelector("[data-kmsf-component-direction='left'] button")?.textContent).toBe("left");
-    expect(cell?.querySelector("[data-kmsf-component-direction='right'] button")?.textContent).toBe("right");
+    expect(cell?.querySelector("[data-comins-component-direction='left'] button")?.textContent).toBe("left");
+    expect(cell?.querySelector("[data-comins-component-direction='right'] button")?.textContent).toBe("right");
   });
 
   it("renders cell input and select only for the single selected row", () => {
-    const ref = createRef<KmsfDataTableRef<Row>>();
-    const columns: Array<KmsfDataTableColumn<Row>> = [
+    const ref = createRef<CominsTableRef<Row>>();
+    const columns: Array<CominsTableColumn<Row>> = [
       {
         field: "name",
         label: "Name",
@@ -191,7 +191,7 @@ describe("@kmsf/data-table component renderer API", () => {
         },
       },
     ];
-    const element = render(<KmsfDataTable columns={columns} data={baseRows} getRowId={(row) => row.id} ref={ref} />);
+    const element = render(<CominsTable columns={columns} data={baseRows} getRowId={(row) => row.id} ref={ref} />);
 
     expect(element.querySelector("[data-testid='cell-a-name']")?.textContent).toBe("name:Alpha");
     expect(element.querySelector("[data-testid='cell-a-role']")?.textContent).toBe("role:owner");
@@ -218,7 +218,7 @@ describe("@kmsf/data-table component renderer API", () => {
   });
 
   it("keeps header input and select components visible without row selection", () => {
-    const columns: Array<KmsfDataTableColumn<Row>> = [
+    const columns: Array<CominsTableColumn<Row>> = [
       {
         field: "name",
         header: {
@@ -240,7 +240,7 @@ describe("@kmsf/data-table component renderer API", () => {
         label: "Name",
       },
     ];
-    const element = render(<KmsfDataTable columns={columns} data={baseRows} getRowId={(row) => row.id} />);
+    const element = render(<CominsTable columns={columns} data={baseRows} getRowId={(row) => row.id} />);
 
     expect(element.querySelector("thead input[aria-label='header-input']")).not.toBeNull();
     expect(element.querySelector("thead select[aria-label='header-select']")).not.toBeNull();
@@ -251,7 +251,7 @@ describe("@kmsf/data-table component renderer API", () => {
 
     function Harness() {
       const [rows, setRows] = useState(baseRows);
-      const columns: Array<KmsfDataTableColumn<Row>> = [
+      const columns: Array<CominsTableColumn<Row>> = [
         {
           field: "name",
           label: "Name",
@@ -272,7 +272,7 @@ describe("@kmsf/data-table component renderer API", () => {
         },
       ];
 
-      return <KmsfDataTable columns={columns} data={rows} getRowId={(row) => row.id} />;
+      return <CominsTable columns={columns} data={rows} getRowId={(row) => row.id} />;
     }
 
     const element = render(<Harness />);
@@ -321,7 +321,7 @@ describe("@kmsf/data-table component renderer API", () => {
 
   it("updates the table model when a cell input commits on Enter or blur", () => {
     const onChangeData = vi.fn();
-    const columns: Array<KmsfDataTableColumn<Row>> = [
+    const columns: Array<CominsTableColumn<Row>> = [
       {
         field: "name",
         label: "Name",
@@ -336,7 +336,7 @@ describe("@kmsf/data-table component renderer API", () => {
       },
     ];
     const element = render(
-      <KmsfDataTable columns={columns} data={baseRows} getRowId={(row) => row.id} onChangeData={onChangeData} />,
+      <CominsTable columns={columns} data={baseRows} getRowId={(row) => row.id} onChangeData={onChangeData} />,
     );
 
     act(() => {
@@ -383,7 +383,7 @@ describe("@kmsf/data-table component renderer API", () => {
 
   it("passes row column value payload to cell button event", () => {
     const onClick = vi.fn();
-    const columns: Array<KmsfDataTableColumn<Row>> = [
+    const columns: Array<CominsTableColumn<Row>> = [
       {
         field: "name",
         label: "Name",
@@ -398,7 +398,7 @@ describe("@kmsf/data-table component renderer API", () => {
         },
       },
     ];
-    const element = render(<KmsfDataTable columns={columns} data={baseRows} getRowId={(row) => row.id} />);
+    const element = render(<CominsTable columns={columns} data={baseRows} getRowId={(row) => row.id} />);
 
     act(() => {
       element.querySelector("button")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -416,7 +416,7 @@ describe("@kmsf/data-table component renderer API", () => {
   it("supports controlled checkbox update and cross-cell disabled recalculation", () => {
     function Harness() {
       const [rows, setRows] = useState(baseRows);
-      const columns: Array<KmsfDataTableColumn<Row>> = [
+      const columns: Array<CominsTableColumn<Row>> = [
         {
           field: "enabled",
           label: "Enabled",
@@ -456,7 +456,7 @@ describe("@kmsf/data-table component renderer API", () => {
         },
       ];
 
-      return <KmsfDataTable columns={columns} data={rows} getRowId={(row) => row.id} />;
+      return <CominsTable columns={columns} data={rows} getRowId={(row) => row.id} />;
     }
 
     const element = render(<Harness />);
@@ -473,7 +473,7 @@ describe("@kmsf/data-table component renderer API", () => {
   it("does not route built-in component interactions to cell or row callbacks", () => {
     const onClickCell = vi.fn();
     const onClickRow = vi.fn();
-    const columns: Array<KmsfDataTableColumn<Row>> = [
+    const columns: Array<CominsTableColumn<Row>> = [
       {
         field: "name",
         label: "Button",
@@ -534,7 +534,7 @@ describe("@kmsf/data-table component renderer API", () => {
       },
     ];
     const element = render(
-      <KmsfDataTable
+      <CominsTable
         columns={columns}
         data={baseRows}
         getRowId={(row) => row.id}
@@ -544,7 +544,7 @@ describe("@kmsf/data-table component renderer API", () => {
     );
 
     act(() => {
-      element.querySelector<HTMLButtonElement>(".kmsf-data-table__component-button")?.click();
+      element.querySelector<HTMLButtonElement>(".comins-table__component-button")?.click();
       element.querySelector<HTMLInputElement>("input[aria-label='enabled-checkbox']")?.click();
       element.querySelector<HTMLInputElement>("input[type='radio']")?.click();
       element.querySelector<HTMLSelectElement>("select[aria-label='role-select']")?.click();
@@ -555,7 +555,7 @@ describe("@kmsf/data-table component renderer API", () => {
   });
 
   it("marks controlled radio value as checked per row", () => {
-    const columns: Array<KmsfDataTableColumn<Row>> = [
+    const columns: Array<CominsTableColumn<Row>> = [
       {
         field: "role",
         label: "Role",
@@ -573,7 +573,7 @@ describe("@kmsf/data-table component renderer API", () => {
         },
       },
     ];
-    const element = render(<KmsfDataTable columns={columns} data={baseRows} getRowId={(row) => row.id} />);
+    const element = render(<CominsTable columns={columns} data={baseRows} getRowId={(row) => row.id} />);
     const groups = element.querySelectorAll("[role='radiogroup']");
     const firstRowRadios = groups[0]?.querySelectorAll<HTMLInputElement>("input[type='radio']");
     const secondRowRadios = groups[1]?.querySelectorAll<HTMLInputElement>("input[type='radio']");
@@ -586,7 +586,7 @@ describe("@kmsf/data-table component renderer API", () => {
   });
 
   it("uses header renderer before header component and label", () => {
-    const columns: Array<KmsfDataTableColumn<Row>> = [
+    const columns: Array<CominsTableColumn<Row>> = [
       {
         field: "name",
         label: "Name",
@@ -601,7 +601,7 @@ describe("@kmsf/data-table component renderer API", () => {
         },
       },
     ];
-    const element = render(<KmsfDataTable columns={columns} data={baseRows} getRowId={(row) => row.id} />);
+    const element = render(<CominsTable columns={columns} data={baseRows} getRowId={(row) => row.id} />);
 
     expect(element.querySelector("[data-testid='header-custom']")?.textContent).toBe("Header Renderer name");
     expect(element.textContent).not.toContain("Header Component");
@@ -611,7 +611,7 @@ describe("@kmsf/data-table component renderer API", () => {
     const onBeforeChange = vi.fn(() => true);
     const onOpenChange = vi.fn();
     const onSelect = vi.fn();
-    const columns: Array<KmsfDataTableColumn<Row>> = [
+    const columns: Array<CominsTableColumn<Row>> = [
       {
         field: "name",
         label: "Name",
@@ -633,7 +633,7 @@ describe("@kmsf/data-table component renderer API", () => {
         },
       },
     ];
-    const element = render(<KmsfDataTable columns={columns} data={baseRows} getRowId={(row) => row.id} />);
+    const element = render(<CominsTable columns={columns} data={baseRows} getRowId={(row) => row.id} />);
     const trigger = element.querySelector<HTMLButtonElement>("[aria-haspopup='menu']");
 
     act(() => {
@@ -656,7 +656,7 @@ describe("@kmsf/data-table component renderer API", () => {
   });
 
   it("renders virtual-list collapsed preview with ellipsis only when items exceed five", () => {
-    const columns: Array<KmsfDataTableColumn<Row>> = [
+    const columns: Array<CominsTableColumn<Row>> = [
       {
         cell: {
           components: [
@@ -675,23 +675,23 @@ describe("@kmsf/data-table component renderer API", () => {
       },
     ];
     const element = render(
-      <KmsfDataTable columns={columns} data={[...listRows, ...shortListRows]} getRowId={(row) => row.id} rowHeight={180} />,
+      <CominsTable columns={columns} data={[...listRows, ...shortListRows]} getRowId={(row) => row.id} rowHeight={180} />,
     );
     const firstList = element.querySelector<HTMLElement>("[data-testid='virtual-list-a-items']");
     const shortList = element.querySelector<HTMLElement>("[data-testid='virtual-list-c-items']");
 
     expect(firstList?.style.height).toBe("140px");
-    expect(firstList?.querySelectorAll("[data-kmsf-virtual-list-item='true']")).toHaveLength(5);
+    expect(firstList?.querySelectorAll("[data-comins-virtual-list-item='true']")).toHaveLength(5);
     expect(firstList?.textContent).toContain("Alpha item 5");
     expect(firstList?.textContent).not.toContain("Alpha item 6");
     expect(firstList?.querySelector("[data-testid='virtual-list-overflow-a-items']")?.textContent).toBe("...");
 
-    expect(shortList?.querySelectorAll("[data-kmsf-virtual-list-item='true']")).toHaveLength(5);
+    expect(shortList?.querySelectorAll("[data-comins-virtual-list-item='true']")).toHaveLength(5);
     expect(shortList?.querySelector("[data-testid='virtual-list-overflow-c-items']")).toBeNull();
   });
 
   it("cancels header menu open when onBeforeChange returns false", () => {
-    const columns: Array<KmsfDataTableColumn<Row>> = [
+    const columns: Array<CominsTableColumn<Row>> = [
       {
         field: "name",
         label: "Name",
@@ -706,7 +706,7 @@ describe("@kmsf/data-table component renderer API", () => {
         },
       },
     ];
-    const element = render(<KmsfDataTable columns={columns} data={baseRows} getRowId={(row) => row.id} />);
+    const element = render(<CominsTable columns={columns} data={baseRows} getRowId={(row) => row.id} />);
 
     act(() => {
       element.querySelector<HTMLButtonElement>("[aria-haspopup='menu']")?.click();
@@ -716,10 +716,10 @@ describe("@kmsf/data-table component renderer API", () => {
   });
 
   it("enables virtual-list more only for single selection without hijacking item events", () => {
-    const ref = createRef<KmsfDataTableRef<Row>>();
+    const ref = createRef<CominsTableRef<Row>>();
     const onClickItem = vi.fn();
     const onContextMenuItem = vi.fn();
-    const columns: Array<KmsfDataTableColumn<Row>> = [
+    const columns: Array<CominsTableColumn<Row>> = [
       {
         cell: {
           components: [
@@ -740,10 +740,10 @@ describe("@kmsf/data-table component renderer API", () => {
         label: "Items",
       },
     ];
-    const element = render(<KmsfDataTable columns={columns} data={listRows} getRowId={(row) => row.id} ref={ref} rowHeight={120} />);
+    const element = render(<CominsTable columns={columns} data={listRows} getRowId={(row) => row.id} ref={ref} rowHeight={120} />);
     const firstList = element.querySelector("[data-testid='virtual-list-a-items']");
 
-    expect(firstList?.querySelectorAll("[data-kmsf-virtual-list-item='true']")).toHaveLength(5);
+    expect(firstList?.querySelectorAll("[data-comins-virtual-list-item='true']")).toHaveLength(5);
 
     const overflowIndicator = firstList?.querySelector<HTMLElement>("[data-testid='virtual-list-overflow-a-items']");
 
@@ -761,11 +761,11 @@ describe("@kmsf/data-table component renderer API", () => {
       overflowButton?.click();
     });
 
-    expect(firstList?.getAttribute("data-kmsf-virtual-list-expanded")).toBe("true");
-    expect(firstList?.querySelectorAll("[data-kmsf-virtual-list-item='true']").length).toBeLessThan(24);
+    expect(firstList?.getAttribute("data-comins-virtual-list-expanded")).toBe("true");
+    expect(firstList?.querySelectorAll("[data-comins-virtual-list-item='true']").length).toBeLessThan(24);
     expect(element.querySelector("[data-testid='row-a']")?.getAttribute("data-selected-row")).toBe("true");
 
-    const firstItem = firstList?.querySelector<HTMLButtonElement>("[data-kmsf-virtual-list-item='true']");
+    const firstItem = firstList?.querySelector<HTMLButtonElement>("[data-comins-virtual-list-item='true']");
 
     act(() => {
       firstItem?.click();
@@ -794,11 +794,11 @@ describe("@kmsf/data-table component renderer API", () => {
   });
 
   it("gates virtual-list search and full scroll behind a single selected row", () => {
-    const ref = createRef<KmsfDataTableRef<Row>>();
+    const ref = createRef<CominsTableRef<Row>>();
     const searchFilter = vi.fn(
       ({ item, itemIndex, value }) => itemIndex === 1 || item.label.toLowerCase().includes(String(value).toLowerCase()),
     );
-    const columns: Array<KmsfDataTableColumn<Row>> = [
+    const columns: Array<CominsTableColumn<Row>> = [
       {
         cell: {
           components: [
@@ -828,11 +828,11 @@ describe("@kmsf/data-table component renderer API", () => {
       },
     ];
     const element = render(
-      <KmsfDataTable columns={columns} data={rows} getRowId={(row) => row.id} ref={ref} rowHeight={120} />,
+      <CominsTable columns={columns} data={rows} getRowId={(row) => row.id} ref={ref} rowHeight={120} />,
     );
     const firstList = element.querySelector<HTMLElement>("[data-testid='virtual-list-a-items']");
 
-    expect(firstList?.querySelectorAll("[data-kmsf-virtual-list-item='true']")).toHaveLength(5);
+    expect(firstList?.querySelectorAll("[data-comins-virtual-list-item='true']")).toHaveLength(5);
     expect(firstList?.textContent).not.toContain("Large item 10000");
     expect(firstList?.querySelector("[data-testid='virtual-list-overflow-a-items']")?.tagName).toBe("SPAN");
 
@@ -842,7 +842,7 @@ describe("@kmsf/data-table component renderer API", () => {
     expect(element.querySelector("[data-testid='row-a']")?.getAttribute("data-selected-row")).toBeNull();
 
     act(() => {
-      const itemsViewport = firstList?.querySelector<HTMLElement>(".kmsf-data-table__component-virtual-list-items");
+      const itemsViewport = firstList?.querySelector<HTMLElement>(".comins-table__component-virtual-list-items");
 
       if (itemsViewport) {
         itemsViewport.scrollTop = (10_000 - 5) * 28;
@@ -850,7 +850,7 @@ describe("@kmsf/data-table component renderer API", () => {
       }
     });
 
-    expect(firstList?.querySelectorAll("[data-kmsf-virtual-list-item='true']")).toHaveLength(5);
+    expect(firstList?.querySelectorAll("[data-comins-virtual-list-item='true']")).toHaveLength(5);
     expect(firstList?.textContent).not.toContain("Large item 10000");
 
     act(() => {
@@ -866,7 +866,7 @@ describe("@kmsf/data-table component renderer API", () => {
       firstList?.querySelector<HTMLButtonElement>("[data-testid='virtual-list-overflow-a-items']")?.click();
     });
 
-    expect(firstList?.getAttribute("data-kmsf-virtual-list-expanded")).toBe("true");
+    expect(firstList?.getAttribute("data-comins-virtual-list-expanded")).toBe("true");
 
     act(() => {
       const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
@@ -876,7 +876,7 @@ describe("@kmsf/data-table component renderer API", () => {
       selectedSearch?.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
-    expect(firstList?.querySelectorAll("[data-kmsf-virtual-list-item='true']").length).toBeLessThan(30);
+    expect(firstList?.querySelectorAll("[data-comins-virtual-list-item='true']").length).toBeLessThan(30);
     expect(firstList?.textContent).toContain("Large item 9999");
     expect(searchFilter).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -893,7 +893,7 @@ describe("@kmsf/data-table component renderer API", () => {
     });
 
     expect(element.querySelector("[data-testid='virtual-list-search-a-items']")).toBeNull();
-    expect(firstList?.querySelectorAll("[data-kmsf-virtual-list-item='true']")).toHaveLength(5);
+    expect(firstList?.querySelectorAll("[data-comins-virtual-list-item='true']")).toHaveLength(5);
     expect(firstList?.querySelector("[data-testid='virtual-list-overflow-a-items']")?.tagName).toBe("SPAN");
   });
 });

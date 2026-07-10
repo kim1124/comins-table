@@ -22,7 +22,7 @@ const userDocs = [
 ];
 
 const implementedTerms = [
-  "KmsfDataTable",
+  "CominsTable",
   "data",
   "onChangeData",
   "onChangeSelection",
@@ -30,25 +30,25 @@ const implementedTerms = [
   "onChangeSort",
   "onClickCell",
   "onClickRow",
-  "createKmsfDataTableState",
-  "addKmsfRows",
-  "updateKmsfRows",
-  "deleteKmsfRows",
-  "queryKmsfRows",
-  "setKmsfPagination",
-  "serializeKmsfColumnLayout",
-  "applyKmsfColumnLayout",
+  "createCominsTableState",
+  "addCominsRows",
+  "updateCominsRows",
+  "deleteCominsRows",
+  "queryCominsRows",
+  "setCominsPagination",
+  "serializeCominsColumnLayout",
+  "applyCominsColumnLayout",
   "selectRow",
   "selectCell",
   "selectCellRange",
-  "getKmsfSelectedCellRange",
-  "copyKmsfRow",
-  "copyKmsfCell",
-  "copyKmsfCellRange",
-  "pasteKmsfRow",
-  "pasteKmsfCell",
-  "pasteKmsfCellRange",
-  "fillKmsfCellRange",
+  "getCominsSelectedCellRange",
+  "copyCominsRow",
+  "copyCominsCell",
+  "copyCominsCellRange",
+  "pasteCominsRow",
+  "pasteCominsCell",
+  "pasteCominsCellRange",
+  "fillCominsCellRange",
   "props.copyable",
   "props.pasteable",
   "virtualized",
@@ -59,8 +59,8 @@ const implementedTerms = [
   "loading",
   "emptyComponent",
   "skeletonRowCount",
-  "exportKmsfRowsToCsv",
-  "exportKmsfRowsToJson",
+  "exportCominsRowsToCsv",
+  "exportCominsRowsToJson",
   "infiniteScroll",
   "infiniteScrollThreshold",
   "hasMoreRows",
@@ -77,7 +77,7 @@ function readWorkspaceFile(path: string) {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
-describe("@kmsf/data-table user documentation contract", () => {
+describe("comins-table user documentation contract", () => {
   it("has user docs for every currently implemented core area", () => {
     for (const doc of userDocs) {
       expect(existsSync(join(process.cwd(), "docs/user", doc)), `${doc} should exist`).toBe(true);
@@ -95,7 +95,7 @@ describe("@kmsf/data-table user documentation contract", () => {
   it("keeps README aligned with the shipped playground and user docs", () => {
     const readme = readWorkspaceFile("README.md");
 
-    expect(readme).toContain("npm --workspace=@kmsf/data-table run dev");
+    expect(readme).toContain("npm --workspace=comins-table run dev");
     expect(readme).toContain("docs/user/01-quick-start.md");
     expect(readme).not.toContain("does not currently ship a browser example server");
   });
@@ -139,6 +139,6 @@ describe("@kmsf/data-table user documentation contract", () => {
     expect(virtualization).toContain("JS heap");
     expect(virtualization).toContain('"buffer-size"');
     expect(virtualization).toContain("rowHeight");
-    expect(virtualization).toContain("--kmsf-data-table-row-height");
+    expect(virtualization).toContain("--comins-table-row-height");
   });
 });

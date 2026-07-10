@@ -22,7 +22,7 @@ function InfiniteUsersTable() {
   };
 
   return (
-    <KmsfDataTable
+    <CominsTable
       columns={columns}
       data={[]}
       getRowId={(row) => row.id}
@@ -64,7 +64,7 @@ Virtualized infinite scroll에서는 `pagination={{ pageIndex: 0, pageSize: expe
 이 방식에서는 테이블이 threshold 감지만 수행하고, 다음 rows append는 소비자 state에서 처리한다.
 
 ```tsx
-<KmsfDataTable
+<CominsTable
   columns={columns}
   data={rows}
   getRowId={(row) => row.id}

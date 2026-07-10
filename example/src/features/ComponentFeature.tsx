@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 
-import { KmsfDataTable, type KmsfDataTableColumn, type KmsfVirtualListItem } from "../../../src";
+import { CominsTable, type CominsTableColumn, type CominsVirtualListItem } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { createExampleRows, type PersonRow } from "../fixtures/people";
@@ -20,7 +20,7 @@ type ComponentExampleId =
   | "virtual-list-search";
 
 type ComponentRow = PersonRow & {
-  virtualListItems?: KmsfVirtualListItem[];
+  virtualListItems?: CominsVirtualListItem[];
 };
 
 type HeaderComponentState = {
@@ -105,7 +105,7 @@ const roleOptions = [
   { label: "Viewer", value: "Viewer" },
 ];
 
-const virtualListItemsFixture: KmsfVirtualListItem[] = Array.from({ length: 10_000 }, (_value, index) => ({
+const virtualListItemsFixture: CominsVirtualListItem[] = Array.from({ length: 10_000 }, (_value, index) => ({
   data: { index },
   label: `검색-${index + 1}`,
   value: `검색-${index + 1}`,
@@ -186,9 +186,9 @@ export function ComponentFeature() {
     }));
   }, []);
 
-  const createColumns = useCallback((componentId: ComponentExampleId): Array<KmsfDataTableColumn<ComponentRow>> => {
+  const createColumns = useCallback((componentId: ComponentExampleId): Array<CominsTableColumn<ComponentRow>> => {
     const field = getComponentField(componentId);
-    const componentColumn: KmsfDataTableColumn<ComponentRow> = {
+    const componentColumn: CominsTableColumn<ComponentRow> = {
       cell: {},
       field,
       id: `${componentId}-component`,
@@ -478,7 +478,7 @@ export function ComponentFeature() {
           acc[example.id] = createColumns(example.id);
           return acc;
         },
-        {} as Record<ComponentExampleId, Array<KmsfDataTableColumn<ComponentRow>>>,
+        {} as Record<ComponentExampleId, Array<CominsTableColumn<ComponentRow>>>,
       ),
     [createColumns],
   );
@@ -499,7 +499,7 @@ export function ComponentFeature() {
           <section className="component-example-section" data-testid={`component-section-${example.id}`} key={example.id}>
             <FeatureSampleSection description={example.description} id={`component-${example.id}`} title={example.title}>
               <div className="component-example-table-wrap" data-testid={`component-example-${example.id}`}>
-                <KmsfDataTable
+                <CominsTable
                   className="example-table component-example-table"
                   columns={columnsByExample[example.id]}
                   data={rowsByExample[example.id]}

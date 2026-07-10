@@ -30,7 +30,7 @@ test("playground repeatedly destroys and recreates feature content without stale
 
   await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "basic");
   await expect(page.getByRole("menu", { name: "데이터 테이블 컨텍스트 메뉴" })).toHaveCount(0);
-  await expect.poll(() => page.evaluate(() => window.__kmsfDataTableLifecycle?.activeMountCount ?? 0)).toBe(1);
-  await expect.poll(() => page.evaluate(() => window.__kmsfDataTableLifecycle?.mountCount ?? 0)).toBeGreaterThan(30);
+  await expect.poll(() => page.evaluate(() => window.__cominsTableLifecycle?.activeMountCount ?? 0)).toBe(1);
+  await expect.poll(() => page.evaluate(() => window.__cominsTableLifecycle?.mountCount ?? 0)).toBeGreaterThan(30);
   expect(diagnostics).toEqual([]);
 });

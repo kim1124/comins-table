@@ -7,7 +7,7 @@ function readPackageFile(path: string) {
   return readFileSync(new URL(path, packageRoot), "utf8");
 }
 
-describe("@kmsf/data-table public API boundary", () => {
+describe("comins-table public API boundary", () => {
   it("defines root and stable feature subpath exports", async () => {
     const packageJson = JSON.parse(readPackageFile("package.json")) as {
       files?: string[];
@@ -24,23 +24,23 @@ describe("@kmsf/data-table public API boundary", () => {
     expect(packageJson.exports?.["./selection"]).toBeDefined();
     expect(packageJson.exports?.["./styles.css"]).toBe("./styles.css");
     expect(packageJson.files).toContain("styles.css");
-    expect(entry.KmsfDataTable).toBeDefined();
-    expect(core.createKmsfDataTableState).toBeDefined();
-    expect(clipboard.copyKmsfCellRange).toBeDefined();
+    expect(entry.CominsTable).toBeDefined();
+    expect(core.createCominsTableState).toBeDefined();
+    expect(clipboard.copyCominsCellRange).toBeDefined();
     expect(core.selectRow).toBeDefined();
     expect(core.selectRows).toBeDefined();
     expect(core.selectCell).toBeDefined();
     expect(core.selectCellRange).toBeDefined();
-    expect(core.selectKmsfRow).toBeUndefined();
-    expect(core.selectKmsfCell).toBeUndefined();
+    expect(core.selectCominsRow).toBeUndefined();
+    expect(core.selectCominsCell).toBeUndefined();
     expect(selection.selectCellRange).toBeDefined();
-    expect(entry.exportKmsfRowsToCsv).toBeDefined();
-    expect(entry.exportKmsfRowsToJson).toBeDefined();
-    expect(core.exportKmsfRowsToCsv).toBeDefined();
-    expect(core.exportKmsfRowsToJson).toBeDefined();
-    expect(entry.KmsfExcelExport).toBeUndefined();
-    expect(entry.KmsfChartsPanel).toBeUndefined();
-    expect(entry.KmsfAiAssistant).toBeUndefined();
+    expect(entry.exportCominsRowsToCsv).toBeDefined();
+    expect(entry.exportCominsRowsToJson).toBeDefined();
+    expect(core.exportCominsRowsToCsv).toBeDefined();
+    expect(core.exportCominsRowsToJson).toBeDefined();
+    expect(entry.CominsExcelExport).toBeUndefined();
+    expect(entry.CominsChartsPanel).toBeUndefined();
+    expect(entry.CominsAiAssistant).toBeUndefined();
   });
 
   it("keeps shadcn and Tailwind scaffold in the playground boundary only", () => {
@@ -55,52 +55,52 @@ describe("@kmsf/data-table public API boundary", () => {
     expect(source).not.toMatch(/from ["'](?:radix-ui|@radix-ui|tailwindcss|@tailwindcss|class-variance-authority)/u);
   });
 
-  it("ships a dependency-free KMSF mint component skin as optional CSS", () => {
+  it("ships a dependency-free COMINS mint component skin as optional CSS", () => {
     const stylesPath = new URL("styles.css", packageRoot);
     const styles = existsSync(stylesPath) ? readPackageFile("styles.css") : "";
 
     expect(existsSync(stylesPath)).toBe(true);
-    expect(styles).toContain(".kmsf-data-table__component-button");
-    expect(styles).toContain(".kmsf-data-table__component-input");
-    expect(styles).toContain(".kmsf-data-table__component-virtual-list");
-    expect(styles).toContain("--kmsf-data-table-accent: #10b981");
-    expect(styles).toContain("--kmsf-data-table-row-height: 36px");
-    expect(styles).toContain("--kmsf-data-table-header-border");
-    expect(styles).toContain("--kmsf-data-table-header-split-border");
-    expect(styles).toContain("--kmsf-data-table-cell-border");
-    expect(styles).toContain("--kmsf-data-table-row-border");
-    expect(styles).toContain("--kmsf-data-table-row-even-background");
-    expect(styles).toContain("--kmsf-data-table-row-odd-background");
-    expect(styles).toContain("--kmsf-data-table-component-accent: var(--kmsf-data-table-accent)");
-    expect(styles).toContain("--kmsf-data-table-component-virtual-list-height: calc(var(--kmsf-data-table-virtual-list-item-height, 28px) * 5)");
-    expect(styles).toContain(".kmsf-data-table-theme--basic");
-    expect(styles).toContain(".kmsf-data-table-theme--dark");
-    expect(styles).toContain(".kmsf-data-table-theme--skyblue");
-    expect(styles).toContain(".kmsf-data-table-theme--mint");
-    expect(styles).toContain(".kmsf-data-table-theme--gray");
-    expect(styles).toContain(".kmsf-data-table-theme--orange");
-    expect(styles).not.toContain(".kmsf-data-table-theme--red");
-    expect(styles).not.toContain(".kmsf-data-table-theme--yellow");
-    expect(styles).not.toContain(".kmsf-data-table-theme--green");
-    expect(styles).not.toContain(".kmsf-data-table-theme--blue");
-    expect(styles).not.toContain(".kmsf-data-table-theme--indigo");
-    expect(styles).not.toContain(".kmsf-data-table-theme--violet");
-    expect(styles).toContain(".kmsf-data-table__thead .kmsf-data-table__th");
-    expect(styles).toMatch(/\.kmsf-data-table__thead \.kmsf-data-table__th[\s\S]*border-right: 1px solid var\(--kmsf-data-table-header-split-border\)/u);
-    expect(styles).toMatch(/\.kmsf-data-table__td[\s\S]*border-right: 1px solid var\(--kmsf-data-table-cell-border\)/u);
-    expect(styles).toMatch(/\.kmsf-data-table__td[\s\S]*border-bottom: 1px solid var\(--kmsf-data-table-row-border\)/u);
-    expect(styles).toContain('.kmsf-data-table__tr[data-kmsf-row-parity="even"] > .kmsf-data-table__td');
-    expect(styles).toContain('.kmsf-data-table__tr[data-kmsf-row-parity="odd"] > .kmsf-data-table__td');
-    expect(styles).toContain(".kmsf-row-selected");
-    expect(styles).toContain(".kmsf-column-drop-marker");
-    expect(styles).toMatch(/\.kmsf-data-table__component-input,[\s\S]*border-radius: 0/u);
-    expect(styles).toMatch(/\.kmsf-data-table__td\[data-kmsf-component-cell="true"\][\s\S]*padding: 2px/u);
-    expect(styles).toMatch(/\.kmsf-data-table__cell-value[\s\S]*text-overflow: ellipsis/u);
-    expect(styles).toMatch(/\.kmsf-data-table__component-virtual-list-item-label[\s\S]*text-overflow: ellipsis/u);
-    expect(styles).toMatch(/\.kmsf-data-table__component-input,[\s\S]*height: 100%/u);
-    expect(styles).toMatch(/\.kmsf-data-table__component-virtual-list[\s\S]*height: 100%/u);
-    expect(styles).toMatch(/\.kmsf-data-table__component-checkbox,[\s\S]*width: 20px/u);
-    expect(styles).toMatch(/\.kmsf-data-table__component-radio input[\s\S]*width: 20px/u);
+    expect(styles).toContain(".comins-table__component-button");
+    expect(styles).toContain(".comins-table__component-input");
+    expect(styles).toContain(".comins-table__component-virtual-list");
+    expect(styles).toContain("--comins-table-accent: #10b981");
+    expect(styles).toContain("--comins-table-row-height: 36px");
+    expect(styles).toContain("--comins-table-header-border");
+    expect(styles).toContain("--comins-table-header-split-border");
+    expect(styles).toContain("--comins-table-cell-border");
+    expect(styles).toContain("--comins-table-row-border");
+    expect(styles).toContain("--comins-table-row-even-background");
+    expect(styles).toContain("--comins-table-row-odd-background");
+    expect(styles).toContain("--comins-table-component-accent: var(--comins-table-accent)");
+    expect(styles).toContain("--comins-table-component-virtual-list-height: calc(var(--comins-table-virtual-list-item-height, 28px) * 5)");
+    expect(styles).toContain(".comins-table-theme--basic");
+    expect(styles).toContain(".comins-table-theme--dark");
+    expect(styles).toContain(".comins-table-theme--skyblue");
+    expect(styles).toContain(".comins-table-theme--mint");
+    expect(styles).toContain(".comins-table-theme--gray");
+    expect(styles).toContain(".comins-table-theme--orange");
+    expect(styles).not.toContain(".comins-table-theme--red");
+    expect(styles).not.toContain(".comins-table-theme--yellow");
+    expect(styles).not.toContain(".comins-table-theme--green");
+    expect(styles).not.toContain(".comins-table-theme--blue");
+    expect(styles).not.toContain(".comins-table-theme--indigo");
+    expect(styles).not.toContain(".comins-table-theme--violet");
+    expect(styles).toContain(".comins-table__thead .comins-table__th");
+    expect(styles).toMatch(/\.comins-table__thead \.comins-table__th[\s\S]*border-right: 1px solid var\(--comins-table-header-split-border\)/u);
+    expect(styles).toMatch(/\.comins-table__td[\s\S]*border-right: 1px solid var\(--comins-table-cell-border\)/u);
+    expect(styles).toMatch(/\.comins-table__td[\s\S]*border-bottom: 1px solid var\(--comins-table-row-border\)/u);
+    expect(styles).toContain('.comins-table__tr[data-comins-row-parity="even"] > .comins-table__td');
+    expect(styles).toContain('.comins-table__tr[data-comins-row-parity="odd"] > .comins-table__td');
+    expect(styles).toContain(".comins-row-selected");
+    expect(styles).toContain(".comins-column-drop-marker");
+    expect(styles).toMatch(/\.comins-table__component-input,[\s\S]*border-radius: 0/u);
+    expect(styles).toMatch(/\.comins-table__td\[data-comins-component-cell="true"\][\s\S]*padding: 2px/u);
+    expect(styles).toMatch(/\.comins-table__cell-value[\s\S]*text-overflow: ellipsis/u);
+    expect(styles).toMatch(/\.comins-table__component-virtual-list-item-label[\s\S]*text-overflow: ellipsis/u);
+    expect(styles).toMatch(/\.comins-table__component-input,[\s\S]*height: 100%/u);
+    expect(styles).toMatch(/\.comins-table__component-virtual-list[\s\S]*height: 100%/u);
+    expect(styles).toMatch(/\.comins-table__component-checkbox,[\s\S]*width: 20px/u);
+    expect(styles).toMatch(/\.comins-table__component-radio input[\s\S]*width: 20px/u);
     expect(styles).not.toMatch(/bootstrap|@radix-ui|shadcn|class-variance-authority|tailwind-merge/u);
   });
 });

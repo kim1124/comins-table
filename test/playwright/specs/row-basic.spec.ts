@@ -34,7 +34,7 @@ test("playground verifies row drag reorder without row order persistence", async
   await page.mouse.down();
   await page.mouse.move(targetBox!.x + targetBox!.width / 2, targetBox!.y + targetBox!.height / 2, { steps: 12 });
   await page.mouse.up();
-  await expect(basicExample.locator(".kmsf-data-table__body-table tbody tr").first().locator("td").first()).toHaveText(
+  await expect(basicExample.locator(".comins-table__body-table tbody tr").first().locator("td").first()).toHaveText(
     "Data 3",
   );
   await expect(page.getByTestId("layout-order")).toHaveCount(0);

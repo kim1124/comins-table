@@ -1,9 +1,9 @@
 # Loading And Empty State
 
-`KmsfDataTable`은 `loading`, `loadingComponent`, `emptyComponent`, `persistHeaderWhenEmpty`, `skeletonRowCount`로 로딩과 빈 데이터 표시를 제어한다.
+`CominsTable`은 `loading`, `loadingComponent`, `emptyComponent`, `persistHeaderWhenEmpty`, `skeletonRowCount`로 로딩과 빈 데이터 표시를 제어한다.
 
 ```tsx
-<KmsfDataTable
+<CominsTable
   columns={columns}
   data={initialLoading ? [] : rows}
   emptyComponent={<span>표시할 데이터가 없습니다.</span>}
@@ -19,4 +19,4 @@
 
 `emptyComponent`는 `loading`이 `false`이고 표시할 row가 없을 때 출력한다. `persistHeaderWhenEmpty`의 기본값은 `true`이며, 빈 데이터와 초기 로딩 상태에서도 Header 구조를 유지한다.
 
-`skeletonRowCount`는 skeleton row 개수만 제어한다. Virtualized table에서 실제 row 높이는 계속 `rowHeight`, `--kmsf-data-table-row-height`, `--kmsf-data-table-cell-height` 계약을 따른다.
+`skeletonRowCount`는 skeleton row 개수만 제어한다. Virtualized table에서 실제 row 높이는 계속 `rowHeight`, `--comins-table-row-height`, `--comins-table-cell-height` 계약을 따른다.

@@ -29,17 +29,17 @@ test("theme page switches shipped CSS themes without reloading or changing virtu
   await expect(themeSelect.locator("option")).toHaveText(["Basic", "Dark", "Skyblue", "Mint", "Gray", "Orange"]);
 
   const mountId = await page.getByTestId("mount-id").textContent();
-  const table = page.locator("[data-feature-option='theme'] .kmsf-data-table").first();
-  const firstHeaderCell = table.locator(".kmsf-data-table__th").first();
-  const rows = table.locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]");
-  const firstRowFirstCell = rows.nth(0).locator(".kmsf-data-table__td").first();
-  const secondRowFirstCell = rows.nth(1).locator(".kmsf-data-table__td").first();
+  const table = page.locator("[data-feature-option='theme'] .comins-table").first();
+  const firstHeaderCell = table.locator(".comins-table__th").first();
+  const rows = table.locator(".comins-table__body-table tbody tr[data-comins-row-data-index]");
+  const firstRowFirstCell = rows.nth(0).locator(".comins-table__td").first();
+  const secondRowFirstCell = rows.nth(1).locator(".comins-table__td").first();
 
   await expect(rows).toHaveCount(16);
-  await expect(table).toHaveClass(/kmsf-data-table-theme--basic/);
+  await expect(table).toHaveClass(/comins-table-theme--basic/);
   await expect(firstHeaderCell).toHaveCSS("background-color", "rgb(16, 185, 129)");
-  await expect(rows.nth(0)).toHaveAttribute("data-kmsf-row-parity", "even");
-  await expect(rows.nth(1)).toHaveAttribute("data-kmsf-row-parity", "odd");
+  await expect(rows.nth(0)).toHaveAttribute("data-comins-row-parity", "even");
+  await expect(rows.nth(1)).toHaveAttribute("data-comins-row-parity", "odd");
   await expect(firstRowFirstCell).toHaveCSS("background-color", "rgb(236, 253, 245)");
   await expect(secondRowFirstCell).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect(firstHeaderCell).toHaveCSS("border-right-color", "rgb(4, 120, 87)");
@@ -47,7 +47,7 @@ test("theme page switches shipped CSS themes without reloading or changing virtu
   await expect(firstRowFirstCell).toHaveCSS("border-bottom-color", "rgb(187, 231, 214)");
 
   await themeSelect.selectOption("dark");
-  await expect(table).toHaveClass(/kmsf-data-table-theme--dark/);
+  await expect(table).toHaveClass(/comins-table-theme--dark/);
   await expect(firstHeaderCell).toHaveCSS("background-color", "rgb(6, 78, 59)");
   await expect(rows).toHaveCount(16);
   await expect(page.getByTestId("mount-id")).toHaveText(mountId ?? "");
@@ -58,7 +58,7 @@ test("theme page switches shipped CSS themes without reloading or changing virtu
   await expect(firstRowFirstCell).toHaveCSS("border-bottom-color", "rgb(44, 76, 66)");
 
   await themeSelect.selectOption("skyblue");
-  await expect(table).toHaveClass(/kmsf-data-table-theme--skyblue/);
+  await expect(table).toHaveClass(/comins-table-theme--skyblue/);
   await expect(firstHeaderCell).toHaveCSS("background-color", "rgb(135, 206, 235)");
   await expect(firstRowFirstCell).toHaveCSS("background-color", "rgb(223, 246, 255)");
   await expect(secondRowFirstCell).toHaveCSS("background-color", "rgb(246, 252, 255)");
@@ -69,7 +69,7 @@ test("theme page switches shipped CSS themes without reloading or changing virtu
   await expect(page.getByTestId("mount-id")).toHaveText(mountId ?? "");
 
   await themeSelect.selectOption("mint");
-  await expect(table).toHaveClass(/kmsf-data-table-theme--mint/);
+  await expect(table).toHaveClass(/comins-table-theme--mint/);
   await expect(firstHeaderCell).toHaveCSS("background-color", "rgb(152, 255, 152)");
   await expect(firstRowFirstCell).toHaveCSS("background-color", "rgb(223, 255, 224)");
   await expect(secondRowFirstCell).toHaveCSS("background-color", "rgb(248, 255, 248)");
@@ -80,7 +80,7 @@ test("theme page switches shipped CSS themes without reloading or changing virtu
   await expect(page.getByTestId("mount-id")).toHaveText(mountId ?? "");
 
   await themeSelect.selectOption("gray");
-  await expect(table).toHaveClass(/kmsf-data-table-theme--gray/);
+  await expect(table).toHaveClass(/comins-table-theme--gray/);
   await expect(firstHeaderCell).toHaveCSS("background-color", "rgb(188, 188, 188)");
   await expect(firstRowFirstCell).toHaveCSS("background-color", "rgb(241, 241, 241)");
   await expect(secondRowFirstCell).toHaveCSS("background-color", "rgb(250, 250, 250)");
@@ -91,7 +91,7 @@ test("theme page switches shipped CSS themes without reloading or changing virtu
   await expect(page.getByTestId("mount-id")).toHaveText(mountId ?? "");
 
   await themeSelect.selectOption("orange");
-  await expect(table).toHaveClass(/kmsf-data-table-theme--orange/);
+  await expect(table).toHaveClass(/comins-table-theme--orange/);
   await expect(firstHeaderCell).toHaveCSS("background-color", "rgb(255, 165, 0)");
   await expect(firstRowFirstCell).toHaveCSS("background-color", "rgb(255, 243, 224)");
   await expect(secondRowFirstCell).toHaveCSS("background-color", "rgb(255, 250, 242)");

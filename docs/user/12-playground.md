@@ -1,10 +1,10 @@
 # Playground
 
-Playground는 `@kmsf/data-table` 기능을 문서와 예제로 함께 확인하는 Vite 기반 문서 shell이다.
+Playground는 `comins-table` 기능을 문서와 예제로 함께 확인하는 Vite 기반 문서 shell이다.
 상단 package navigation, 왼쪽 기능별 메뉴, 오른쪽 article content로 구성하며 React Router route 이동을 사용한다.
 
 ```bash
-npm --workspace=@kmsf/data-table run dev
+npm --workspace=comins-table run dev
 ```
 
 기본 실행 URL은 `http://127.0.0.1:4002`다.
@@ -25,7 +25,7 @@ npm --workspace=@kmsf/data-table run dev
 - `/examples/component`: Header와 Cell에 적용되는 built-in component와 custom renderer. Component 예제는 렌더링 결과 중심으로 표시한다.
 - `/examples/row`: drag handle reorder, `rowProps.draggable`, row disabled, row custom formatting, row event Alert, row keyboard copy/paste
 - `/examples/context-menu`: callback 기반 row/cell context menu, 우클릭 단일 row selection, payload preview
-- `/examples/export`: `exportKmsfRowsToCsv`, `exportKmsfRowsToJson` helper 출력 예제
+- `/examples/export`: `exportCominsRowsToCsv`, `exportCominsRowsToJson` helper 출력 예제
 - `/api/props`: 현재 구현된 props, events, ref/core 항목
 - `/api/ref`: 현재 구현된 ref method와 core helper 경계
 - `/performance/infinite-scroll`: 원격 API batch를 append하는 `lazyLoad`, `onLazyLoad` 기반 Infinite Scroll 예제

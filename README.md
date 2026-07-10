@@ -1,6 +1,6 @@
-# @kmsf/data-table
+# comins-table
 
-`@kmsf/data-table`은 KMSF 애플리케이션을 위한 CSR 중심 React 데이터 테이블 패키지다. 재사용 가능한 `KmsfDataTable` 컴포넌트와 함께 Row, Column, Layout, Selection, Clipboard, Pagination, Sorting, 2 Depth Header, Virtualized Rendering을 다루는 프레임워크 비의존 코어 헬퍼를 제공한다.
+`comins-table`은 COMINS 애플리케이션을 위한 CSR 중심 React 데이터 테이블 패키지다. 재사용 가능한 `CominsTable` 컴포넌트와 함께 Row, Column, Layout, Selection, Clipboard, Pagination, Sorting, 2 Depth Header, Virtualized Rendering을 다루는 프레임워크 비의존 코어 헬퍼를 제공한다.
 
 애플리케이션이 `data` 배열을 소유하고, 테이블에서 발생한 변경은 controlled callback으로 다시 전달하는 구조를 기준으로 설계되어 있다. 관리자 대시보드, 내부 운영 도구, 대용량 데이터 화면에 맞춘다.
 
@@ -14,7 +14,7 @@
 ## 설치
 
 ```bash
-npm install @kmsf/data-table react react-dom
+npm install comins-table react react-dom
 ```
 
 피어 의존성:
@@ -27,15 +27,15 @@ npm install @kmsf/data-table react react-dom
 기본 테이블 스킨은 선택적으로 import한다.
 
 ```tsx
-import "@kmsf/data-table/styles.css";
+import "comins-table/styles.css";
 ```
 
 ## 빠른 시작
 
 ```tsx
 import { useState } from "react";
-import { KmsfDataTable, type KmsfDataTableColumn } from "@kmsf/data-table";
-import "@kmsf/data-table/styles.css";
+import { CominsTable, type CominsTableColumn } from "comins-table";
+import "comins-table/styles.css";
 
 type UserRow = {
   active: boolean;
@@ -45,7 +45,7 @@ type UserRow = {
   role: string;
 };
 
-const columns: Array<KmsfDataTableColumn<UserRow>> = [
+const columns: Array<CominsTableColumn<UserRow>> = [
   { field: "name", label: "이름", sort: true },
   { field: "age", label: "나이", sort: true },
   { field: "role", label: "역할" },
@@ -64,7 +64,7 @@ export function UsersTable() {
   ]);
 
   return (
-    <KmsfDataTable<UserRow>
+    <CominsTable<UserRow>
       columns={columns}
       data={data}
       getRowId={(row) => row.id}
@@ -100,7 +100,7 @@ export function UsersTable() {
 Leaf column은 기존처럼 flat `columns`에 정의하고, 부모 Header는 별도 `columnGroups` prop으로 정의한다.
 
 ```tsx
-<KmsfDataTable<UserRow>
+<CominsTable<UserRow>
   columns={[
     { id: "name", field: "name", label: "이름", sort: true, width: 160 },
     { id: "age", field: "age", label: "나이", sort: true, width: 120 },
@@ -130,45 +130,45 @@ Leaf column은 기존처럼 flat `columns`에 정의하고, 부모 Header는 별
 
 ## 코어 헬퍼
 
-Root export는 `KmsfDataTable`과 public core helper를 함께 제공한다. 더 좁은 import가 필요하면 안정적인 subpath를 사용할 수 있다.
+Root export는 `CominsTable`과 public core helper를 함께 제공한다. 더 좁은 import가 필요하면 안정적인 subpath를 사용할 수 있다.
 
 ```ts
 import {
-  createKmsfDataTableState,
-  addKmsfRows,
-  updateKmsfRows,
-  deleteKmsfRows,
-  queryKmsfRows,
-  setKmsfPagination,
-  setKmsfSortState,
-  serializeKmsfColumnLayout,
-  applyKmsfColumnLayout,
+  createCominsTableState,
+  addCominsRows,
+  updateCominsRows,
+  deleteCominsRows,
+  queryCominsRows,
+  setCominsPagination,
+  setCominsSortState,
+  serializeCominsColumnLayout,
+  applyCominsColumnLayout,
   selectRow,
   selectCell,
   selectCellRange,
-  copyKmsfCellRange,
-  exportKmsfRowsToCsv,
-  exportKmsfRowsToJson,
-  pasteKmsfCellRange,
-  fillKmsfCellRange,
-} from "@kmsf/data-table/core";
+  copyCominsCellRange,
+  exportCominsRowsToCsv,
+  exportCominsRowsToJson,
+  pasteCominsCellRange,
+  fillCominsCellRange,
+} from "comins-table/core";
 ```
 
 패키지 export:
 
 | Import | 용도 |
 | --- | --- |
-| `@kmsf/data-table` | React component, public type, core export |
-| `@kmsf/data-table/core` | Table state, row, column, layout, pagination, sorting, selection, clipboard, virtualization helper |
-| `@kmsf/data-table/clipboard` | Clipboard helper subset |
-| `@kmsf/data-table/selection` | Selection helper subset |
-| `@kmsf/data-table/styles.css` | 선택 테이블 shell, theme class, built-in component skin |
+| `comins-table` | React component, public type, core export |
+| `comins-table/core` | Table state, row, column, layout, pagination, sorting, selection, clipboard, virtualization helper |
+| `comins-table/clipboard` | Clipboard helper subset |
+| `comins-table/selection` | Selection helper subset |
+| `comins-table/styles.css` | 선택 테이블 shell, theme class, built-in component skin |
 
 Export helper는 UI 상태를 자동으로 읽지 않는다. Export할 row 집합과 value getter column을 호출자가 명시적으로 전달한다.
 
 ```ts
-const csv = exportKmsfRowsToCsv({ columns: exportColumns, rows });
-const json = exportKmsfRowsToJson({ columns: exportColumns, rows });
+const csv = exportCominsRowsToCsv({ columns: exportColumns, rows });
+const json = exportCominsRowsToJson({ columns: exportColumns, rows });
 ```
 
 ## 주요 Props
@@ -201,7 +201,7 @@ const json = exportKmsfRowsToJson({ columns: exportColumns, rows });
 | `lazyLoadMode` | Lazy Load mode. 현재 지원 값은 `"append"`다. |
 | `lazyLoadThreshold` | Body viewport 하단에서 몇 px 이내에 들어왔을 때 lazy append 요청을 보낼지 지정한다. |
 | `onLazyLoad` | `offset`, `limit`, `reason`, `AbortSignal`을 받아 row batch와 optional `total`을 반환하는 async datasource callback. |
-| `theme` | 선택 `className`, `style`, `density` skin hook. 기본 제공 class는 `kmsf-data-table-theme--basic`, `--dark`, `--skyblue`, `--mint`, `--gray`, `--orange`다. |
+| `theme` | 선택 `className`, `style`, `density` skin hook. 기본 제공 class는 `comins-table-theme--basic`, `--dark`, `--skyblue`, `--mint`, `--gray`, `--orange`다. |
 | `showHeader` | Header area 전체를 표시하거나 제거한다. |
 | `cellSelection` | Cell/range selection visual을 활성화하거나 비활성화한다. |
 | `rowProps` | Row-level class, style, disabled, draggable 동작을 공급한다. |
@@ -209,7 +209,7 @@ const json = exportKmsfRowsToJson({ columns: exportColumns, rows });
 ## Ref API
 
 ```tsx
-const tableRef = useRef<KmsfDataTableRef<UserRow>>(null);
+const tableRef = useRef<CominsTableRef<UserRow>>(null);
 
 tableRef.current?.getColumnLayout();
 tableRef.current?.setColumnLayout(savedLayout);
@@ -228,7 +228,7 @@ tableRef.current?.setMoveTargetRow(3, 1);
 저장소 루트에서 패키지 playground를 실행한다.
 
 ```bash
-npm --workspace=@kmsf/data-table run dev
+npm --workspace=comins-table run dev
 ```
 
 Playground는 `/docs/getting-started`에서 시작한다. CRUD, table size, Theme, Loading / Empty State, Header, 2 Depth Header, Pagination, Infinite Scroll, Lazy Load, 대용량 Virtualization, Cell, Row, Component, Selection, Clipboard, Context Menu, Export Helper 예제를 포함한다.
@@ -240,13 +240,13 @@ Legacy URL인 `/examples/basic`과 `/examples/body`는 현재 Getting Started와
 Package script는 `package.json`과 일치한다.
 
 ```bash
-npm --workspace=@kmsf/data-table run lint
-npm --workspace=@kmsf/data-table run test:run
-npm --workspace=@kmsf/data-table run build
-npm --workspace=@kmsf/data-table run verify
-npm --workspace=@kmsf/data-table run verify:e2e
-npm --workspace=@kmsf/data-table run verify:full
-npm --workspace=@kmsf/data-table run test:perf
+npm --workspace=comins-table run lint
+npm --workspace=comins-table run test:run
+npm --workspace=comins-table run build
+npm --workspace=comins-table run verify
+npm --workspace=comins-table run verify:e2e
+npm --workspace=comins-table run verify:full
+npm --workspace=comins-table run test:perf
 ```
 
 ## 현재 범위
@@ -266,5 +266,5 @@ npm --workspace=@kmsf/data-table run test:perf
 아직 구현하지 않은 범위:
 
 - 별도 external store adapter 객체. 현재는 `data`와 `onChangeData`를 `useState`, Zustand, Redux 또는 다른 store state에 직접 연결한다.
-- Excel-like Visual Fill Handle UI. `fillKmsfCellRange` core helper는 제공하지만 drag-handle UX는 후속 범위다.
+- Excel-like Visual Fill Handle UI. `fillCominsCellRange` core helper는 제공하지만 drag-handle UX는 후속 범위다.
 - Server-side row model, viewport datasource model, row grouping, aggregation, pivoting, tree data, master/detail, charts integration, AI assistant 기능.

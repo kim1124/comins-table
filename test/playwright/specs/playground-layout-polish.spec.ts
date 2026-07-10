@@ -26,8 +26,8 @@ test("feature content uses card containers and avoids page-level vertical scroll
   await expect(page.getByTestId("feature-sample-card-header")).toBeVisible();
   await expect(page.getByTestId("feature-sample-card-content")).toBeVisible();
   await expect(page.getByTestId("feature-option-heading").first()).toContainText("기본");
-  await expect(page.getByTestId("feature-option-description").first()).toHaveText("@kmsf/data-table 기본 예제입니다.");
-  await expect(page.getByTestId("feature-option-sample").first().locator(".kmsf-data-table")).toBeVisible();
+  await expect(page.getByTestId("feature-option-description").first()).toHaveText("comins-table 기본 예제입니다.");
+  await expect(page.getByTestId("feature-option-sample").first().locator(".comins-table")).toBeVisible();
   await expect(page.getByTestId("feature-controls")).toHaveCount(0);
   await expect(page.getByTestId("basic-live-state")).toHaveCount(0);
   await expect(page.getByTestId("sample-row-count")).toHaveCount(0);
@@ -56,7 +56,7 @@ test("single samples keep default table height and repeated samples scroll verti
   const basicMetrics = await page.getByTestId("feature-content").evaluate((element) => {
     const style = window.getComputedStyle(element);
     const sample = element.querySelector<HTMLElement>("[data-testid='feature-option-sample']");
-    const table = element.querySelector<HTMLElement>(".kmsf-data-table");
+    const table = element.querySelector<HTMLElement>(".comins-table");
 
     return {
       overflowY: style.overflowY,
@@ -88,9 +88,9 @@ test("repeated sample containers provide at least 500px sample height and full-w
   await page.goto("/examples/component");
 
   const sample = page.getByTestId("feature-option-sample").first();
-  const table = sample.locator(".kmsf-data-table").first();
+  const table = sample.locator(".comins-table").first();
   const metrics = await sample.evaluate((element) => {
-    const tableRoot = element.querySelector<HTMLElement>(".kmsf-data-table");
+    const tableRoot = element.querySelector<HTMLElement>(".comins-table");
     const tableStyle = tableRoot ? window.getComputedStyle(tableRoot) : null;
     const sampleBox = element.getBoundingClientRect();
     const tableBox = tableRoot?.getBoundingClientRect();
@@ -252,7 +252,7 @@ test("all playground examples keep width containment and component resize scroll
   await page.mouse.move(handleBox!.x + 420, handleBox!.y + handleBox!.height / 2);
   await page.mouse.up();
 
-  const overflowMetrics = await table.locator(".kmsf-data-table__body-viewport").evaluate((element) => {
+  const overflowMetrics = await table.locator(".comins-table__body-viewport").evaluate((element) => {
     const style = window.getComputedStyle(element);
 
     return {
@@ -284,10 +284,10 @@ test("CRUD page removes noisy query output and keeps pagination controls out of 
     await expect(page.getByRole("button", { exact: true, name: label })).toBeVisible();
   }
   await expect(page.getByTestId("crud-pagination")).toHaveCount(0);
-  await expect(page.locator(".kmsf-data-table__header-table th")).toHaveCount(6);
+  await expect(page.locator(".comins-table__header-table th")).toHaveCount(6);
 
   const detailBox = await page.getByTestId("crud-detail-pane").boundingBox();
-  const tableBox = await page.locator(".example-table.kmsf-data-table").boundingBox();
+  const tableBox = await page.locator(".example-table.comins-table").boundingBox();
   const sampleBox = await page.getByTestId("feature-option-sample").first().boundingBox();
   expect(detailBox).not.toBeNull();
   expect(tableBox).not.toBeNull();
@@ -334,17 +334,17 @@ test("general samples render thirty rows per page", async ({ page }) => {
 
   for (const route of ["/docs/getting-started", "/examples/cell", "/examples/context-menu", "/performance/pagination"]) {
     await page.goto(route);
-    await expect(page.locator(".kmsf-data-table").first()).toBeVisible();
-    await expect(page.locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]")).toHaveCount(30);
+    await expect(page.locator(".comins-table").first()).toBeVisible();
+    await expect(page.locator(".comins-table__body-table tbody tr[data-comins-row-data-index]")).toHaveCount(30);
   }
 
   await page.goto("/examples/crud");
   await expect(page.getByTestId("data-table-viewport")).toBeVisible();
-  await expect(page.locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]")).toHaveCount(100);
+  await expect(page.locator(".comins-table__body-table tbody tr[data-comins-row-data-index]")).toHaveCount(100);
 
   await page.goto("/examples/row");
   await expect(
-    page.getByTestId("row-example-basic").locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
+    page.getByTestId("row-example-basic").locator(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
   ).toHaveCount(30);
 
   await page.goto("/examples/header");
@@ -354,20 +354,20 @@ test("general samples render thirty rows per page", async ({ page }) => {
     "header-example-layout",
   ]) {
     await expect(
-      page.getByTestId(testId).locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
+      page.getByTestId(testId).locator(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
     ).toHaveCount(30);
   }
 
   await page.goto("/examples/column-groups");
   for (const testId of ["header-example-groups", "column-group-dynamic-columns"]) {
     await expect(
-      page.getByTestId(testId).locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]").first(),
+      page.getByTestId(testId).locator(".comins-table__body-table tbody tr[data-comins-row-data-index]").first(),
     ).toBeVisible();
   }
 
   await page.goto("/examples/component");
   await expect(
-    page.getByTestId("component-example-button").locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
+    page.getByTestId("component-example-button").locator(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
   ).toHaveCount(30);
 
   expect(diagnostics).toEqual([]);
@@ -379,12 +379,12 @@ test("large data remains virtualized @perf", async ({ page }) => {
   await expect(page.getByRole("button", { exact: true, name: "100만 행 로드" })).toHaveCount(0);
   await expect(page.getByRole("button", { exact: true, name: "10만 행 로드" })).toHaveCount(0);
   await expect
-    .poll(() => page.locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]").count())
+    .poll(() => page.locator(".comins-table__body-table tbody tr[data-comins-row-data-index]").count())
     .toBeLessThan(90);
   expect(diagnostics).toEqual([]);
 });
 
-test("selected row uses a stronger KMSF mint color", async ({ page }) => {
+test("selected row uses a stronger COMINS mint color", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/docs/getting-started");
 
@@ -435,7 +435,7 @@ test("header examples keep table body vertical scrolling available", async ({ pa
   ]) {
     const metrics = await page
       .getByTestId(testId)
-      .locator(".kmsf-data-table__body-viewport")
+      .locator(".comins-table__body-viewport")
       .evaluate((viewport) => {
         const style = window.getComputedStyle(viewport);
 
@@ -454,7 +454,7 @@ test("header examples keep table body vertical scrolling available", async ({ pa
   for (const testId of ["header-example-groups", "column-group-dynamic-columns"]) {
     const metrics = await page
       .getByTestId(testId)
-      .locator(".kmsf-data-table__body-viewport")
+      .locator(".comins-table__body-viewport")
       .evaluate((viewport) => {
         const style = window.getComputedStyle(viewport);
 
@@ -477,13 +477,13 @@ test("data table uses 2px outer radius and keeps viewport edge lines visible", a
   await page.goto("/");
   await page.goto("/performance/virtualization");
   await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
-  const table = page.locator(".example-table.kmsf-data-table").first();
-  await expect(table.locator(".kmsf-data-table__header-table th")).toHaveCount(10);
+  const table = page.locator(".example-table.comins-table").first();
+  await expect(table.locator(".comins-table__header-table th")).toHaveCount(10);
   const headerWidths = await table
-    .locator(".kmsf-data-table__header-table th[data-kmsf-column-id]")
+    .locator(".comins-table__header-table th[data-comins-column-id]")
     .evaluateAll((headers) =>
       headers.map((header) => ({
-        id: header.getAttribute("data-kmsf-column-id"),
+        id: header.getAttribute("data-comins-column-id"),
         width: Math.round(header.getBoundingClientRect().width),
       })),
     );
@@ -500,7 +500,7 @@ test("data table uses 2px outer radius and keeps viewport edge lines visible", a
     element.scrollLeft = element.scrollWidth;
     element.dispatchEvent(new Event("scroll", { bubbles: true }));
     const viewportRect = element.getBoundingClientRect();
-    const root = element.closest<HTMLElement>(".kmsf-data-table");
+    const root = element.closest<HTMLElement>(".comins-table");
     const rootRect = root?.getBoundingClientRect();
     const rootStyle = root ? window.getComputedStyle(root) : null;
 
@@ -567,7 +567,7 @@ test("column shrink clips overflowing component content inside the resized cell"
     const rect = cell.getBoundingClientRect();
     const leakedTarget = document.elementFromPoint(rect.right + 6, rect.top + rect.height / 2);
     const header = document.querySelector<HTMLElement>("[data-testid='header-button-component']");
-    const headerText = header?.querySelector<HTMLElement>(".kmsf-data-table__header-label");
+    const headerText = header?.querySelector<HTMLElement>(".comins-table__header-label");
     const headerTextStyle = headerText ? window.getComputedStyle(headerText) : null;
     const cellStyle = window.getComputedStyle(cell);
 
@@ -575,7 +575,7 @@ test("column shrink clips overflowing component content inside the resized cell"
       cellOverflow: cellStyle.overflow,
       headerOverflow: headerTextStyle?.overflow ?? null,
       headerTextOverflow: headerTextStyle?.textOverflow ?? null,
-      leakedButtonText: leakedTarget?.closest(".kmsf-data-table__component-button")?.textContent ?? null,
+      leakedButtonText: leakedTarget?.closest(".comins-table__component-button")?.textContent ?? null,
     };
   });
 
@@ -594,12 +594,12 @@ test("body viewport keeps a single bottom border at max scroll @perf", async ({ 
 
   const metrics = await page.getByTestId("data-table-viewport").evaluate((viewport) => {
     viewport.scrollTop = viewport.scrollHeight;
-    const tableRoot = viewport.closest(".kmsf-data-table");
+    const tableRoot = viewport.closest(".comins-table");
     const dataRows = Array.from(
-      viewport.querySelectorAll<HTMLTableRowElement>(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
+      viewport.querySelectorAll<HTMLTableRowElement>(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
     );
     const lastDataRow = dataRows.at(-1);
-    const firstCell = lastDataRow?.querySelector<HTMLElement>(".kmsf-data-table__td");
+    const firstCell = lastDataRow?.querySelector<HTMLElement>(".comins-table__td");
     const rootStyle = tableRoot ? window.getComputedStyle(tableRoot) : null;
     const cellStyle = firstCell ? window.getComputedStyle(firstCell) : null;
 
@@ -701,11 +701,11 @@ test("table size menu demonstrates manual and parent sizing only", async ({ page
   const parentBox = await page.getByTestId("size-case-parent").boundingBox();
   const manualTableBox = await page
     .getByTestId("data-table-size-manual")
-    .locator("xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' kmsf-data-table ')][1]")
+    .locator("xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' comins-table ')][1]")
     .boundingBox();
   const parentTableBox = await page
     .getByTestId("data-table-size-parent")
-    .locator("xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' kmsf-data-table ')][1]")
+    .locator("xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' comins-table ')][1]")
     .boundingBox();
   expect(manualBox).not.toBeNull();
   expect(parentBox).not.toBeNull();
@@ -726,7 +726,7 @@ test("single column group live sample uses the full available card width", async
   const sampleMetrics = await page.getByTestId("column-group-dynamic-columns").evaluate((element) => {
     const sample = element.querySelector<HTMLElement>("[data-testid='feature-option-sample']");
     const grid = element.querySelector<HTMLElement>("[data-testid='dynamic-group-table']");
-    const table = element.querySelector<HTMLElement>("[data-testid='dynamic-group-viewport']")?.closest<HTMLElement>(".kmsf-data-table");
+    const table = element.querySelector<HTMLElement>("[data-testid='dynamic-group-viewport']")?.closest<HTMLElement>(".comins-table");
     const sampleRect = sample?.getBoundingClientRect();
     const gridRect = grid?.getBoundingClientRect();
     const tableRect = table?.getBoundingClientRect();

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { KmsfDataTable } from "../../../src";
+import { CominsTable } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { createBaseColumns } from "../fixtures/columns";
 import { createExampleRows } from "../fixtures/people";
@@ -11,11 +11,11 @@ export function BasicFeature() {
   return (
     <section className="feature-panel">
       <FeatureSampleSection
-        description="@kmsf/data-table 기본 예제입니다."
+        description="comins-table 기본 예제입니다."
         id="basic"
         title="기본"
       >
-        <KmsfDataTable
+        <CominsTable
           className="example-table"
           columns={createBaseColumns()}
           data={rows}

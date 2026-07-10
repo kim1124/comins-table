@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  clearKmsfSelection,
-  createKmsfDataTableState,
-  deleteKmsfRows,
-  isKmsfCellSelected,
-  isKmsfRowSelected,
-  replaceKmsfRows,
+  clearCominsSelection,
+  createCominsTableState,
+  deleteCominsRows,
+  isCominsCellSelected,
+  isCominsRowSelected,
+  replaceCominsRows,
   selectCell,
   selectRow,
-  updateKmsfRows,
+  updateCominsRows,
 } from "../src";
 
 type PersonRow = {
@@ -30,33 +30,33 @@ const columns = [
 ] as const;
 
 function createState() {
-  return createKmsfDataTableState<PersonRow>({
+  return createCominsTableState<PersonRow>({
     columns,
     getRowId: (row) => row.id,
     rows,
   });
 }
 
-describe("@kmsf/data-table selection core", () => {
+describe("comins-table selection core", () => {
   it("supports single row, multi row, single cell, and clear selection", () => {
     let state = createState();
 
     state = selectRow(state, "a");
     expect(state.selection.rowIds).toEqual(["a"]);
-    expect(isKmsfRowSelected(state, "a")).toBe(true);
+    expect(isCominsRowSelected(state, "a")).toBe(true);
 
     state = selectRow(state, "b", { multi: true });
     expect(state.selection.rowIds).toEqual(["a", "b"]);
 
     state = selectRow(state, "a", { multi: true, toggle: true });
     expect(state.selection.rowIds).toEqual(["b"]);
-    expect(isKmsfRowSelected(state, "a")).toBe(false);
+    expect(isCominsRowSelected(state, "a")).toBe(false);
 
     state = selectCell(state, { columnId: "age", rowId: "c" });
     expect(state.selection.cell).toEqual({ columnId: "age", rowId: "c" });
-    expect(isKmsfCellSelected(state, { columnId: "age", rowId: "c" })).toBe(true);
+    expect(isCominsCellSelected(state, { columnId: "age", rowId: "c" })).toBe(true);
 
-    state = clearKmsfSelection(state);
+    state = clearCominsSelection(state);
     expect(state.selection.rowIds).toEqual([]);
     expect(state.selection.cell).toBeNull();
   });
@@ -66,19 +66,19 @@ describe("@kmsf/data-table selection core", () => {
 
     state = selectRow(state, "a");
     state = selectCell(state, { columnId: "name", rowId: "b" });
-    state = updateKmsfRows(state, [{ id: "b", patch: { name: "Beta updated" } }]);
+    state = updateCominsRows(state, [{ id: "b", patch: { name: "Beta updated" } }]);
 
     expect(state.selection.rowIds).toEqual(["a"]);
     expect(state.selection.cell).toEqual({ columnId: "name", rowId: "b" });
 
-    state = deleteKmsfRows(state, ["c"]);
+    state = deleteCominsRows(state, ["c"]);
 
     expect(state.selection.rowIds).toEqual([]);
     expect(state.selection.cell).toBeNull();
 
     state = selectRow(state, "a");
     state = selectCell(state, { columnId: "name", rowId: "b" });
-    state = replaceKmsfRows(state, [
+    state = replaceCominsRows(state, [
       { age: 31, id: "a", name: "Alpha refreshed" },
       { age: 42, id: "b", name: "Beta refreshed" },
     ]);

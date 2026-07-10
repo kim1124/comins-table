@@ -7,7 +7,7 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: "../../node_modules/.bin/vite --config vite.example.config.ts --host 127.0.0.1 --port 4002",
+    command: "./node_modules/.bin/vite --config vite.example.config.ts --host 127.0.0.1 --port 4002",
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
     url: "http://127.0.0.1:4002",

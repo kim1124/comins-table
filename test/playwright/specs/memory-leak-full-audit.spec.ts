@@ -49,7 +49,7 @@ async function readDevtoolsAuditSnapshot(page: Page, step: string): Promise<Devt
   const values = new Map(metrics.metrics.map((metric) => [metric.name, metric.value]));
   const domMetrics = await page.evaluate(() => ({
     liveElementCount: document.querySelectorAll("*").length,
-    renderedRows: document.querySelectorAll(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]").length,
+    renderedRows: document.querySelectorAll(".comins-table__body-table tbody tr[data-comins-row-data-index]").length,
     timestamp: new Date().toISOString(),
   }));
 
@@ -203,12 +203,12 @@ test("full audit keeps 100000 row virtual scroll counters within 10 percent @per
         viewport.evaluate((element) => {
           const rows = Array.from(
             element.querySelectorAll<HTMLTableRowElement>(
-              ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+              ".comins-table__body-table tbody tr[data-comins-row-data-index]",
             ),
           );
           const last = rows[rows.length - 1];
 
-          return Number(last?.getAttribute("data-kmsf-row-data-index") ?? "-1");
+          return Number(last?.getAttribute("data-comins-row-data-index") ?? "-1");
         }),
       )
       .toBeGreaterThan(99_900);
@@ -220,12 +220,12 @@ test("full audit keeps 100000 row virtual scroll counters within 10 percent @per
         viewport.evaluate((element) => {
           const rows = Array.from(
             element.querySelectorAll<HTMLTableRowElement>(
-              ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+              ".comins-table__body-table tbody tr[data-comins-row-data-index]",
             ),
           );
           const first = rows[0];
 
-          return Number(first?.getAttribute("data-kmsf-row-data-index") ?? "-1");
+          return Number(first?.getAttribute("data-comins-row-data-index") ?? "-1");
         }),
       )
       .toBeLessThan(100);
@@ -238,19 +238,19 @@ test("full audit keeps component column counters within 10 percent @perf", async
 
     const inputExample = currentPage.getByTestId("component-example-input");
     await inputExample.getByTestId("row-input-a").click();
-    const cellInput = inputExample.locator("tbody .kmsf-data-table__component-input").first();
+    const cellInput = inputExample.locator("tbody .comins-table__component-input").first();
     await expect(cellInput).toBeVisible();
     await cellInput.fill("Data Audit");
     await cellInput.press("Enter");
 
     const selectExample = currentPage.getByTestId("component-example-select");
     await selectExample.getByTestId("row-select-a").click();
-    const select = selectExample.locator("tbody .kmsf-data-table__component-select").first();
+    const select = selectExample.locator("tbody .comins-table__component-select").first();
     await expect(select).toBeVisible();
     await select.selectOption("Viewer");
 
     const menuExample = currentPage.getByTestId("component-example-menu");
-    const menuTrigger = menuExample.locator(".kmsf-data-table__component-menu-trigger").first();
+    const menuTrigger = menuExample.locator(".comins-table__component-menu-trigger").first();
     await menuTrigger.scrollIntoViewIfNeeded();
     await menuTrigger.click();
     await expect(currentPage.getByRole("menu", { name: "Header menu" })).toBeVisible();
@@ -261,8 +261,8 @@ test("full audit keeps component column counters within 10 percent @perf", async
     const moreButton = currentPage.getByTestId("virtual-list-overflow-virtual-list-more-a-virtual-list-more-component");
     await currentPage.getByTestId("cell-virtual-list-more-a-id").click();
     await moreButton.click();
-    await expect(moreList).toHaveAttribute("data-kmsf-virtual-list-expanded", "true");
-    await moreList.locator(".kmsf-data-table__component-virtual-list-items").evaluate((element) => {
+    await expect(moreList).toHaveAttribute("data-comins-virtual-list-expanded", "true");
+    await moreList.locator(".comins-table__component-virtual-list-items").evaluate((element) => {
       element.scrollTop = element.scrollHeight;
       element.dispatchEvent(new Event("scroll", { bubbles: true }));
     });
@@ -356,6 +356,6 @@ test("full audit keeps feature lifecycle counters within 10 percent @perf", asyn
       }
     }
 
-    await expect.poll(() => currentPage.evaluate(() => window.__kmsfDataTableLifecycle?.activeMountCount ?? 0)).toBe(1);
+    await expect.poll(() => currentPage.evaluate(() => window.__cominsTableLifecycle?.activeMountCount ?? 0)).toBe(1);
   });
 });

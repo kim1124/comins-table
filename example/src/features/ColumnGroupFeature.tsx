@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Eye, EyeOff, RotateCcw } from "lucide-react";
 
-import { KmsfDataTable, type KmsfColumnLayout, type KmsfDataTableRef } from "../../../src";
+import { CominsTable, type CominsColumnLayout, type CominsTableRef } from "../../../src";
 import { ActionButton, FeatureControls } from "../components/FeatureControls";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { MultiSelect } from "../components/ui/multi-select";
@@ -14,10 +14,10 @@ import {
 import { createExampleRows, type PersonRow } from "../fixtures/people";
 
 export function ColumnGroupFeature() {
-  const groupTableRef = useRef<KmsfDataTableRef<PersonRow>>(null);
+  const groupTableRef = useRef<CominsTableRef<PersonRow>>(null);
   const [rows] = useState(() => createExampleRows(100));
   const groupColumns = useMemo(() => createHeaderGroupColumns(), []);
-  const [groupLayout, setGroupLayout] = useState<KmsfColumnLayout>(() => cloneGroupLayout());
+  const [groupLayout, setGroupLayout] = useState<CominsColumnLayout>(() => cloneGroupLayout());
   const [dynamicColumnIds, setDynamicColumnIds] = useState(() => dynamicColumnOptions.map((option) => option.value));
   const dynamicColumns = useMemo(
     () => groupColumns.filter((column) => dynamicColumnIds.includes(String(column.id ?? column.field))),
@@ -63,7 +63,7 @@ export function ColumnGroupFeature() {
                 </>
               }
             />
-            <KmsfDataTable
+            <CominsTable
               className="example-table header-example-table"
               columnGroups={headerColumnGroups}
               columns={groupColumns}
@@ -96,7 +96,7 @@ export function ColumnGroupFeature() {
               }
             />
             <section className="header-dynamic-grid" data-testid="dynamic-group-table">
-              <KmsfDataTable
+              <CominsTable
                 className="example-table header-example-table"
                 columnGroups={headerColumnGroups}
                 columns={dynamicColumns}

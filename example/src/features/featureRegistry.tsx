@@ -19,7 +19,7 @@ import type { FeatureDefinition, FeatureId } from "./types";
 export const featureRegistry: FeatureDefinition[] = [
   {
     Component: BasicFeature,
-    description: "@kmsf/data-table 기본 예제 페이지입니다.",
+    description: "comins-table 기본 예제 페이지입니다.",
     id: "basic",
     label: "기본",
     options: [
@@ -60,8 +60,8 @@ export const featureRegistry: FeatureDefinition[] = [
     id: "theme",
     label: "Theme",
     options: [
-      { description: "배포 CSS에 포함된 샘플 theme class", example: "kmsf-data-table-theme--skyblue", name: "theme.className" },
-      { description: "CSS 변수 override", example: "{ '--kmsf-data-table-header-split-border': '#278aa7' }", name: "theme.style" },
+      { description: "배포 CSS에 포함된 샘플 theme class", example: "comins-table-theme--skyblue", name: "theme.className" },
+      { description: "CSS 변수 override", example: "{ '--comins-table-header-split-border': '#278aa7' }", name: "theme.style" },
       { description: "가상 스크롤 행 높이 계산 기준", example: "rowHeight={32}", name: "rowHeight" },
     ],
     summary: "Basic, Dark, Skyblue, Mint, Gray, Orange 샘플 테마와 rowHeight 계약 예제입니다.",
@@ -215,8 +215,8 @@ export const featureRegistry: FeatureDefinition[] = [
     id: "export",
     label: "Export Helper",
     options: [
-      { description: "CSV 문자열 생성", example: "exportKmsfRowsToCsv({ columns, rows })", name: "exportKmsfRowsToCsv" },
-      { description: "JSON 문자열 생성", example: "exportKmsfRowsToJson({ columns, rows })", name: "exportKmsfRowsToJson" },
+      { description: "CSV 문자열 생성", example: "exportCominsRowsToCsv({ columns, rows })", name: "exportCominsRowsToCsv" },
+      { description: "JSON 문자열 생성", example: "exportCominsRowsToJson({ columns, rows })", name: "exportCominsRowsToJson" },
       { description: "출력 순서와 Header 이름 override", example: "{ columnOrder, headerOverrides }", name: "export options" },
     ],
     summary: "CSV/JSON export helper 출력 예제입니다.",

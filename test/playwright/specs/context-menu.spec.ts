@@ -34,7 +34,7 @@ test("playground shows callback-driven shadcn context menu examples", async ({ p
   await expect(page.getByTestId("context-proof-menu")).toHaveCount(0);
   await expect(page.getByTestId("context-example-code")).toHaveCount(0);
   const detailBox = await page.getByTestId("context-detail-pane").boundingBox();
-  const tableBox = await page.locator(".example-table.kmsf-data-table").boundingBox();
+  const tableBox = await page.locator(".example-table.comins-table").boundingBox();
   expect(detailBox).not.toBeNull();
   expect(tableBox).not.toBeNull();
   expect(detailBox!.y).toBeLessThan(tableBox!.y);

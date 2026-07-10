@@ -24,14 +24,14 @@ test("header boundary resize is isolated from long-press column move and animate
   const basicExample = page.getByTestId("header-example-basic");
 
   await expect(basicExample.getByTestId("header-role")).toHaveAttribute("data-sortable", "false");
-  await expect(basicExample.getByTestId("header-role").locator(".kmsf-data-table__header-content")).toHaveCSS(
+  await expect(basicExample.getByTestId("header-role").locator(".comins-table__header-content")).toHaveCSS(
     "justify-content",
     "center",
   );
   await expect(basicExample.getByTestId("header-name")).toHaveAttribute("data-sortable", "true");
 
   const firstHeaderBefore = await basicExample
-    .locator(".kmsf-data-table__header-table thead th[data-kmsf-column-id]")
+    .locator(".comins-table__header-table thead th[data-comins-column-id]")
     .first()
     .textContent();
   const boundary = basicExample.getByTestId("resize-age");
@@ -45,7 +45,7 @@ test("header boundary resize is isolated from long-press column move and animate
   await page.mouse.move(boundaryBox!.x + boundaryBox!.width / 2 + 60, boundaryBox!.y + boundaryBox!.height / 2);
   await page.mouse.up();
 
-  await expect(basicExample.locator(".kmsf-data-table__header-table thead th[data-kmsf-column-id]").first()).toContainText(
+  await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText(
     firstHeaderBefore ?? "",
   );
 
@@ -87,19 +87,19 @@ test("header boundary resize is isolated from long-press column move and animate
   await page.mouse.move(nameBox!.x + nameBox!.width / 2, nameBox!.y + nameBox!.height / 2);
   await page.mouse.up();
 
-  await expect(basicExample.locator(".kmsf-data-table__header-table thead th[data-kmsf-column-id]").first()).toContainText("Column2");
+  await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("Column2");
   await expect(page.getByTestId("layout-order")).toHaveCount(0);
 
-  const firstBodyCell = basicExample.locator(".kmsf-data-table__body-table tbody tr").first().locator("td").first();
+  const firstBodyCell = basicExample.locator(".comins-table__body-table tbody tr").first().locator("td").first();
   const firstBodyCellBox = await firstBodyCell.boundingBox();
-  const rowDragHandleBox = await basicExample.locator(".kmsf-row-drag-handle").first().boundingBox();
+  const rowDragHandleBox = await basicExample.locator(".comins-row-drag-handle").first().boundingBox();
   expect(firstBodyCellBox).not.toBeNull();
   expect(rowDragHandleBox).not.toBeNull();
   expect(rowDragHandleBox!.x - firstBodyCellBox!.x).toBeGreaterThanOrEqual(0);
   expect(rowDragHandleBox!.x - firstBodyCellBox!.x).toBeLessThanOrEqual(24);
 
   const firstHeaderAfterMove = await basicExample
-    .locator(".kmsf-data-table__header-table thead th[data-kmsf-column-id]")
+    .locator(".comins-table__header-table thead th[data-comins-column-id]")
     .first()
     .textContent();
   const roleHeader = basicExample.getByTestId("header-role");
@@ -110,7 +110,7 @@ test("header boundary resize is isolated from long-press column move and animate
   await page.mouse.move(roleBox!.x + roleBox!.width / 2 + 8, roleBox!.y + roleBox!.height / 2);
   await page.mouse.up();
 
-  await expect(basicExample.locator(".kmsf-data-table__header-table thead th[data-kmsf-column-id]").first()).toContainText(
+  await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText(
     firstHeaderAfterMove ?? "",
   );
   await expect(basicExample.getByTestId("sort-indicator-role")).toHaveAttribute("data-sort-state", "none");
@@ -140,11 +140,11 @@ test("column move shows a ghost and insertion marker while dragging", async ({ p
   await expect(page.getByTestId("column-move-ghost")).toBeVisible();
   await expect(page.getByTestId("column-move-ghost")).toContainText("Column2");
   await expect(nameHeader).toHaveAttribute("data-column-drop-target", "true");
-  await expect(nameHeader.locator(".kmsf-column-drop-marker")).toBeVisible();
+  await expect(nameHeader.locator(".comins-column-drop-marker")).toBeVisible();
 
   await page.mouse.up();
   await expect(page.getByTestId("column-move-ghost")).toHaveCount(0);
-  await expect(basicExample.locator(".kmsf-data-table__header-table thead th[data-kmsf-column-id]").first()).toContainText("Column2");
+  await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("Column2");
 
   expect(diagnostics).toEqual([]);
 });
@@ -163,9 +163,9 @@ test("resize handle is hidden until boundary hover and first resize starts from 
   expect(beforeHeaderBox).not.toBeNull();
   expect(handleBox).not.toBeNull();
 
-  await expect(handle.locator(".kmsf-data-table__resize-line")).toHaveCSS("opacity", "0");
+  await expect(handle.locator(".comins-table__resize-line")).toHaveCSS("opacity", "0");
   await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2);
-  await expect(handle.locator(".kmsf-data-table__resize-line")).toHaveCSS("opacity", "1");
+  await expect(handle.locator(".comins-table__resize-line")).toHaveCSS("opacity", "1");
 
   await page.mouse.down();
   await page.mouse.move(handleBox!.x + handleBox!.width / 2 + 4, handleBox!.y + handleBox!.height / 2);

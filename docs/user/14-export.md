@@ -1,6 +1,6 @@
 # Export Helpers
 
-`exportKmsfRowsToCsv`와 `exportKmsfRowsToJson`은 table UI와 분리된 dependency-free helper다. 현재 `rows`와 export column 정의를 입력받아 CSV 또는 JSON 문자열을 반환한다.
+`exportCominsRowsToCsv`와 `exportCominsRowsToJson`은 table UI와 분리된 dependency-free helper다. 현재 `rows`와 export column 정의를 입력받아 CSV 또는 JSON 문자열을 반환한다.
 
 ```ts
 const exportColumns = [
@@ -14,7 +14,7 @@ const exportColumns = [
   },
 ];
 
-const csv = exportKmsfRowsToCsv({
+const csv = exportCominsRowsToCsv({
   columnOrder: ["name", "age", "salary"],
   columns: exportColumns,
   headerOverrides: { salary: "급여" },
@@ -22,7 +22,7 @@ const csv = exportKmsfRowsToCsv({
   valueSource: "formatted",
 });
 
-const json = exportKmsfRowsToJson({
+const json = exportCominsRowsToJson({
   columns: exportColumns,
   rows,
 });

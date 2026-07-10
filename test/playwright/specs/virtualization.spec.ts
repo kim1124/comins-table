@@ -138,7 +138,7 @@ test("playground verifies 100000 row virtualization smoke @perf", async ({ page 
   await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
 
   await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
-  await expect.poll(() => page.locator(".kmsf-data-table__body-table tbody tr").count()).toBeLessThan(80);
+  await expect.poll(() => page.locator(".comins-table__body-table tbody tr").count()).toBeLessThan(80);
   await page.getByTestId("data-table-viewport").evaluate((element) => {
     element.scrollTop = 2400;
     element.dispatchEvent(new Event("scroll", { bubbles: true }));
@@ -147,10 +147,10 @@ test("playground verifies 100000 row virtualization smoke @perf", async ({ page 
     .poll(() =>
       page.getByTestId("data-table-viewport").evaluate((element) => {
         const firstRow = element.querySelector<HTMLTableRowElement>(
-          ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+          ".comins-table__body-table tbody tr[data-comins-row-data-index]",
         );
 
-        return Number(firstRow?.getAttribute("data-kmsf-row-data-index") ?? "-1");
+        return Number(firstRow?.getAttribute("data-comins-row-data-index") ?? "-1");
       }),
     )
     .toBeGreaterThan(50);
@@ -166,7 +166,7 @@ test("playground verifies 100000 row virtualization perf smoke @perf", async ({ 
   await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
 
   await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
-  await expect.poll(() => page.locator(".kmsf-data-table__body-table tbody tr").count()).toBeLessThan(80);
+  await expect.poll(() => page.locator(".comins-table__body-table tbody tr").count()).toBeLessThan(80);
   await expect
     .poll(() => page.getByTestId("data-table-viewport").evaluate((element) => element.scrollHeight))
     .toBeGreaterThan(100_000);
@@ -184,23 +184,23 @@ test("playground verifies 100000 row virtualization perf smoke @perf", async ({ 
       page.getByTestId("data-table-viewport").evaluate((element) => {
         const rows = Array.from(
           element.querySelectorAll<HTMLTableRowElement>(
-            ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
           ),
         );
         const lastRow = rows[rows.length - 1];
 
-        return Number(lastRow?.getAttribute("data-kmsf-row-data-index") ?? "-1");
+        return Number(lastRow?.getAttribute("data-comins-row-data-index") ?? "-1");
       }),
     )
     .toBeGreaterThan(99_950);
   const metrics = await page.getByTestId("data-table-viewport").evaluate((element) => {
     const rows = Array.from(
-      element.querySelectorAll<HTMLTableRowElement>(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
+      element.querySelectorAll<HTMLTableRowElement>(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
     );
     const lastRow = rows[rows.length - 1];
 
     return {
-      lastRenderedIndex: Number(lastRow?.getAttribute("data-kmsf-row-data-index") ?? "-1"),
+      lastRenderedIndex: Number(lastRow?.getAttribute("data-comins-row-data-index") ?? "-1"),
       renderedRows: rows.length,
       scrollHeight: element.scrollHeight,
       scrollTop: element.scrollTop,
@@ -230,15 +230,15 @@ test("playground keeps rendered row count bounded across virtual scroll position
     viewport.evaluate((element) => {
       const rows = Array.from(
         element.querySelectorAll<HTMLTableRowElement>(
-          ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+          ".comins-table__body-table tbody tr[data-comins-row-data-index]",
         ),
       );
       const first = rows[0];
       const last = rows[rows.length - 1];
 
       return {
-        firstRenderedIndex: Number(first?.getAttribute("data-kmsf-row-data-index") ?? "-1"),
-        lastRenderedIndex: Number(last?.getAttribute("data-kmsf-row-data-index") ?? "-1"),
+        firstRenderedIndex: Number(first?.getAttribute("data-comins-row-data-index") ?? "-1"),
+        lastRenderedIndex: Number(last?.getAttribute("data-comins-row-data-index") ?? "-1"),
         renderedRows: rows.length,
       };
     });
@@ -284,19 +284,19 @@ test("playground keeps heavy renderer virtual rows bounded @perf", async ({ page
       viewport.evaluate((element) => {
         const rows = Array.from(
           element.querySelectorAll<HTMLTableRowElement>(
-            ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
           ),
         );
         const first = rows[0];
 
-        return Number(first?.getAttribute("data-kmsf-row-data-index") ?? "-1");
+        return Number(first?.getAttribute("data-comins-row-data-index") ?? "-1");
       }),
     )
     .toBeGreaterThan(40_000);
 
   const rowMetrics = await viewport.evaluate((element) => {
     const rows = Array.from(
-      element.querySelectorAll<HTMLTableRowElement>(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
+      element.querySelectorAll<HTMLTableRowElement>(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
     );
 
     return {
@@ -331,7 +331,7 @@ test("playground renders component-heavy one hundred thousand row sample @perf",
   await expect.poll(() => section.getByTestId("component-large-button").count()).toBeGreaterThan(0);
   await expect.poll(() => section.getByTestId("component-large-select").count()).toBeGreaterThan(0);
   await expect.poll(() => section.getByTestId("component-large-progress").count()).toBeGreaterThan(0);
-  await expect.poll(() => section.locator(".kmsf-data-table__component-virtual-list").count()).toBeGreaterThan(0);
+  await expect.poll(() => section.locator(".comins-table__component-virtual-list").count()).toBeGreaterThan(0);
   await expect.poll(() => section.getByTestId("component-large-radio").count()).toBeGreaterThan(0);
 
   await viewport.evaluate((element) => {
@@ -343,17 +343,17 @@ test("playground renders component-heavy one hundred thousand row sample @perf",
       viewport.evaluate((element) => {
         const rows = Array.from(
           element.querySelectorAll<HTMLTableRowElement>(
-            ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
           ),
         );
         const first = rows[0];
 
-        return Number(first?.getAttribute("data-kmsf-row-data-index") ?? "-1");
+        return Number(first?.getAttribute("data-comins-row-data-index") ?? "-1");
       }),
     )
     .toBeGreaterThan(40_000);
   const rowMetrics = await viewport.evaluate((element) => ({
-    renderedRows: element.querySelectorAll(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]").length,
+    renderedRows: element.querySelectorAll(".comins-table__body-table tbody tr[data-comins-row-data-index]").length,
   }));
 
   expect(rowMetrics.renderedRows).toBeLessThanOrEqual(45);
@@ -380,12 +380,12 @@ test("playground keeps devtools metrics bounded during one hundred thousand row 
       viewport.evaluate((element) => {
         const rows = Array.from(
           element.querySelectorAll<HTMLTableRowElement>(
-            ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
           ),
         );
         const first = rows[0];
 
-        return Number(first?.getAttribute("data-kmsf-row-data-index") ?? "-1");
+        return Number(first?.getAttribute("data-comins-row-data-index") ?? "-1");
       }),
     )
     .toBeGreaterThan(40_000);
@@ -402,12 +402,12 @@ test("playground keeps devtools metrics bounded during one hundred thousand row 
       viewport.evaluate((element) => {
         const rows = Array.from(
           element.querySelectorAll<HTMLTableRowElement>(
-            ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
           ),
         );
         const last = rows[rows.length - 1];
 
-        return Number(last?.getAttribute("data-kmsf-row-data-index") ?? "-1");
+        return Number(last?.getAttribute("data-comins-row-data-index") ?? "-1");
       }),
     )
     .toBeGreaterThan(99_900);
@@ -418,12 +418,12 @@ test("playground keeps devtools metrics bounded during one hundred thousand row 
   const afterScroll = await readPerformanceMetrics(page);
   const rowMetrics = await viewport.evaluate((element) => {
     const rows = Array.from(
-      element.querySelectorAll<HTMLTableRowElement>(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
+      element.querySelectorAll<HTMLTableRowElement>(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
     );
     const cells = element.querySelectorAll<HTMLTableCellElement>(
-      ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index] td",
+      ".comins-table__body-table tbody tr[data-comins-row-data-index] td",
     );
-    const bodyTable = element.querySelector<HTMLElement>(".kmsf-data-table__body-table");
+    const bodyTable = element.querySelector<HTMLElement>(".comins-table__body-table");
     const transform = bodyTable ? window.getComputedStyle(bodyTable).transform : "none";
 
     return {
@@ -473,7 +473,7 @@ test("playground releases devtools DOM counters after 100000 row scroll and retu
 
   const viewport = page.getByTestId("data-table-viewport");
   await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
-  await expect.poll(() => page.locator(".kmsf-data-table__body-table tbody tr").count()).toBeLessThan(90);
+  await expect.poll(() => page.locator(".comins-table__body-table tbody tr").count()).toBeLessThan(90);
   const postLoad = await readDevtoolsMemorySnapshot(page);
 
   await viewport.hover();
@@ -484,12 +484,12 @@ test("playground releases devtools DOM counters after 100000 row scroll and retu
       viewport.evaluate((element) => {
         const rows = Array.from(
           element.querySelectorAll<HTMLTableRowElement>(
-            ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
           ),
         );
         const last = rows[rows.length - 1];
 
-        return Number(last?.getAttribute("data-kmsf-row-data-index") ?? "-1");
+        return Number(last?.getAttribute("data-comins-row-data-index") ?? "-1");
       }),
     )
     .toBeGreaterThan(99_900);
@@ -502,12 +502,12 @@ test("playground releases devtools DOM counters after 100000 row scroll and retu
       viewport.evaluate((element) => {
         const rows = Array.from(
           element.querySelectorAll<HTMLTableRowElement>(
-            ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
           ),
         );
         const first = rows[0];
 
-        return Number(first?.getAttribute("data-kmsf-row-data-index") ?? "-1");
+        return Number(first?.getAttribute("data-comins-row-data-index") ?? "-1");
       }),
     )
     .toBeLessThan(100);
@@ -539,14 +539,14 @@ test("playground recycles rendered row DOM while virtual scrolling one hundred t
   await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
   const before = await viewport.evaluate((element) => {
     const rows = Array.from(
-      element.querySelectorAll<HTMLTableRowElement>(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
+      element.querySelectorAll<HTMLTableRowElement>(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
     );
 
-    (window as typeof window & { __kmsfVirtualRowNodeSnapshot?: HTMLTableRowElement[] })
-      .__kmsfVirtualRowNodeSnapshot = rows.slice(0, 12);
+    (window as typeof window & { __cominsVirtualRowNodeSnapshot?: HTMLTableRowElement[] })
+      .__cominsVirtualRowNodeSnapshot = rows.slice(0, 12);
 
     return {
-      firstDataIndex: Number(rows[0]?.getAttribute("data-kmsf-row-data-index") ?? "-1"),
+      firstDataIndex: Number(rows[0]?.getAttribute("data-comins-row-data-index") ?? "-1"),
       rowCount: rows.length,
     };
   });
@@ -554,10 +554,10 @@ test("playground recycles rendered row DOM while virtual scrolling one hundred t
   await dragVirtualScrollbar(page, "down");
   const after = await viewport.evaluate((element) => {
     const previousRows =
-      (window as typeof window & { __kmsfVirtualRowNodeSnapshot?: HTMLTableRowElement[] })
-        .__kmsfVirtualRowNodeSnapshot ?? [];
+      (window as typeof window & { __cominsVirtualRowNodeSnapshot?: HTMLTableRowElement[] })
+        .__cominsVirtualRowNodeSnapshot ?? [];
     const rows = Array.from(
-      element.querySelectorAll<HTMLTableRowElement>(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
+      element.querySelectorAll<HTMLTableRowElement>(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
     );
     const comparedCount = Math.min(previousRows.length, rows.length);
     let reusedCount = 0;
@@ -569,7 +569,7 @@ test("playground recycles rendered row DOM while virtual scrolling one hundred t
     }
 
     return {
-      firstDataIndex: Number(rows[0]?.getAttribute("data-kmsf-row-data-index") ?? "-1"),
+      firstDataIndex: Number(rows[0]?.getAttribute("data-comins-row-data-index") ?? "-1"),
       reusedCount,
       rowCount: rows.length,
     };
@@ -601,12 +601,12 @@ test("playground keeps follow-up scroll responsive after one hundred thousand ro
       viewport.evaluate((element) => {
         const rows = Array.from(
           element.querySelectorAll<HTMLTableRowElement>(
-            ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
           ),
         );
         const last = rows[rows.length - 1];
 
-        return Number(last?.getAttribute("data-kmsf-row-data-index") ?? "-1");
+        return Number(last?.getAttribute("data-comins-row-data-index") ?? "-1");
       }),
     )
     .toBeGreaterThan(99_900);
@@ -619,26 +619,26 @@ test("playground keeps follow-up scroll responsive after one hundred thousand ro
         const viewportElement = document.querySelector<HTMLElement>('[data-testid="data-table-viewport"]');
         const renderedRows = Array.from(
           viewportElement?.querySelectorAll<HTMLTableRowElement>(
-            ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
           ) ?? [],
         );
         const last = renderedRows[renderedRows.length - 1];
 
-        return Number(last?.getAttribute("data-kmsf-row-data-index") ?? "-1");
+        return Number(last?.getAttribute("data-comins-row-data-index") ?? "-1");
       }),
     )
     .toBeGreaterThan(98_000);
 
   const rows = await viewport.evaluate((element) => {
     const renderedRows = Array.from(
-      element.querySelectorAll<HTMLTableRowElement>(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
+      element.querySelectorAll<HTMLTableRowElement>(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
     );
     const first = renderedRows[0];
     const last = renderedRows[renderedRows.length - 1];
 
     return {
-      firstRenderedIndex: Number(first?.getAttribute("data-kmsf-row-data-index") ?? "-1"),
-      lastRenderedIndex: Number(last?.getAttribute("data-kmsf-row-data-index") ?? "-1"),
+      firstRenderedIndex: Number(first?.getAttribute("data-comins-row-data-index") ?? "-1"),
+      lastRenderedIndex: Number(last?.getAttribute("data-comins-row-data-index") ?? "-1"),
       renderedRows: renderedRows.length,
       scrollHeight: element.scrollHeight,
       scrollTop: element.scrollTop,

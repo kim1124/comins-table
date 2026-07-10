@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { exportKmsfRowsToCsv, exportKmsfRowsToJson } from "../src";
+import { exportCominsRowsToCsv, exportCominsRowsToJson } from "../src";
 
 type ExportRow = {
   active: boolean;
@@ -29,9 +29,9 @@ const columns = [
   { id: "active", label: "Active", value: (row: ExportRow) => row.active },
 ];
 
-describe("KMSF export helpers", () => {
+describe("COMINS export helpers", () => {
   it("exports raw CSV with escaping and empty nullish cells", () => {
-    expect(exportKmsfRowsToCsv({ columns, rows })).toBe(
+    expect(exportCominsRowsToCsv({ columns, rows })).toBe(
       [
         "Name,Salary,Note,Meta,Active",
         'Alpha,80000,"comma, quote "" and\nline","{""score"":8}",true',
@@ -42,7 +42,7 @@ describe("KMSF export helpers", () => {
 
   it("exports formatted CSV with ordered and renamed columns", () => {
     expect(
-      exportKmsfRowsToCsv({
+      exportCominsRowsToCsv({
         columnOrder: ["salary", "name"],
         columns,
         headerOverrides: { salary: "Annual Salary" },
@@ -54,7 +54,7 @@ describe("KMSF export helpers", () => {
 
   it("exports JSON with the same column order and value source", () => {
     expect(
-      exportKmsfRowsToJson({
+      exportCominsRowsToJson({
         columnOrder: ["name", "salary"],
         columns,
         rows: rows.slice(0, 1),

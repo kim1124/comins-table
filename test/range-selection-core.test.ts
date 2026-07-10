@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  clearKmsfCellRange,
-  createKmsfDataTableState,
-  getKmsfSelectedCellRange,
-  isKmsfCellInSelectedRange,
+  clearCominsCellRange,
+  createCominsTableState,
+  getCominsSelectedCellRange,
+  isCominsCellInSelectedRange,
   selectCellRange,
 } from "../src";
 
@@ -28,14 +28,14 @@ const columns = [
 ] as const;
 
 function createState() {
-  return createKmsfDataTableState<PersonRow>({
+  return createCominsTableState<PersonRow>({
     columns,
     getRowId: (row) => row.id,
     rows,
   });
 }
 
-describe("@kmsf/data-table range selection core", () => {
+describe("comins-table range selection core", () => {
   it("expands a rectangular selected cell range in row and visible column order", () => {
     let state = createState();
 
@@ -48,7 +48,7 @@ describe("@kmsf/data-table range selection core", () => {
       anchor: { columnId: "name", rowId: "a" },
       focus: { columnId: "role", rowId: "c" },
     });
-    expect(getKmsfSelectedCellRange(state).map((cell) => `${String(cell.rowId)}:${cell.columnId}`)).toEqual([
+    expect(getCominsSelectedCellRange(state).map((cell) => `${String(cell.rowId)}:${cell.columnId}`)).toEqual([
       "a:name",
       "a:age",
       "a:role",
@@ -59,8 +59,8 @@ describe("@kmsf/data-table range selection core", () => {
       "c:age",
       "c:role",
     ]);
-    expect(isKmsfCellInSelectedRange(state, { columnId: "age", rowId: "b" })).toBe(true);
-    expect(isKmsfCellInSelectedRange(state, { columnId: "name", rowId: "a" })).toBe(true);
+    expect(isCominsCellInSelectedRange(state, { columnId: "age", rowId: "b" })).toBe(true);
+    expect(isCominsCellInSelectedRange(state, { columnId: "name", rowId: "a" })).toBe(true);
   });
 
   it("clears the selected range without clearing row selection", () => {
@@ -70,9 +70,9 @@ describe("@kmsf/data-table range selection core", () => {
       anchor: { columnId: "age", rowId: "b" },
       focus: { columnId: "role", rowId: "c" },
     });
-    state = clearKmsfCellRange(state);
+    state = clearCominsCellRange(state);
 
     expect(state.selection.range).toBeNull();
-    expect(getKmsfSelectedCellRange(state)).toEqual([]);
+    expect(getCominsSelectedCellRange(state)).toEqual([]);
   });
 });

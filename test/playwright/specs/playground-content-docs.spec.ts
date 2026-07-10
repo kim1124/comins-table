@@ -17,7 +17,7 @@ function collectBrowserDiagnostics(page: Page) {
 }
 
 const featurePages = [
-  ["/docs/getting-started", "@kmsf/data-table 기본 예제입니다."],
+  ["/docs/getting-started", "comins-table 기본 예제입니다."],
   ["/examples/crud", "추가, 수정, 삭제, 초기화, 필터링"],
   ["/examples/size", "300px 고정 높이와 부모 컨테이너 500px"],
   ["/examples/theme", "CSS 변수와 theme class"],
@@ -38,7 +38,7 @@ test("feature pages render Korean docs in the main content area", async ({ page 
   for (const [route, descriptionText] of featurePages) {
     await page.goto(route);
     await expect(page.getByTestId("feature-option-description").first()).toContainText(descriptionText);
-    await expect(page.getByTestId("feature-option-sample").first().locator(".kmsf-data-table").first()).toBeVisible();
+    await expect(page.getByTestId("feature-option-sample").first().locator(".comins-table").first()).toBeVisible();
   }
 
   await expect(page.getByRole("complementary", { name: "데이터 테이블 문서" })).toHaveCount(0);
@@ -65,7 +65,7 @@ test("ref api page documents ref type and visible-index semantics", async ({ pag
   await page.goto("/api/ref");
 
   const main = page.locator("main");
-  await expect(main).toContainText("KmsfDataTableRef<TData>");
+  await expect(main).toContainText("CominsTableRef<TData>");
   await expect(main).toContainText("getColumnLayout");
   await expect(main).toContainText("setColumnLayout");
   await expect(main).toContainText("setSelectedRow");

@@ -19,7 +19,7 @@ async function loadRows({ offset, limit, reason, signal }) {
   };
 }
 
-<KmsfDataTable
+<CominsTable
   columns={columns}
   data={[]}
   emptyComponent={<span>표시할 데이터가 없습니다.</span>}

@@ -17,14 +17,14 @@ function collectBrowserDiagnostics(page: Page) {
 }
 
 function getDefaultVirtualTable(page: Page) {
-  return page.locator('[data-feature-option="body"]').locator(".kmsf-data-table").first();
+  return page.locator('[data-feature-option="body"]').locator(".comins-table").first();
 }
 
 async function readColumnAlignment(table: ReturnType<typeof getDefaultVirtualTable>) {
   return table.evaluate((root) => {
-    const headers = [...root.querySelectorAll<HTMLElement>(".kmsf-data-table__header-table th[data-kmsf-column-id]")];
+    const headers = [...root.querySelectorAll<HTMLElement>(".comins-table__header-table th[data-comins-column-id]")];
     const cells = [
-      ...root.querySelectorAll<HTMLElement>(".kmsf-data-table__body-table tbody tr:not([aria-hidden='true']) td"),
+      ...root.querySelectorAll<HTMLElement>(".comins-table__body-table tbody tr:not([aria-hidden='true']) td"),
     ].slice(0, headers.length);
 
     return headers.map((header, index) => {
@@ -52,11 +52,11 @@ test("virtualized header stays sticky while scrolling one hundred thousand rows 
   const table = getDefaultVirtualTable(page);
   const viewport = table.getByTestId("data-table-viewport");
   const header = table.getByTestId("header-name");
-  await expect(table.locator(".kmsf-data-table__header-table")).toHaveCount(1);
-  await expect(table.locator(".kmsf-data-table__body-table")).toHaveCount(1);
+  await expect(table.locator(".comins-table__header-table")).toHaveCount(1);
+  await expect(table.locator(".comins-table__body-table")).toHaveCount(1);
   await expect(table.locator("table")).toHaveCount(2);
-  await expect(table.locator(".kmsf-data-table__body-viewport")).toHaveCSS("overflow-y", "scroll");
-  await expect(table.locator(".kmsf-data-table__header")).toHaveCSS("overflow-y", "hidden");
+  await expect(table.locator(".comins-table__body-viewport")).toHaveCSS("overflow-y", "scroll");
+  await expect(table.locator(".comins-table__header")).toHaveCSS("overflow-y", "hidden");
   const before = await header.boundingBox();
   expect(before).not.toBeNull();
 
@@ -170,8 +170,8 @@ test("body viewport uses horizontal overflow for the wide data set and keeps scr
   const horizontalScrollSync = await viewport.evaluate((element) => {
     element.scrollLeft = element.scrollWidth;
     element.dispatchEvent(new Event("scroll", { bubbles: true }));
-    const tableRoot = element.closest(".kmsf-data-table");
-    const header = tableRoot?.querySelector<HTMLElement>(".kmsf-data-table__header");
+    const tableRoot = element.closest(".comins-table");
+    const header = tableRoot?.querySelector<HTMLElement>(".comins-table__header");
 
     return {
       headerScrollLeft: header?.scrollLeft ?? null,

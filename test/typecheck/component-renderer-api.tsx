@@ -1,4 +1,4 @@
-import type { KmsfDataTableColumn } from "../../src";
+import type { CominsTableColumn } from "../../src";
 
 type TypecheckRow = {
   id: string;
@@ -52,7 +52,7 @@ const validRendererColumns = [
       renderer: ({ value }) => <strong>{String(value)}</strong>,
     },
   },
-] satisfies Array<KmsfDataTableColumn<TypecheckRow>>;
+] satisfies Array<CominsTableColumn<TypecheckRow>>;
 
 const removedSingleComponentColumns = [
   {
@@ -71,7 +71,7 @@ const removedSingleComponentColumns = [
       },
     },
   },
-] satisfies Array<KmsfDataTableColumn<TypecheckRow>>;
+] satisfies Array<CominsTableColumn<TypecheckRow>>;
 
 const cellMenuColumns = [
   {
@@ -87,7 +87,7 @@ const cellMenuColumns = [
       ],
     },
   },
-] satisfies Array<KmsfDataTableColumn<TypecheckRow>>;
+] satisfies Array<CominsTableColumn<TypecheckRow>>;
 
 const validVirtualListColumns = [
   {
@@ -115,7 +115,7 @@ const validVirtualListColumns = [
       ],
     },
   },
-] satisfies Array<KmsfDataTableColumn<TypecheckRow>>;
+] satisfies Array<CominsTableColumn<TypecheckRow>>;
 
 const invalidVirtualListPayloadColumns = [
   {
@@ -134,7 +134,7 @@ const invalidVirtualListPayloadColumns = [
       ],
     },
   },
-] satisfies Array<KmsfDataTableColumn<TypecheckRow>>;
+] satisfies Array<CominsTableColumn<TypecheckRow>>;
 
 const headerVirtualListColumns = [
   {
@@ -150,7 +150,7 @@ const headerVirtualListColumns = [
       ],
     },
   },
-] satisfies Array<KmsfDataTableColumn<TypecheckRow>>;
+] satisfies Array<CominsTableColumn<TypecheckRow>>;
 
 const removedFormatColumns = [
   {
@@ -159,7 +159,7 @@ const removedFormatColumns = [
     // @ts-expect-error root-level format was replaced by cell.format.
     format: ({ value }) => String(value),
   },
-] satisfies Array<KmsfDataTableColumn<TypecheckRow>>;
+] satisfies Array<CominsTableColumn<TypecheckRow>>;
 
 const removedPropsColumns = [
   {
@@ -168,7 +168,7 @@ const removedPropsColumns = [
     // @ts-expect-error root-level props was replaced by cell.props.
     props: { className: "legacy" },
   },
-] satisfies Array<KmsfDataTableColumn<TypecheckRow>>;
+] satisfies Array<CominsTableColumn<TypecheckRow>>;
 
 void validRendererColumns;
 void removedSingleComponentColumns;

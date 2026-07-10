@@ -17,10 +17,10 @@ function collectBrowserDiagnostics(page: Page) {
 }
 
 async function getVisualLeafOrder(example: Locator) {
-  return example.locator(".kmsf-data-table__header-table thead th[data-kmsf-column-id]").evaluateAll((headers) =>
+  return example.locator(".comins-table__header-table thead th[data-comins-column-id]").evaluateAll((headers) =>
     headers
       .map((header) => ({
-        id: header.getAttribute("data-kmsf-column-id") ?? "",
+        id: header.getAttribute("data-comins-column-id") ?? "",
         left: header.getBoundingClientRect().left,
       }))
       .sort((left, right) => left.left - right.left)
@@ -54,7 +54,7 @@ test("playground verifies header resize, column position change, and layout rest
   await expect(page.getByTestId("header-example-dynamic-columns")).toHaveCount(0);
 
   const basicExample = page.getByTestId("header-example-basic");
-  await expect(basicExample.locator(".kmsf-data-table__header-table thead tr")).toHaveCount(1);
+  await expect(basicExample.locator(".comins-table__header-table thead tr")).toHaveCount(1);
   const ageHeader = basicExample.getByTestId("header-age");
   const nameHeader = basicExample.getByTestId("header-name");
   await ageHeader.scrollIntoViewIfNeeded();
@@ -67,7 +67,7 @@ test("playground verifies header resize, column position change, and layout rest
   await page.waitForTimeout(1100);
   await page.mouse.move(nameBox!.x + nameBox!.width / 2, nameBox!.y + nameBox!.height / 2);
   await page.mouse.up();
-  await expect(basicExample.locator(".kmsf-data-table__header-table thead th[data-kmsf-column-id]").first()).toContainText("Column2");
+  await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("Column2");
   await expect(page.getByTestId("layout-order")).toHaveCount(0);
 
   const handle = basicExample.getByTestId("resize-age");
@@ -83,7 +83,7 @@ test("playground verifies header resize, column position change, and layout rest
   await expect(page.getByTestId("layout-width-age")).toHaveCount(0);
 
   await basicExample.getByRole("button", { exact: true, name: "초기화" }).click();
-  await expect(basicExample.locator(".kmsf-data-table__header-table thead th[data-kmsf-column-id]").first()).toContainText("Column1");
+  await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("Column1");
 
   expect(diagnostics).toEqual([]);
 });
@@ -95,7 +95,7 @@ test("playground verifies 2-depth parent resize ratio and minimum clamp", async 
 
   const groupExample = page.getByTestId("header-example-groups");
   await groupExample.scrollIntoViewIfNeeded();
-  await expect(groupExample.locator(".kmsf-data-table__header-table thead tr")).toHaveCount(2);
+  await expect(groupExample.locator(".comins-table__header-table thead tr")).toHaveCount(2);
   await expect(groupExample.getByTestId("header-group-profile")).toContainText("Header 그룹 1");
   await expect(groupExample.getByTestId("header-group-profile")).toHaveAttribute("scope", "colgroup");
   await expect(groupExample.getByTestId("header-group-profile")).not.toHaveAttribute("aria-sort", /.+/);
@@ -274,15 +274,15 @@ test("playground verifies header-wide show and hide removes the whole header are
   await expect(visibilityExample.getByTestId("header-name")).toBeVisible();
   await expect(visibilityExample.getByTestId("cell-a-name")).toBeVisible();
 
-  await expect(visibilityExample.locator(".kmsf-data-table__header")).toBeVisible();
+  await expect(visibilityExample.locator(".comins-table__header")).toBeVisible();
   await expect(toggle).toHaveAttribute("aria-pressed", "true");
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
-  await expect(visibilityExample.locator(".kmsf-data-table__header")).toHaveCount(0);
-  await expect(visibilityExample.locator(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]")).toHaveCount(30);
+  await expect(visibilityExample.locator(".comins-table__header")).toHaveCount(0);
+  await expect(visibilityExample.locator(".comins-table__body-table tbody tr[data-comins-row-data-index]")).toHaveCount(30);
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-pressed", "true");
-  await expect(visibilityExample.locator(".kmsf-data-table__header")).toBeVisible();
+  await expect(visibilityExample.locator(".comins-table__header")).toBeVisible();
   await expect(visibilityExample.getByTestId("header-age")).toHaveCount(0);
   await columnSelect.click();
   await page.getByRole("checkbox", { exact: true, name: "Column2" }).click();
@@ -353,7 +353,7 @@ test("playground verifies dynamic column visibility for column groups", async ({
   await expect(dynamicExample.getByRole("button", { exact: true, name: "표시 컬럼" })).toHaveCount(0);
   await expect(dynamicExample.getByTestId("column-group-column-select-trigger")).toHaveClass(/ui-selectbox-trigger/u);
   await expect(dynamicExample.getByTestId("column-group-column-select-trigger")).toContainText("5개 컬럼");
-  await expect(dynamicExample.getByTestId("dynamic-group-table").locator(".kmsf-data-table__header-table th[data-kmsf-column-id]")).toHaveCount(5);
+  await expect(dynamicExample.getByTestId("dynamic-group-table").locator(".comins-table__header-table th[data-comins-column-id]")).toHaveCount(5);
 
   await dynamicExample.getByTestId("column-group-column-select-trigger").click();
   await expect(page.getByTestId("column-group-column-select-content")).toBeVisible();

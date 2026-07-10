@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, EyeOff, RotateCcw, Save, Upload } from "lucide-react";
 
 import {
-  KmsfDataTable,
-  type KmsfColumnLayout,
-  type KmsfDataTableRef,
+  CominsTable,
+  type CominsColumnLayout,
+  type CominsTableRef,
 } from "../../../src";
 import { ActionButton, FeatureControls } from "../components/FeatureControls";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
@@ -17,7 +17,7 @@ const allHeaderColumnIds = dynamicColumnOptions.map((option) => option.value);
 
 type HeaderLayoutSnapshot = {
   columnIds: string[];
-  layout: KmsfColumnLayout;
+  layout: CominsColumnLayout;
 };
 
 function normalizeHeaderColumnIds(columnIds: unknown, fallbackColumnIds: string[]) {
@@ -31,7 +31,7 @@ function normalizeHeaderColumnIds(columnIds: unknown, fallbackColumnIds: string[
 }
 
 function parseHeaderLayoutSnapshot(value: string): HeaderLayoutSnapshot {
-  const parsed = JSON.parse(value) as HeaderLayoutSnapshot | KmsfColumnLayout;
+  const parsed = JSON.parse(value) as HeaderLayoutSnapshot | CominsColumnLayout;
 
   if (parsed && typeof parsed === "object" && "layout" in parsed) {
     return {
@@ -47,15 +47,15 @@ function parseHeaderLayoutSnapshot(value: string): HeaderLayoutSnapshot {
 }
 
 export function HeaderFeature() {
-  const basicTableRef = useRef<KmsfDataTableRef<PersonRow>>(null);
-  const layoutTableRef = useRef<KmsfDataTableRef<PersonRow>>(null);
-  const pendingLayoutRef = useRef<KmsfColumnLayout | null>(null);
+  const basicTableRef = useRef<CominsTableRef<PersonRow>>(null);
+  const layoutTableRef = useRef<CominsTableRef<PersonRow>>(null);
+  const pendingLayoutRef = useRef<CominsColumnLayout | null>(null);
   const [rows] = useState(() => createExampleRows(100));
   const columns = useMemo(() => createBaseColumns(), []);
   const visibilityBaseColumns = useMemo(() => createHeaderGroupColumns(), []);
   const layoutBaseColumns = useMemo(() => createHeaderGroupColumns(), []);
-  const [, setBasicLayout] = useState<KmsfColumnLayout>(() => cloneDefaultLayout());
-  const [layoutState, setLayoutState] = useState<KmsfColumnLayout>(() => cloneGroupLayout());
+  const [, setBasicLayout] = useState<CominsColumnLayout>(() => cloneDefaultLayout());
+  const [layoutState, setLayoutState] = useState<CominsColumnLayout>(() => cloneGroupLayout());
   const [savedLayout, setSavedLayout] = useState("");
   const [visibilityShowHeader, setVisibilityShowHeader] = useState(true);
   const [visibilityColumnIds, setVisibilityColumnIds] = useState(() => dynamicColumnOptions.map((option) => option.value));
@@ -109,7 +109,7 @@ export function HeaderFeature() {
                 </ActionButton>
               }
             />
-            <KmsfDataTable
+            <CominsTable
               className="example-table header-example-table"
               columns={columns}
               data={rows}
@@ -149,7 +149,7 @@ export function HeaderFeature() {
                 </ActionButton>
               }
             />
-            <KmsfDataTable
+            <CominsTable
               className="example-table header-example-table"
               columns={visibilityColumns}
               data={rows}
@@ -220,7 +220,7 @@ export function HeaderFeature() {
             <pre className="state-output" data-testid="saved-layout-json">
               {savedLayout || "저장된 레이아웃 없음"}
             </pre>
-            <KmsfDataTable
+            <CominsTable
               className="example-table header-example-table"
               columns={layoutColumns}
               data={rows}

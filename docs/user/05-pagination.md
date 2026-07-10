@@ -1,9 +1,9 @@
 # Pagination
 
-Pagination은 `pagination` prop 또는 `setKmsfPagination` core helper로 제어한다.
+Pagination은 `pagination` prop 또는 `setCominsPagination` core helper로 제어한다.
 
 ```tsx
-<KmsfDataTable
+<CominsTable
   columns={[{ field: "name", label: "Name" }]}
   data={Array.from({ length: 25 }, (_value, index) => ({
     id: `row-${index}`,

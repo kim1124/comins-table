@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { KmsfDataTable, type KmsfDataTableColumn } from "../../../src";
+import { CominsTable, type CominsTableColumn } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { Button } from "../components/ui/button";
@@ -17,7 +17,7 @@ export function CellFeature() {
     title: "셀 이벤트 대기",
   });
   const [rows, setRows] = useState(() => createExampleRows(100));
-  const columns: Array<KmsfDataTableColumn<PersonRow>> = [
+  const columns: Array<CominsTableColumn<PersonRow>> = [
     {
       cell: {
         tooltip: ({ value }) => `name:${String(value)}`,
@@ -104,7 +104,7 @@ export function CellFeature() {
           <AlertTitle>{eventLog.title}</AlertTitle>
           <AlertDescription>{eventLog.detail}</AlertDescription>
         </Alert>
-        <KmsfDataTable
+        <CominsTable
           className="example-table cell-style-example-table"
           columns={columns}
           data={rows}

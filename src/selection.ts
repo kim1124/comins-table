@@ -1,18 +1,18 @@
 export {
-  clearKmsfCellRange,
-  clearKmsfSelection,
-  getKmsfSelectedCellRange,
-  isKmsfCellInSelectedRange,
-  isKmsfCellSelected,
-  isKmsfRowSelected,
+  clearCominsCellRange,
+  clearCominsSelection,
+  getCominsSelectedCellRange,
+  isCominsCellInSelectedRange,
+  isCominsCellSelected,
+  isCominsRowSelected,
   selectCell,
   selectCellRange,
   selectRow,
 } from "./core";
 
 export type {
-  KmsfCellAddress,
-  KmsfCellRange,
-  KmsfRowSelectionOptions,
-  KmsfSelectionState,
+  CominsCellAddress,
+  CominsCellRange,
+  CominsRowSelectionOptions,
+  CominsSelectionState,
 } from "./core";

@@ -1,7 +1,7 @@
 import type React from "react";
 import { useMemo, useState } from "react";
 
-import { KmsfDataTable } from "../../../src";
+import { CominsTable } from "../../../src";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { ContextMenu, type ContextMenuItem } from "../components/ui/context-menu";
@@ -92,7 +92,7 @@ export function ContextMenuFeature() {
             </pre>
           </div>
           <div className="context-table-pane">
-            <KmsfDataTable
+            <CominsTable
               className="example-table"
               columns={columns}
               data={rows}

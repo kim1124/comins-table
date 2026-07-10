@@ -3,9 +3,9 @@
 Header는 표시/숨김, DOM props, label, column boundary resize, TH 영역 1초 long-press column move, keyboard sort, `aria-sort`, animated sort indicator, layout save/load를 제공한다. Layout save/load는 ref method로 처리한다.
 
 ```tsx
-const tableRef = useRef<KmsfDataTableRef<Row>>(null);
+const tableRef = useRef<CominsTableRef<Row>>(null);
 
-<KmsfDataTable
+<CominsTable
   ref={tableRef}
   columns={[
     {
@@ -34,7 +34,7 @@ tableRef.current?.clearSort();
 2 Depth Header는 기존 flat `columns`를 유지하고, 별도 `columnGroups`로 부모 header를 정의한다.
 
 ```tsx
-<KmsfDataTable
+<CominsTable
   columns={[
     { id: "name", field: "name", label: "이름", sort: true },
     { id: "age", field: "age", label: "나이", sort: true },

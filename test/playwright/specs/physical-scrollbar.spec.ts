@@ -61,12 +61,12 @@ async function readDevtoolsMemorySnapshot(page: Page): Promise<DevtoolsMemorySna
 async function readRenderedRowSnapshot(page: Page): Promise<RenderedRowSnapshot> {
   return page.getByTestId("data-table-viewport").evaluate((element) => {
     const rows = Array.from(
-      element.querySelectorAll<HTMLTableRowElement>(".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]"),
+      element.querySelectorAll<HTMLTableRowElement>(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
     );
     const first = rows[0];
 
     return {
-      firstDataIndex: Number(first?.getAttribute("data-kmsf-row-data-index") ?? "-1"),
+      firstDataIndex: Number(first?.getAttribute("data-comins-row-data-index") ?? "-1"),
       renderedRows: rows.length,
       scrollTop: element.scrollTop,
     };
@@ -93,9 +93,9 @@ async function measureWheelRowUpdateLatency(page: Page, deltaY: number, samples 
           }
 
           const first = element.querySelector<HTMLTableRowElement>(
-            ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
           );
-          const firstDataIndex = Number(first?.getAttribute("data-kmsf-row-data-index") ?? "-1");
+          const firstDataIndex = Number(first?.getAttribute("data-comins-row-data-index") ?? "-1");
 
           return firstDataIndex !== previousFirstDataIndex || Math.abs(element.scrollTop - previousScrollTop) > 1;
         },
@@ -233,12 +233,12 @@ test("playground releases devtools counters after physical scrollbar drag and re
       viewport.evaluate((element) => {
         const rows = Array.from(
           element.querySelectorAll<HTMLTableRowElement>(
-            ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
           ),
         );
         const last = rows[rows.length - 1];
 
-        return Number(last?.getAttribute("data-kmsf-row-data-index") ?? "-1");
+        return Number(last?.getAttribute("data-comins-row-data-index") ?? "-1");
       }),
     )
     .toBeGreaterThan(99_900);
@@ -250,12 +250,12 @@ test("playground releases devtools counters after physical scrollbar drag and re
       viewport.evaluate((element) => {
         const rows = Array.from(
           element.querySelectorAll<HTMLTableRowElement>(
-            ".kmsf-data-table__body-table tbody tr[data-kmsf-row-data-index]",
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
           ),
         );
         const first = rows[0];
 
-        return Number(first?.getAttribute("data-kmsf-row-data-index") ?? "-1");
+        return Number(first?.getAttribute("data-comins-row-data-index") ?? "-1");
       }),
     )
     .toBeLessThan(100);

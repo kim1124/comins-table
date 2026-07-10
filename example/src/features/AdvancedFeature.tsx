@@ -1,4 +1,4 @@
-import { KmsfDataTable } from "../../../src";
+import { CominsTable } from "../../../src";
 import { createBaseColumns } from "../fixtures/columns";
 import { cloneBaseRows } from "../fixtures/people";
 
@@ -34,7 +34,7 @@ export function AdvancedFeature() {
         </ul>
         <p>후속 기능은 별도 승인된 계획과 검증 기준을 만든 뒤 진행합니다.</p>
       </div>
-      <KmsfDataTable
+      <CominsTable
         className="example-table"
         columns={createBaseColumns()}
         data={cloneBaseRows()}
