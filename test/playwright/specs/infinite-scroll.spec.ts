@@ -69,5 +69,9 @@ test("infinite scroll example appends remote rows near the bottom", async ({ pag
 
   await expect(page.getByTestId("infinite-load-count")).toContainText("Loaded 120 / 240");
   await expect(page.getByTestId("data-table-infinite-loading-row")).toHaveCount(0);
-  expect(requestSkips).toEqual([0, 40, 80]);
+
+  await page.getByRole("button", { exact: true, name: "새로고침" }).click();
+  await expect(page.getByTestId("infinite-load-count")).toContainText("Loaded 40 / 240");
+  await expect(page.getByTestId("row-dummy-1")).toBeVisible();
+  expect(requestSkips).toEqual([0, 40, 80, 0]);
 });

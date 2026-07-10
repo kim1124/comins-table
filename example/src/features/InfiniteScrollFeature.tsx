@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useState } from "react";
+import { RotateCcw } from "lucide-react";
 
 import { KmsfDataTable, type KmsfDataTableColumn, type KmsfLazyLoadRequest } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
+import { Button } from "../components/ui/button";
 import type { PersonRow } from "../fixtures/people";
 
 type DummyUser = {
@@ -47,6 +49,7 @@ function buildInfiniteScrollUrl(request: KmsfLazyLoadRequest) {
 
 export function InfiniteScrollFeature() {
   const [status, setStatus] = useState({ loaded: 0, total: 0 });
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const columns = useMemo<Array<KmsfDataTableColumn<PersonRow>>>(
     () => [
       {
@@ -88,8 +91,12 @@ export function InfiniteScrollFeature() {
 
       return { rows, total: result.total };
     },
-    [],
+    [refreshVersion],
   );
+  const refreshRows = () => {
+    setStatus({ loaded: 0, total: 0 });
+    setRefreshVersion((current) => current + 1);
+  };
 
   return (
     <section className="feature-panel">
@@ -99,6 +106,10 @@ export function InfiniteScrollFeature() {
         title="Infinite Scroll"
       >
         <div className="table-toolbar">
+          <Button aria-label="새로고침" onClick={refreshRows} variant="outline">
+            <RotateCcw aria-hidden="true" size={16} />
+            새로고침
+          </Button>
           <span className="table-toolbar__state" data-testid="infinite-load-count">
             Loaded {status.loaded} / {status.total}
           </span>

@@ -869,6 +869,13 @@ function KmsfDataTableInner<TData>(
     lazyAbortControllerRef.current?.abort();
     lazyAbortControllerRef.current = controller;
     lazyLoadingReasonRef.current = reason;
+    if (reason !== "scroll") {
+      pendingScrollTopRef.current = 0;
+      setScrollTop(0);
+      if (containerRef.current) {
+        containerRef.current.scrollTop = 0;
+      }
+    }
     setLazyLoadingReason(reason);
 
     void onLazyLoad({
@@ -2486,7 +2493,12 @@ function KmsfDataTableInner<TData>(
           />
         ) : null}
         {resolvedLoading && !isEmpty ? (
-          <div className="kmsf-data-table__loading-overlay" data-testid="data-table-loading-overlay" role="status">
+          <div
+            className="kmsf-data-table__loading-overlay"
+            data-testid="data-table-loading-overlay"
+            role="status"
+            style={scrollTop > 0 ? { transform: `translateY(${scrollTop}px)` } : undefined}
+          >
             <span className="kmsf-data-table__loading-spinner" data-testid="data-table-loading-spinner" />
             <span>{loadingComponent ?? "불러오는 중입니다."}</span>
           </div>

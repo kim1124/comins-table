@@ -245,7 +245,7 @@ export const docsPages: DocsPage[] = [
   featurePage({
     body: paragraphs([
       "pagination prop은 현재 pageIndex와 pageSize를 DataTable에 전달합니다.",
-      "버튼, select, query string 등 외부 UI에서 페이지 상태를 관리할 수 있습니다.",
+      "첫 페이지, 이전 페이지, 다음 페이지, 마지막 페이지 버튼처럼 외부 UI에서 페이지 상태를 관리할 수 있습니다.",
     ]),
     category: "Body / Performance",
     codeSamples: paginationSamples,
@@ -259,6 +259,7 @@ export const docsPages: DocsPage[] = [
     body: paragraphs([
       "Infinite Scroll 예제는 원격 API에서 offset/limit batch를 가져와 viewport 하단 근접 시 Row를 계속 append합니다.",
       "`onLazyLoad`는 offset, limit, AbortSignal을 받아 datasource 요청을 수행하고, 응답 total을 기준으로 추가 요청 여부를 판단합니다.",
+      "새로고침은 내부 Row 배열을 offset 0 요청 결과로 교체하여 처음부터 다시 로드합니다.",
     ]),
     category: "Body / Performance",
     codeSamples: infiniteScrollSamples,
@@ -271,7 +272,7 @@ export const docsPages: DocsPage[] = [
   featurePage({
     body: paragraphs([
       "Lazy Load는 DataTable이 네트워크를 직접 소유하지 않고 `onLazyLoad`로 offset, limit, AbortSignal을 전달합니다.",
-      "첫 요청은 skeleton, 재조회는 overlay, append 요청은 하단 loading row와 연결할 수 있습니다.",
+      "첫 요청은 skeleton, 재조회는 overlay, append 요청은 하단 loading row와 연결할 수 있으며 overlay는 table scroll 위치와 무관하게 viewport에 표시됩니다.",
     ]),
     category: "Body / Performance",
     codeSamples: lazyLoadSamples,

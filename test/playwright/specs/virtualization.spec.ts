@@ -432,15 +432,33 @@ test("playground keeps devtools metrics bounded during one hundred thousand row 
       transform,
     };
   });
+  const metricFailureContext = JSON.stringify(
+    {
+      afterScroll,
+      rowMetrics,
+      stableBaseline,
+      thresholds: {
+        JSHeapUsedSize: Math.ceil(stableBaseline.JSHeapUsedSize * 1.2),
+        JSEventListeners: Math.ceil(stableBaseline.JSEventListeners * 1.1),
+        Nodes: Math.ceil(stableBaseline.Nodes * 1.1),
+      },
+    },
+    null,
+    2,
+  );
 
   expect(rowMetrics.renderedRows).toBeLessThanOrEqual(45);
   expect(rowMetrics.transform).not.toBe("none");
   expect(frameDurations.average).toBeLessThanOrEqual(24);
   expect(frameDurations.p95).toBeLessThanOrEqual(32);
   expect(frameDurations.max).toBeLessThanOrEqual(50);
-  expect(afterScroll.Nodes).toBeLessThanOrEqual(Math.ceil(stableBaseline.Nodes * 1.1));
-  expect(afterScroll.JSEventListeners).toBeLessThanOrEqual(450 + rowMetrics.renderedCells * 2);
-  expect(afterScroll.JSHeapUsedSize).toBeLessThanOrEqual(Math.ceil(stableBaseline.JSHeapUsedSize * 1.2));
+  expect(afterScroll.Nodes, metricFailureContext).toBeLessThanOrEqual(Math.ceil(stableBaseline.Nodes * 1.1));
+  expect(afterScroll.JSEventListeners, metricFailureContext).toBeLessThanOrEqual(
+    Math.ceil(stableBaseline.JSEventListeners * 1.1),
+  );
+  expect(afterScroll.JSHeapUsedSize, metricFailureContext).toBeLessThanOrEqual(
+    Math.ceil(stableBaseline.JSHeapUsedSize * 1.2),
+  );
   expect(diagnostics).toEqual([]);
 });
 
@@ -448,6 +466,7 @@ test("playground releases devtools DOM counters after 100000 row scroll and retu
   test.setTimeout(60_000);
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
+  const basicBaseline = await readDevtoolsMemorySnapshot(page);
   await page.goto("/performance/virtualization");
   await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
@@ -498,12 +517,14 @@ test("playground releases devtools DOM counters after 100000 row scroll and retu
   await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "basic");
   await expect(page.getByTestId("data-table-viewport")).toBeVisible();
   const afterBasic = await readDevtoolsMemorySnapshot(page);
-  const snapshots = { afterBasic, afterDown, afterUp, postLoad };
+  const snapshots = { afterBasic, afterDown, afterUp, basicBaseline, postLoad };
   const failureContext = JSON.stringify(snapshots, null, 2);
 
-  expect(afterBasic.nodes, failureContext).toBeLessThanOrEqual(Math.ceil(postLoad.nodes * 1.5));
-  expect(afterBasic.jsEventListeners, failureContext).toBeLessThanOrEqual(Math.ceil(postLoad.jsEventListeners * 1.5));
-  expect(afterBasic.documents, failureContext).toBe(postLoad.documents);
+  expect(afterBasic.nodes, failureContext).toBeLessThanOrEqual(Math.ceil(basicBaseline.nodes * 1.25));
+  expect(afterBasic.jsEventListeners, failureContext).toBeLessThanOrEqual(
+    Math.ceil(basicBaseline.jsEventListeners * 1.25),
+  );
+  expect(afterBasic.documents, failureContext).toBe(basicBaseline.documents);
   expect(diagnostics).toEqual([]);
 });
 

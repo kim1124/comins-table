@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 import { KmsfDataTable } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
@@ -26,11 +27,24 @@ export function PaginationFeature() {
             <PaginationContent>
               <PaginationItem>
                 <PaginationButton
-                  aria-label="이전"
+                  aria-label="첫 페이지"
+                  disabled={safePageIndex === 0}
+                  onClick={() => setPageIndex(0)}
+                  size="icon"
+                  title="첫 페이지"
+                >
+                  <ChevronsLeft aria-hidden="true" size={16} />
+                </PaginationButton>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationButton
+                  aria-label="이전 페이지"
                   disabled={safePageIndex === 0}
                   onClick={() => setPageIndex((current) => Math.max(0, current - 1))}
+                  size="icon"
+                  title="이전 페이지"
                 >
-                  이전
+                  <ChevronLeft aria-hidden="true" size={16} />
                 </PaginationButton>
               </PaginationItem>
               <PaginationItem>
@@ -40,11 +54,24 @@ export function PaginationFeature() {
               </PaginationItem>
               <PaginationItem>
                 <PaginationButton
-                  aria-label="다음"
+                  aria-label="다음 페이지"
                   disabled={safePageIndex >= pageCount - 1}
                   onClick={() => setPageIndex((current) => Math.min(pageCount - 1, current + 1))}
+                  size="icon"
+                  title="다음 페이지"
                 >
-                  다음
+                  <ChevronRight aria-hidden="true" size={16} />
+                </PaginationButton>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationButton
+                  aria-label="마지막 페이지"
+                  disabled={safePageIndex >= pageCount - 1}
+                  onClick={() => setPageIndex(pageCount - 1)}
+                  size="icon"
+                  title="마지막 페이지"
+                >
+                  <ChevronsRight aria-hidden="true" size={16} />
                 </PaginationButton>
               </PaginationItem>
             </PaginationContent>

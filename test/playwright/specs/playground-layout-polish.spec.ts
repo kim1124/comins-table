@@ -306,9 +306,19 @@ test("pagination page owns the table paging example above virtualization", async
   await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "pagination");
   await expect(page.getByTestId("pagination-control")).toContainText("1 / 4");
   await expect(page.getByTestId("pagination-state")).toContainText("Page 1");
-  await page.getByRole("button", { exact: true, name: "다음" }).click();
+  await expect(page.getByRole("button", { exact: true, name: "첫 페이지" })).toBeDisabled();
+  await expect(page.getByRole("button", { exact: true, name: "이전 페이지" })).toBeDisabled();
+  await expect(page.getByRole("button", { exact: true, name: "다음 페이지" })).toBeEnabled();
+  await expect(page.getByRole("button", { exact: true, name: "마지막 페이지" })).toBeEnabled();
+  await page.getByRole("button", { exact: true, name: "다음 페이지" }).click();
   await expect(page.getByTestId("pagination-control")).toContainText("2 / 4");
   await expect(page.getByTestId("pagination-state")).toContainText("Page 2");
+  await page.getByRole("button", { exact: true, name: "마지막 페이지" }).click();
+  await expect(page.getByTestId("pagination-control")).toContainText("4 / 4");
+  await expect(page.getByTestId("pagination-state")).toContainText("Page 4");
+  await page.getByRole("button", { exact: true, name: "첫 페이지" }).click();
+  await expect(page.getByTestId("pagination-control")).toContainText("1 / 4");
+  await expect(page.getByTestId("pagination-state")).toContainText("Page 1");
 
   const performanceLinks = await page
     .locator(".docs-sidebar__group", { hasText: "Body / Performance" })
@@ -467,18 +477,20 @@ test("data table uses 2px outer radius and keeps viewport edge lines visible", a
   await page.goto("/");
   await page.goto("/performance/virtualization");
   await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
-  await expect(page.locator(".kmsf-data-table__header-table th")).toHaveCount(10);
-  const headerWidths = await page.locator(".kmsf-data-table__header-table th[data-kmsf-column-id]").evaluateAll((headers) =>
-    headers.map((header) => ({
-      id: header.getAttribute("data-kmsf-column-id"),
-      width: Math.round(header.getBoundingClientRect().width),
-    })),
-  );
+  const table = page.locator(".example-table.kmsf-data-table").first();
+  await expect(table.locator(".kmsf-data-table__header-table th")).toHaveCount(10);
+  const headerWidths = await table
+    .locator(".kmsf-data-table__header-table th[data-kmsf-column-id]")
+    .evaluateAll((headers) =>
+      headers.map((header) => ({
+        id: header.getAttribute("data-kmsf-column-id"),
+        width: Math.round(header.getBoundingClientRect().width),
+      })),
+    );
   for (const header of headerWidths) {
     expect(header.width, `${header.id ?? "unknown"} header width`).toBeGreaterThanOrEqual(100);
   }
 
-  const table = page.locator(".example-table.kmsf-data-table").first();
   await expect(table).toHaveCSS("border-radius", "2px");
   await expect(table).toHaveCSS("border-right-width", "1px");
   await expect(table).toHaveCSS("border-bottom-width", "1px");

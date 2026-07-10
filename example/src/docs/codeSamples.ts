@@ -197,7 +197,9 @@ const overrides = useState({});
 
 export const infiniteScrollSamples: DocsCodeSample[] = [
   {
-    code: `const loadRows = async ({ offset, limit, signal }) => {
+    code: `const [refreshVersion, setRefreshVersion] = useState(0);
+
+const loadRows = useCallback(async ({ offset, limit, signal }) => {
   const params = new URLSearchParams({
     delay: "500",
     limit: String(limit),
@@ -211,8 +213,11 @@ export const infiniteScrollSamples: DocsCodeSample[] = [
     rows: result.users.map(toPersonRow),
     total: result.total,
   };
-};
+}, [refreshVersion]);
 
+const refreshRows = () => setRefreshVersion((current) => current + 1);
+
+<Button onClick={refreshRows}>새로고침</Button>
 <DataTable
   columns={columns}
   data={[]}
@@ -231,7 +236,9 @@ export const infiniteScrollSamples: DocsCodeSample[] = [
 
 export const lazyLoadSamples: DocsCodeSample[] = [
   {
-    code: `const loadRows = async ({ offset, limit, reason, signal }) => {
+    code: `const [refreshVersion, setRefreshVersion] = useState(0);
+
+const loadRows = useCallback(async ({ offset, limit, reason, signal }) => {
   const params = new URLSearchParams({
     delay: "700",
     limit: String(limit),
@@ -245,8 +252,11 @@ export const lazyLoadSamples: DocsCodeSample[] = [
     rows: result.users.map(toPersonRow),
     total: result.total,
   };
-};
+}, [refreshVersion]);
 
+const refreshRows = () => setRefreshVersion((current) => current + 1);
+
+<Button onClick={refreshRows}>새로고침</Button>
 <DataTable
   columns={columns}
   data={[]}
@@ -270,7 +280,14 @@ export const paginationSamples: DocsCodeSample[] = [
   {
     code: `const [pageIndex, setPageIndex] = useState(0);
 const pageSize = 30;
+const pageCount = Math.ceil(rows.length / pageSize);
 
+<Pagination>
+  <PaginationButton onClick={() => setPageIndex(0)}>첫 페이지</PaginationButton>
+  <PaginationButton onClick={() => setPageIndex((page) => Math.max(0, page - 1))}>이전 페이지</PaginationButton>
+  <PaginationButton onClick={() => setPageIndex((page) => Math.min(pageCount - 1, page + 1))}>다음 페이지</PaginationButton>
+  <PaginationButton onClick={() => setPageIndex(pageCount - 1)}>마지막 페이지</PaginationButton>
+</Pagination>
 <DataTable
   columns={columns}
   data={rows}

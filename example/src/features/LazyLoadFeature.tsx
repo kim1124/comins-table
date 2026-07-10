@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { RotateCcw } from "lucide-react";
 
 import { KmsfDataTable, type KmsfDataTableColumn, type KmsfLazyLoadRequest } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
@@ -35,7 +36,7 @@ function toPersonRow(user: DummyUser): PersonRow {
   };
 }
 
-function buildLazyLoadUrl(request: KmsfLazyLoadRequest, emptyMode: boolean) {
+function buildLazyLoadUrl(request: KmsfLazyLoadRequest) {
   const params = new URLSearchParams({
     delay: "700",
     limit: String(request.limit),
@@ -43,17 +44,11 @@ function buildLazyLoadUrl(request: KmsfLazyLoadRequest, emptyMode: boolean) {
     skip: String(request.offset),
   });
 
-  if (emptyMode) {
-    params.set("empty", "true");
-  }
-
   return `${DUMMY_USERS_URL}?${params.toString()}`;
 }
 
 export function LazyLoadFeature() {
-  const [emptyMode, setEmptyMode] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const [status, setStatus] = useState({ loaded: 0, total: 0 });
   const columns = useMemo<Array<KmsfDataTableColumn<PersonRow>>>(
     () => [
@@ -66,14 +61,8 @@ export function LazyLoadFeature() {
   );
   const loadRows = useCallback(
     async (request: KmsfLazyLoadRequest) => {
-      const response = await fetch(buildLazyLoadUrl(request, emptyMode), { signal: request.signal });
+      const response = await fetch(buildLazyLoadUrl(request), { signal: request.signal });
       const result = (await response.json()) as DummyUsersResponse;
-
-      if (emptyMode) {
-        setStatus({ loaded: 0, total: 0 });
-        return { rows: [], total: 0 };
-      }
-
       const rows = result.users.map(toPersonRow);
       const loaded = request.reason === "scroll" ? request.offset + rows.length : rows.length;
 
@@ -81,29 +70,12 @@ export function LazyLoadFeature() {
 
       return { rows, total: result.total };
     },
-    [emptyMode],
+    [refreshVersion],
   );
 
-  const reload = (nextEmptyMode: boolean) => {
-    setEmptyMode(nextEmptyMode);
+  const refreshRows = () => {
     setStatus({ loaded: 0, total: 0 });
-    setReloadKey((current) => current + 1);
-  };
-
-  const refresh = async () => {
-    setRefreshing(true);
-
-    try {
-      const controller = new AbortController();
-      const response = await fetch(
-        buildLazyLoadUrl({ limit: BATCH_SIZE, offset: 0, reason: "refresh", signal: controller.signal }, false),
-      );
-      const result = (await response.json()) as DummyUsersResponse;
-
-      setStatus({ loaded: result.users.length, total: result.total });
-    } finally {
-      window.setTimeout(() => setRefreshing(false), 160);
-    }
+    setRefreshVersion((current) => current + 1);
   };
 
   return (
@@ -114,21 +86,15 @@ export function LazyLoadFeature() {
         title="Lazy Load"
       >
         <div className="table-toolbar">
-          <Button onClick={() => reload(false)} variant="primary">
-            데이터 로드
-          </Button>
-          <Button onClick={refresh} variant="outline">
+          <Button aria-label="새로고침" onClick={refreshRows} variant="outline">
+            <RotateCcw aria-hidden="true" size={16} />
             새로고침
-          </Button>
-          <Button onClick={() => reload(true)} variant="outline">
-            빈 결과
           </Button>
           <span className="table-toolbar__state" data-testid="lazy-load-state">
             Loaded {status.loaded} / {status.total}
           </span>
         </div>
         <KmsfDataTable
-          key={reloadKey}
           className="example-table"
           columns={columns}
           data={[]}
@@ -138,7 +104,6 @@ export function LazyLoadFeature() {
           lazyLoad
           lazyLoadBatchSize={BATCH_SIZE}
           lazyLoadThreshold={140}
-          loading={refreshing}
           loadingComponent={<span>원격 데이터를 다시 불러오는 중입니다.</span>}
           onLazyLoad={loadRows}
           pagination={{ pageIndex: 0, pageSize: BATCH_SIZE * 3 }}
