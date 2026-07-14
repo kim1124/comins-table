@@ -31,8 +31,12 @@ import {
   updateCominsRows,
 } from "./core";
 import { renderCominsBuiltInComponent } from "./component-renderer";
+import { getCominsSummaryValues } from "./summary";
 
 export * from "./core";
+export * from "./summary";
+
+import type { CominsTableSummaryConfig } from "./summary";
 
 import type {
   CominsCellAddress,
@@ -185,6 +189,7 @@ export type CominsTableProps<TData> = {
   showHeader?: boolean;
   skeletonRowCount?: number;
   style?: React.CSSProperties;
+  summary?: CominsTableSummaryConfig<TData>;
   theme?: CominsTableTheme;
   virtualized?: boolean;
 };
@@ -793,12 +798,14 @@ function CominsTableInner<TData>(
     showHeader = true,
     skeletonRowCount,
     style,
+    summary,
     theme,
     virtualized = false,
   }: CominsTableProps<TData>,
   ref: React.ForwardedRef<CominsTableRef<TData>>,
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const footerRef = useRef<HTMLDivElement | null>(null);
   const headerRef = useRef<HTMLDivElement | null>(null);
   const copiedCellRef = useRef<CominsCopiedCell | null>(null);
   const copiedRangeRef = useRef<CominsCopiedCellRange | null>(null);
@@ -1052,6 +1059,10 @@ function CominsTableInner<TData>(
 
   const visibleColumns = useMemo(() => getCominsVisibleColumns(state), [state]);
   const headerRows = useMemo(() => getCominsHeaderRows(state), [state]);
+  const summaryValues = useMemo(
+    () => (summary ? getCominsSummaryValues(state.rows, visibleColumns, summary) : null),
+    [state.rows, summary, visibleColumns],
+  );
   const sortedRowIndexes = useMemo(() => (state.sort ? getCominsSortedRowIndexes(state) : null), [state]);
   const visibleRowCount = sortedRowIndexes?.length ?? state.rows.length;
   const pageStartIndex = Math.max(0, state.pagination.pageIndex) * Math.max(1, state.pagination.pageSize);
@@ -2085,6 +2096,10 @@ function CominsTableInner<TData>(
       }
 
       headerRef.current.scrollLeft = nextScrollLeft;
+
+      if (footerRef.current) {
+        footerRef.current.scrollLeft = nextScrollLeft;
+      }
     }
   };
 
@@ -2504,6 +2519,22 @@ function CominsTableInner<TData>(
           </div>
         ) : null}
       </div>
+      {summary ? (
+        <div aria-label="Table summary" className="comins-table__summary" ref={footerRef}>
+          <table className="comins-table__table comins-table__summary-table min-w-full table-fixed" style={{ width: tableWidth }}>
+            {renderColumnSizing()}
+            <tfoot>
+              <tr className="comins-table__summary-row">
+                {visibleColumns.map((column, index) => (
+                  <td className="comins-table__summary-cell px-3 py-2" data-testid={`summary-cell-${column.id}`} key={column.id}>
+                    {summaryValues?.[column.id] ?? (index === 0 ? summary.label : null)}
+                  </td>
+                ))}
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      ) : null}
       {movingHeaderLabel && columnMovePointer ? (
         <div
           aria-hidden="true"

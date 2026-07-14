@@ -230,6 +230,19 @@
   overflow-y: hidden;
 }
 
+.comins-table__summary {
+  flex: 0 0 auto;
+  overflow: hidden;
+}
+
+.comins-table__summary-cell {
+  background: var(--comins-table-surface-muted);
+  border-right: 1px solid var(--comins-table-cell-border);
+  border-top: 1px solid var(--comins-table-header-border);
+  color: var(--comins-table-foreground);
+  font-weight: 700;
+}
+
 .comins-table__body-viewport {
   box-sizing: border-box;
   flex: 1 1 auto;

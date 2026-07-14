@@ -98,6 +98,20 @@ function pressControlKey(element: Element, key: "c" | "v") {
 }
 
 describe("comins-table keyboard interaction", () => {
+  it("renders summary values from all controlled rows before pagination", () => {
+    const element = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={rows}
+        getRowId={(row) => row.id}
+        pagination={{ pageIndex: 0, pageSize: 1 }}
+        summary={{ columns: { age: "sum" } }}
+      />,
+    );
+
+    expect(element.querySelector("[data-testid='summary-cell-age']")?.textContent).toBe("73");
+  });
+
   it("applies the shared COMINS typography class and 12px base text class", () => {
     const element = renderTable();
     const table = element.querySelector(".comins-table");
