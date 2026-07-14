@@ -62,6 +62,15 @@ export type CominsTreeNode<TItem extends Record<string, unknown>> = {
 - Tree Grid disables row drag/reorder, pagination, `lazyLoad`, and `infiniteScroll` in V1. The public tree-prop type rejects these combinations, and the runtime does not trigger lazy or load-more requests when tree mode is active.
 - Tree Grid summary aggregation uses all leaf `item` rows in the supplied tree, regardless of expansion state. Parent nodes are excluded to prevent double counting.
 
+### Future Row Expand and Row Grouping boundary
+
+- Tree Grid `expand` means only “include this node's children in the visible tree traversal.” It is stored in `CominsTreeNode` because it changes the tree-data projection.
+- A future Row Expand feature is a separate flat-row detail presentation. It must keep its controlled state as row ids, for example `expandedRowIds` and `onChangeExpandedRowIds`, and must never write a generic `expand` field into application row data.
+- Row Expand renders a detail region immediately after its owner row. Sorting, pagination, lazy loading, infinite scrolling, selection, clipboard, and row movement continue to operate on the owner data row; the detail region follows that row and is not itself a selectable, sortable, copyable, or movable row.
+- Tree Grid V1 continues to use fixed `rowHeight` virtualization. Row Expand's requested fixed-or-content-sized detail regions require a later variable-height virtual-layout adapter with measurement caching; that adapter is deliberately not coupled to Tree Grid V1.
+- A future Row Grouping feature is derived from flat row values and has its own group ids and expanded-group state. It must not convert flat data into `CominsTreeNode` or reuse tree-node ids. It may later share a neutral render-entry contract with Row Expand, but Tree Grid V1 must not introduce a premature generic grouping abstraction.
+- The only permitted shared primitive in this delivery is a presentational disclosure button with keyboard and `aria-expanded` behavior. Its state ownership, row projection, sorting rules, and data callbacks remain feature-specific.
+
 ## Implementation design
 
 ### Public type surface
@@ -104,6 +113,7 @@ The Playground adds a feature with the label `Tree Grid` and the route `/example
 
 - Summary core tests: numeric aggregation, non-numeric values, custom aggregation, hidden/reordered columns, pagination independence, and loaded-row-only behavior for append data.
 - Tree utility tests: pre-order flattening, collapsed-parent exclusion, depth and path retention, global-id validation, immutable expand update, immutable nested-cell update, and recursive sibling sorting.
+- Compatibility regression tests: Tree Node expansion changes only visible descendants; no flat row-detail API or variable-height virtual layout is introduced by the Tree Grid delivery.
 - Table interaction tests: the original columns render values from `item`; the first column expander updates controlled data; collapsed descendants leave the DOM; selection/copy/paste operates on visible rows; and prohibited Tree Grid props do not activate loading or row movement.
 - Playwright tests: direct route loading, sidebar/search discovery, expand/collapse behavior, `aria-expanded`, sorting without losing hierarchy, virtualized scroll stability, no browser diagnostics, and documentation text for the V1 limitations.
 - Regression gates after each delivery: `npm run lint`, focused Vitest and Playwright specs, then `npm run verify` and `npm run test:e2e -- --workers=1`. Run the existing performance suite and manual DevTools monitor check before any later release decision.
