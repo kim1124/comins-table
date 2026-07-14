@@ -35,6 +35,7 @@ import { getCominsSummaryValues } from "./summary";
 
 export * from "./core";
 export * from "./summary";
+export * from "./tree";
 
 import type { CominsTableSummaryConfig } from "./summary";
 
