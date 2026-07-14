@@ -16,6 +16,7 @@
     "dev": "vite --config vite.example.config.ts",
     "lint": "tsc --noEmit",
     "test": "vitest",
+    "test:consumer": "node scripts/consumer-smoke.mjs",
     "test:e2e": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep-invert @perf",
     "test:perf": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep @perf",
     "test:run": "vitest run",

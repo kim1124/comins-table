@@ -12,7 +12,6 @@ const unavailable = [
   "피벗",
   "트리 데이터",
   "master/detail",
-  "export",
   "charts integration",
   "AI assistant",
 ];
