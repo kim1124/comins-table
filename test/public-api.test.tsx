@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CominsTable, cominsTablePackage } from "../src";
+import { CominsTable, cominsTablePackage, type CominsTreeNode } from "../src";
 
 describe("comins-table public API", () => {
   it("exports the package marker and table component", () => {
@@ -131,6 +131,69 @@ describe("comins-table public API", () => {
         }}
       />,
     ).toBeTruthy();
+  });
+
+  it("accepts controlled Tree Grid data while preserving item columns", () => {
+    const data: CominsTreeNode<{ age: number; id: string; name: string }>[] = [
+      {
+        children: [{ item: { age: 20, id: "child", name: "Child" } }],
+        item: { age: 40, id: "root", name: "Root" },
+      },
+    ];
+
+    expect(
+      <CominsTable
+        columns={[{ field: "name", label: "Name", sort: true }]}
+        data={data}
+        getRowId={(item) => item.id}
+        onChangeData={() => undefined}
+        tree
+      />,
+    ).toBeTruthy();
+  });
+
+  it("rejects flat-only pagination, remote loading, and row dragging in Tree Grid", () => {
+    const data: CominsTreeNode<{ id: string; name: string }>[] = [{ item: { id: "root", name: "Root" } }];
+    const columns = [{ field: "name", label: "Name" }];
+
+    const rejectedTreeProps = [
+      <CominsTable
+        columns={columns}
+        data={data}
+        getRowId={(item) => item.id}
+        // @ts-expect-error Tree Grid V1 does not support pagination.
+        pagination={{ pageIndex: 0, pageSize: 10 }}
+        tree
+      />,
+      <CominsTable
+        columns={columns}
+        data={data}
+        getRowId={(item) => item.id}
+        // @ts-expect-error Tree Grid V1 does not support infinite scroll.
+        infiniteScroll
+        tree
+      />,
+      <CominsTable
+        columns={columns}
+        data={data}
+        getRowId={(item) => item.id}
+        // @ts-expect-error Tree Grid V1 does not support lazy load.
+        lazyLoad
+        tree
+      />,
+      <CominsTable
+        columns={columns}
+        data={data}
+        getRowId={(item) => item.id}
+        rowProps={{
+          // @ts-expect-error Tree Grid V1 does not support row drag.
+          draggable: true,
+        }}
+        tree
+      />,
+    ];
+
+    expect(rejectedTreeProps).toHaveLength(4);
   });
 
   it("rejects removed root-level format and props column API", () => {

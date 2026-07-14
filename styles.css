@@ -243,6 +243,42 @@
   font-weight: 700;
 }
 
+.comins-tree-cell-content {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+  min-width: 0;
+  padding-left: calc(var(--comins-tree-depth) * 16px);
+}
+
+.comins-tree-expander,
+.comins-tree-expander-spacer {
+  flex: 0 0 18px;
+  height: 18px;
+  width: 18px;
+}
+
+.comins-tree-expander {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--comins-table-accent-strong);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  justify-content: center;
+  padding: 0;
+}
+
+.comins-tree-expander:focus-visible {
+  box-shadow: 0 0 0 3px var(--comins-table-focus);
+  outline: none;
+}
+
+.comins-tree-cell-value {
+  min-width: 0;
+}
+
 .comins-table__body-viewport {
   box-sizing: border-box;
   flex: 1 1 auto;

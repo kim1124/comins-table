@@ -32,12 +32,20 @@ import {
 } from "./core";
 import { renderCominsBuiltInComponent } from "./component-renderer";
 import { getCominsSummaryValues } from "./summary";
+import {
+  flattenCominsTree,
+  getCominsTreeLeafItems,
+  sortCominsTreeSiblings,
+  toggleCominsTreeNode,
+  updateCominsTreeItem,
+} from "./tree";
 
 export * from "./core";
 export * from "./summary";
 export * from "./tree";
 
 import type { CominsTableSummaryConfig } from "./summary";
+import type { CominsTreeNode, CominsVisibleTreeRow } from "./tree";
 
 import type {
   CominsCellAddress,
@@ -192,7 +200,22 @@ export type CominsTableProps<TData> = {
   style?: React.CSSProperties;
   summary?: CominsTableSummaryConfig<TData>;
   theme?: CominsTableTheme;
+  tree?: false;
   virtualized?: boolean;
+};
+
+export type CominsTreeTableProps<TData> = Omit<
+  CominsTableProps<TData>,
+  "data" | "getRowId" | "infiniteScroll" | "lazyLoad" | "onChangeData" | "pagination" | "rowProps" | "tree"
+> & {
+  data: readonly CominsTreeNode<TData>[];
+  getRowId: (item: TData, index: number) => CominsRowId;
+  infiniteScroll?: never;
+  lazyLoad?: never;
+  onChangeData?: (data: CominsTreeNode<TData>[]) => void;
+  pagination?: never;
+  rowProps?: Omit<CominsTableRowProps<TData>, "draggable"> & { draggable?: never };
+  tree: true;
 };
 
 type VisibleRowEntry<TData> = {
@@ -200,6 +223,16 @@ type VisibleRowEntry<TData> = {
   row: TData;
   rowId: CominsRowId;
   visibleIndex: number;
+};
+
+type CominsTreeRenderContext<TData> = {
+  entriesByRowId: Map<CominsRowId, CominsVisibleTreeRow<TData>>;
+  onToggle: (rowId: CominsRowId) => void;
+  summaryRows: readonly TData[];
+};
+
+type CominsTableInnerProps<TData> = CominsTableProps<TData> & {
+  treeContext?: CominsTreeRenderContext<TData>;
 };
 
 function createVisibleRowEntries<TData>(
@@ -757,6 +790,51 @@ function canPreserveSelection<TData>(
   return true;
 }
 
+function getTreeNestedFieldValue(row: unknown, field: string): unknown {
+  return field.split(".").reduce<unknown>((value, key) => {
+    if (value == null || typeof value !== "object") {
+      return undefined;
+    }
+
+    return (value as Record<string, unknown>)[key];
+  }, row);
+}
+
+function compareTreeValues(left: unknown, right: unknown) {
+  if (typeof left === "number" && typeof right === "number") {
+    return left - right;
+  }
+
+  return String(left ?? "").localeCompare(String(right ?? ""));
+}
+
+function getSortedCominsTree<TData>(
+  data: readonly CominsTreeNode<TData>[],
+  columns: readonly CominsTableColumn<TData>[],
+  sort: CominsSortState | null,
+) {
+  if (!sort) {
+    return data;
+  }
+
+  const column = columns.find((candidate) => (candidate.id ?? candidate.field) === sort.columnId);
+
+  if (!column?.sort) {
+    return data;
+  }
+
+  return sortCominsTreeSiblings(data, (leftRow, rightRow) => {
+    const leftValue = getTreeNestedFieldValue(leftRow, column.field);
+    const rightValue = getTreeNestedFieldValue(rightRow, column.field);
+    const result =
+      typeof column.sort === "function"
+        ? column.sort(leftValue, rightValue, leftRow, rightRow)
+        : compareTreeValues(leftValue, rightValue);
+
+    return sort.direction === "desc" ? result * -1 : result;
+  });
+}
+
 function CominsTableInner<TData>(
   {
     "buffer-size": bufferSize,
@@ -801,8 +879,9 @@ function CominsTableInner<TData>(
     style,
     summary,
     theme,
+    treeContext,
     virtualized = false,
-  }: CominsTableProps<TData>,
+  }: CominsTableInnerProps<TData>,
   ref: React.ForwardedRef<CominsTableRef<TData>>,
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -1061,10 +1140,13 @@ function CominsTableInner<TData>(
   const visibleColumns = useMemo(() => getCominsVisibleColumns(state), [state]);
   const headerRows = useMemo(() => getCominsHeaderRows(state), [state]);
   const summaryValues = useMemo(
-    () => (summary ? getCominsSummaryValues(state.rows, visibleColumns, summary) : null),
-    [state.rows, summary, visibleColumns],
+    () => (summary ? getCominsSummaryValues(treeContext?.summaryRows ?? state.rows, visibleColumns, summary) : null),
+    [state.rows, summary, treeContext?.summaryRows, visibleColumns],
   );
-  const sortedRowIndexes = useMemo(() => (state.sort ? getCominsSortedRowIndexes(state) : null), [state]);
+  const sortedRowIndexes = useMemo(
+    () => (treeContext || !state.sort ? null : getCominsSortedRowIndexes(state)),
+    [state, treeContext],
+  );
   const visibleRowCount = sortedRowIndexes?.length ?? state.rows.length;
   const pageStartIndex = Math.max(0, state.pagination.pageIndex) * Math.max(1, state.pagination.pageSize);
   const rowWindow = useMemo(() => {
@@ -1211,7 +1293,8 @@ function CominsTableInner<TData>(
     anchorRowId: CominsRowId,
     focusRowId: CominsRowId,
   ) => {
-    const visibleEntries = getCominsSortedRowIndexes(current).flatMap<VisibleRowEntry<TData>>((dataIndex, visibleIndex) => {
+    const visibleRowIndexes = treeContext ? current.rows.map((_row, index) => index) : getCominsSortedRowIndexes(current);
+    const visibleEntries = visibleRowIndexes.flatMap<VisibleRowEntry<TData>>((dataIndex, visibleIndex) => {
         const row = current.rows[dataIndex];
         const rowId = current.rowIds[dataIndex];
 
@@ -1288,6 +1371,10 @@ function CominsTableInner<TData>(
       setMoveTargetRow: (targetIdx, sourceIdx) =>
         commitState(
           (current) => {
+            if (treeContext) {
+              return current;
+            }
+
             const visibleRowIds = getCominsSortedRowIndexes(current).flatMap((dataIndex) => {
               const rowId = current.rowIds[dataIndex];
 
@@ -1327,7 +1414,7 @@ function CominsTableInner<TData>(
       setSelectedRows: (indexes) => selectRowsByVisibleIndexes(indexes),
       setSortState: (sort) => commitState((current) => setCominsSortState(current, sort), { sortChanged: true }),
     }),
-    [rowWindow.entries, state],
+    [rowWindow.entries, state, treeContext],
   );
 
   const clearColumnPointerInteraction = () => {
@@ -2086,21 +2173,23 @@ function CominsTableInner<TData>(
       });
     }
 
+    let nextScrollLeft = Math.max(0, bodyViewport.scrollLeft);
+
     if (headerRef.current) {
       const headerMaxScrollLeft = Math.max(0, headerRef.current.scrollWidth - headerRef.current.clientWidth);
       const bodyMaxScrollLeft = Math.max(0, bodyViewport.scrollWidth - bodyViewport.clientWidth);
       const sharedMaxScrollLeft = Math.min(headerMaxScrollLeft, bodyMaxScrollLeft);
-      const nextScrollLeft = Math.min(sharedMaxScrollLeft, Math.max(0, bodyViewport.scrollLeft));
+      nextScrollLeft = Math.min(sharedMaxScrollLeft, nextScrollLeft);
 
       if (Math.abs(bodyViewport.scrollLeft - nextScrollLeft) > 0.5) {
         bodyViewport.scrollLeft = nextScrollLeft;
       }
 
       headerRef.current.scrollLeft = nextScrollLeft;
+    }
 
-      if (footerRef.current) {
-        footerRef.current.scrollLeft = nextScrollLeft;
-      }
+    if (footerRef.current) {
+      footerRef.current.scrollLeft = nextScrollLeft;
     }
   };
 
@@ -2323,6 +2412,37 @@ function CominsTableInner<TData>(
                   );
                   const tooltip =
                     typeof column.cell?.tooltip === "function" ? column.cell.tooltip(cellPayload) : column.cell?.tooltip;
+                  const treeEntry = columnIndex === 0 ? treeContext?.entriesByRowId.get(entry.rowId) : undefined;
+                  const renderedCellContent = treeEntry ? (
+                    <span
+                      className="comins-tree-cell-content"
+                      style={{ "--comins-tree-depth": treeEntry.depth } as React.CSSProperties}
+                    >
+                      {treeEntry.hasChildren ? (
+                        <button
+                          aria-expanded={treeEntry.expanded}
+                          aria-label={`${treeEntry.expanded ? "Collapse" : "Expand"} ${String(entry.rowId)}`}
+                          className="comins-tree-expander"
+                          data-testid={`tree-expander-${String(entry.rowId)}`}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            treeContext?.onToggle(entry.rowId);
+                          }}
+                          onMouseDown={(event) => event.stopPropagation()}
+                          onPointerDown={(event) => event.stopPropagation()}
+                          type="button"
+                        >
+                          {treeEntry.expanded ? "▾" : "▸"}
+                        </button>
+                      ) : (
+                        <span aria-hidden="true" className="comins-tree-expander-spacer" />
+                      )}
+                      <span className="comins-tree-cell-value">{cellContent}</span>
+                    </span>
+                  ) : (
+                    cellContent
+                  );
 
                   return (
                     <td
@@ -2470,7 +2590,7 @@ function CominsTableInner<TData>(
                           }
                         />
                       ) : null}
-                      {cellContent}
+                      {renderedCellContent}
                     </td>
                   );
                 })}
@@ -2550,8 +2670,82 @@ function CominsTableInner<TData>(
   );
 }
 
-export const CominsTable = forwardRef(CominsTableInner) as <TData>(
-  props: CominsTableProps<TData> & React.RefAttributes<CominsTableRef<TData>>,
+function CominsTreeTableInner<TData>(
+  {
+    data,
+    getRowId,
+    onChangeData,
+    onChangeSort,
+    rowProps,
+    tree: _tree,
+    ...props
+  }: CominsTreeTableProps<TData>,
+  ref: React.ForwardedRef<CominsTableRef<TData>>,
+) {
+  const [treeSort, setTreeSort] = useState<CominsSortState | null>(null);
+  const sortedTree = useMemo(() => getSortedCominsTree(data, props.columns, treeSort), [data, props.columns, treeSort]);
+  const visibleTreeRows = useMemo(() => flattenCominsTree(sortedTree, getRowId), [getRowId, sortedTree]);
+  const entriesByRowId = useMemo(
+    () => new Map(visibleTreeRows.map((entry) => [entry.rowId, entry] as const)),
+    [visibleTreeRows],
+  );
+  const treeContext = useMemo<CominsTreeRenderContext<TData>>(
+    () => ({
+      entriesByRowId,
+      onToggle: (rowId) => onChangeData?.(toggleCominsTreeNode(data, rowId, getRowId)),
+      summaryRows: getCominsTreeLeafItems(data),
+    }),
+    [data, entriesByRowId, getRowId, onChangeData],
+  );
+  const handleFlatDataChange = (nextRows: TData[]) => {
+    let nextTree: readonly CominsTreeNode<TData>[] = data;
+
+    nextRows.forEach((nextItem, index) => {
+      const entry = visibleTreeRows[index];
+
+      if (entry && entry.item !== nextItem) {
+        nextTree = updateCominsTreeItem(nextTree, entry.rowId, getRowId, () => nextItem);
+      }
+    });
+
+    if (nextTree !== data) {
+      onChangeData?.([...nextTree]);
+    }
+  };
+  const flatProps: CominsTableProps<TData> = {
+    ...props,
+    data: visibleTreeRows.map((entry) => entry.item),
+    getRowId,
+    onChangeData: handleFlatDataChange,
+    onChangeSort: (nextSort) => {
+      setTreeSort(nextSort);
+      onChangeSort?.(nextSort);
+    },
+    pagination: { pageIndex: 0, pageSize: Math.max(1, visibleTreeRows.length) },
+    rowProps: { ...rowProps, draggable: false },
+    tree: false,
+  };
+
+  return <ForwardedCominsTableInner {...flatProps} ref={ref} treeContext={treeContext} />;
+}
+
+const ForwardedCominsTableInner = forwardRef(CominsTableInner) as <TData>(
+  props: CominsTableInnerProps<TData> & React.RefAttributes<CominsTableRef<TData>>,
+) => React.ReactElement | null;
+
+const ForwardedCominsTreeTableInner = forwardRef(CominsTreeTableInner) as <TData>(
+  props: CominsTreeTableProps<TData> & React.RefAttributes<CominsTableRef<TData>>,
+) => React.ReactElement | null;
+
+function CominsTableAdapter<TData>(
+  props: CominsTableProps<TData> | CominsTreeTableProps<TData>,
+  ref: React.ForwardedRef<CominsTableRef<TData>>,
+) {
+  return props.tree ? <ForwardedCominsTreeTableInner {...props} ref={ref} /> : <ForwardedCominsTableInner {...props} ref={ref} />;
+}
+
+export const CominsTable = forwardRef(CominsTableAdapter) as <TData>(
+  props: (CominsTableProps<TData> | CominsTreeTableProps<TData>) & React.RefAttributes<CominsTableRef<TData>>,
 ) => React.ReactElement | null;
 
 export const cominsTablePackage = "comins-table";
