@@ -4,6 +4,12 @@ Comins Table is a controlled React data table for data-heavy application screens
 
 Comins Table is built as a standalone open-source package. It does not wrap AG Grid, MUI X, TanStack Table, or another table/grid implementation.
 
+## Repository Scope
+
+Comins Table is maintained as an independent repository. This repository is the source of truth for the library, Playground, public documentation, tests, and releases.
+
+Run development and verification commands from this repository root. Comins Table is not managed as a workspace package, so commands do not require an `npm --workspace` prefix. Future feature work and releases belong in this repository.
+
 ## Installation
 
 ```bash

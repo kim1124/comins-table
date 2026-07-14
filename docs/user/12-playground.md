@@ -1,6 +1,6 @@
 # Playground
 
-Run the local playground from the standalone repository root.
+Comins Table is maintained as an independent repository. Run the local playground from this repository root; an `npm --workspace` prefix is not required.
 
 ```bash
 npm run dev

@@ -3,8 +3,10 @@
 Playground는 `comins-table` 기능을 문서와 예제로 함께 확인하는 Vite 기반 문서 shell이다.
 상단 package navigation, 왼쪽 기능별 메뉴, 오른쪽 article content로 구성하며 React Router route 이동을 사용한다.
 
+`comins-table`은 독립 저장소로 관리한다. 라이브러리, Playground, 문서, 테스트, 릴리스 작업은 모두 이 저장소 루트에서 진행하며 `npm --workspace` 접두사를 사용하지 않는다.
+
 ```bash
-npm --workspace=comins-table run dev
+npm run dev
 ```
 
 기본 실행 URL은 `http://127.0.0.1:4002`다.
