@@ -31,6 +31,7 @@ const featurePages = [
   { feature: "cell", label: "Cells", route: "/examples/cell" },
   { feature: "component", label: "Components", route: "/examples/component" },
   { feature: "row", label: "Rows", route: "/examples/row" },
+  { feature: "tree-grid", label: "Tree Grid", route: "/examples/tree-grid" },
   { feature: "context-menu", label: "Context Menu", route: "/examples/context-menu" },
   { feature: "export", label: "Export Helper", route: "/examples/export" },
 ];

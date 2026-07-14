@@ -14,6 +14,7 @@ import { PaginationFeature } from "./PaginationFeature";
 import { RowFeature } from "./RowFeature";
 import { SizeFeature } from "./SizeFeature";
 import { ThemeFeature } from "./ThemeFeature";
+import { TreeGridFeature } from "./TreeGridFeature";
 import type { FeatureDefinition, FeatureId } from "./types";
 
 export const featureRegistry: FeatureDefinition[] = [
@@ -197,6 +198,19 @@ export const featureRegistry: FeatureDefinition[] = [
       { description: "Moves row position from outside the table.", example: "setMoveTargetRow(targetIdx, sourceIdx)", name: "setMoveTargetRow" },
     ],
     summary: "Row style, drag, disabled, and custom behavior example.",
+  },
+  {
+    Component: TreeGridFeature,
+    description: "Example page for controlled nested rows, hierarchy expansion, and leaf-only summary values.",
+    id: "tree-grid",
+    label: "Tree Grid",
+    options: [
+      { description: "Enables the controlled Tree Grid input branch.", example: "tree", name: "tree" },
+      { description: "Nested nodes with the business row in item.", example: "[{ item, expand, children }]", name: "data" },
+      { description: "Globally unique id resolver for every item at every depth.", example: "(item) => item.id", name: "getRowId" },
+      { description: "Uses only leaf items for configured aggregate values.", example: "{ columns: { age: 'sum' } }", name: "summary" },
+    ],
+    summary: "Controlled nested rows with existing item columns, hierarchy expansion, and leaf-only summary values.",
   },
   {
     Component: ContextMenuFeature,

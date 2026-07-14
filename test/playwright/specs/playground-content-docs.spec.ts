@@ -28,6 +28,7 @@ const featurePages = [
   ["/performance/virtualization", "대용량 데이터"],
   ["/examples/cell", "Td Cell 포맷"],
   ["/examples/row", "Tr Row 스타일"],
+  ["/examples/tree-grid", "node.item을 그대로 읽습니다."],
   ["/examples/context-menu", "우클릭"],
 ] as const;
 

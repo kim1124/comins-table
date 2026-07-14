@@ -185,6 +185,30 @@ describe("comins-table public API", () => {
         columns={columns}
         data={data}
         getRowId={(item) => item.id}
+        // @ts-expect-error Tree Grid V1 does not support lazy callbacks.
+        onLazyLoad={async () => ({ rows: [], total: 0 })}
+        tree
+      />,
+      <CominsTable
+        columns={columns}
+        data={data}
+        getRowId={(item) => item.id}
+        // @ts-expect-error Tree Grid V1 does not support infinite-scroll callbacks.
+        onLoadMore={() => undefined}
+        tree
+      />,
+      <CominsTable
+        columns={columns}
+        data={data}
+        getRowId={(item) => item.id}
+        // @ts-expect-error Tree Grid V1 does not support remote-load state props.
+        hasMoreRows
+        tree
+      />,
+      <CominsTable
+        columns={columns}
+        data={data}
+        getRowId={(item) => item.id}
         rowProps={{
           // @ts-expect-error Tree Grid V1 does not support row drag.
           draggable: true,
@@ -193,7 +217,7 @@ describe("comins-table public API", () => {
       />,
     ];
 
-    expect(rejectedTreeProps).toHaveLength(4);
+    expect(rejectedTreeProps).toHaveLength(7);
   });
 
   it("rejects removed root-level format and props column API", () => {

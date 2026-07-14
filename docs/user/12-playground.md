@@ -19,6 +19,7 @@ Implemented routes include:
 - `/examples/cell`
 - `/examples/component`
 - `/examples/row`
+- `/examples/tree-grid`
 - `/examples/context-menu`
 - `/examples/export`
 - `/api/props`

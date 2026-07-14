@@ -20,6 +20,7 @@ import {
   rowSamples,
   sizeSamples,
   themeSamples,
+  treeGridSamples,
 } from "./codeSamples";
 import type { DocsCodeSample, DocsPage } from "./types";
 import { findFeature } from "../features/featureRegistry";
@@ -203,6 +204,18 @@ export const docsPages: DocsPage[] = [
     codeSamples: rowSamples,
     featureId: "row",
     path: "/examples/row",
+  }),
+  featurePage({
+    body: paragraphs([
+      "Tree Grid receives controlled nested nodes in the `{ item, expand, children }` shape. Existing columns, cell formatters, and callbacks continue to receive the business object in `item`.",
+      "Every `getRowId(item)` result must be globally unique across all tree levels. Expanding a node changes only the controlled tree data and the visible pre-order rows.",
+      "The summary row aggregates leaf items only, including leaves under collapsed parents. Pagination, lazy loading, infinite scrolling, and row drag are intentionally unavailable in Tree Grid V1. Row-level copy/paste is also unavailable because it requires a hierarchy-aware insertion contract.",
+      "Tree expansion is hierarchy visibility, not the future flat Row Expand detail area or Row Grouping state model.",
+    ]),
+    category: "Row / Context",
+    codeSamples: treeGridSamples,
+    featureId: "tree-grid",
+    path: "/examples/tree-grid",
   }),
   featurePage({
     body: paragraphs(["Review how row or cell right-clicks update selection and callback payloads."]),

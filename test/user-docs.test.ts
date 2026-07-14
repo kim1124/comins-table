@@ -19,6 +19,7 @@ const userDocs = [
   "14-export.md",
   "15-infinite-scroll.md",
   "16-lazy-load.md",
+  "17-tree-grid.md",
 ];
 
 const implementedTerms = [
@@ -71,6 +72,9 @@ const implementedTerms = [
   "lazyLoadMode",
   "lazyLoadThreshold",
   "onLazyLoad",
+  "CominsTreeNode",
+  "summary",
+  "tree",
 ];
 
 function readWorkspaceFile(path: string) {
@@ -127,6 +131,8 @@ describe("comins-table user documentation contract", () => {
 
     expect(unavailableList).not.toContain("advanced range selection");
     expect(unavailableList).not.toContain("multi-cell clipboard");
+    expect(unavailableList).not.toContain("집계");
+    expect(unavailableList).not.toContain("트리 데이터");
     expect(advancedFeature).toContain("시각적 Fill Handle UI");
   });
 

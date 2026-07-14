@@ -1,6 +1,6 @@
 # Comins Table
 
-Comins Table is a controlled React data table for data-heavy application screens. It provides a reusable table component, framework-independent core helpers, virtualized rendering, selection, clipboard helpers, pagination, sorting, two-level headers, lazy loading, infinite scrolling, loading states, and CSS-variable based theming.
+Comins Table is a controlled React data table for data-heavy application screens. It provides a reusable table component, framework-independent core helpers, virtualized rendering, selection, clipboard helpers, pagination, sorting, two-level headers, summary rows, controlled Tree Grid rendering, lazy loading, infinite scrolling, loading states, and CSS-variable based theming.
 
 Comins Table is built as a standalone open-source package. It does not wrap AG Grid, MUI X, TanStack Table, or another table/grid implementation.
 
@@ -120,6 +120,8 @@ import {
 - Cell formatting, custom renderer, cell events, single-cell selection, range selection, and drag range selection.
 - Clipboard helpers with `props.copyable`, `props.pasteable`, and disabled guard support.
 - Pagination, loading and empty states, virtualized rendering, infinite scroll, and append-mode lazy loading.
+- Configurable Summary Row aggregation, including leaf-only totals in Tree Grid.
+- Controlled Tree Grid data with `{ item, expand, children }`, existing item-based columns, recursive sibling sorting, and accessible expanders.
 - CSS-variable based themes, including `comins-table-theme--basic`, `--dark`, `--skyblue`, `--mint`, `--gray`, and `--orange`.
 - Built-in header and cell controls: `button`, `input`, `checkbox`, `radio`, `select`, `toggle`, `progress`, header `menu`, and cell `virtual-list`.
 - CSV and JSON export helpers.
@@ -142,6 +144,8 @@ import {
 | `virtualized`, `"buffer-size"`, `rowHeight` | Enable and tune virtualized row rendering. |
 | `infiniteScroll`, `infiniteScrollThreshold`, `hasMoreRows`, `loadingMore`, `onLoadMore` | Control append loading when the body viewport nears the bottom. |
 | `lazyLoad`, `lazyLoadBatchSize`, `lazyLoadMode`, `lazyLoadThreshold`, `onLazyLoad` | Control async append-mode data loading with `AbortSignal`. |
+| `summary` | Configures fixed footer aggregates by column. Tree Grid aggregates leaf items only. |
+| `tree` | Opts into controlled `{ item, expand, children }` data. Tree Grid does not support pagination, lazy loading, infinite scrolling, row drag, or row-level copy/paste in V1. |
 | `theme` | Supplies optional `className`, inline `style`, and density settings. |
 | `rowProps` | Supplies row class, style, disabled, and `rowProps.draggable` behavior. |
 
@@ -174,7 +178,7 @@ The previous Korean documentation is preserved under `docs/ko/` as secondary doc
 npm run dev
 ```
 
-The playground starts at `/docs/getting-started` and includes examples for CRUD, sizing, theme, loading and empty states, headers, column groups, pagination, infinite scroll, lazy load, virtualization, cells, rows, built-in components, selection, clipboard, context menu, and export helpers.
+The playground starts at `/docs/getting-started` and includes examples for CRUD, sizing, theme, loading and empty states, headers, column groups, pagination, infinite scroll, lazy load, virtualization, cells, rows, Tree Grid, built-in components, selection, clipboard, context menu, and export helpers.
 
 ## Development
 
@@ -189,6 +193,6 @@ npm pack --dry-run --json
 
 ## Current Scope
 
-Comins Table currently ships CSR table rendering, controlled data updates, row/cell selection, clipboard helpers, pagination, sorting, layout helpers, two-level headers, built-in controls, virtualized rendering, loading and empty states, CSV/JSON export helpers, controlled infinite scrolling, and append-mode lazy loading.
+Comins Table currently ships CSR table rendering, controlled data updates, row/cell selection, clipboard helpers, pagination, sorting, layout helpers, two-level headers, built-in controls, virtualized rendering, Summary Row aggregation, controlled Tree Grid rendering, loading and empty states, CSV/JSON export helpers, controlled infinite scrolling, and append-mode lazy loading.
 
-It does not currently ship server-side row models, row grouping, aggregation, pivoting, tree data, master/detail, charts integration, an AI assistant, or a drag-handle UI for Excel-like visual fill. The `fillCominsCellRange` core helper exists, but the drag UX remains outside the first public release.
+It does not currently ship server-side row models, row grouping, pivoting, flat Row Expand detail areas, master/detail, charts integration, an AI assistant, or a drag-handle UI for Excel-like visual fill. Tree Grid V1 deliberately excludes remote tree loading, hierarchy pagination, row drag, and row-level copy/paste. The `fillCominsCellRange` core helper exists, but the drag UX remains outside the first public release.

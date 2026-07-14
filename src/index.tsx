@@ -206,13 +206,36 @@ export type CominsTableProps<TData> = {
 
 export type CominsTreeTableProps<TData> = Omit<
   CominsTableProps<TData>,
-  "data" | "getRowId" | "infiniteScroll" | "lazyLoad" | "onChangeData" | "pagination" | "rowProps" | "tree"
+  | "data"
+  | "getRowId"
+  | "hasMoreRows"
+  | "infiniteScroll"
+  | "infiniteScrollThreshold"
+  | "lazyLoad"
+  | "lazyLoadBatchSize"
+  | "lazyLoadMode"
+  | "lazyLoadThreshold"
+  | "loadingMore"
+  | "onChangeData"
+  | "onLazyLoad"
+  | "onLoadMore"
+  | "pagination"
+  | "rowProps"
+  | "tree"
 > & {
   data: readonly CominsTreeNode<TData>[];
   getRowId: (item: TData, index: number) => CominsRowId;
+  hasMoreRows?: never;
   infiniteScroll?: never;
+  infiniteScrollThreshold?: never;
   lazyLoad?: never;
+  lazyLoadBatchSize?: never;
+  lazyLoadMode?: never;
+  lazyLoadThreshold?: never;
+  loadingMore?: never;
   onChangeData?: (data: CominsTreeNode<TData>[]) => void;
+  onLazyLoad?: never;
+  onLoadMore?: never;
   pagination?: never;
   rowProps?: Omit<CominsTableRowProps<TData>, "draggable"> & { draggable?: never };
   tree: true;
@@ -1669,6 +1692,11 @@ function CominsTableInner<TData>(
       return;
     }
 
+    if (treeContext && (isCopyPasteKey(event, "c") || isCopyPasteKey(event, "v"))) {
+      event.preventDefault();
+      return;
+    }
+
     if (isCopyPasteKey(event, "c")) {
       event.preventDefault();
       copiedRowRef.current = copyCominsRow(state, entry.rowId);
@@ -2674,8 +2702,18 @@ function CominsTreeTableInner<TData>(
   {
     data,
     getRowId,
+    hasMoreRows: _hasMoreRows,
+    infiniteScroll: _infiniteScroll,
+    infiniteScrollThreshold: _infiniteScrollThreshold,
+    lazyLoad: _lazyLoad,
+    lazyLoadBatchSize: _lazyLoadBatchSize,
+    lazyLoadMode: _lazyLoadMode,
+    lazyLoadThreshold: _lazyLoadThreshold,
+    loadingMore: _loadingMore,
     onChangeData,
     onChangeSort,
+    onLazyLoad: _onLazyLoad,
+    onLoadMore: _onLoadMore,
     rowProps,
     tree: _tree,
     ...props
@@ -2716,11 +2754,21 @@ function CominsTreeTableInner<TData>(
     ...props,
     data: visibleTreeRows.map((entry) => entry.item),
     getRowId,
+    hasMoreRows: false,
+    infiniteScroll: false,
+    infiniteScrollThreshold: undefined,
+    lazyLoad: false,
+    lazyLoadBatchSize: undefined,
+    lazyLoadMode: undefined,
+    lazyLoadThreshold: undefined,
+    loadingMore: false,
     onChangeData: handleFlatDataChange,
     onChangeSort: (nextSort) => {
       setTreeSort(nextSort);
       onChangeSort?.(nextSort);
     },
+    onLazyLoad: undefined,
+    onLoadMore: undefined,
     pagination: { pageIndex: 0, pageSize: Math.max(1, visibleTreeRows.length) },
     rowProps: { ...rowProps, draggable: false },
     tree: false,

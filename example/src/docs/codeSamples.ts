@@ -354,6 +354,32 @@ export const rowSamples: DocsCodeSample[] = [
   },
 ];
 
+export const treeGridSamples: DocsCodeSample[] = [
+  {
+    code: `const [data, setData] = useState([
+  {
+    item: { id: "engineering", name: "Engineering", age: 60, role: "Owner" },
+    expand: false,
+    children: [
+      { item: { id: "platform", name: "Platform Team", age: 32, role: "Editor" } },
+    ],
+  },
+]);
+
+<CominsTable
+  columns={columns}
+  data={data}
+  getRowId={(item) => item.id}
+  onChangeData={setData}
+  summary={{ columns: { age: "sum" } }}
+  tree
+  virtualized
+/>;`,
+    language: "tsx",
+    title: "Controlled Tree Grid",
+  },
+];
+
 export const contextMenuSamples: DocsCodeSample[] = [
   {
     code: `<CominsTable

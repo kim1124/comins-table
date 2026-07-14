@@ -26,6 +26,7 @@ npm run dev
 - `/examples/cell`: `cell.format`, `cell.props`, `cell.renderer`, cell event Alert, clipboard guard
 - `/examples/component`: Header와 Cell에 적용되는 built-in component와 custom renderer. Component 예제는 렌더링 결과 중심으로 표시한다.
 - `/examples/row`: drag handle reorder, `rowProps.draggable`, row disabled, row custom formatting, row event Alert, row keyboard copy/paste
+- `/examples/tree-grid`: 제어형 `{ item, expand, children }` data, hierarchy expand, 기존 `item` 컬럼 재사용, leaf-only Summary Row
 - `/examples/context-menu`: callback 기반 row/cell context menu, 우클릭 단일 row selection, payload preview
 - `/examples/export`: `exportCominsRowsToCsv`, `exportCominsRowsToJson` helper 출력 예제
 - `/api/props`: 현재 구현된 props, events, ref/core 항목
