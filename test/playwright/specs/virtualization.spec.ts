@@ -1,0 +1,654 @@
+import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
+
+test.describe.configure({ mode: "serial" });
+
+function collectBrowserDiagnostics(page: Page) {
+  const diagnostics: Array<{ text: string; type: ReturnType<ConsoleMessage["type"]> | "pageerror" }> = [];
+
+  page.on("console", (message) => {
+    if (message.type() === "error" || message.type() === "warning") {
+      diagnostics.push({ text: message.text(), type: message.type() });
+    }
+  });
+
+  page.on("pageerror", (error) => {
+    diagnostics.push({ text: error.message, type: "pageerror" });
+  });
+
+  return diagnostics;
+}
+
+type CdpPerformanceMetrics = {
+  JSHeapUsedSize: number;
+  JSEventListeners: number;
+  Nodes: number;
+};
+
+type DevtoolsMemorySnapshot = {
+  documents: number;
+  jsEventListeners: number;
+  jsHeapUsedSize: number;
+  liveElementCount: number;
+  nodes: number;
+};
+
+async function readPerformanceMetrics(page: Page): Promise<CdpPerformanceMetrics> {
+  const session = await page.context().newCDPSession(page);
+
+  await session.send("Performance.enable");
+  const metrics = await session.send("Performance.getMetrics");
+  await session.detach();
+
+  const values = new Map(metrics.metrics.map((metric) => [metric.name, metric.value]));
+
+  return {
+    JSHeapUsedSize: values.get("JSHeapUsedSize") ?? 0,
+    JSEventListeners: values.get("JSEventListeners") ?? 0,
+    Nodes: values.get("Nodes") ?? 0,
+  };
+}
+
+async function collectGarbage(page: Page) {
+  const session = await page.context().newCDPSession(page);
+
+  await session.send("HeapProfiler.enable");
+  await session.send("HeapProfiler.collectGarbage");
+  await session.detach();
+  await page.waitForTimeout(100);
+}
+
+async function readDevtoolsMemorySnapshot(page: Page): Promise<DevtoolsMemorySnapshot> {
+  const session = await page.context().newCDPSession(page);
+
+  await session.send("HeapProfiler.enable");
+  await session.send("HeapProfiler.collectGarbage");
+  await session.send("HeapProfiler.collectGarbage");
+  await session.send("Performance.enable");
+  const [{ documents, jsEventListeners, nodes }, metrics] = await Promise.all([
+    session.send("Memory.getDOMCounters"),
+    session.send("Performance.getMetrics"),
+  ]);
+  await session.detach();
+  await page.waitForTimeout(100);
+
+  const values = new Map(metrics.metrics.map((metric) => [metric.name, metric.value]));
+  const liveElementCount = await page.evaluate(() => document.querySelectorAll("*").length);
+
+  return {
+    documents,
+    jsEventListeners,
+    jsHeapUsedSize: values.get("JSHeapUsedSize") ?? 0,
+    liveElementCount,
+    nodes,
+  };
+}
+
+async function dragVirtualScrollbar(page: Page, direction: "down" | "up") {
+  await page.getByTestId("data-table-viewport").evaluate(
+    async (element, scrollDirection) => {
+      const start = element.scrollTop;
+      const end = scrollDirection === "down" ? element.scrollHeight : 0;
+      const steps = 60;
+
+      for (let step = 1; step <= steps; step += 1) {
+        element.scrollTop = start + ((end - start) * step) / steps;
+        element.dispatchEvent(new Event("scroll", { bubbles: true }));
+
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => resolve());
+        });
+      }
+    },
+    direction,
+  );
+}
+
+async function runVirtualScrollFrames(page: Page, frames = 30) {
+  return page.getByTestId("data-table-viewport").evaluate(
+    (element, frameCount) => {
+      const durations: number[] = [];
+
+      for (let index = 0; index < frameCount; index += 1) {
+        const startedAt = performance.now();
+
+        element.scrollTop = Math.max(0, element.scrollTop - 2400);
+        element.dispatchEvent(new Event("scroll", { bubbles: true }));
+
+        durations.push(performance.now() - startedAt);
+      }
+
+      const sorted = [...durations].sort((left, right) => left - right);
+      const p95Index = Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1);
+
+      return {
+        average: durations.reduce((sum, value) => sum + value, 0) / durations.length,
+        max: Math.max(...durations),
+        p95: sorted[p95Index] ?? 0,
+      };
+    },
+    frames,
+  );
+}
+
+test("playground verifies 100000 row virtualization smoke @perf", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/");
+  await page.goto("/performance/virtualization");
+  await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
+
+  await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
+  await expect.poll(() => page.locator(".comins-table__body-table tbody tr").count()).toBeLessThan(80);
+  await page.getByTestId("data-table-viewport").evaluate((element) => {
+    element.scrollTop = 2400;
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+  await expect
+    .poll(() =>
+      page.getByTestId("data-table-viewport").evaluate((element) => {
+        const firstRow = element.querySelector<HTMLTableRowElement>(
+          ".comins-table__body-table tbody tr[data-comins-row-data-index]",
+        );
+
+        return Number(firstRow?.getAttribute("data-comins-row-data-index") ?? "-1");
+      }),
+    )
+    .toBeGreaterThan(50);
+
+  expect(diagnostics).toEqual([]);
+});
+
+test("playground verifies 100000 row virtualization perf smoke @perf", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/");
+  await page.goto("/performance/virtualization");
+  await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
+
+  await expect(page.getByTestId("virtual-row-count")).toHaveCount(0);
+  await expect.poll(() => page.locator(".comins-table__body-table tbody tr").count()).toBeLessThan(80);
+  await expect
+    .poll(() => page.getByTestId("data-table-viewport").evaluate((element) => element.scrollHeight))
+    .toBeGreaterThan(100_000);
+
+  const scrollDispatchMs = await page.getByTestId("data-table-viewport").evaluate((element) => {
+    const startedAt = performance.now();
+
+    element.scrollTop = element.scrollHeight;
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+
+    return performance.now() - startedAt;
+  });
+  await expect
+    .poll(() =>
+      page.getByTestId("data-table-viewport").evaluate((element) => {
+        const rows = Array.from(
+          element.querySelectorAll<HTMLTableRowElement>(
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
+          ),
+        );
+        const lastRow = rows[rows.length - 1];
+
+        return Number(lastRow?.getAttribute("data-comins-row-data-index") ?? "-1");
+      }),
+    )
+    .toBeGreaterThan(99_950);
+  const metrics = await page.getByTestId("data-table-viewport").evaluate((element) => {
+    const rows = Array.from(
+      element.querySelectorAll<HTMLTableRowElement>(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
+    );
+    const lastRow = rows[rows.length - 1];
+
+    return {
+      lastRenderedIndex: Number(lastRow?.getAttribute("data-comins-row-data-index") ?? "-1"),
+      renderedRows: rows.length,
+      scrollHeight: element.scrollHeight,
+      scrollTop: element.scrollTop,
+    };
+  });
+
+  expect(metrics.lastRenderedIndex).toBeGreaterThan(99_950);
+  expect(metrics.renderedRows).toBeLessThan(90);
+  expect(metrics.scrollTop).toBeGreaterThan(0);
+  expect(metrics.scrollHeight).toBeLessThan(2_000_000);
+  expect(scrollDispatchMs).toBeLessThan(2_000);
+
+  expect(diagnostics).toEqual([]);
+});
+
+test("playground keeps rendered row count bounded across virtual scroll positions @perf", async ({ page }) => {
+  test.setTimeout(30_000);
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/performance/virtualization");
+  await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
+
+  const viewport = page.getByTestId("data-table-viewport");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
+
+  const readRows = () =>
+    viewport.evaluate((element) => {
+      const rows = Array.from(
+        element.querySelectorAll<HTMLTableRowElement>(
+          ".comins-table__body-table tbody tr[data-comins-row-data-index]",
+        ),
+      );
+      const first = rows[0];
+      const last = rows[rows.length - 1];
+
+      return {
+        firstRenderedIndex: Number(first?.getAttribute("data-comins-row-data-index") ?? "-1"),
+        lastRenderedIndex: Number(last?.getAttribute("data-comins-row-data-index") ?? "-1"),
+        renderedRows: rows.length,
+      };
+    });
+
+  const top = await readRows();
+
+  await viewport.evaluate((element) => {
+    element.scrollTop = Math.floor(element.scrollHeight / 2);
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+  await expect.poll(() => readRows().then((rows) => rows.firstRenderedIndex)).toBeGreaterThan(40_000);
+  const middle = await readRows();
+
+  await viewport.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+  await expect.poll(() => readRows().then((rows) => rows.lastRenderedIndex)).toBeGreaterThan(99_900);
+  const bottom = await readRows();
+  const failureContext = JSON.stringify({ bottom, middle, top }, null, 2);
+
+  expect(top.renderedRows, failureContext).toBeLessThanOrEqual(45);
+  expect(middle.renderedRows, failureContext).toBeLessThanOrEqual(45);
+  expect(bottom.renderedRows, failureContext).toBeLessThanOrEqual(45);
+  expect(diagnostics).toEqual([]);
+});
+
+test("playground keeps heavy renderer virtual rows bounded @perf", async ({ page }) => {
+  test.setTimeout(30_000);
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/performance/virtualization?fixture=heavy-renderer");
+
+  const viewport = page.getByTestId("data-table-viewport");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
+  await expect.poll(() => page.getByTestId("virtual-heavy-cell").count()).toBeGreaterThan(0);
+
+  await viewport.evaluate((element) => {
+    element.scrollTop = Math.floor(element.scrollHeight / 2);
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => {
+        const rows = Array.from(
+          element.querySelectorAll<HTMLTableRowElement>(
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
+          ),
+        );
+        const first = rows[0];
+
+        return Number(first?.getAttribute("data-comins-row-data-index") ?? "-1");
+      }),
+    )
+    .toBeGreaterThan(40_000);
+
+  const rowMetrics = await viewport.evaluate((element) => {
+    const rows = Array.from(
+      element.querySelectorAll<HTMLTableRowElement>(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
+    );
+
+    return {
+      heavyCells: element.querySelectorAll("[data-testid='virtual-heavy-cell']").length,
+      renderedRows: rows.length,
+    };
+  });
+
+  expect(rowMetrics.renderedRows).toBeLessThanOrEqual(45);
+  expect(rowMetrics.heavyCells).toBeGreaterThanOrEqual(rowMetrics.renderedRows);
+  expect(diagnostics).toEqual([]);
+});
+
+test("playground renders component-heavy one hundred thousand row sample @perf", async ({ page }) => {
+  test.setTimeout(30_000);
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/performance/virtualization");
+
+  const section = page.locator('[data-feature-option="component-large-virtualization"]');
+  await expect(section).toBeVisible();
+  await expect(section.getByRole("columnheader", { name: "Column1" })).toBeVisible();
+  await expect(section.getByRole("columnheader", { name: "Column2" })).toBeVisible();
+  await expect(section.getByRole("columnheader", { name: "Column3" })).toBeVisible();
+  await expect(section.getByRole("columnheader", { name: "Column4" })).toBeVisible();
+  await expect(section.getByRole("columnheader", { name: "Column5" })).toBeVisible();
+  await expect(section.getByRole("columnheader", { name: "Column6" })).toBeVisible();
+  await expect(section.getByRole("columnheader", { name: "Column7" })).toBeVisible();
+
+  const viewport = section.getByTestId("data-table-viewport-component-large");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
+  await expect.poll(() => section.getByTestId("component-large-checkbox").count()).toBeGreaterThan(0);
+  await expect.poll(() => section.getByTestId("component-large-button").count()).toBeGreaterThan(0);
+  await expect.poll(() => section.getByTestId("component-large-select").count()).toBeGreaterThan(0);
+  await expect.poll(() => section.getByTestId("component-large-progress").count()).toBeGreaterThan(0);
+  await expect.poll(() => section.locator(".comins-table__component-virtual-list").count()).toBeGreaterThan(0);
+  await expect.poll(() => section.getByTestId("component-large-radio").count()).toBeGreaterThan(0);
+
+  await viewport.evaluate((element) => {
+    element.scrollTop = Math.floor(element.scrollHeight / 2);
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => {
+        const rows = Array.from(
+          element.querySelectorAll<HTMLTableRowElement>(
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
+          ),
+        );
+        const first = rows[0];
+
+        return Number(first?.getAttribute("data-comins-row-data-index") ?? "-1");
+      }),
+    )
+    .toBeGreaterThan(40_000);
+  const rowMetrics = await viewport.evaluate((element) => ({
+    renderedRows: element.querySelectorAll(".comins-table__body-table tbody tr[data-comins-row-data-index]").length,
+  }));
+
+  expect(rowMetrics.renderedRows).toBeLessThanOrEqual(45);
+  expect(diagnostics).toEqual([]);
+});
+
+test("playground keeps devtools metrics bounded during one hundred thousand row virtual scroll @perf", async ({ page }) => {
+  test.setTimeout(45_000);
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/");
+  await page.goto("/performance/virtualization");
+  await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
+
+  const viewport = page.getByTestId("data-table-viewport");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
+
+  await viewport.evaluate((element) => {
+    element.scrollTop = Math.floor(element.scrollHeight / 2);
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => {
+        const rows = Array.from(
+          element.querySelectorAll<HTMLTableRowElement>(
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
+          ),
+        );
+        const first = rows[0];
+
+        return Number(first?.getAttribute("data-comins-row-data-index") ?? "-1");
+      }),
+    )
+    .toBeGreaterThan(40_000);
+  await collectGarbage(page);
+  const stableBaseline = await readPerformanceMetrics(page);
+
+  await viewport.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => {
+        const rows = Array.from(
+          element.querySelectorAll<HTMLTableRowElement>(
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
+          ),
+        );
+        const last = rows[rows.length - 1];
+
+        return Number(last?.getAttribute("data-comins-row-data-index") ?? "-1");
+      }),
+    )
+    .toBeGreaterThan(99_900);
+
+  const frameDurations = await runVirtualScrollFrames(page, 30);
+
+  await collectGarbage(page);
+  const afterScroll = await readPerformanceMetrics(page);
+  const rowMetrics = await viewport.evaluate((element) => {
+    const rows = Array.from(
+      element.querySelectorAll<HTMLTableRowElement>(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
+    );
+    const cells = element.querySelectorAll<HTMLTableCellElement>(
+      ".comins-table__body-table tbody tr[data-comins-row-data-index] td",
+    );
+    const bodyTable = element.querySelector<HTMLElement>(".comins-table__body-table");
+    const transform = bodyTable ? window.getComputedStyle(bodyTable).transform : "none";
+
+    return {
+      renderedCells: cells.length,
+      renderedRows: rows.length,
+      transform,
+    };
+  });
+  const metricFailureContext = JSON.stringify(
+    {
+      afterScroll,
+      rowMetrics,
+      stableBaseline,
+      thresholds: {
+        JSHeapUsedSize: Math.ceil(stableBaseline.JSHeapUsedSize * 1.2),
+        JSEventListeners: Math.ceil(stableBaseline.JSEventListeners * 1.1),
+        Nodes: Math.ceil(stableBaseline.Nodes * 1.1),
+      },
+    },
+    null,
+    2,
+  );
+
+  expect(rowMetrics.renderedRows).toBeLessThanOrEqual(45);
+  expect(rowMetrics.transform).not.toBe("none");
+  expect(frameDurations.average).toBeLessThanOrEqual(24);
+  expect(frameDurations.p95).toBeLessThanOrEqual(32);
+  expect(frameDurations.max).toBeLessThanOrEqual(50);
+  expect(afterScroll.Nodes, metricFailureContext).toBeLessThanOrEqual(Math.ceil(stableBaseline.Nodes * 1.1));
+  expect(afterScroll.JSEventListeners, metricFailureContext).toBeLessThanOrEqual(
+    Math.ceil(stableBaseline.JSEventListeners * 1.1),
+  );
+  expect(afterScroll.JSHeapUsedSize, metricFailureContext).toBeLessThanOrEqual(
+    Math.ceil(stableBaseline.JSHeapUsedSize * 1.2),
+  );
+  expect(diagnostics).toEqual([]);
+});
+
+test("playground releases devtools DOM counters after 100000 row scroll and return to basic @perf", async ({ page }) => {
+  test.setTimeout(60_000);
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/");
+  const basicBaseline = await readDevtoolsMemorySnapshot(page);
+  await page.goto("/performance/virtualization");
+  await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
+
+  const viewport = page.getByTestId("data-table-viewport");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
+  await expect.poll(() => page.locator(".comins-table__body-table tbody tr").count()).toBeLessThan(90);
+  const postLoad = await readDevtoolsMemorySnapshot(page);
+
+  await viewport.hover();
+  await page.mouse.wheel(0, 2400);
+  await dragVirtualScrollbar(page, "down");
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => {
+        const rows = Array.from(
+          element.querySelectorAll<HTMLTableRowElement>(
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
+          ),
+        );
+        const last = rows[rows.length - 1];
+
+        return Number(last?.getAttribute("data-comins-row-data-index") ?? "-1");
+      }),
+    )
+    .toBeGreaterThan(99_900);
+  const afterDown = await readDevtoolsMemorySnapshot(page);
+
+  await page.mouse.wheel(0, -2400);
+  await dragVirtualScrollbar(page, "up");
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => {
+        const rows = Array.from(
+          element.querySelectorAll<HTMLTableRowElement>(
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
+          ),
+        );
+        const first = rows[0];
+
+        return Number(first?.getAttribute("data-comins-row-data-index") ?? "-1");
+      }),
+    )
+    .toBeLessThan(100);
+  const afterUp = await readDevtoolsMemorySnapshot(page);
+
+  await page.goto("/docs/getting-started");
+  await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "basic");
+  await expect(page.getByTestId("data-table-viewport")).toBeVisible();
+  const afterBasic = await readDevtoolsMemorySnapshot(page);
+  const snapshots = { afterBasic, afterDown, afterUp, basicBaseline, postLoad };
+  const failureContext = JSON.stringify(snapshots, null, 2);
+
+  expect(afterBasic.nodes, failureContext).toBeLessThanOrEqual(Math.ceil(basicBaseline.nodes * 1.25));
+  expect(afterBasic.jsEventListeners, failureContext).toBeLessThanOrEqual(
+    Math.ceil(basicBaseline.jsEventListeners * 1.25),
+  );
+  expect(afterBasic.documents, failureContext).toBe(basicBaseline.documents);
+  expect(diagnostics).toEqual([]);
+});
+
+test("playground recycles rendered row DOM while virtual scrolling one hundred thousand rows @perf", async ({ page }) => {
+  test.setTimeout(30_000);
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/");
+  await page.goto("/performance/virtualization");
+  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
+
+  const viewport = page.getByTestId("data-table-viewport");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
+  const before = await viewport.evaluate((element) => {
+    const rows = Array.from(
+      element.querySelectorAll<HTMLTableRowElement>(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
+    );
+
+    (window as typeof window & { __cominsVirtualRowNodeSnapshot?: HTMLTableRowElement[] })
+      .__cominsVirtualRowNodeSnapshot = rows.slice(0, 12);
+
+    return {
+      firstDataIndex: Number(rows[0]?.getAttribute("data-comins-row-data-index") ?? "-1"),
+      rowCount: rows.length,
+    };
+  });
+
+  await dragVirtualScrollbar(page, "down");
+  const after = await viewport.evaluate((element) => {
+    const previousRows =
+      (window as typeof window & { __cominsVirtualRowNodeSnapshot?: HTMLTableRowElement[] })
+        .__cominsVirtualRowNodeSnapshot ?? [];
+    const rows = Array.from(
+      element.querySelectorAll<HTMLTableRowElement>(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
+    );
+    const comparedCount = Math.min(previousRows.length, rows.length);
+    let reusedCount = 0;
+
+    for (let index = 0; index < comparedCount; index += 1) {
+      if (previousRows[index] === rows[index]) {
+        reusedCount += 1;
+      }
+    }
+
+    return {
+      firstDataIndex: Number(rows[0]?.getAttribute("data-comins-row-data-index") ?? "-1"),
+      reusedCount,
+      rowCount: rows.length,
+    };
+  });
+
+  expect(before.rowCount).toBeGreaterThan(0);
+  expect(after.firstDataIndex).toBeGreaterThan(before.firstDataIndex);
+  expect(after.reusedCount).toBeGreaterThanOrEqual(Math.min(10, before.rowCount, after.rowCount));
+  expect(diagnostics).toEqual([]);
+});
+
+test("playground keeps follow-up scroll responsive after one hundred thousand row jump @perf", async ({ page }) => {
+  test.setTimeout(30_000);
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/");
+  await page.goto("/performance/virtualization");
+  await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
+
+  const viewport = page.getByTestId("data-table-viewport");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
+
+  await viewport.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => {
+        const rows = Array.from(
+          element.querySelectorAll<HTMLTableRowElement>(
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
+          ),
+        );
+        const last = rows[rows.length - 1];
+
+        return Number(last?.getAttribute("data-comins-row-data-index") ?? "-1");
+      }),
+    )
+    .toBeGreaterThan(99_900);
+
+  const frameDurations = await runVirtualScrollFrames(page, 10);
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const viewportElement = document.querySelector<HTMLElement>('[data-testid="data-table-viewport"]');
+        const renderedRows = Array.from(
+          viewportElement?.querySelectorAll<HTMLTableRowElement>(
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
+          ) ?? [],
+        );
+        const last = renderedRows[renderedRows.length - 1];
+
+        return Number(last?.getAttribute("data-comins-row-data-index") ?? "-1");
+      }),
+    )
+    .toBeGreaterThan(98_000);
+
+  const rows = await viewport.evaluate((element) => {
+    const renderedRows = Array.from(
+      element.querySelectorAll<HTMLTableRowElement>(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
+    );
+    const first = renderedRows[0];
+    const last = renderedRows[renderedRows.length - 1];
+
+    return {
+      firstRenderedIndex: Number(first?.getAttribute("data-comins-row-data-index") ?? "-1"),
+      lastRenderedIndex: Number(last?.getAttribute("data-comins-row-data-index") ?? "-1"),
+      renderedRows: renderedRows.length,
+      scrollHeight: element.scrollHeight,
+      scrollTop: element.scrollTop,
+    };
+  });
+
+  expect(rows.lastRenderedIndex).toBeGreaterThan(98_000);
+  expect(rows.renderedRows).toBeLessThan(100);
+  expect(frameDurations.average).toBeLessThanOrEqual(24);
+  expect(frameDurations.p95).toBeLessThanOrEqual(32);
+  expect(frameDurations.max).toBeLessThanOrEqual(50);
+  expect(diagnostics).toEqual([]);
+});

@@ -1,0 +1,168 @@
+import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
+
+function collectBrowserDiagnostics(page: Page) {
+  const diagnostics: Array<{ text: string; type: ReturnType<ConsoleMessage["type"]> | "pageerror" }> = [];
+
+  page.on("console", (message) => {
+    if (message.type() === "error" || message.type() === "warning") {
+      diagnostics.push({ text: message.text(), type: message.type() });
+    }
+  });
+
+  page.on("pageerror", (error) => {
+    diagnostics.push({ text: error.message, type: "pageerror" });
+  });
+
+  return diagnostics;
+}
+
+test("playground uses charts-style docs shell and remounts content when switching feature menus", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/");
+
+  await expect(page.locator("body")).toHaveCSS("font-size", "12px");
+  await expect(page.locator("body")).toHaveCSS("font-family", /Spoqa Han Sans Neo/);
+  const aside = page.locator(".docs-sidebar");
+  const content = page.locator(".docs-shell__content");
+  const featureContent = page.getByTestId("feature-content");
+  await expect(page.getByRole("navigation", { name: "Docs navigation" })).toBeVisible();
+  await expect(content).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "Data table docs" })).toHaveCount(0);
+  await expect(page.locator(".docs-top-nav")).toContainText("comins-table");
+  await expect(page.locator(".workspace-tabs")).toHaveCount(0);
+  await expect(page.locator(".workspace-tabs__bar")).toHaveCount(0);
+  await expect(page.getByRole("tablist", { name: "플레이그라운드 보기" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "React Table Playground" })).toHaveCount(0);
+  await expect(page.locator(".docs-shell__body")).toBeVisible();
+
+  const asideBox = await aside.boundingBox();
+  const contentBox = await content.boundingBox();
+  expect(asideBox).not.toBeNull();
+  expect(contentBox).not.toBeNull();
+  expect(asideBox!.width).toBeGreaterThanOrEqual(220);
+  expect(asideBox!.width).toBeLessThanOrEqual(320);
+  expect(contentBox!.width).toBeGreaterThan(asideBox!.width);
+
+  for (const label of [
+    "Getting Started",
+    "CRUD",
+    "Sizing",
+    "Theme",
+    "Header Basics",
+    "Header Groups",
+    "Pagination",
+    "Lazy Load",
+    "Virtualization",
+    "Cells",
+    "Components",
+    "Rows",
+    "Context Menu",
+  ]) {
+    await expect(page.getByRole("link", { exact: true, name: label })).toBeVisible();
+  }
+  await expect(page.getByRole("link", { exact: true, name: "핵심 기능" })).toHaveCount(0);
+  await expect(page.getByRole("link", { exact: true, name: "고급 기능" })).toHaveCount(0);
+  await expect(page.getByRole("link", { exact: true, name: "기본" })).toHaveCount(0);
+  await expect(page.getByRole("link", { exact: true, name: "대용량 데이터 표시" })).toHaveCount(0);
+
+  const firstMountId = await page.getByTestId("mount-id").textContent();
+  await page.getByRole("link", { exact: true, name: "CRUD" }).click();
+  await expect(page.getByTestId("mount-id")).not.toHaveText(firstMountId ?? "");
+  await expect.poll(() => page.evaluate(() => window.__cominsTableLastUnmount)).toBe(firstMountId);
+
+  await page.getByRole("link", { exact: true, name: "Header Basics" }).click();
+  await expect(featureContent).toHaveAttribute("data-feature", "header");
+  const headerMountId = await page.getByTestId("mount-id").textContent();
+  expect(headerMountId).not.toBe(firstMountId);
+
+  await page.getByRole("link", { exact: true, name: "CRUD" }).click();
+  await expect(featureContent).toHaveAttribute("data-feature", "basic-crud");
+  await expect
+    .poll(() => page.evaluate(() => window.__cominsTableLastUnmount))
+    .toBe(headerMountId);
+
+  await page.goto("/api/props");
+  await expect(page.locator(".docs-reference-list")).toContainText("columns");
+  await expect(page.locator(".docs-reference-list")).toContainText("setMoveTargetRow");
+  await expect(page.getByRole("tab", { exact: true, name: "문서 요약" })).toHaveCount(0);
+
+  expect(diagnostics).toEqual([]);
+});
+
+test("playground verifies row and cell Ctrl+C Ctrl+V interactions in a browser", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/");
+
+  const bodyRows = page.locator(".comins-table__body-table tbody tr");
+  await bodyRows.nth(0).focus();
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+C" : "Control+C");
+  await bodyRows.nth(1).focus();
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+V" : "Control+V");
+  await expect(bodyRows.nth(2).locator("td").first()).toHaveText("Data 1");
+
+  const cells = page.locator(".comins-table__body-table tbody td");
+  await cells.nth(2).focus();
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+C" : "Control+C");
+  await cells.nth(0).focus();
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+V" : "Control+V");
+  await expect(cells.nth(0)).toHaveText("Owner");
+
+  expect(diagnostics).toEqual([]);
+});
+
+test("playground verifies range drag and multi-cell Ctrl+C Ctrl+V interactions in a browser", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/");
+
+  const anchorCell = page.getByTestId("cell-a-name");
+  const focusCell = page.getByTestId("cell-b-age");
+  await anchorCell.hover();
+  await page.mouse.down();
+  await focusCell.hover();
+  await page.mouse.up();
+
+  await expect(page.getByTestId("cell-a-name")).toHaveAttribute("data-range-selected", "true");
+  await expect(page.getByTestId("cell-b-age")).toHaveAttribute("data-range-selected", "true");
+
+  await anchorCell.focus();
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+C" : "Control+C");
+  await page.getByTestId("cell-b-name").focus();
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+V" : "Control+V");
+
+  await expect(page.getByTestId("cell-b-name")).toHaveText("Data 1");
+  await expect(page.getByTestId("cell-b-age")).toHaveText("Data 2");
+  await expect(page.getByTestId("cell-c-name")).toHaveText("Data 2");
+  await expect(page.getByTestId("cell-c-age")).toHaveText("Data 3");
+  expect(diagnostics).toEqual([]);
+});
+
+test("basic page removes live controls and keeps only the default table", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/");
+  await page.goto("/docs/getting-started");
+
+  await expect(page.getByTestId("feature-controls")).toHaveCount(0);
+  await expect(page.getByTestId("basic-live-state")).toHaveCount(0);
+  await expect(page.getByLabel("첫 번째 이름")).toHaveCount(0);
+  await expect(page.getByTestId("cell-a-name")).toHaveText("Data 1");
+
+  expect(diagnostics).toEqual([]);
+});
+
+test("basic page table expands to the available browser height", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.setViewportSize({ height: 900, width: 1280 });
+  await page.goto("/");
+  await page.goto("/docs/getting-started");
+
+  await expect(page.getByTestId("sample-row-count")).toHaveCount(0);
+
+  const tableBox = await page.locator(".example-table.comins-table").first().boundingBox();
+  const sampleBox = await page.getByTestId("feature-option-sample").first().boundingBox();
+  expect(tableBox).not.toBeNull();
+  expect(sampleBox).not.toBeNull();
+  expect(tableBox!.height).toBeGreaterThanOrEqual(300);
+  expect(Math.abs(tableBox!.height - sampleBox!.height)).toBeLessThanOrEqual(2);
+
+  expect(diagnostics).toEqual([]);
+});

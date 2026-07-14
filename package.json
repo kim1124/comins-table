@@ -1,0 +1,71 @@
+{
+  "name": "comins-table",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kim1124/comins-table.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kim1124/comins-table/issues"
+  },
+  "homepage": "https://github.com/kim1124/comins-table#readme",
+  "scripts": {
+    "build": "vite build && tsc -p tsconfig.build.json",
+    "dev": "vite --config vite.example.config.ts",
+    "lint": "tsc --noEmit",
+    "test": "vitest",
+    "test:e2e": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep-invert @perf",
+    "test:perf": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep @perf",
+    "test:run": "vitest run",
+    "verify": "npm run lint && npm run test:run && npm run build",
+    "verify:e2e": "npm run test:e2e",
+    "verify:full": "npm run verify && npm run verify:e2e"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./clipboard": {
+      "types": "./dist/clipboard.d.ts",
+      "import": "./dist/clipboard.js"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
+    },
+    "./selection": {
+      "types": "./dist/selection.d.ts",
+      "import": "./dist/selection.js"
+    },
+    "./styles.css": "./styles.css"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "styles.css",
+    "CHANGELOG.md"
+  ],
+  "peerDependencies": {
+    "react": ">=18.0.0 <20.0.0",
+    "react-dom": ">=18.0.0 <20.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@tailwindcss/postcss": "^4.3.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "latest",
+    "jsdom": "^29.1.1",
+    "prism-react-renderer": "^2.4.1",
+    "react-router": "^7.17.0",
+    "typescript": "^6.0.3",
+    "vite": "latest",
+    "vitest": "latest"
+  },
+  "dependencies": {
+    "lucide-react": "^1.17.0"
+  }
+}
