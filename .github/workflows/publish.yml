@@ -45,7 +45,8 @@ jobs:
           const { name } = require("./package.json");
           execFileSync("npm", ["view", name, "version"], { stdio: "inherit" });'
       - run: npm ci
-      - run: npm run verify
+      - run: npx playwright install --with-deps chromium
+      - run: npm run verify:full
       - run: npm run test:consumer
       - run: npm pack --dry-run --json
       - run: npm stage publish --access public
