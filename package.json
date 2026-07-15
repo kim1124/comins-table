@@ -49,6 +49,9 @@
     "styles.css",
     "CHANGELOG.md"
   ],
+  "sideEffects": [
+    "./styles.css"
+  ],
   "peerDependencies": {
     "react": ">=18.0.0 <20.0.0",
     "react-dom": ">=18.0.0 <20.0.0"
@@ -58,13 +61,13 @@
     "@tailwindcss/postcss": "^4.3.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "latest",
+    "@vitejs/plugin-react": "^6.0.3",
     "jsdom": "^29.1.1",
     "prism-react-renderer": "^2.4.1",
     "react-router": "^7.17.0",
     "typescript": "^6.0.3",
-    "vite": "latest",
-    "vitest": "latest"
+    "vite": "^8.1.4",
+    "vitest": "^4.1.10"
   },
   "dependencies": {
     "lucide-react": "^1.17.0"

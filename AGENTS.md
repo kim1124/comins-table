@@ -6,6 +6,14 @@
 - Run commands from `<repo-root>`. Do not use KMSF paths or `npm --workspace` commands unless the user explicitly asks to inspect migration history.
 - Treat KMSF references in `reports/` as historical evidence. Do not rewrite historical records to remove them.
 
+## Shared Contract
+
+- This repository adopts Comins Contract v1.1.
+- For policy, security, public API, or release work, read `COMINS_CONTRACT.md` in the Comins governance repository explicitly. Keep `AGENTS.override.md` uncommitted and temporary.
+- Use `gpt-5.6-sol` with `xhigh` reasoning as the default for all Comins work.
+- For vulnerability investigation, runtime memory leaks, retention, out-of-memory failures, or security work, use `gpt-5.6-sol` with at least `xhigh`.
+- For instruction planning, Plan mode, or authoring or updating an implementation plan, use `gpt-5.6-sol` with at least `max`.
+
 ## Change Boundaries
 
 - Preserve the controlled React API, existing public types, and package-local conventions unless the requested change explicitly expands them.
@@ -23,6 +31,6 @@
 
 ## Reporting
 
-- For meaningful committed code, documentation, configuration, or test changes, update `reports/YYYY-MM-DD.md` with summary, files, verification, and residual risks.
+- For behavior, public API, configuration, security, release, or test-contract changes, update `reports/YYYY-MM-DD.md` with summary, files, verification, and residual risks.
 - Do not create or update a worklog for inspection-only work unless the user requests a durable report.
 - Keep unrun or failed validation visible in the final report.

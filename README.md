@@ -28,6 +28,21 @@ React and React DOM are peer dependencies:
 | `react` | `>=18.0.0 <20.0.0` |
 | `react-dom` | `>=18.0.0 <20.0.0` |
 
+## Runtime Boundary
+
+Comins Table is browser UI. Its package source does not make network requests, load remote assets, collect telemetry, or send error reports. Server rendering is not yet a supported integration contract; use an application client boundary where SSR is present.
+
+## Supported Platforms
+
+| Surface | Support |
+| --- | --- |
+| React | `>=18.0.0 <20.0.0` |
+| React DOM | `>=18.0.0 <20.0.0` |
+| Chrome and Edge | Current stable Chromium-based releases |
+| Automated browser gate | Playwright-bundled Chromium |
+| Firefox and Safari | Not in the supported contract until Firefox and WebKit projects are added |
+| SSR | Client boundary required; server rendering is not currently supported |
+
 ## Quick Start
 
 ```tsx
@@ -190,6 +205,12 @@ npm run test:e2e
 npm run test:perf -- --workers=1
 npm pack --dry-run --json
 ```
+
+## Release Bootstrap
+
+`comins-table` does not yet exist on the npm registry. npm cannot register trusted or staged publishing for a brand-new package, so the first public version must be published interactively by the maintainer with npm 2FA and without an automation token.
+
+After that bootstrap publication, register `kim1124/comins-table`, `publish.yml`, and the `npm` environment as the trusted publisher. Allow only `npm stage publish`, disallow token publishing, and require maintainer 2FA approval for every staged version. The repository workflow is intentionally manual and refuses non-`main` refs, mismatched versions, and missing bootstrap packages.
 
 ## Current Scope
 
