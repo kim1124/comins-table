@@ -10,3 +10,9 @@ reports/artifacts/
 .env.*
 !.env.example
 .npmrc
+!.npmrc.example
+.worktrees/
+*.pem
+*.key
+*.p12
+*.pfx
