@@ -4,3 +4,9 @@ test-results/
 playwright-report/
 reports/artifacts/
 *.log
+
+# Local credentials and environment overrides
+.env
+.env.*
+!.env.example
+.npmrc
