@@ -110,7 +110,8 @@ describe("repository hygiene scanner", () => {
   it("detects a sensitive UTF-16 file", () => {
     const root = createRepository();
     const token = ["gh", "p_", "d".repeat(36)].join("");
-    writeRepositoryFile(root, "notes.txt", Buffer.from(token, "utf16le"));
+    const oddLengthContent = Buffer.concat([Buffer.from(token, "utf16le"), Buffer.from([0xff])]);
+    writeRepositoryFile(root, "notes.txt", oddLengthContent);
     add(root, "notes.txt");
 
     const result = scan(root);
@@ -374,6 +375,14 @@ describe("repository hygiene scanner", () => {
 
     expect(source).not.toContain('runGit(["cat-file", "--batch"]');
     expect(source).toContain('spawn("git", ["cat-file", "--batch"]');
+  });
+
+  it("aligns odd-length buffers before UTF-16 decoding", () => {
+    const source = readFileSync(scannerPath, "utf8");
+
+    expect(source).toContain("const utf16Length = buffer.length - (buffer.length % 2);");
+    expect(source).toContain('buffer.subarray(0, utf16Length).toString("utf16le")');
+    expect(source).not.toContain('buffer.toString("utf16le")');
   });
 
   it("scans the exact commit selected by the pre-push environment", () => {

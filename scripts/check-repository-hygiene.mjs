@@ -253,8 +253,9 @@ function readCandidate(path) {
 function decodeBuffer(buffer) {
   const variants = [buffer.toString("utf8")];
   if (buffer.subarray(0, 8192).includes(0)) {
-    variants.push(buffer.toString("utf16le"));
-    const swapped = Buffer.allocUnsafe(buffer.length - (buffer.length % 2));
+    const utf16Length = buffer.length - (buffer.length % 2);
+    variants.push(buffer.subarray(0, utf16Length).toString("utf16le"));
+    const swapped = Buffer.allocUnsafe(utf16Length);
     for (let index = 0; index < swapped.length; index += 2) {
       swapped[index] = buffer[index + 1];
       swapped[index + 1] = buffer[index];
