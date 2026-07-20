@@ -4,3 +4,15 @@ test-results/
 playwright-report/
 reports/artifacts/
 *.log
+
+# Local credentials and environment overrides
+.env
+.env.*
+!.env.example
+.npmrc
+!.npmrc.example
+.worktrees/
+*.pem
+*.key
+*.p12
+*.pfx

@@ -1,19 +1,33 @@
 # Security Policy
 
-## Reporting a Vulnerability
-
-Report potential vulnerabilities privately through this repository's GitHub Security Advisories page using Private Vulnerability Reporting. Do not open a public issue, pull request, or discussion for an unpatched vulnerability.
-
 ## Supported Versions
 
-Supported versions and the security-fix support window will be documented with each public release.
+| Version | Supported |
+| --- | --- |
+| 0.1.x | Yes |
+| < 0.1.0 | No |
 
-## Before a Public npm Release
+## Reporting a Vulnerability
 
-Keep Private Vulnerability Reporting active and enable GitHub's available dependency and secret-scanning alerts. Bootstrap the brand-new npm package interactively with maintainer 2FA and no automation token because trusted and staged publishing require an existing package.
+Report potential vulnerabilities through [GitHub Private Vulnerability Reporting](https://github.com/kim1124/comins-table/security/advisories/new). Do not open a public issue, pull request, or discussion for an unpatched vulnerability.
 
-After bootstrap, register the exact repository, `publish.yml`, and `npm` environment as the trusted publisher. Allow only `npm stage publish`, disallow token publishing, and require maintainer 2FA approval for every staged version.
+Include the affected version, impact, reproduction steps or a proof of concept, and any known mitigations. Do not include credentials, personal data, or unrelated production data.
 
-## Disclosure
+## Response Process
 
-The maintainer will assess the report, prepare a remediation when applicable, and decide whether to publish a GitHub security advisory or request a CVE after the remediation is available.
+- The maintainer targets an initial acknowledgement within three business days.
+- The report will be triaged for impact, exploitability, affected versions, and an appropriate disclosure plan.
+- The reporter will receive a status update at least every seven days while investigation or remediation remains active.
+- Remediation timing depends on severity, complexity, and release risk. A fixed patch deadline is not guaranteed.
+
+## Release Security Controls
+
+- Keep Private Vulnerability Reporting, dependency alerts, secret scanning, and push protection active.
+- Require maintainer two-factor authentication for account and release approval.
+- Publish only through `.github/workflows/publish.yml`, the GitHub `npm` environment, and the registered npm trusted publisher.
+- Use OIDC trusted publishing and `npm stage publish`; do not create or store a long-lived npm automation token for releases.
+- Verify the requested package version, the consumer install, the complete project gate, and the dry-run package contents before staging a release.
+
+## Coordinated Disclosure
+
+The maintainer and reporter should coordinate public disclosure after a remediation or mitigation is available. The maintainer will decide whether to publish a GitHub security advisory or request a CVE based on the confirmed impact.
