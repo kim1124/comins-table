@@ -1,7 +1,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -322,6 +322,51 @@ describe("repository hygiene scanner", () => {
     expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(1);
     expect(result.stderr).toContain("history-provider-token");
     expect(result.stderr).not.toContain(token);
+  });
+
+  it("keeps each reachable history content batch within 128 objects", () => {
+    const root = createRepository();
+    for (let index = 0; index < 140; index += 1) {
+      writeRepositoryFile(root, `src/history-${index}.txt`, `safe fixture ${index}\n`);
+    }
+    add(root, "src");
+    execFileSync("git", ["commit", "--quiet", "-m", "large safe history"], { cwd: root });
+
+    const realGit = execFileSync("/usr/bin/env", ["sh", "-c", "command -v git"], {
+      encoding: "utf8",
+    }).trim();
+    const binaryDirectory = join(root, "test-bin");
+    const gitWrapper = join(binaryDirectory, "git");
+    writeRepositoryFile(
+      root,
+      "test-bin/git",
+      [
+        "#!/bin/sh",
+        "set -eu",
+        'if [ "$1" = "cat-file" ] && [ "${2:-}" = "--batch" ]; then',
+        '  input_file="$(mktemp)"',
+        '  trap \'rm -f "$input_file"\' 0',
+        '  cat > "$input_file"',
+        '  object_count="$(wc -l < "$input_file")"',
+        '  if [ "$object_count" -gt 128 ]; then',
+        '    echo "history content batch exceeded 128 objects" >&2',
+        "    exit 86",
+        "  fi",
+        '  "$COMINS_TEST_REAL_GIT" "$@" < "$input_file"',
+        "  exit $?",
+        "fi",
+        'exec "$COMINS_TEST_REAL_GIT" "$@"',
+        "",
+      ].join("\n"),
+    );
+    chmodSync(gitWrapper, 0o755);
+
+    const result = scanWithEnvironment(root, {
+      COMINS_TEST_REAL_GIT: realGit,
+      PATH: `${binaryDirectory}${delimiter}${process.env.PATH ?? ""}`,
+    });
+
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
   });
 
   it("scans the exact commit selected by the pre-push environment", () => {

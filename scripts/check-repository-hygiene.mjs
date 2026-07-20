@@ -29,6 +29,7 @@ if (
 }
 const repositoryRoot = runGitText(["rev-parse", "--show-toplevel"]).trim();
 const benchmarkExclusions = new Set(["scripts/check-repository-hygiene.mjs"]);
+const historyContentBatchSize = 128;
 const findings = [];
 const findingKeys = new Set();
 const redactedPaths = new Set();
@@ -501,37 +502,40 @@ function scanReachableBlobHistory() {
     return;
   }
 
-  const typeByObjectId = new Map(selected.map(({ objectId, type }) => [objectId, type]));
-  const batch = runGit(["cat-file", "--batch"], {
-    input: Buffer.from(`${selected.map(({ objectId }) => objectId).join("\n")}\n`, "utf8"),
-    maxBuffer: 256 * 1024 * 1024,
-    stdio: ["pipe", "pipe", "pipe"],
-  });
-
-  let offset = 0;
   let objectIndex = 0;
-  while (offset < batch.length) {
-    const headerEnd = batch.indexOf(10, offset);
-    if (headerEnd < 0) {
-      break;
+  for (let start = 0; start < selected.length; start += historyContentBatchSize) {
+    const selectedBatch = selected.slice(start, start + historyContentBatchSize);
+    const typeByObjectId = new Map(selectedBatch.map(({ objectId, type }) => [objectId, type]));
+    const batch = runGit(["cat-file", "--batch"], {
+      input: Buffer.from(`${selectedBatch.map(({ objectId }) => objectId).join("\n")}\n`, "utf8"),
+      maxBuffer: 256 * 1024 * 1024,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+
+    let offset = 0;
+    while (offset < batch.length) {
+      const headerEnd = batch.indexOf(10, offset);
+      if (headerEnd < 0) {
+        break;
+      }
+      const [objectId = "", type = "", sizeText = ""] = batch
+        .subarray(offset, headerEnd)
+        .toString("utf8")
+        .split(" ");
+      const size = Number(sizeText);
+      if (!Number.isSafeInteger(size) || size < 0) {
+        break;
+      }
+      const contentStart = headerEnd + 1;
+      const contentEnd = contentStart + size;
+      const content = decodeBuffer(batch.subarray(contentStart, contentEnd));
+      const objectType = typeByObjectId.get(objectId) ?? type;
+      const prefix = objectType === "tree" ? "history-path-" : "history-";
+      scanDetachedSensitiveText(`(history-${objectType})`, objectIndex + 1, content, prefix);
+      scannedHistoryObjects += 1;
+      objectIndex += 1;
+      offset = contentEnd + 1;
     }
-    const [objectId = "", type = "", sizeText = ""] = batch
-      .subarray(offset, headerEnd)
-      .toString("utf8")
-      .split(" ");
-    const size = Number(sizeText);
-    if (!Number.isSafeInteger(size) || size < 0) {
-      break;
-    }
-    const contentStart = headerEnd + 1;
-    const contentEnd = contentStart + size;
-    const content = decodeBuffer(batch.subarray(contentStart, contentEnd));
-    const objectType = typeByObjectId.get(objectId) ?? type;
-    const prefix = objectType === "tree" ? "history-path-" : "history-";
-    scanDetachedSensitiveText(`(history-${objectType})`, objectIndex + 1, content, prefix);
-    scannedHistoryObjects += 1;
-    objectIndex += 1;
-    offset = contentEnd + 1;
   }
 }
 
