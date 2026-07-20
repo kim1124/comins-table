@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+zero=0000000000000000000000000000000000000000
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ "$local_sha" = "$zero" ]; then
+    continue
+  fi
+  COMINS_HYGIENE_BASE="$remote_sha" COMINS_HYGIENE_REF="$local_sha" npm run check:hygiene
+done

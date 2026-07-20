@@ -20,8 +20,16 @@
 - Keep public documentation English-first under `docs/user/`; maintain matching Korean guidance under `docs/ko/` when public behavior changes.
 - Do not publish, tag, create a GitHub Release, or push a remote branch without an explicit user command. Publishing `comins-table@0.1.0` is an explicit release operation.
 
+## Repository Hygiene
+
+- Never track personal names, personal email addresses, identifying local absolute paths, authentication tokens, API keys, private keys, credential-bearing URLs, or secret dumps. The public repository owner handle and GitHub noreply identities are the only expected maintainer identifiers.
+- Keep third-party table or grid benchmark research, comparison matrices, copied samples, screenshots, license notes, source snapshots, and raw measurements under the ignored `.local/benchmarks/` tree only. Public documentation may describe Comins behavior but must not contain named competitor comparisons.
+- Run `npm run check:hygiene` before committing. Enable the repository hooks once per clone with `npm run setup:hooks`; pre-commit validates the complete staged index and local Git identity, while pre-push validates every local SHA being sent and its reachable history.
+- Do not bypass the hygiene check. Move intentional local-only material under `.local/` instead of adding an allowlist exception.
+
 ## Verification
 
+- For every change, `npm run verify` includes the repository hygiene check. Use `npm run check:hygiene -- --staged` when validating the exact index snapshot independently.
 - For library, type, or build changes, run `npm run verify` before reporting completion.
 - For public documentation changes, run the focused user-documentation test when applicable: `npm run test:run -- test/user-docs.test.ts`.
 - For Playground behavior or UI changes, run the affected Playwright spec; run `npm run test:e2e -- --workers=1` when the change can affect shared interaction or routing behavior.

@@ -13,14 +13,16 @@
   "homepage": "https://github.com/kim1124/comins-table#readme",
   "scripts": {
     "build": "vite build && tsc -p tsconfig.build.json",
+    "check:hygiene": "node scripts/check-repository-hygiene.mjs",
     "dev": "vite --config vite.example.config.ts",
     "lint": "tsc --noEmit",
+    "setup:hooks": "git config core.hooksPath .githooks",
     "test": "vitest",
     "test:consumer": "node scripts/consumer-smoke.mjs",
     "test:e2e": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep-invert @perf",
     "test:perf": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep @perf",
     "test:run": "vitest run",
-    "verify": "npm run lint && npm run test:run && npm run build",
+    "verify": "npm run check:hygiene && npm run lint && npm run test:run && npm run build",
     "verify:e2e": "npm run test:e2e",
     "verify:full": "npm run verify && npm run verify:e2e"
   },

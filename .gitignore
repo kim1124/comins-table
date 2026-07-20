@@ -11,8 +11,18 @@ reports/artifacts/
 !.env.example
 .npmrc
 !.npmrc.example
+.netrc
+.pypirc
+.secrets/
+credentials*.json
+service-account*.json
 .worktrees/
 *.pem
 *.key
 *.p12
 *.pfx
+*.jks
+*.keystore
+
+# Local-only private material and third-party benchmark research
+/.local/
