@@ -2,7 +2,7 @@
 
 Comins Table is a controlled React data table for data-heavy application screens. It provides a reusable table component, framework-independent core helpers, virtualized rendering, selection, clipboard helpers, pagination, sorting, two-level headers, summary rows, controlled Tree Grid rendering, lazy loading, infinite scrolling, loading states, and CSS-variable based theming.
 
-Comins Table is built as a standalone open-source package. It does not wrap AG Grid, MUI X, TanStack Table, or another table/grid implementation.
+Comins Table is built as a standalone open-source package. It does not wrap another table or grid implementation.
 
 ## Repository Scope
 

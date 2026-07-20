@@ -32,6 +32,16 @@ try {
   const packed = JSON.parse(runNpm(["pack", "--json", "--pack-destination", temporaryRoot]));
   const tarballName = packed[0]?.filename;
   assert.equal(typeof tarballName, "string", "npm pack did not return a tarball filename");
+  assert.ok(Array.isArray(packed[0]?.files) && packed[0].files.length > 0, "npm pack returned no files");
+  const packageFiles = packed[0].files.map((file) => file.path);
+  const repositoryOnlyRoots = [".githooks", ".local", "reports", "scripts", "test"];
+  for (const path of packageFiles) {
+    assert.equal(
+      repositoryOnlyRoots.some((root) => path === root || path.startsWith(`${root}/`)),
+      false,
+      `repository-only file leaked into package: ${path}`,
+    );
+  }
 
   const consumerRoot = join(temporaryRoot, "consumer");
   await mkdir(consumerRoot);
