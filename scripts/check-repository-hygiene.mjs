@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { lstatSync, readFileSync, readlinkSync } from "node:fs";
 import { isAbsolute, join, relative } from "node:path";
@@ -110,7 +110,7 @@ scanGitIdentity();
 scanReachableCommitMetadata();
 if (!stagedOnly) {
   scanReachableTagMetadata();
-  scanReachableBlobHistory();
+  await scanReachableBlobHistory();
   scanNewCommitRange();
 }
 
@@ -464,7 +464,7 @@ function scanReachableTagMetadata() {
   }
 }
 
-function scanReachableBlobHistory() {
+async function scanReachableBlobHistory() {
   let objectIds;
   try {
     objectIds = runGit(["rev-list", "--objects", "--no-object-names", historyRef])
@@ -505,38 +505,85 @@ function scanReachableBlobHistory() {
   let objectIndex = 0;
   for (let start = 0; start < selected.length; start += historyContentBatchSize) {
     const selectedBatch = selected.slice(start, start + historyContentBatchSize);
-    const typeByObjectId = new Map(selectedBatch.map(({ objectId, type }) => [objectId, type]));
-    const batch = runGit(["cat-file", "--batch"], {
-      input: Buffer.from(`${selectedBatch.map(({ objectId }) => objectId).join("\n")}\n`, "utf8"),
-      maxBuffer: 256 * 1024 * 1024,
-      stdio: ["pipe", "pipe", "pipe"],
-    });
+    objectIndex = await scanHistoryContentBatch(selectedBatch, objectIndex);
+  }
+}
 
-    let offset = 0;
-    while (offset < batch.length) {
-      const headerEnd = batch.indexOf(10, offset);
-      if (headerEnd < 0) {
+async function scanHistoryContentBatch(selectedBatch, objectIndex) {
+  const typeByObjectId = new Map(selectedBatch.map(({ objectId, type }) => [objectId, type]));
+  const child = spawn("git", ["cat-file", "--batch"], {
+    cwd: repositoryRoot,
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  const completion = new Promise((resolve, reject) => {
+    child.once("error", reject);
+    child.once("close", (code, signal) => resolve({ code, signal }));
+  });
+  let stderr = "";
+  child.stderr.setEncoding("utf8");
+  child.stderr.on("data", (chunk) => {
+    if (stderr.length < 16 * 1024) {
+      stderr += chunk;
+    }
+  });
+  child.stdin.on("error", () => {
+    // The child close status below is the authoritative batch failure signal.
+  });
+  child.stdin.end(`${selectedBatch.map(({ objectId }) => objectId).join("\n")}\n`);
+
+  let pending = Buffer.alloc(0);
+  let expectedObject = null;
+  let processedObjects = 0;
+
+  for await (const chunk of child.stdout) {
+    pending = pending.length === 0 ? chunk : Buffer.concat([pending, chunk]);
+
+    while (pending.length > 0) {
+      if (expectedObject === null) {
+        const headerEnd = pending.indexOf(10);
+        if (headerEnd < 0) {
+          break;
+        }
+        const [objectId = "", type = "", sizeText = ""] = pending
+          .subarray(0, headerEnd)
+          .toString("utf8")
+          .split(" ");
+        const size = Number(sizeText);
+        if (!typeByObjectId.has(objectId) || !Number.isSafeInteger(size) || size < 0) {
+          throw new Error("Repository hygiene history stream returned malformed output.");
+        }
+        expectedObject = { objectId, size, type };
+        pending = pending.subarray(headerEnd + 1);
+      }
+
+      if (pending.length < expectedObject.size + 1) {
         break;
       }
-      const [objectId = "", type = "", sizeText = ""] = batch
-        .subarray(offset, headerEnd)
-        .toString("utf8")
-        .split(" ");
-      const size = Number(sizeText);
-      if (!Number.isSafeInteger(size) || size < 0) {
-        break;
+      if (pending[expectedObject.size] !== 10) {
+        throw new Error("Repository hygiene history stream returned malformed content.");
       }
-      const contentStart = headerEnd + 1;
-      const contentEnd = contentStart + size;
-      const content = decodeBuffer(batch.subarray(contentStart, contentEnd));
-      const objectType = typeByObjectId.get(objectId) ?? type;
+
+      const content = decodeBuffer(pending.subarray(0, expectedObject.size));
+      const objectType = typeByObjectId.get(expectedObject.objectId) ?? expectedObject.type;
       const prefix = objectType === "tree" ? "history-path-" : "history-";
       scanDetachedSensitiveText(`(history-${objectType})`, objectIndex + 1, content, prefix);
       scannedHistoryObjects += 1;
       objectIndex += 1;
-      offset = contentEnd + 1;
+      processedObjects += 1;
+      pending = pending.subarray(expectedObject.size + 1);
+      expectedObject = null;
     }
   }
+
+  const { code, signal } = await completion;
+  if (code !== 0 || signal || stderr) {
+    throw new Error("Repository hygiene history stream failed.");
+  }
+  if (expectedObject !== null || pending.length > 0 || processedObjects !== selectedBatch.length) {
+    throw new Error("Repository hygiene history stream ended before all objects were scanned.");
+  }
+
+  return objectIndex;
 }
 
 function scanNewCommitRange() {

@@ -369,6 +369,13 @@ describe("repository hygiene scanner", () => {
     expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
   });
 
+  it("streams reachable history content instead of synchronously capturing binary output", () => {
+    const source = readFileSync(scannerPath, "utf8");
+
+    expect(source).not.toContain('runGit(["cat-file", "--batch"]');
+    expect(source).toContain('spawn("git", ["cat-file", "--batch"]');
+  });
+
   it("scans the exact commit selected by the pre-push environment", () => {
     const root = createRepository();
     writeRepositoryFile(root, "src/index.ts", "export const value = 1;\n");
