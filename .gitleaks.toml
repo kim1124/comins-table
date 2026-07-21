@@ -19,6 +19,13 @@ regexes = [
   '''(?i)^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@(?:example\.(?:com|net|org)|example\.test|invalid)$''',
 ]
 
+[[rules.allowlists]]
+description = "Approved npm package version coordinates"
+regexTarget = "match"
+regexes = [
+  '''(?i)^[a-z0-9._-]+@[0-9]+\.[0-9]+\.[0-9]+(?:-[a-z0-9.-]+)?$''',
+]
+
 [[rules]]
 id = "comins-local-account-path"
 description = "Local account path"

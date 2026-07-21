@@ -94,6 +94,7 @@ test('pins shared Gitleaks, hooks, scripts, and workflows', () => {
     'comins-sensitive-filename',
   ]) assert.match(config, new RegExp(`^id = "${id}"$`, 'm'));
   assert.doesNotMatch(config, /^\[\[allowlists\]\]$/m);
+  assert.match(config, /Approved npm package version coordinates/);
 
   assert.match(preCommit, /npm run check:hygiene -- --staged/);
   assert.match(preCommit, /check-public-identities\.mjs/);
