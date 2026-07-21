@@ -22,9 +22,11 @@
     "test:e2e": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep-invert @perf",
     "test:perf": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep @perf",
     "test:run": "vitest run",
-    "verify": "npm run check:hygiene && npm run lint && npm run test:run && npm run build",
+    "test:security": "node --test test/sensitive-data-gates.node.mjs test/package-artifact-gate.node.mjs",
+    "verify": "npm run check:hygiene && npm run test:security && npm run lint && npm run test:run && npm run build",
     "verify:e2e": "npm run test:e2e",
-    "verify:full": "npm run verify && npm run verify:e2e"
+    "verify:full": "npm run verify && npm run verify:e2e",
+    "verify:package-artifact": "node scripts/verify-package-artifact.mjs"
   },
   "exports": {
     ".": {

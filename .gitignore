@@ -26,3 +26,5 @@ service-account*.json
 
 # Local-only private material and third-party benchmark research
 /.local/
+/.gitleaks-output/
+/gitleaks

@@ -31,3 +31,7 @@ Include the affected version, impact, reproduction steps or a proof of concept, 
 ## Coordinated Disclosure
 
 The maintainer and reporter should coordinate public disclosure after a remediation or mitigation is available. The maintainer will decide whether to publish a GitHub security advisory or request a CVE based on the confirmed impact.
+
+## Credential and PII Incidents
+
+Treat a credential/PII incident as a release blocker. Stop the affected release, rotate any exposed credential, preserve non-public evidence, and coordinate remediation without public disclosure of the sensitive value.
