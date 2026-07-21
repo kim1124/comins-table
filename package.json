@@ -74,6 +74,6 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "lucide-react": "^1.17.0"
+    "lucide-react": "^1.25.0"
   }
 }
