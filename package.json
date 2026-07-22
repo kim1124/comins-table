@@ -15,6 +15,7 @@
     "build": "vite build && tsc -p tsconfig.build.json",
     "check:hygiene": "node scripts/check-repository-hygiene.mjs",
     "dev": "vite --config vite.example.config.ts",
+    "docs:readme-gif": "node scripts/capture-readme-demo.mjs",
     "lint": "tsc --noEmit",
     "setup:hooks": "git config core.hooksPath .githooks",
     "test": "vitest",
