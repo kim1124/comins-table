@@ -27,7 +27,7 @@ Comins Table is standalone and does not wrap another table or grid implementatio
 | --- | --- |
 | React | `>=18.0.0 <20.0.0` |
 | React DOM | `>=18.0.0 <20.0.0` |
-| TypeScript | Declarations bundled with every package entry point |
+| TypeScript | Declarations bundled with every JavaScript entry point; CSS available through the stylesheet export |
 | Chrome and Edge | Current stable Chromium-based releases |
 | Automated browser gate | Playwright-bundled Chromium |
 | Firefox and Safari | Outside the supported contract until Firefox and WebKit projects are added |
@@ -77,7 +77,7 @@ const columns: Array<CominsTableColumn<UserRow>> = [
 
 export function UsersTable() {
   const [data, setData] = useState<UserRow[]>([
-    { active: true, age: 31, id: "u-1", name: "Kim", role: "Admin" },
+    { active: true, age: 31, id: "u-1", name: "Example user", role: "Admin" },
   ]);
 
   return (
@@ -196,7 +196,9 @@ The local Playground starts at [`/docs/getting-started`](http://127.0.0.1:4002/d
 
 ## Documentation
 
-Start with the [English Quick Start](docs/user/01-quick-start.md), then browse [all English feature guides](docs/user/). The detailed [Tree Grid](docs/user/17-tree-grid.md) and [Summary Row](docs/user/18-summary-row.md) contracts include runnable examples and edge cases. Korean guides are retained under [`docs/ko/`](docs/ko/) as secondary documentation.
+Start with the [English Quick Start](https://github.com/kim1124/comins-table/blob/main/docs/user/01-quick-start.md), then browse [all English feature guides](https://github.com/kim1124/comins-table/tree/main/docs/user). The detailed [Tree Grid](https://github.com/kim1124/comins-table/blob/main/docs/user/17-tree-grid.md) and [Summary Row](https://github.com/kim1124/comins-table/blob/main/docs/user/18-summary-row.md) contracts include runnable examples and edge cases. [Korean guides](https://github.com/kim1124/comins-table/tree/main/docs/ko) are retained as secondary documentation.
+
+Use the [source repository](https://github.com/kim1124/comins-table) for development context, review the [changelog](https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md) for version history, and follow the [security policy](https://github.com/kim1124/comins-table/blob/main/SECURITY.md) for vulnerability reporting.
 
 ## Current Boundaries
 

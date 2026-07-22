@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
+import { finalizeReadmeGif } from "./finalize-readme-gif.mjs";
 
 const scriptsRoot = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = dirname(scriptsRoot);
@@ -17,6 +18,7 @@ let browser;
 let frameRoot;
 let frameNumber = 0;
 let port;
+let readyOutputPath;
 let stagingRoot;
 
 async function settleLayout(page) {
@@ -124,7 +126,26 @@ async function resetFlatHorizontalScroll(page) {
     });
 }
 
-async function dragHeader(page, source, target) {
+async function assertHeaderMoveCommitted(page, source, target, expectedOrder) {
+  const placeholder = await source.getAttribute("data-column-placeholder");
+  const dropTarget = await target.getAttribute("data-column-drop-target");
+  const markerVisible = await target.locator(".comins-column-drop-marker").isVisible();
+  const ghostVisible = await page.getByTestId("column-move-ghost").isVisible();
+  if (placeholder !== "true" || dropTarget !== "true" || !markerVisible || !ghostVisible) {
+    throw new Error("readme-gif: Header move preview unavailable");
+  }
+
+  await page.mouse.up();
+  const actualOrder = await page
+    .getByTestId("readme-demo-flat")
+    .locator(".comins-table__header-table thead th[data-comins-column-id]")
+    .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-comins-column-id")));
+  if (actualOrder.length !== expectedOrder.length || actualOrder.some((id, index) => id !== expectedOrder[index])) {
+    throw new Error("readme-gif: Header move was not committed");
+  }
+}
+
+async function dragHeader(page, source, target, expectedOrder) {
   const sourceBox = await source.boundingBox();
   const targetBox = await target.boundingBox();
   if (!sourceBox || !targetBox) throw new Error("readme-gif: Header geometry unavailable");
@@ -140,9 +161,43 @@ async function dragHeader(page, source, target) {
     );
     await capture(page);
   }
-  await page.mouse.up();
+  await assertHeaderMoveCommitted(page, source, target, expectedOrder);
   await resetFlatHorizontalScroll(page);
   await capture(page, 4);
+}
+
+async function cleanupGenerationResources() {
+  let cleanupError;
+  const cleanup = async (operation) => {
+    try {
+      await operation();
+    } catch (error) {
+      cleanupError ??= error;
+    }
+  };
+
+  await cleanup(async () => {
+    await browser?.close();
+    browser = undefined;
+  });
+  await cleanup(async () => {
+    if (server && server.exitCode === null) {
+      const serverExit = once(server, "exit");
+      server.kill("SIGTERM");
+      await serverExit;
+    }
+    server = undefined;
+  });
+  await cleanup(async () => {
+    if (stagingRoot) await rm(stagingRoot, { force: true, recursive: true });
+    stagingRoot = undefined;
+  });
+  await cleanup(async () => {
+    if (frameRoot) await rm(frameRoot, { force: true, recursive: true });
+    frameRoot = undefined;
+  });
+
+  if (cleanupError) throw cleanupError;
 }
 
 async function generateReadmeGif() {
@@ -177,7 +232,12 @@ async function generateReadmeGif() {
     const flat = page.getByTestId("readme-demo-flat");
     await flat.getByTestId("header-age").click();
     await capture(page, 6);
-    await dragHeader(page, flat.getByTestId("header-name"), flat.getByTestId("header-team"));
+    await dragHeader(
+      page,
+      flat.getByTestId("header-age"),
+      flat.getByTestId("header-name"),
+      ["age", "name", "team", "score", "tasks"],
+    );
 
     await flat
       .getByTestId("virtual-list-record-a-tasks")
@@ -241,27 +301,23 @@ async function generateReadmeGif() {
 
     const result = await stat(stagedOutputPath);
     if (result.size > 5 * 1024 * 1024) throw new Error("readme-gif: size budget exceeded");
-    await rename(stagedOutputPath, outputPath);
-    process.stdout.write("README GIF generated.\n");
-  } finally {
+    readyOutputPath = join(outputDirectory, `.comins-table-demo.${process.pid}.ready.gif`);
+    await rm(readyOutputPath, { force: true });
+    await rename(stagedOutputPath, readyOutputPath);
+  } catch (error) {
     try {
-      await browser?.close();
+      await cleanupGenerationResources();
     } finally {
-      try {
-        if (server && server.exitCode === null) {
-          const serverExit = once(server, "exit");
-          server.kill("SIGTERM");
-          await serverExit;
-        }
-      } finally {
-        try {
-          if (stagingRoot) await rm(stagingRoot, { force: true, recursive: true });
-        } finally {
-          await rm(frameRoot, { force: true, recursive: true });
-        }
-      }
+      if (readyOutputPath) await rm(readyOutputPath, { force: true });
     }
+    throw error;
   }
+
+  await finalizeReadmeGif({
+    cleanup: cleanupGenerationResources,
+    outputPath,
+    readyOutputPath,
+  });
 }
 
 try {

@@ -22,8 +22,12 @@ test("README demo presents the real Table and Tree Grid interaction storyboard",
   await ageHeader.click();
   await expect(ageHeader).toHaveAttribute("data-sort-direction", "asc");
 
-  const source = flat.getByTestId("header-name");
-  const target = flat.getByTestId("header-team");
+  const headers = flat.locator(".comins-table__header-table thead th[data-comins-column-id]");
+  await expect.poll(() => headers.evaluateAll((elements) =>
+    elements.map((element) => element.getAttribute("data-comins-column-id")),
+  )).toEqual(["name", "team", "age", "score", "tasks"]);
+  const source = flat.getByTestId("header-age");
+  const target = flat.getByTestId("header-name");
   const sourceBox = await source.boundingBox();
   const targetBox = await target.boundingBox();
   if (!sourceBox || !targetBox) throw new Error("README demo Header geometry unavailable");
@@ -31,8 +35,15 @@ test("README demo presents the real Table and Tree Grid interaction storyboard",
   await page.mouse.down();
   await page.mouse.move(sourceBox.x + sourceBox.width / 2 + 8, sourceBox.y + sourceBox.height / 2);
   await expect(source).toHaveAttribute("data-column-placeholder", "true");
+  await expect(page.getByTestId("column-move-ghost")).toBeVisible();
   await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2);
+  await expect(target).toHaveAttribute("data-column-drop-target", "true");
+  await expect(target.locator(".comins-column-drop-marker")).toBeVisible();
   await page.mouse.up();
+  await expect(page.getByTestId("column-move-ghost")).toHaveCount(0);
+  await expect.poll(() => headers.evaluateAll((elements) =>
+    elements.map((element) => element.getAttribute("data-comins-column-id")),
+  )).toEqual(["age", "name", "team", "score", "tasks"]);
 
   const list = flat.getByTestId("virtual-list-record-a-tasks");
   const firstItem = list.locator("[data-comins-virtual-list-item='true']").first();
