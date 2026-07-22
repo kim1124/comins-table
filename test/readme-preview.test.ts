@@ -6,7 +6,81 @@ import { describe, expect, it } from "vitest";
 
 const gifPath = "docs/assets/comins-table-demo.gif";
 
+function getReadmeSection(readme: string, heading: string) {
+  const start = readme.indexOf(`## ${heading}\n`);
+  const end = readme.indexOf("\n## ", start + heading.length + 4);
+
+  return readme.slice(start, end < 0 ? undefined : end);
+}
+
 describe("README preview contract", () => {
+  it("separates controlled data write-back from observable internal view state", () => {
+    const readme = readFileSync("README.md", "utf8");
+    const controlledModel = getReadmeSection(readme, "Controlled Model");
+
+    expect(controlledModel).toContain("Only `onChangeData` requires application write-back");
+    expect(controlledModel).toContain("internal view state");
+    expect(controlledModel).toContain("observe those changes");
+    expect(controlledModel).toContain("supported Ref API");
+    expect(controlledModel).toContain("`setSelectedRow` and `setSelectedRows`");
+    expect(controlledModel).toContain("`setColumnLayout`");
+    expect(controlledModel).toContain("`setSortState` and `clearSort`");
+    expect(controlledModel).not.toContain("Apply each callback payload to the owning state");
+  });
+
+  it("keeps the README architecture and public boundaries structurally stable", () => {
+    const readme = readFileSync("README.md", "utf8");
+    const headings = readme.match(/^## .+$/gmu) ?? [];
+
+    expect(headings).toEqual([
+      "## Why Comins Table",
+      "## Support",
+      "## Installation",
+      "## Quick Start",
+      "## Controlled Model",
+      "## Package Entry Points",
+      "## Header And Layout",
+      "## Rows, Cells, And Selection",
+      "## Virtualization And Loading",
+      "## Summary Row",
+      "## Tree Grid",
+      "## Components And Renderers",
+      "## Clipboard And Export",
+      "## Styling And Themes",
+      "## Ref API",
+      "## Playground",
+      "## Documentation",
+      "## Current Boundaries",
+      "## Development",
+      "## Trusted Publishing",
+    ]);
+
+    const packageEntries = getReadmeSection(readme, "Package Entry Points")
+      .split("\n")
+      .filter((line) => line.startsWith("| `comins-table"));
+    expect(packageEntries).toHaveLength(5);
+
+    const support = getReadmeSection(readme, "Support");
+    for (const surface of ["React", "React DOM", "TypeScript", "Chrome and Edge", "Firefox and Safari", "SSR", "Runtime network behavior"]) {
+      expect(support).toContain(`| ${surface} |`);
+    }
+
+    const boundaries = getReadmeSection(readme, "Current Boundaries");
+    for (const boundary of ["Server-side Row models", "Row grouping", "pivoting", "charts", "AI assistance", "remote Tree loading", "hierarchy pagination", "Tree Row drag", "Tree Row copy/paste", "visual fill handle", "Firefox", "Safari", "SSR"]) {
+      expect(boundaries).toContain(boundary);
+    }
+
+    const tree = getReadmeSection(readme, "Tree Grid");
+    expect(tree).toContain("`expand(nodeIds?)`");
+    expect(tree).toContain("`fold(nodeIds?)`");
+    expect(tree).toContain("ancestor remains folded");
+
+    const trustedPublishing = getReadmeSection(readme, "Trusted Publishing");
+    for (const term of ["`publish.yml`", "OIDC", "`npm stage publish`", "protected `npm` environment"]) {
+      expect(trustedPublishing).toContain(term);
+    }
+  });
+
   it("keeps the README consumer-first and feature-complete", () => {
     const readme = readFileSync("README.md", "utf8");
     const required = [

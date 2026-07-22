@@ -95,14 +95,13 @@ export function UsersTable() {
 
 ## Controlled Model
 
-Comins Table is a CSR-focused controlled component. The application owns the `data` array and writes callback results back into its state.
+Comins Table is a CSR-focused controlled component for application-owned data. The application owns the `data` array.
 
-- `onChangeData` emits the next flat row array or Tree Grid node array after table-owned mutations.
-- `onChangeSelection` emits Row, Cell, and range selection state.
-- `onChangeColumnLayout` emits column order, width, and visibility state.
-- `onChangeSort` emits the next sort state.
+Only `onChangeData` requires application write-back. It emits the next flat Row array or Tree Grid node array after table-owned mutations; pass that array back through `data` to retain the change.
 
-The table does not replace application state internally. Apply each callback payload to the owning state when the UI should retain that change.
+Selection, column layout, and sort are internal view state. `onChangeSelection`, `onChangeColumnLayout`, and `onChangeSort` observe those changes so an application can coordinate or persist them externally; the table updates the corresponding view state even when a callback is omitted.
+
+Where restoration is supported, use the supported Ref API: `setSelectedRow` and `setSelectedRows` restore Row selection by visible index, `setColumnLayout` restores layout, and `setSortState` and `clearSort` restore or clear sorting. `getColumnLayout` and `getSortState` read the current layout and sort state.
 
 ## Package Entry Points
 
