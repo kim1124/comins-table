@@ -79,7 +79,7 @@ jobs:
             exit 1
           fi
 
-  gif-metadata:
+  gif_metadata:
     name: README GIF metadata
     runs-on: macos-latest
     timeout-minutes: 10
@@ -95,9 +95,18 @@ jobs:
       - run: npm run test:run -- test/readme-preview.test.ts
 
   verify:
-    needs: gif-metadata
+    if: ${{ always() }}
+    needs: gif_metadata
     runs-on: ubuntu-latest
     steps:
+      - name: Require README GIF metadata success
+        env:
+          GIF_METADATA_RESULT: ${{ needs.gif_metadata.result }}
+        run: |
+          if test "$GIF_METADATA_RESULT" != 'success'; then
+            printf '%s\n' 'readme-gif-metadata-check: failed' >&2
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false

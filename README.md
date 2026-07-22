@@ -135,13 +135,13 @@ Set `virtualized`, `rowHeight`, and `"buffer-size"` for fixed-height windowed re
 
 ## Summary Row
 
-See the [Summary Row guide](docs/user/18-summary-row.md) and run the [`/examples/summary-row`](http://127.0.0.1:4002/examples/summary-row) Playground route.
+See the [Summary Row guide](https://github.com/kim1124/comins-table/blob/main/docs/user/18-summary-row.md) and run the [`/examples/summary-row`](http://127.0.0.1:4002/examples/summary-row) Playground route.
 
 Configure `summary.columns` with built-in `count`, `sum`, `avg`, `min`, and `max` aggregation or a custom aggregator. The object form supports visible-column `colSpan`, post-aggregation `format`, and per-cell `className` and `style`; `summary.className` and `summary.style` apply to the footer Row.
 
 ## Tree Grid
 
-See the [Tree Grid guide](docs/user/17-tree-grid.md) and run the [`/examples/tree-grid`](http://127.0.0.1:4002/examples/tree-grid) Playground route.
+See the [Tree Grid guide](https://github.com/kim1124/comins-table/blob/main/docs/user/17-tree-grid.md) and run the [`/examples/tree-grid`](http://127.0.0.1:4002/examples/tree-grid) Playground route.
 
 Set `tree` and provide controlled `{ item, expand, children }` nodes. `defaultExpandAll` supplies the initial fallback expansion state and defaults to `true`; explicit node state wins. `expand(nodeIds?)` and `fold(nodeIds?)` update multiple node ids, while an omitted argument targets every branch and an empty array is a no-op. Descendant-only expansion is blocked while an ancestor remains folded unless both ids are included in the same call.
 

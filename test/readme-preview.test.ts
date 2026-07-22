@@ -16,12 +16,21 @@ function getReadmeSection(readme: string, heading: string) {
 describe("README preview contract", () => {
   it("makes the required Verify job depend on the macOS ImageIO metadata gate", () => {
     const workflow = readFileSync(".github/workflows/verify.yml", "utf8");
-    const metadataJob = workflow.match(/  gif-metadata:\n(?<body>[\s\S]*?)(?=\n  [a-z][a-z-]+:\n)/u)?.groups?.body ?? "";
+    const metadataJob = workflow.match(/  gif_metadata:\n(?<body>[\s\S]*?)(?=\n  [a-z][a-z_-]+:\n)/u)?.groups?.body ?? "";
     const verifyJob = workflow.match(/  verify:\n(?<body>[\s\S]*)$/u)?.groups?.body ?? "";
+    const verifySteps = verifyJob.slice(verifyJob.indexOf("steps:\n") + "steps:\n".length).trimStart();
+    const dependencyGateIndex = verifyJob.indexOf("- name: Require README GIF metadata success");
+    const checkoutIndex = verifyJob.indexOf("- uses: actions/checkout@");
 
     expect(metadataJob).toContain("runs-on: macos-latest");
     expect(metadataJob).toContain("npm run test:run -- test/readme-preview.test.ts");
-    expect(verifyJob).toContain("needs: gif-metadata");
+    expect(verifyJob).toContain("if: ${{ always() }}");
+    expect(verifyJob).toContain("needs: gif_metadata");
+    expect(verifyJob).toContain("GIF_METADATA_RESULT: ${{ needs.gif_metadata.result }}");
+    expect(verifyJob).toContain('test "$GIF_METADATA_RESULT" != \'success\'');
+    expect(verifySteps.startsWith("- name: Require README GIF metadata success")).toBe(true);
+    expect(dependencyGateIndex).toBeGreaterThanOrEqual(0);
+    expect(dependencyGateIndex).toBeLessThan(checkoutIndex);
   });
 
   it("separates controlled data write-back from observable internal view state", () => {
@@ -140,9 +149,9 @@ describe("README preview contract", () => {
   it("uses an explicit non-personal placeholder in the packaged Quick Start", () => {
     const readme = readFileSync("README.md", "utf8");
     const quickStart = getReadmeSection(readme, "Quick Start");
+    const names = [...quickStart.matchAll(/\bname:\s*"([^"]+)"/gu)].map((match) => match[1]);
 
-    expect(quickStart).toContain('name: "Example user"');
-    expect(quickStart).not.toContain('name: "Kim"');
+    expect(names).toEqual(["Example user"]);
   });
 
   it("keeps packaged documentation and maintenance links valid on npm", () => {
@@ -161,7 +170,7 @@ describe("README preview contract", () => {
     ]) {
       expect(documentation).toContain(url);
     }
-    expect(documentation).not.toMatch(/\]\(docs\//u);
+    expect(readme).not.toMatch(/\]\(docs\//u);
   });
 
   it("scopes declarations to JavaScript entries and styles to the stylesheet export", () => {
@@ -219,8 +228,8 @@ describe("README preview contract", () => {
     expect(capture).toContain("async function generateReadmeGif");
     expect(capture).toContain('process.stderr.write("readme-gif: generation failed\\n")');
     expect(finalizer.indexOf("await cleanup()"))
-      .toBeLessThan(finalizer.indexOf("await rename(readyOutputPath, outputPath)"));
-    expect(finalizer.trimEnd().endsWith("await rename(readyOutputPath, outputPath);\n}")).toBe(true);
+      .toBeLessThan(finalizer.indexOf("await renameFile(readyOutputPath, outputPath)"));
+    expect(finalizer).not.toContain("process.stdout");
     expect(inspector).toContain("ImageIO");
     expect(inspector).toContain("CGImageSourceCreateImageAtIndex");
   });
@@ -243,6 +252,35 @@ describe("README preview contract", () => {
         outputPath,
         readyOutputPath,
       })).rejects.toThrow("injected cleanup failure");
+      expect(readFileSync(outputPath, "utf8")).toBe("current asset");
+      expect(existsSync(readyOutputPath)).toBe(false);
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it("preserves the current GIF and removes the ready file when final rename fails", async () => {
+    const root = mkdtempSync(join(tmpdir(), "comins-table-readme-rename-failure-"));
+    const outputPath = join(root, "comins-table-demo.gif");
+    const readyOutputPath = join(root, ".comins-table-demo.ready.gif");
+
+    try {
+      writeFileSync(outputPath, "current asset");
+      writeFileSync(readyOutputPath, "ready asset");
+      const finalizerUrl = new URL("../scripts/finalize-readme-gif.mjs", import.meta.url).href;
+      const { finalizeReadmeGif } = await import(/* @vite-ignore */ finalizerUrl);
+      const renameError = new Error("injected rename failure");
+
+      await expect(finalizeReadmeGif(
+        { cleanup: async () => undefined, outputPath, readyOutputPath },
+        {
+          removeFile: async (path: string) => {
+            rmSync(path, { force: true });
+            throw new Error("injected ready cleanup failure");
+          },
+          renameFile: async () => { throw renameError; },
+        },
+      )).rejects.toBe(renameError);
       expect(readFileSync(outputPath, "utf8")).toBe("current asset");
       expect(existsSync(readyOutputPath)).toBe(false);
     } finally {
