@@ -135,8 +135,8 @@ import {
 - Cell formatting, custom renderer, cell events, single-cell selection, range selection, and drag range selection.
 - Clipboard helpers with `props.copyable`, `props.pasteable`, and disabled guard support.
 - Pagination, loading and empty states, virtualized rendering, infinite scroll, and append-mode lazy loading.
-- Configurable Summary Row aggregation, including leaf-only totals in Tree Grid.
-- Controlled Tree Grid data with `{ item, expand, children }`, existing item-based columns, recursive sibling sorting, and accessible expanders.
+- Configurable Summary Row aggregation with `count`, `sum`, `avg`, `min`, `max`, custom aggregators, visible-column `colSpan`, output `format`, and row/cell styling.
+- Controlled Tree Grid data with `{ item, expand, children }`, initial `defaultExpandAll`, array-based ref expansion, existing component/renderer cells, recursive sibling sorting, and accessible expanders.
 - CSS-variable based themes, including `comins-table-theme--basic`, `--dark`, `--skyblue`, `--mint`, `--gray`, and `--orange`.
 - Built-in header and cell controls: `button`, `input`, `checkbox`, `radio`, `select`, `toggle`, `progress`, header `menu`, and cell `virtual-list`.
 - CSV and JSON export helpers.
@@ -159,8 +159,8 @@ import {
 | `virtualized`, `"buffer-size"`, `rowHeight` | Enable and tune virtualized row rendering. |
 | `infiniteScroll`, `infiniteScrollThreshold`, `hasMoreRows`, `loadingMore`, `onLoadMore` | Control append loading when the body viewport nears the bottom. |
 | `lazyLoad`, `lazyLoadBatchSize`, `lazyLoadMode`, `lazyLoadThreshold`, `onLazyLoad` | Control async append-mode data loading with `AbortSignal`. |
-| `summary` | Configures fixed footer aggregates by column. Tree Grid aggregates leaf items only. |
-| `tree` | Opts into controlled `{ item, expand, children }` data. Tree Grid does not support pagination, lazy loading, infinite scrolling, row drag, or row-level copy/paste in V1. |
+| `summary` | Configures fixed footer aggregates, `colSpan`, `format`, `className`, and `style` by column. Tree Grid aggregates leaf items only. |
+| `tree`, `defaultExpandAll` | Opt into controlled `{ item, expand, children }` data and set the initial fallback expansion state. `defaultExpandAll` defaults to `true`; explicit node state wins. Tree Grid does not support pagination, lazy loading, infinite scrolling, row drag, or row-level copy/paste in V1. |
 | `theme` | Supplies optional `className`, inline `style`, and density settings. |
 | `rowProps` | Supplies row class, style, disabled, and `rowProps.draggable` behavior. |
 
@@ -177,13 +177,18 @@ tableRef.current?.clearSort();
 tableRef.current?.setSelectedRow(0);
 tableRef.current?.setSelectedRows([0, 1]);
 tableRef.current?.setMoveTargetRow(3, 1);
+tableRef.current?.expand(["department-1", "team-1-1"]);
+tableRef.current?.fold(["team-1-1"]);
+tableRef.current?.expand(); // all Tree Grid branches
+tableRef.current?.fold(); // all Tree Grid branches
 ```
 
 `setSelectedRow`, `setSelectedRows`, and `setMoveTargetRow` use the visible row index after current sorting and pagination are applied.
+`expand(nodeIds?)` and `fold(nodeIds?)` accept readonly Tree Grid node-id arrays. Omitting the array targets every branch; an empty array is a no-op. A folded ancestor blocks descendant-only expansion unless both ids are included in the same call. Flat tables ignore these methods.
 
 ## Documentation
 
-English user documentation starts at `docs/user/01-quick-start.md`.
+English user documentation starts at `docs/user/01-quick-start.md`. Detailed Tree Grid and Summary Row contracts are in `docs/user/17-tree-grid.md` and `docs/user/18-summary-row.md`.
 
 The previous Korean documentation is preserved under `docs/ko/` as secondary documentation while the public package moves to English-first docs.
 
@@ -193,7 +198,7 @@ The previous Korean documentation is preserved under `docs/ko/` as secondary doc
 npm run dev
 ```
 
-The playground starts at `/docs/getting-started` and includes examples for CRUD, sizing, theme, loading and empty states, headers, column groups, pagination, infinite scroll, lazy load, virtualization, cells, rows, Tree Grid, built-in components, selection, clipboard, context menu, and export helpers.
+The playground starts at `/docs/getting-started` and includes examples for CRUD, sizing, theme, loading and empty states, headers, column groups, pagination, infinite scroll, lazy load, virtualization, cells, rows, Summary Row, Tree Grid, built-in components, selection, clipboard, context menu, and export helpers. The Tree Grid route includes a 30-node baseline and an exactly 10000-node virtualized example.
 
 ## Development
 

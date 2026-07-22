@@ -16,6 +16,7 @@ export type FeatureId =
   | "pagination"
   | "row"
   | "size"
+  | "summary-row"
   | "tree-grid"
   | "theme";
 

@@ -2261,6 +2261,29 @@ body {
   background: transparent;
 }
 
+.summary-style-table .summary-row-highlight > .comins-table__summary-cell {
+  background: #ecfdf5;
+  color: #064e3b;
+}
+
+.summary-style-table .summary-cell-emphasis {
+  color: #be123c;
+  font-variant-numeric: tabular-nums;
+}
+
+.tree-style-table.comins-table .tree-row-root > .comins-table__td {
+  background: #eff6ff;
+  border-left: 4px solid #2563eb;
+  color: #1e3a8a;
+}
+
+.tree-example-count {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  margin: 0 0 8px;
+}
+
 @media (max-width: 760px) {
   .example-topbar {
     align-items: flex-start;

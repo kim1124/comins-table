@@ -28,7 +28,8 @@ const featurePages = [
   ["/performance/virtualization", "대용량 데이터"],
   ["/examples/cell", "Td Cell 포맷"],
   ["/examples/row", "Tr Row 스타일"],
-  ["/examples/tree-grid", "node.item을 그대로 읽습니다."],
+  ["/examples/summary-row", "count, sum, avg, max, min"],
+  ["/examples/tree-grid", "3개 Department, 9개 Team, 18개 Member"],
   ["/examples/context-menu", "우클릭"],
 ] as const;
 
@@ -71,6 +72,8 @@ test("ref api page documents ref type and visible-index semantics", async ({ pag
   await expect(main).toContainText("setColumnLayout");
   await expect(main).toContainText("setSelectedRow");
   await expect(main).toContainText("setMoveTargetRow");
+  await expect(main).toContainText("expand");
+  await expect(main).toContainText("fold");
   await expect(main).toContainText("visible index");
   await expect(main).not.toContainText("DataTableProps<T>");
 

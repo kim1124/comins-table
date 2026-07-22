@@ -54,4 +54,27 @@ describe("comins-table summary core", () => {
     });
     expect(aggregate).toHaveBeenCalledOnce();
   });
+
+  it("formats a detailed aggregate after resolving its source values", () => {
+    const format = vi.fn(({ value, values }) => `${String(value)}:${values.join(",")}`);
+
+    expect(
+      getCominsSummaryValues(state.rows, state.columns, {
+        columns: {
+          age: {
+            aggregate: "sum",
+            format,
+          },
+        },
+      }),
+    ).toEqual({ age: "73:31,42" });
+    expect(format).toHaveBeenCalledWith(
+      expect.objectContaining({
+        column: expect.objectContaining({ id: "age" }),
+        rows: state.rows,
+        value: 73,
+        values: [31, 42],
+      }),
+    );
+  });
 });

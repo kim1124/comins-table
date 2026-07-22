@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 
-import { act, type ComponentType, useState } from "react";
+import { act, type ComponentType, createRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CominsTable, type CominsTreeNode } from "../src";
+import { CominsTable, type CominsTableRef, type CominsTreeNode } from "../src";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -22,6 +22,7 @@ const columns = [
 const initialData: CominsTreeNode<PersonRow>[] = [
   {
     children: [{ item: { age: 20, id: "child", name: "Child" } }],
+    expand: false,
     item: { age: 100, id: "root", name: "Root" },
   },
   { item: { age: 10, id: "leaf", name: "Leaf" } },
@@ -65,6 +66,129 @@ function pressControlKey(element: Element, key: "c" | "v") {
 }
 
 describe("comins-table tree grid", () => {
+  it("expands undefined branches by default while preserving explicit collapsed nodes", () => {
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    act(() => {
+      root?.render(
+        <CominsTable
+          columns={columns}
+          data={[
+            {
+              children: [{ item: { age: 20, id: "default-child", name: "Default Child" } }],
+              item: { age: 100, id: "default-root", name: "Default Root" },
+            },
+            {
+              children: [{ item: { age: 21, id: "collapsed-child", name: "Collapsed Child" } }],
+              expand: false,
+              item: { age: 101, id: "collapsed-root", name: "Collapsed Root" },
+            },
+          ]}
+          getRowId={(item) => item.id}
+          tree
+        />,
+      );
+    });
+
+    expect(container.querySelector("[data-testid='row-default-child']")).not.toBeNull();
+    expect(container.querySelector("[data-testid='tree-expander-default-root']")?.getAttribute("aria-expanded")).toBe("true");
+    expect(container.querySelector("[data-testid='row-collapsed-child']")).toBeNull();
+  });
+
+  it("expands node id arrays atomically and blocks descendants under unrequested collapsed ancestors", () => {
+    const ref = createRef<CominsTableRef<PersonRow>>();
+    const onChangeData = vi.fn();
+    const nestedData: CominsTreeNode<PersonRow>[] = [
+      {
+        children: [
+          {
+            children: [{ item: { age: 10, id: "leaf", name: "Leaf" } }],
+            expand: false,
+            item: { age: 20, id: "branch", name: "Branch" },
+          },
+        ],
+        expand: false,
+        item: { age: 30, id: "root", name: "Root" },
+      },
+    ];
+
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    act(() => {
+      root?.render(
+        <CominsTable
+          ref={ref}
+          columns={columns}
+          data={nestedData}
+          getRowId={(item) => item.id}
+          onChangeData={onChangeData}
+          tree
+        />,
+      );
+    });
+
+    act(() => ref.current?.expand(["branch"]));
+    expect(onChangeData).not.toHaveBeenCalled();
+
+    act(() => ref.current?.expand(["branch", "root", "branch", "missing", "leaf"]));
+    expect(onChangeData).toHaveBeenCalledOnce();
+    expect(onChangeData.mock.calls[0]?.[0]).toMatchObject([
+      {
+        expand: true,
+        children: [{ expand: true, children: [{ item: { id: "leaf" } }] }],
+      },
+    ]);
+  });
+
+  it("folds and expands every branch while treating an empty id array as a no-op", () => {
+    const ref = createRef<CominsTableRef<PersonRow>>();
+    const onChangeData = vi.fn();
+    const expandedData: CominsTreeNode<PersonRow>[] = [
+      {
+        children: [
+          {
+            children: [{ item: { age: 10, id: "leaf", name: "Leaf" } }],
+            item: { age: 20, id: "branch", name: "Branch" },
+          },
+        ],
+        item: { age: 30, id: "root", name: "Root" },
+      },
+    ];
+
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    act(() => {
+      root?.render(
+        <CominsTable
+          ref={ref}
+          columns={columns}
+          data={expandedData}
+          getRowId={(item) => item.id}
+          onChangeData={onChangeData}
+          tree
+        />,
+      );
+    });
+
+    act(() => ref.current?.fold([]));
+    expect(onChangeData).not.toHaveBeenCalled();
+
+    act(() => ref.current?.fold());
+    expect(onChangeData).toHaveBeenCalledOnce();
+    expect(onChangeData.mock.calls[0]?.[0]).toMatchObject([
+      {
+        expand: false,
+        children: [{ expand: false }],
+      },
+    ]);
+  });
+
   it("keeps existing columns on item rows and toggles descendant visibility", () => {
     container = document.createElement("div");
     document.body.append(container);

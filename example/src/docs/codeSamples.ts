@@ -354,9 +354,32 @@ export const rowSamples: DocsCodeSample[] = [
   },
 ];
 
+export const summaryRowSamples: DocsCodeSample[] = [
+  {
+    code: `<CominsTable
+  columns={columns}
+  data={rows}
+  summary={{
+    className: "summary-row",
+    columns: {
+      item: { aggregate: "count", colSpan: 2 },
+      amount: {
+        aggregate: "sum",
+        className: "summary-amount",
+        format: ({ value }) => \`₩\${Number(value).toLocaleString()}\`,
+      },
+    },
+  }}
+/>;`,
+    language: "tsx",
+    title: "Summary Row configuration",
+  },
+];
+
 export const treeGridSamples: DocsCodeSample[] = [
   {
-    code: `const [data, setData] = useState([
+    code: `const tableRef = useRef<CominsTableRef<PersonRow>>(null);
+const [data, setData] = useState([
   {
     item: { id: "engineering", name: "Engineering", age: 60, role: "Owner" },
     expand: false,
@@ -367,8 +390,10 @@ export const treeGridSamples: DocsCodeSample[] = [
 ]);
 
 <CominsTable
+  ref={tableRef}
   columns={columns}
   data={data}
+  defaultExpandAll
   getRowId={(item) => item.id}
   onChangeData={setData}
   summary={{ columns: { age: "sum" } }}
@@ -377,6 +402,14 @@ export const treeGridSamples: DocsCodeSample[] = [
 />;`,
     language: "tsx",
     title: "Controlled Tree Grid",
+  },
+  {
+    code: `tableRef.current?.expand(["engineering", "platform"]);
+tableRef.current?.fold(["platform"]);
+tableRef.current?.expand();
+tableRef.current?.fold();`,
+    language: "tsx",
+    title: "Tree expansion ref",
   },
 ];
 
@@ -431,6 +464,8 @@ export const refApiSamples: DocsCodeSample[] = [
   {
     code: `type CominsTableRef<TData = unknown> = {
   clearSort: () => void;
+  expand: (nodeIds?: readonly CominsRowId[]) => void;
+  fold: (nodeIds?: readonly CominsRowId[]) => void;
   getColumnLayout: () => CominsColumnLayout;
   getSortState: () => CominsSortState | null;
   setColumnLayout: (layout: CominsColumnLayout) => void;
@@ -449,7 +484,9 @@ tableRef.current?.setSelectedRow(0);
 tableRef.current?.setSelectedRows([0, 2]);
 tableRef.current?.setMoveTargetRow(2, 0);
 tableRef.current?.setColumnLayout(savedLayout);
-tableRef.current?.clearSort();`,
+tableRef.current?.clearSort();
+tableRef.current?.expand(["department-1", "team-1-1"]);
+tableRef.current?.fold();`,
     language: "tsx",
     title: "Ref usage",
   },
