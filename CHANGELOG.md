@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.1.3 - 2026-07-22
+
+- Added 6-pixel mouse Header reorder activation with source placeholder, ghost, target marker, vertical-intent cancellation, and preserved non-mouse long-press compatibility.
+- Connected Virtual List Item and More activation to owning Row selection, preserved More keyboard focus, and suppressed invalid column-layout callback emissions.
+- Added a consumer-first README and real-product animated preview covering sorting, column reorder, Virtual List selection, Summary Row, and Tree Grid interaction.
+- Expanded focused browser and documentation regression coverage for the shipped interaction and README contracts.
+
 ## 0.1.2 - 2026-07-22
 
 - Extended Summary Row with descriptor-based `colSpan`, aggregate output `format`, and row or cell `className` and `style`.

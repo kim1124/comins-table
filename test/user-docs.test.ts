@@ -102,6 +102,10 @@ describe("comins-table user documentation contract", () => {
 
     expect(readme).toContain("npm run dev");
     expect(readme).toContain("docs/user/01-quick-start.md");
+    expect(readme).toContain("/examples/summary-row");
+    expect(readme).toContain("/examples/tree-grid");
+    expect(readme).toContain("docs/user/17-tree-grid.md");
+    expect(readme).toContain("docs/user/18-summary-row.md");
     expect(readme).not.toContain("does not currently ship a browser example server");
   });
 
@@ -122,7 +126,8 @@ describe("comins-table user documentation contract", () => {
 
     expect(readme).toContain("CSR-focused controlled component");
     expect(readme).toContain("CSR");
-    expect(readme).toContain("drag UX remains outside the first public release");
+    expect(readme).toContain("The visual fill handle is not shipped or supported");
+    expect(readme).not.toContain("first public release");
 
     expect(optionGuide).toContain("data + onChangeData");
     expect(optionGuide).toContain("CSR");
@@ -166,5 +171,28 @@ describe("comins-table user documentation contract", () => {
     expect(tree).toContain("cell.components");
     expect(tree).toContain("cell.renderer");
     expect(tree).toContain("10000");
+  });
+
+  it("documents column drag activation and Virtual List row selection", () => {
+    const header = readWorkspaceFile("docs/user/06-header.md");
+    const cell = readWorkspaceFile("docs/user/08-cell.md");
+
+    expect(header).toContain("6-pixel");
+    expect(header).toContain("source placeholder");
+    expect(header).toContain("non-mouse");
+    expect(cell).toContain("Ctrl");
+    expect(cell).toContain("Shift");
+    expect(cell).toContain("More");
+    expect(cell).toContain("onClickCell");
+    expect(cell).toContain("onClickRow");
+  });
+
+  it("keeps English and Korean Virtual List Search guidance single-selection-only", () => {
+    const englishCell = readWorkspaceFile("docs/user/08-cell.md");
+    const koreanCell = readWorkspaceFile("docs/ko/08-cell.md");
+
+    expect(englishCell).toContain("Search remains single-selection-only and is available only while exactly one Row is selected.");
+    expect(koreanCell).toContain("`searchable: true`인 경우 정확히 하나의 Row가 선택되었을 때만 검색 input을 표시");
+    expect(koreanCell).not.toContain("Row/Cell selection 상태에 의존하지 않는다");
   });
 });

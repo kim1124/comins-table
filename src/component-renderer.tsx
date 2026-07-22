@@ -470,9 +470,11 @@ function CominsHeaderMenuComponent<TData, TValue>({
 
 function CominsCellVirtualListComponent<TData, TValue>({
   component,
+  interaction,
   payload,
 }: {
   component: Extract<CominsCellComponentConfig<TData, TValue>, { type: "virtual-list" }>;
+  interaction?: CominsBuiltInComponentInteraction;
   payload: CominsCellComponentPayload<TData, TValue>;
 }) {
   const props = resolveComponentProps<
@@ -506,7 +508,6 @@ function CominsCellVirtualListComponent<TData, TValue>({
   const itemsViewportRef = useRef<HTMLDivElement>(null);
   const isSingleRowSelected = payload.row.selected && payload.selection.selectedRowCount === 1;
   const searchEnabled = Boolean(searchable && isSingleRowSelected);
-  const moreEnabled = Boolean(more && isSingleRowSelected);
   const activeQuery = searchEnabled ? query : "";
 
   useEffect(() => {
@@ -603,6 +604,12 @@ function CominsCellVirtualListComponent<TData, TValue>({
     event: React.MouseEvent<HTMLButtonElement> | React.KeyboardEvent<HTMLButtonElement>,
   ) => {
     if (item.disabled) {
+      return;
+    }
+
+    const accepted = interaction?.requestRowSelection?.({ event, mode: "row-click" });
+
+    if (accepted === false) {
       return;
     }
 
@@ -713,32 +720,36 @@ function CominsCellVirtualListComponent<TData, TValue>({
         ) : null}
       </div>
       <div className="comins-table__component-virtual-list-controls">
-        {showOverflowControl ? (
-          moreEnabled ? (
-            <button
-              aria-label="전체 목록 보기"
-              className="comins-table__component-virtual-list-overflow comins-table__component-virtual-list-more"
-              data-testid={`virtual-list-overflow-${listId}`}
-              onClick={(event) => {
-                preventAndStopComponentEvent(event);
-                setExpanded(true);
-              }}
-              onKeyDown={stopComponentEvent}
-              onMouseDown={stopComponentEvent}
-              onPointerDown={stopComponentEvent}
-              type="button"
-            >
-              ...
-            </button>
-          ) : (
-            <span
-              aria-hidden="true"
-              className="comins-table__component-virtual-list-overflow comins-table__component-virtual-list-more"
-              data-testid={`virtual-list-overflow-${listId}`}
-            >
-              ...
-            </span>
-          )
+        {more && hasOverflow ? (
+          <button
+            aria-expanded={virtualized}
+            aria-label="전체 목록 보기"
+            className="comins-table__component-virtual-list-overflow comins-table__component-virtual-list-more"
+            data-testid={`virtual-list-overflow-${listId}`}
+            onClick={(event) => {
+              preventAndStopComponentEvent(event);
+
+              if (interaction?.requestRowSelection?.({ event, mode: "exclusive" }) === false) {
+                return;
+              }
+
+              setExpanded(true);
+            }}
+            onKeyDown={stopComponentEvent}
+            onMouseDown={stopComponentEvent}
+            onPointerDown={stopComponentEvent}
+            type="button"
+          >
+            ...
+          </button>
+        ) : showOverflowControl ? (
+          <span
+            aria-hidden="true"
+            className="comins-table__component-virtual-list-overflow comins-table__component-virtual-list-more"
+            data-testid={`virtual-list-overflow-${listId}`}
+          >
+            ...
+          </span>
         ) : null}
         {searchEnabled ? (
           <input
@@ -762,17 +773,27 @@ function CominsCellVirtualListComponent<TData, TValue>({
   );
 }
 
+export type CominsBuiltInComponentInteraction = {
+  requestRowSelection?: (request: {
+    event: React.KeyboardEvent<HTMLButtonElement> | React.MouseEvent<HTMLButtonElement>;
+    mode: "exclusive" | "row-click";
+  }) => boolean;
+};
+
 export function renderCominsBuiltInComponent<TData, TValue>(
   component: CominsCellComponentConfig<TData, TValue>,
   payload: CominsCellComponentPayload<TData, TValue>,
+  interaction?: CominsBuiltInComponentInteraction,
 ): React.ReactNode;
 export function renderCominsBuiltInComponent<TData, TValue>(
   component: CominsHeaderComponentConfig<TData, TValue>,
   payload: CominsHeaderComponentPayload<TData, TValue>,
+  interaction?: CominsBuiltInComponentInteraction,
 ): React.ReactNode;
 export function renderCominsBuiltInComponent<TData, TValue>(
   component: CominsAnyComponentConfig<TData, TValue>,
   payload: CominsAnyComponentPayload<TData, TValue>,
+  interaction?: CominsBuiltInComponentInteraction,
 ): React.ReactNode {
   if (component.type === "menu") {
     return <CominsHeaderMenuComponent component={component} payload={payload as CominsHeaderComponentPayload<TData, TValue>} />;
@@ -782,6 +803,7 @@ export function renderCominsBuiltInComponent<TData, TValue>(
     return (
       <CominsCellVirtualListComponent
         component={component}
+        interaction={interaction}
         payload={payload as CominsCellComponentPayload<TData, TValue>}
       />
     );

@@ -76,7 +76,16 @@ Cell components는 `button`, `input`, `checkbox`, `radio`, `select`, `toggle`, `
 
 `input`은 입력 중 외부 `data`를 갱신하지 않고 내부 draft만 변경한다. `Enter` 또는 `Blur` 시점에 값이 바뀐 경우 한 번만 `onChange`/`onValueChange`를 호출한다.
 
-`virtual-list`는 하나의 Cell 안에서 여러 item을 표시한다. 기본값은 `itemHeight: 28`, `limit: 5`, 높이는 `itemHeight * 5`다. 초기 상태는 최대 5개 preview만 렌더링하고, 항목이 5개를 초과하면 `...`를 표시한다. `more: true`인 경우 `...`가 버튼으로 렌더링되며, 클릭하면 전체 목록을 bounded virtual scroll로 확장한다. `searchable: true`인 경우 검색 input을 표시하고 검색 결과도 virtualized range만 렌더링한다. More/Search 이벤트는 Row/Cell selection과 분리된다. item 선택 상태는 Cell 내부 일시 상태로 관리된다. virtual scroll로 Cell이 destroy/recreate되면 item 선택 상태는 초기화될 수 있다.
+`virtual-list`는 하나의 Cell 안에서 여러 item을 표시한다. 기본값은 `itemHeight: 28`, `limit: 5`, 높이는 `itemHeight * 5`다. 초기 상태는 최대 5개 preview만 렌더링하고, 항목이 5개를 초과하면 `...`를 표시한다. `more: true`인 경우 `...`가 Row 선택 전에도 동작하는 버튼으로 렌더링되며, 클릭하면 해당 Row를 단독 선택한 뒤 전체 목록을 bounded virtual scroll로 확장한다. `searchable: true`인 경우 정확히 하나의 Row가 선택되었을 때만 검색 input을 표시하고 검색 결과도 virtualized range만 렌더링한다. item 선택 상태는 Cell 내부 일시 상태로 관리된다. virtual scroll로 Cell이 destroy/recreate되면 item 선택 상태는 초기화될 수 있다.
+
+Virtual List Row 선택 기준:
+
+- 일반 Item 클릭은 해당 Item이 속한 Row만 선택한다.
+- `Ctrl`/`Cmd` 클릭은 해당 Row의 선택을 toggle하고, `Shift` 클릭은 직전 anchor부터 현재 Item이 속한 Row까지 화면에 보이는 Row 범위를 선택한다.
+- Item의 `Enter`와 `Space` 활성화도 클릭과 동일한 Row 선택 규칙을 적용한다.
+- More는 Row 선택 전에도 동작하며, 먼저 해당 Row를 단독 선택한 다음 전체 목록을 확장한다.
+- Search는 하나의 Row만 선택된 상태에서만 사용할 수 있다.
+- Item과 More 이벤트는 컴포넌트 내부에서 처리되며 `onClickCell` 또는 `onClickRow`를 호출하지 않는다.
 
 ```tsx
 {
@@ -108,7 +117,7 @@ Cell components는 `button`, `input`, `checkbox`, `radio`, `select`, `toggle`, `
 }
 ```
 
-`searchFilter` payload는 `item`, `itemIndex`, `value`만 받는다. 여기서 `value`는 검색 input 값이다. 검색 input은 `searchable: true`인 virtual-list Cell에 표시되며 Row/Cell selection 상태에 의존하지 않는다.
+`searchFilter` payload는 `item`, `itemIndex`, `value`만 받는다. 여기서 `value`는 검색 input 값이다. 검색 input은 `searchable: true`이고 정확히 하나의 Row가 선택된 virtual-list Cell에만 표시된다.
 
 Cell 내부 입력 컴포넌트는 immutable update로 외부 `data` 또는 store를 갱신해야 한다.
 

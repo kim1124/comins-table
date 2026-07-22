@@ -28,7 +28,7 @@ async function getVisualLeafOrder(example: Locator) {
   );
 }
 
-async function dragHeader(page: Page, source: Locator, target: Locator) {
+async function dragHeader(page: Page, source: Locator, target: Locator, placeholderHeaders: Locator[] = [source]) {
   const sourceBox = await source.boundingBox();
   const targetBox = await target.boundingBox();
   expect(sourceBox).not.toBeNull();
@@ -36,7 +36,13 @@ async function dragHeader(page: Page, source: Locator, target: Locator) {
 
   await page.mouse.move(sourceBox!.x + sourceBox!.width / 2, sourceBox!.y + sourceBox!.height / 2);
   await page.mouse.down();
-  await page.waitForTimeout(1100);
+  await page.mouse.move(sourceBox!.x + sourceBox!.width / 2 + 6, sourceBox!.y + sourceBox!.height / 2);
+
+  for (const placeholderHeader of placeholderHeaders) {
+    await expect(placeholderHeader).toHaveAttribute("data-column-placeholder", "true");
+  }
+
+  await expect(page.getByTestId("column-move-ghost")).toBeVisible();
   await page.mouse.move(targetBox!.x + targetBox!.width / 2, targetBox!.y + targetBox!.height / 2);
   await page.mouse.up();
 }
@@ -64,7 +70,9 @@ test("playground verifies header resize, column position change, and layout rest
   expect(nameBox).not.toBeNull();
   await page.mouse.move(ageBox!.x + ageBox!.width / 2, ageBox!.y + ageBox!.height / 2);
   await page.mouse.down();
-  await page.waitForTimeout(1100);
+  await page.mouse.move(ageBox!.x + ageBox!.width / 2 + 6, ageBox!.y + ageBox!.height / 2);
+  await expect(ageHeader).toHaveAttribute("data-column-placeholder", "true");
+  await expect(page.getByTestId("column-move-ghost")).toBeVisible();
   await page.mouse.move(nameBox!.x + nameBox!.width / 2, nameBox!.y + nameBox!.height / 2);
   await page.mouse.up();
   await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("Column2");
@@ -211,13 +219,16 @@ test("playground verifies 2-depth parent and child move constraints", async ({ p
   await expect.poll(() => getVisualLeafOrder(groupExample)).toEqual(["name", "age", "active", "locked", "role"]);
 
   const groupHeader = groupExample.getByTestId("header-group-profile");
+  const nameHeader = groupExample.getByTestId("header-name");
+  const ageHeader = groupExample.getByTestId("header-age");
   const statusHeader = groupExample.getByTestId("header-group-status");
   const roleHeader = groupExample.getByTestId("header-role");
+  const groupPlaceholders = [groupHeader, nameHeader, ageHeader];
 
-  await dragHeader(page, groupHeader, statusHeader);
+  await dragHeader(page, groupHeader, statusHeader, groupPlaceholders);
   await expect.poll(() => getVisualLeafOrder(groupExample)).toEqual(["active", "locked", "name", "age", "role"]);
 
-  await dragHeader(page, groupHeader, roleHeader);
+  await dragHeader(page, groupHeader, roleHeader, groupPlaceholders);
   await expect.poll(() => getVisualLeafOrder(groupExample)).toEqual(["active", "locked", "role", "name", "age"]);
 
   await groupExample.getByRole("button", { exact: true, name: "초기화" }).click();

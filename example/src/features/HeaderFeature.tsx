@@ -98,7 +98,7 @@ export function HeaderFeature() {
       <div className="header-example-showcase">
         <section data-testid="header-example-basic">
           <FeatureSampleSection
-            description="1Depth 컬럼의 위치 이동과 너비 리사이즈를 확인합니다."
+            description="헤더를 수평으로 6px 이상 드래그하면 placeholder, ghost, drop marker가 즉시 표시됩니다."
             id="header-basic"
             title="Header 기본 기능"
           >

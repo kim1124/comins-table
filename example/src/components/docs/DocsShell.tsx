@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes, useLocation } from "react-router";
 
 import { docsPages } from "../../docs/docsRoutes";
+import { ReadmeDemoPage } from "../../readme/ReadmeDemoPage";
 import { DocsArticle } from "./DocsArticle";
 import { DocsSidebar } from "./DocsSidebar";
 import { DocsTopNav } from "./DocsTopNav";
@@ -8,6 +9,10 @@ import { RouteLifecycleBoundary } from "./RouteLifecycleBoundary";
 
 export function DocsShell() {
   const location = useLocation();
+
+  if (location.pathname === "/readme-demo") {
+    return <ReadmeDemoPage />;
+  }
 
   return (
     <div className="docs-shell">
