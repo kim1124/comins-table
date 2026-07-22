@@ -2372,3 +2372,99 @@ body {
     padding: 5px 7px;
   }
 }
+
+.readme-demo {
+  box-sizing: border-box;
+  display: grid;
+  gap: 16px;
+  width: 960px;
+  max-width: 100%;
+  min-height: 590px;
+  padding: 24px;
+  color: #0f172a;
+  background:
+    radial-gradient(circle at top right, rgb(16 185 129 / 14%), transparent 34%),
+    #f8fafc;
+  border: 1px solid #dbe4ea;
+  border-radius: 18px;
+}
+
+.readme-demo__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.readme-demo__header h1,
+.readme-demo__header p {
+  margin: 0;
+}
+
+.readme-demo__header h1 {
+  margin-top: 4px;
+  font-size: 28px;
+  letter-spacing: -0.03em;
+}
+
+.readme-demo__header > div > p:last-child {
+  max-width: 650px;
+  margin-top: 8px;
+  color: #475569;
+}
+
+.readme-demo__eyebrow {
+  color: #047857;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.readme-demo__view-switch,
+.readme-demo__tree-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.readme-demo__view-switch button,
+.readme-demo__tree-controls button {
+  min-height: 34px;
+  padding: 0 12px;
+  color: #334155;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.readme-demo__view-switch button[aria-pressed="true"] {
+  color: #fff;
+  background: #047857;
+  border-color: #047857;
+}
+
+.readme-demo__surface {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.readme-demo__table {
+  height: 455px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 18px 48px rgb(15 23 42 / 8%);
+}
+
+.readme-demo__tree-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.readme-demo__tree-label small {
+  color: #64748b;
+}
