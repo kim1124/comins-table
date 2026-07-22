@@ -30,6 +30,7 @@ import {
   setCominsSortState,
   updateCominsRows,
 } from "./core";
+import { getCominsColumnMouseIntent } from "./column-pointer";
 import { renderCominsBuiltInComponent } from "./component-renderer";
 import { getCominsSummaryValues } from "./summary";
 import {
@@ -77,14 +78,23 @@ type CominsClassValue = string | Record<string, boolean> | undefined;
 type CominsRowPropValue<TData, TValue> = TValue | ((row: TData, index: number) => TValue);
 type CominsColumnPointerInteraction = {
   active: boolean;
+  blocked: boolean;
   cancelSort: boolean;
+  cleanup: () => void;
   id: string;
   kind: "column" | "group";
-  movedBeforeLongPress: boolean;
-  startedAt: number;
+  pointerType: string;
   startX: number;
   startY: number;
-  timer: number;
+  timer: number | null;
+};
+type CominsColumnPointerOptions = {
+  activate: (x: number, y: number) => void;
+  commitTarget: (targetId: string) => void;
+  event: React.PointerEvent<HTMLTableCellElement>;
+  id: string;
+  kind: "column" | "group";
+  sortColumnId?: string;
 };
 type CominsRowMoveState = {
   sourceRowId: CominsRowId;
@@ -1576,7 +1586,11 @@ function CominsTableInner<TData>(
     const interaction = columnPointerInteractionRef.current;
 
     if (interaction) {
-      window.clearTimeout(interaction.timer);
+      interaction.cleanup();
+
+      if (interaction.timer !== null) {
+        window.clearTimeout(interaction.timer);
+      }
     }
 
     columnPointerInteractionRef.current = null;
@@ -1586,210 +1600,192 @@ function CominsTableInner<TData>(
     setColumnMoveTargetId(null);
   };
 
-  const beginHeaderPointerInteraction = (
-    event: React.PointerEvent<HTMLTableCellElement>,
-    column: CominsTableRuntimeColumn<TData>,
-  ) => {
-    if (event.button !== 0) {
+  useEffect(() => () => clearColumnPointerInteraction(), []);
+
+  const beginColumnPointerInteraction = (options: CominsColumnPointerOptions) => {
+    if (options.event.button !== 0) {
       return;
     }
 
-    const activateColumnMove = (current: CominsColumnPointerInteraction, x: number, y: number) => {
+    const pointerType: string = options.event.pointerType;
+    const isMousePointer = pointerType === "mouse" || pointerType === "";
+    const suppressPendingSort = () => {
+      if (options.sortColumnId) {
+        suppressedSortColumnIdRef.current = options.sortColumnId;
+      }
+    };
+    const activateCurrent = (x: number, y: number) => {
+      const current = columnPointerInteractionRef.current;
+
+      if (!current || current !== interaction || current.active || current.blocked) {
+        return;
+      }
+
       current.active = true;
       current.cancelSort = true;
-      suppressedSortColumnIdRef.current = column.id;
-      setColumnMovePointer({ x, y });
-      setColumnMoveTargetId(column.id);
-      setMovingGroupId(null);
-      setMovingColumnId(column.id);
+      suppressPendingSort();
+      options.activate(x, y);
     };
-    const interaction: CominsColumnPointerInteraction = {
-      active: false,
-      cancelSort: false,
-      id: column.id,
-      kind: "column",
-      movedBeforeLongPress: false,
-      startedAt: performance.now(),
-      startX: event.clientX,
-      startY: event.clientY,
-      timer: window.setTimeout(() => {
-        const current = columnPointerInteractionRef.current;
-
-        if (!current || current.id !== column.id || current.kind !== "column" || current.movedBeforeLongPress) {
-          return;
-        }
-
-        activateColumnMove(current, current.startX, current.startY);
-      }, 1000),
-    };
-
     const handlePointerMove = (moveEvent: PointerEvent) => {
       const current = columnPointerInteractionRef.current;
 
-      if (!current || current.id !== column.id || current.kind !== "column") {
+      if (!current || current !== interaction) {
         return;
       }
 
-      const distance = Math.hypot(moveEvent.clientX - current.startX, moveEvent.clientY - current.startY);
+      if (!current.active && !current.blocked && isMousePointer) {
+        const intent = getCominsColumnMouseIntent({
+          clientX: moveEvent.clientX,
+          clientY: moveEvent.clientY,
+          startX: current.startX,
+          startY: current.startY,
+        });
 
-      if (!current.active && performance.now() - current.startedAt >= 1000 && !current.movedBeforeLongPress) {
-        activateColumnMove(current, moveEvent.clientX, moveEvent.clientY);
+        if (intent === "activate") {
+          activateCurrent(moveEvent.clientX, moveEvent.clientY);
+        } else if (intent === "cancel") {
+          current.blocked = true;
+          current.cancelSort = true;
+          suppressPendingSort();
+        }
       }
 
-      if (!current.active && distance > 4) {
-        current.movedBeforeLongPress = true;
-        current.cancelSort = true;
-        suppressedSortColumnIdRef.current = column.id;
-        window.clearTimeout(current.timer);
-        return;
+      if (!current.active && !current.blocked && !isMousePointer) {
+        const distance = Math.hypot(moveEvent.clientX - current.startX, moveEvent.clientY - current.startY);
+
+        if (distance > 4) {
+          current.blocked = true;
+          current.cancelSort = true;
+          window.clearTimeout(current.timer ?? undefined);
+          suppressPendingSort();
+        }
       }
 
       if (current.active) {
         moveEvent.preventDefault();
         setColumnMovePointer({ x: moveEvent.clientX, y: moveEvent.clientY });
-
         setColumnMoveTargetId(getColumnMoveTargetId(moveEvent.clientX, moveEvent.clientY));
       }
     };
-
     const handlePointerUp = (upEvent: PointerEvent) => {
       const current = columnPointerInteractionRef.current;
 
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
+      if (current === interaction && current.active) {
+        const targetId = getColumnMoveTargetId(upEvent.clientX, upEvent.clientY);
 
-      if (!current || current.id !== column.id || current.kind !== "column") {
-        clearColumnPointerInteraction();
-        return;
-      }
-
-      window.clearTimeout(current.timer);
-
-      if (current.active) {
-        const targetColumnId = getColumnMoveTargetId(upEvent.clientX, upEvent.clientY);
-
-        if (targetColumnId) {
-          const targetIndex = visibleColumns.findIndex((visibleColumn) => visibleColumn.id === targetColumnId);
-
-          if (targetIndex >= 0) {
-            commitState((stateCurrent) => moveCominsColumn(stateCurrent, column.id, targetIndex), {
-              columnLayoutChanged: true,
-            });
-          }
+        if (targetId) {
+          options.commitTarget(targetId);
         }
-      }
-
-      if (current.cancelSort || current.active) {
-        suppressedSortColumnIdRef.current = column.id;
       }
 
       clearColumnPointerInteraction();
     };
+    const handlePointerCancel = () => clearColumnPointerInteraction();
+    const handleKeyDown = (keyEvent: KeyboardEvent) => {
+      if (keyEvent.key === "Escape") {
+        keyEvent.preventDefault();
+        clearColumnPointerInteraction();
+      }
+    };
+    const handleWindowBlur = () => clearColumnPointerInteraction();
+    const interaction: CominsColumnPointerInteraction = {
+      active: false,
+      blocked: false,
+      cancelSort: false,
+      cleanup: () => {
+        window.removeEventListener("pointermove", handlePointerMove);
+        window.removeEventListener("pointerup", handlePointerUp);
+        window.removeEventListener("pointercancel", handlePointerCancel);
+        window.removeEventListener("keydown", handleKeyDown);
+        window.removeEventListener("blur", handleWindowBlur);
+      },
+      id: options.id,
+      kind: options.kind,
+      pointerType,
+      startX: options.event.clientX,
+      startY: options.event.clientY,
+      timer: null,
+    };
 
     clearColumnPointerInteraction();
+
+    if (!isMousePointer) {
+      interaction.timer = window.setTimeout(() => {
+        const current = columnPointerInteractionRef.current;
+
+        if (current === interaction && !current.active && !current.blocked) {
+          activateCurrent(current.startX, current.startY);
+        }
+      }, 1000);
+    }
+
     columnPointerInteractionRef.current = interaction;
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerCancel);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("blur", handleWindowBlur);
+  };
+
+  const beginHeaderPointerInteraction = (
+    event: React.PointerEvent<HTMLTableCellElement>,
+    column: CominsTableRuntimeColumn<TData>,
+  ) => {
+    beginColumnPointerInteraction({
+      activate: (x, y) => {
+        setColumnMovePointer({ x, y });
+        setColumnMoveTargetId(column.id);
+        setMovingGroupId(null);
+        setMovingColumnId(column.id);
+      },
+      commitTarget: (targetId) => {
+        if (targetId === column.id) {
+          return;
+        }
+
+        const targetIndex = visibleColumns.findIndex((visibleColumn) => visibleColumn.id === targetId);
+
+        if (targetIndex >= 0) {
+          commitState((stateCurrent) => moveCominsColumn(stateCurrent, column.id, targetIndex), {
+            columnLayoutChanged: true,
+          });
+        }
+      },
+      event,
+      id: column.id,
+      kind: "column",
+      sortColumnId: column.id,
+    });
   };
 
   const beginGroupPointerInteraction = (
     event: React.PointerEvent<HTMLTableCellElement>,
     group: CominsTableRuntimeColumnGroup,
   ) => {
-    if (event.button !== 0) {
-      return;
-    }
-
-    const activateGroupMove = (current: CominsColumnPointerInteraction, x: number, y: number) => {
-      current.active = true;
-      current.cancelSort = true;
-      setColumnMovePointer({ x, y });
-      setColumnMoveTargetId(group.children[0] ?? null);
-      setMovingColumnId(null);
-      setMovingGroupId(group.id);
-    };
-    const interaction: CominsColumnPointerInteraction = {
-      active: false,
-      cancelSort: false,
-      id: group.id,
-      kind: "group",
-      movedBeforeLongPress: false,
-      startedAt: performance.now(),
-      startX: event.clientX,
-      startY: event.clientY,
-      timer: window.setTimeout(() => {
-        const current = columnPointerInteractionRef.current;
-
-        if (!current || current.id !== group.id || current.kind !== "group" || current.movedBeforeLongPress) {
+    beginColumnPointerInteraction({
+      activate: (x, y) => {
+        setColumnMovePointer({ x, y });
+        setColumnMoveTargetId(group.children[0] ?? null);
+        setMovingColumnId(null);
+        setMovingGroupId(group.id);
+      },
+      commitTarget: (targetId) => {
+        if (group.children.includes(targetId)) {
           return;
         }
 
-        activateGroupMove(current, current.startX, current.startY);
-      }, 1000),
-    };
+        const targetIndex = visibleColumns.findIndex((visibleColumn) => visibleColumn.id === targetId);
 
-    const handlePointerMove = (moveEvent: PointerEvent) => {
-      const current = columnPointerInteractionRef.current;
-
-      if (!current || current.id !== group.id || current.kind !== "group") {
-        return;
-      }
-
-      const distance = Math.hypot(moveEvent.clientX - current.startX, moveEvent.clientY - current.startY);
-
-      if (!current.active && performance.now() - current.startedAt >= 1000 && !current.movedBeforeLongPress) {
-        activateGroupMove(current, moveEvent.clientX, moveEvent.clientY);
-      }
-
-      if (!current.active && distance > 4) {
-        current.movedBeforeLongPress = true;
-        current.cancelSort = true;
-        window.clearTimeout(current.timer);
-        return;
-      }
-
-      if (current.active) {
-        moveEvent.preventDefault();
-        setColumnMovePointer({ x: moveEvent.clientX, y: moveEvent.clientY });
-
-        setColumnMoveTargetId(getColumnMoveTargetId(moveEvent.clientX, moveEvent.clientY));
-      }
-    };
-
-    const handlePointerUp = (upEvent: PointerEvent) => {
-      const current = columnPointerInteractionRef.current;
-
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-
-      if (!current || current.id !== group.id || current.kind !== "group") {
-        clearColumnPointerInteraction();
-        return;
-      }
-
-      window.clearTimeout(current.timer);
-
-      if (current.active) {
-        const targetColumnId = getColumnMoveTargetId(upEvent.clientX, upEvent.clientY);
-
-        if (targetColumnId) {
-          const targetIndex = visibleColumns.findIndex((visibleColumn) => visibleColumn.id === targetColumnId);
-
-          if (targetIndex >= 0) {
-            commitState((stateCurrent) => moveCominsColumnGroup(stateCurrent, group.id, targetIndex), {
-              columnLayoutChanged: true,
-            });
-          }
+        if (targetIndex >= 0) {
+          commitState((stateCurrent) => moveCominsColumnGroup(stateCurrent, group.id, targetIndex), {
+            columnLayoutChanged: true,
+          });
         }
-      }
-
-      clearColumnPointerInteraction();
-    };
-
-    clearColumnPointerInteraction();
-    columnPointerInteractionRef.current = interaction;
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
+      },
+      event,
+      id: group.id,
+      kind: "group",
+    });
   };
 
   const selectRowFromClick = (event: React.MouseEvent, entry: VisibleRowEntry<TData>) => {
@@ -2036,6 +2032,7 @@ function CominsTableInner<TData>(
             .join(" ")}
           colSpan={cell.colSpan}
           data-column-moving={movingGroupId === cell.groupId ? "true" : undefined}
+          data-column-placeholder={movingGroupId === cell.groupId ? "true" : undefined}
           data-comins-column-group-id={cell.groupId}
           data-testid={`header-group-${cell.groupId}`}
           key={`group-${cell.groupId}`}
@@ -2119,6 +2116,8 @@ function CominsTableInner<TData>(
     const headerProps = column.header?.props ?? {};
     const sortIndicatorState = getSortIndicatorState(state.sort, column.id);
     const sortIndicatorVisible = sortIndicatorState === "asc" || sortIndicatorState === "desc";
+    const isMovingGroupChild = Boolean(movingGroup?.children.includes(column.id));
+    const isColumnPlaceholder = movingColumnId === column.id || isMovingGroupChild;
     const headerClassName = [
       "comins-table__th px-3 py-2 text-left font-semibold",
       movingColumnId === column.id ? "comins-column-moving" : undefined,
@@ -2143,6 +2142,7 @@ function CominsTableInner<TData>(
         colSpan={cell.colSpan}
         data-column-drop-target={columnMoveTargetId === column.id ? "true" : undefined}
         data-column-moving={movingColumnId === column.id ? "true" : undefined}
+        data-column-placeholder={isColumnPlaceholder ? "true" : undefined}
         data-comins-column-id={column.id}
         data-comins-column-index={safeIndex}
         data-sort-direction={state.sort?.columnId === column.id ? state.sort.direction : undefined}

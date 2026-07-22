@@ -497,6 +497,18 @@
   cursor: grabbing;
 }
 
+.comins-table__th[data-column-placeholder="true"] {
+  background: color-mix(in srgb, var(--comins-table-surface-muted) 82%, transparent);
+  outline: 1px dashed var(--comins-table-drop-marker);
+  outline-offset: -2px;
+}
+
+.comins-table__th[data-column-placeholder="true"] > .comins-table__header-content,
+.comins-table__th[data-column-placeholder="true"] > .comins-table__resize {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .comins-table__header-content {
   align-items: center;
   column-gap: 0;

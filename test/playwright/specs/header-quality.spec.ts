@@ -16,7 +16,7 @@ function collectBrowserDiagnostics(page: Page) {
   return diagnostics;
 }
 
-test("header boundary resize is isolated from long-press column move and animated sort state", async ({ page }) => {
+test("header boundary resize is isolated from immediate column move and animated sort state", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
   await page.goto("/examples/header");
@@ -82,7 +82,9 @@ test("header boundary resize is isolated from long-press column move and animate
 
   await page.mouse.move(ageBox!.x + ageBox!.width / 2, ageBox!.y + ageBox!.height / 2);
   await page.mouse.down();
-  await page.waitForTimeout(1100);
+  await page.mouse.move(ageBox!.x + ageBox!.width / 2 + 6, ageBox!.y + ageBox!.height / 2);
+  await expect(ageHeader).toHaveAttribute("data-column-placeholder", "true");
+  await expect(page.getByTestId("column-move-ghost")).toBeVisible();
   await expect(ageHeader).toHaveCSS("cursor", "grabbing");
   await page.mouse.move(nameBox!.x + nameBox!.width / 2, nameBox!.y + nameBox!.height / 2);
   await page.mouse.up();
@@ -107,7 +109,7 @@ test("header boundary resize is isolated from long-press column move and animate
   expect(roleBox).not.toBeNull();
   await page.mouse.move(roleBox!.x + roleBox!.width / 2, roleBox!.y + roleBox!.height / 2);
   await page.mouse.down();
-  await page.mouse.move(roleBox!.x + roleBox!.width / 2 + 8, roleBox!.y + roleBox!.height / 2);
+  await page.mouse.move(roleBox!.x + roleBox!.width / 2, roleBox!.y + roleBox!.height / 2 + 8);
   await page.mouse.up();
 
   await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText(
@@ -134,7 +136,9 @@ test("column move shows a ghost and insertion marker while dragging", async ({ p
 
   await page.mouse.move(ageBox!.x + ageBox!.width / 2, ageBox!.y + ageBox!.height / 2);
   await page.mouse.down();
-  await page.waitForTimeout(1100);
+  await page.mouse.move(ageBox!.x + ageBox!.width / 2 + 6, ageBox!.y + ageBox!.height / 2);
+  await expect(ageHeader).toHaveAttribute("data-column-placeholder", "true");
+  await expect(page.getByTestId("column-move-ghost")).toBeVisible();
   await page.mouse.move(nameBox!.x + nameBox!.width / 2, nameBox!.y + nameBox!.height / 2);
 
   await expect(page.getByTestId("column-move-ghost")).toBeVisible();
@@ -145,6 +149,46 @@ test("column move shows a ghost and insertion marker while dragging", async ({ p
   await page.mouse.up();
   await expect(page.getByTestId("column-move-ghost")).toHaveCount(0);
   await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("Column2");
+
+  expect(diagnostics).toEqual([]);
+});
+
+test("Escape cancels an active column move and clears its drag UI", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/");
+  await page.goto("/examples/header");
+
+  const basicExample = page.getByTestId("header-example-basic");
+  const headers = basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]");
+  const orderBefore = await headers.evaluateAll((elements) =>
+    elements.map((element) => element.getAttribute("data-comins-column-id")),
+  );
+  const ageHeader = basicExample.getByTestId("header-age");
+  const nameHeader = basicExample.getByTestId("header-name");
+  await ageHeader.scrollIntoViewIfNeeded();
+  const ageBox = await ageHeader.boundingBox();
+  const nameBox = await nameHeader.boundingBox();
+  expect(ageBox).not.toBeNull();
+  expect(nameBox).not.toBeNull();
+
+  await page.mouse.move(ageBox!.x + ageBox!.width / 2, ageBox!.y + ageBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(ageBox!.x + ageBox!.width / 2 + 6, ageBox!.y + ageBox!.height / 2);
+  await expect(ageHeader).toHaveAttribute("data-column-placeholder", "true");
+  await expect(page.getByTestId("column-move-ghost")).toBeVisible();
+  await page.mouse.move(nameBox!.x + nameBox!.width / 2, nameBox!.y + nameBox!.height / 2);
+  await expect(nameHeader.locator(".comins-column-drop-marker")).toBeVisible();
+
+  await page.keyboard.press("Escape");
+
+  await expect(ageHeader).not.toHaveAttribute("data-column-placeholder", "true");
+  await expect(page.getByTestId("column-move-ghost")).toHaveCount(0);
+  await expect(nameHeader).not.toHaveAttribute("data-column-drop-target", "true");
+  await expect(nameHeader.locator(".comins-column-drop-marker")).toBeHidden();
+  await page.mouse.up();
+  await expect.poll(() => headers.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-comins-column-id")))).toEqual(
+    orderBefore,
+  );
 
   expect(diagnostics).toEqual([]);
 });
