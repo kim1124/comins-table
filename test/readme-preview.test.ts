@@ -7,6 +7,32 @@ import { describe, expect, it } from "vitest";
 const gifPath = "docs/assets/comins-table-demo.gif";
 
 describe("README preview contract", () => {
+  it("keeps the README consumer-first and feature-complete", () => {
+    const readme = readFileSync("README.md", "utf8");
+    const required = [
+      "https://img.shields.io/npm/v/comins-table",
+      "https://img.shields.io/npm/types/comins-table",
+      "actions/workflows/verify.yml/badge.svg?branch=main",
+      "License-MIT",
+      "https://raw.githubusercontent.com/kim1124/comins-table/main/docs/assets/comins-table-demo.gif",
+      "Controlled data",
+      "100,000-row",
+      "6-pixel",
+      "Virtual List",
+      "Summary Row",
+      "Tree Grid",
+      "comins-table/core",
+      "comins-table/styles.css",
+      "Client boundary required",
+      "Trusted publishing",
+    ];
+
+    for (const text of required) expect(readme).toContain(text);
+    expect(readme).not.toContain("does not yet exist on the npm registry");
+    expect(readme).not.toContain("first public version must be published interactively");
+    expect(readme.indexOf("comins-table-demo.gif")).toBeLessThan(readme.indexOf("## Installation"));
+  });
+
   it("keeps a repeatable real-product GIF pipeline", () => {
     const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
     const capture = readFileSync("scripts/capture-readme-demo.mjs", "utf8");

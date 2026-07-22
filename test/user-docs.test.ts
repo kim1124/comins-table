@@ -102,6 +102,10 @@ describe("comins-table user documentation contract", () => {
 
     expect(readme).toContain("npm run dev");
     expect(readme).toContain("docs/user/01-quick-start.md");
+    expect(readme).toContain("/examples/summary-row");
+    expect(readme).toContain("/examples/tree-grid");
+    expect(readme).toContain("docs/user/17-tree-grid.md");
+    expect(readme).toContain("docs/user/18-summary-row.md");
     expect(readme).not.toContain("does not currently ship a browser example server");
   });
 
@@ -122,7 +126,8 @@ describe("comins-table user documentation contract", () => {
 
     expect(readme).toContain("CSR-focused controlled component");
     expect(readme).toContain("CSR");
-    expect(readme).toContain("drag UX remains outside the first public release");
+    expect(readme).toContain("The visual fill handle is not shipped or supported");
+    expect(readme).not.toContain("first public release");
 
     expect(optionGuide).toContain("data + onChangeData");
     expect(optionGuide).toContain("CSR");
