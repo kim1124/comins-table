@@ -720,37 +720,36 @@ function CominsCellVirtualListComponent<TData, TValue>({
         ) : null}
       </div>
       <div className="comins-table__component-virtual-list-controls">
-        {showOverflowControl ? (
-          more ? (
-            <button
-              aria-label="전체 목록 보기"
-              className="comins-table__component-virtual-list-overflow comins-table__component-virtual-list-more"
-              data-testid={`virtual-list-overflow-${listId}`}
-              onClick={(event) => {
-                preventAndStopComponentEvent(event);
+        {more && hasOverflow ? (
+          <button
+            aria-expanded={virtualized}
+            aria-label="전체 목록 보기"
+            className="comins-table__component-virtual-list-overflow comins-table__component-virtual-list-more"
+            data-testid={`virtual-list-overflow-${listId}`}
+            onClick={(event) => {
+              preventAndStopComponentEvent(event);
 
-                if (interaction?.requestRowSelection?.({ event, mode: "exclusive" }) === false) {
-                  return;
-                }
+              if (interaction?.requestRowSelection?.({ event, mode: "exclusive" }) === false) {
+                return;
+              }
 
-                setExpanded(true);
-              }}
-              onKeyDown={stopComponentEvent}
-              onMouseDown={stopComponentEvent}
-              onPointerDown={stopComponentEvent}
-              type="button"
-            >
-              ...
-            </button>
-          ) : (
-            <span
-              aria-hidden="true"
-              className="comins-table__component-virtual-list-overflow comins-table__component-virtual-list-more"
-              data-testid={`virtual-list-overflow-${listId}`}
-            >
-              ...
-            </span>
-          )
+              setExpanded(true);
+            }}
+            onKeyDown={stopComponentEvent}
+            onMouseDown={stopComponentEvent}
+            onPointerDown={stopComponentEvent}
+            type="button"
+          >
+            ...
+          </button>
+        ) : showOverflowControl ? (
+          <span
+            aria-hidden="true"
+            className="comins-table__component-virtual-list-overflow comins-table__component-virtual-list-more"
+            data-testid={`virtual-list-overflow-${listId}`}
+          >
+            ...
+          </span>
         ) : null}
         {searchEnabled ? (
           <input

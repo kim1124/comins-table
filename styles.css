@@ -625,6 +625,10 @@
   background: var(--comins-table-accent-strong);
 }
 
+.comins-table__th[data-column-placeholder="true"][data-column-drop-target="true"] {
+  background: color-mix(in srgb, var(--comins-table-surface-muted) 82%, transparent);
+}
+
 .comins-column-move-ghost {
   background: var(--comins-table-drop-marker);
   border: 1px solid rgba(255, 255, 255, 0.58);

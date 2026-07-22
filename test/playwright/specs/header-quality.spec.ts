@@ -100,22 +100,161 @@ test("header boundary resize is isolated from immediate column move and animated
   expect(rowDragHandleBox!.x - firstBodyCellBox!.x).toBeGreaterThanOrEqual(0);
   expect(rowDragHandleBox!.x - firstBodyCellBox!.x).toBeLessThanOrEqual(24);
 
-  const firstHeaderAfterMove = await basicExample
+  expect(diagnostics).toEqual([]);
+});
+
+test("column move termination suppresses only its derived click", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/examples/header");
+
+  const basicExample = page.getByTestId("header-example-basic");
+  const ageHeader = basicExample.getByTestId("header-age");
+  const nameHeader = basicExample.getByTestId("header-name");
+  const indicator = basicExample.getByTestId("sort-indicator-age");
+  await ageHeader.scrollIntoViewIfNeeded();
+  const ageBox = await ageHeader.boundingBox();
+  const nameBox = await nameHeader.boundingBox();
+  expect(ageBox).not.toBeNull();
+  expect(nameBox).not.toBeNull();
+
+  const expectNextClickSortsAscending = async () => {
+    await expect(indicator).toHaveAttribute("data-sort-state", "none");
+    await ageHeader.click();
+    await expect(indicator).toHaveAttribute("data-sort-state", "asc");
+    await ageHeader.click();
+    await ageHeader.click();
+    await expect(indicator).toHaveAttribute("data-sort-state", "none");
+  };
+  const beginActiveMove = async () => {
+    const currentAgeBox = await ageHeader.boundingBox();
+    expect(currentAgeBox).not.toBeNull();
+    await page.mouse.move(currentAgeBox!.x + currentAgeBox!.width / 2, currentAgeBox!.y + currentAgeBox!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(currentAgeBox!.x + currentAgeBox!.width / 2 + 8, currentAgeBox!.y + currentAgeBox!.height / 2);
+    await expect(ageHeader).toHaveAttribute("data-column-placeholder", "true");
+  };
+
+  await beginActiveMove();
+  await page.mouse.move(nameBox!.x + nameBox!.width / 2, nameBox!.y + nameBox!.height / 2);
+  await page.mouse.up();
+  await expectNextClickSortsAscending();
+
+  await beginActiveMove();
+  await page.mouse.move(nameBox!.x + nameBox!.width / 2, nameBox!.y + nameBox!.height / 2);
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expectNextClickSortsAscending();
+
+  const dispatchTermination = async (type: "blur" | "pointercancel") => {
+    const currentAgeBox = await ageHeader.boundingBox();
+    expect(currentAgeBox).not.toBeNull();
+    await ageHeader.dispatchEvent("pointerdown", {
+      button: 0,
+      clientX: currentAgeBox!.x + currentAgeBox!.width / 2,
+      clientY: currentAgeBox!.y + currentAgeBox!.height / 2,
+      pointerType: "mouse",
+    });
+    await page.evaluate(
+      ({ x, y }) => {
+        window.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: x + 8, clientY: y, pointerType: "mouse" }));
+      },
+      { x: currentAgeBox!.x + currentAgeBox!.width / 2, y: currentAgeBox!.y + currentAgeBox!.height / 2 },
+    );
+    await expect(ageHeader).toHaveAttribute("data-column-placeholder", "true");
+    await page.evaluate((terminationType) => {
+      window.dispatchEvent(
+        terminationType === "blur"
+          ? new Event("blur")
+          : new PointerEvent("pointercancel", { bubbles: true, pointerType: "mouse" }),
+      );
+    }, type);
+  };
+
+  await dispatchTermination("pointercancel");
+  await expectNextClickSortsAscending();
+
+  await dispatchTermination("blur");
+  await expectNextClickSortsAscending();
+
+  expect(diagnostics).toEqual([]);
+});
+
+test("sortable Header vertical intent cancels once and the next click sorts ascending", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/examples/header");
+
+  const basicExample = page.getByTestId("header-example-basic");
+  const ageHeader = basicExample.getByTestId("header-age");
+  await ageHeader.scrollIntoViewIfNeeded();
+  const indicator = basicExample.getByTestId("sort-indicator-age");
+  const orderBefore = await basicExample
     .locator(".comins-table__header-table thead th[data-comins-column-id]")
-    .first()
-    .textContent();
-  const roleHeader = basicExample.getByTestId("header-role");
-  const roleBox = await roleHeader.boundingBox();
-  expect(roleBox).not.toBeNull();
-  await page.mouse.move(roleBox!.x + roleBox!.width / 2, roleBox!.y + roleBox!.height / 2);
+    .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-comins-column-id")));
+  const ageBox = await ageHeader.boundingBox();
+  expect(ageBox).not.toBeNull();
+
+  await ageHeader.dispatchEvent("pointerdown", {
+    button: 0,
+    clientX: ageBox!.x + ageBox!.width / 2,
+    clientY: ageBox!.y + ageBox!.height / 2,
+    pointerType: "mouse",
+  });
+  await page.evaluate(
+    ({ x, y }) => {
+      window.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: x, clientY: y + 8, pointerType: "mouse" }));
+      window.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, clientX: x, clientY: y + 8, pointerType: "mouse" }));
+    },
+    { x: ageBox!.x + ageBox!.width / 2, y: ageBox!.y + ageBox!.height / 2 },
+  );
+
+  await expect(indicator).toHaveAttribute("data-sort-state", "none");
+  await expect.poll(() => basicExample
+    .locator(".comins-table__header-table thead th[data-comins-column-id]")
+    .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-comins-column-id")))).toEqual(orderBefore);
+  await ageHeader.click();
+  await expect(indicator).toHaveAttribute("data-sort-state", "asc");
+
+  expect(diagnostics).toEqual([]);
+});
+
+test("source placeholder background stays muted while its drop marker remains visible", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/examples/header");
+
+  const basicExample = page.getByTestId("header-example-basic");
+  const ageHeader = basicExample.getByTestId("header-age");
+  await ageHeader.scrollIntoViewIfNeeded();
+  const ageBox = await ageHeader.boundingBox();
+  expect(ageBox).not.toBeNull();
+  await page.mouse.move(ageBox!.x + ageBox!.width / 2, ageBox!.y + ageBox!.height / 2);
   await page.mouse.down();
-  await page.mouse.move(roleBox!.x + roleBox!.width / 2, roleBox!.y + roleBox!.height / 2 + 8);
+  await page.mouse.move(ageBox!.x + ageBox!.width / 2 + 8, ageBox!.y + ageBox!.height / 2);
+  await expect(ageHeader).toHaveAttribute("data-column-drop-target", "true");
+  await expect(ageHeader.locator(".comins-column-drop-marker")).toBeVisible();
+  await expect(ageHeader).not.toHaveCSS("background-color", "rgb(4, 120, 87)");
   await page.mouse.up();
 
-  await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText(
-    firstHeaderAfterMove ?? "",
+  await page.goto("/examples/column-groups");
+  const groupExample = page.getByTestId("header-example-groups");
+  const profileHeader = groupExample.getByTestId("header-group-profile");
+  const nameHeader = groupExample.getByTestId("header-name");
+  const ageGroupHeader = groupExample.getByTestId("header-age");
+  await profileHeader.scrollIntoViewIfNeeded();
+  const profileBox = await profileHeader.boundingBox();
+  expect(profileBox).not.toBeNull();
+  await page.mouse.move(profileBox!.x + profileBox!.width / 2, profileBox!.y + profileBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(profileBox!.x + profileBox!.width / 2 + 8, profileBox!.y + profileBox!.height / 2);
+  await expect(nameHeader).toHaveAttribute("data-column-drop-target", "true");
+  await expect(nameHeader.locator(".comins-column-drop-marker")).toBeVisible();
+  const groupBackgrounds = await Promise.all(
+    [profileHeader, nameHeader, ageGroupHeader].map((header) =>
+      header.evaluate((element) => getComputedStyle(element).backgroundColor),
+    ),
   );
-  await expect(basicExample.getByTestId("sort-indicator-role")).toHaveAttribute("data-sort-state", "none");
+  expect(new Set(groupBackgrounds).size).toBe(1);
+  expect(groupBackgrounds[0]).not.toBe("rgb(4, 120, 87)");
+  await page.mouse.up();
 
   expect(diagnostics).toEqual([]);
 });

@@ -538,8 +538,13 @@ test("virtual-list component scrolls lower items and exposes more/search example
   const moreButton = page.getByTestId("virtual-list-overflow-virtual-list-more-a-virtual-list-more-component");
   await expect(moreButton).toBeVisible();
   await expect.poll(() => moreButton.evaluate((element) => element.tagName)).toBe("BUTTON");
-  await moreButton.click();
+  await expect(moreButton).toHaveAttribute("aria-expanded", "false");
+  await moreButton.focus();
+  await expect(moreButton).toBeFocused();
+  await moreButton.press("Enter");
   await expect(moreList).toHaveAttribute("data-comins-virtual-list-expanded", "true");
+  await expect(moreButton).toHaveAttribute("aria-expanded", "true");
+  await expect(moreButton).toBeFocused();
   await expect(page.getByTestId("row-virtual-list-more-a")).toHaveAttribute("data-selected-row", "true");
   await expect(page.getByTestId("row-virtual-list-more-b")).not.toHaveAttribute("data-selected-row", "true");
   const expandedItemCount = await moreList.locator("[data-comins-virtual-list-item='true']").count();

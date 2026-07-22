@@ -97,6 +97,17 @@ function pressControlKey(element: Element, key: "c" | "v") {
   });
 }
 
+function createMousePointerEvent(
+  type: "pointerdown" | "pointermove" | "pointerup",
+  init: MouseEventInit,
+) {
+  const event = new MouseEvent(type, init);
+
+  Object.defineProperty(event, "pointerType", { value: "mouse" });
+
+  return event;
+}
+
 describe("comins-table keyboard interaction", () => {
   it("renders summary values from all controlled rows before pagination", () => {
     const element = renderTableElement(
@@ -533,6 +544,53 @@ describe("comins-table keyboard interaction", () => {
     const bodyRows = container.querySelectorAll("tbody tr");
     pressControlKey(bodyRows[0]!, "c");
     pressControlKey(bodyRows[1]!, "v");
+
+    expect(onChangeColumnLayout).not.toHaveBeenCalled();
+  });
+
+  it("does not notify column layout changes for an invalid cross-group child drop", () => {
+    const onChangeColumnLayout = vi.fn();
+    const groupedColumns = [
+      { field: "name", label: "Name" },
+      { field: "age", label: "Age", sort: true },
+      { field: "profile.age", label: "Profile Age" },
+    ] as const;
+    const element = renderTableElement(
+      <CominsTable
+        columnGroups={[{ children: ["name", "age"], id: "profile", label: "Profile" }]}
+        columns={groupedColumns}
+        data={apiRows}
+        getRowId={(row) => row.id}
+        onChangeColumnLayout={onChangeColumnLayout}
+      />,
+    );
+    const source = element.querySelector<HTMLElement>("[data-testid='header-age']");
+    const invalidTarget = element.querySelector<HTMLElement>("[data-testid='header-profile.age']");
+    const originalElementFromPoint = document.elementFromPoint;
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => invalidTarget),
+    });
+
+    try {
+      act(() => {
+        source?.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointermove", { bubbles: true, button: 0, clientX: 16, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointerup", { bubbles: true, button: 0, clientX: 30, clientY: 10 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
 
     expect(onChangeColumnLayout).not.toHaveBeenCalled();
   });

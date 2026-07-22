@@ -96,6 +96,11 @@ type CominsColumnPointerOptions = {
   kind: "column" | "group";
   sortColumnId?: string;
 };
+type CominsSuppressedSortClick = {
+  cleanup: () => void;
+  columnId: string;
+  timer: number | null;
+};
 type CominsRowMoveState = {
   sourceRowId: CominsRowId;
   targetDataIndex: number;
@@ -1035,7 +1040,7 @@ function CominsTableInner<TData>(
   const pendingScrollTopRef = useRef(0);
   const scrollCommitTimeoutRef = useRef<number | null>(null);
   const scrollFrameRef = useRef<number | null>(null);
-  const suppressedSortColumnIdRef = useRef<string | null>(null);
+  const suppressedSortClickRef = useRef<CominsSuppressedSortClick | null>(null);
   const [containerHeight, setContainerHeight] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
   const [movingColumnId, setMovingColumnId] = useState<string | null>(null);
@@ -1493,12 +1498,75 @@ function CominsTableInner<TData>(
       return selectRows(current, rowIds);
     });
   };
-  const activateHeaderSort = (column: CominsTableRuntimeColumn<TData>) => {
-    if (suppressedSortColumnIdRef.current === column.id) {
-      suppressedSortColumnIdRef.current = null;
+  const clearSuppressedSortClick = () => {
+    const suppressed = suppressedSortClickRef.current;
+
+    if (!suppressed) {
       return;
     }
 
+    suppressed.cleanup();
+
+    if (suppressed.timer !== null) {
+      window.clearTimeout(suppressed.timer);
+    }
+
+    suppressedSortClickRef.current = null;
+  };
+  const suppressNextSortClick = (columnId: string) => {
+    if (suppressedSortClickRef.current?.columnId === columnId) {
+      return;
+    }
+
+    clearSuppressedSortClick();
+    suppressedSortClickRef.current = { cleanup: () => undefined, columnId, timer: null };
+  };
+  const scheduleSuppressedSortClickClear = () => {
+    const suppressed = suppressedSortClickRef.current;
+
+    if (!suppressed) {
+      return;
+    }
+
+    suppressed.cleanup();
+    suppressed.cleanup = () => undefined;
+    suppressed.timer = window.setTimeout(() => {
+      if (suppressedSortClickRef.current === suppressed) {
+        suppressedSortClickRef.current = null;
+      }
+    }, 0);
+  };
+  const keepSuppressedSortClickUntilPointerEnd = () => {
+    const suppressed = suppressedSortClickRef.current;
+
+    if (!suppressed) {
+      return;
+    }
+
+    const handlePointerUp = () => scheduleSuppressedSortClickClear();
+    const handlePointerCancel = () => clearSuppressedSortClick();
+    const handleWindowBlur = () => clearSuppressedSortClick();
+
+    suppressed.cleanup();
+    suppressed.cleanup = () => {
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerCancel);
+      window.removeEventListener("blur", handleWindowBlur);
+    };
+    window.addEventListener("pointerup", handlePointerUp, { once: true });
+    window.addEventListener("pointercancel", handlePointerCancel, { once: true });
+    window.addEventListener("blur", handleWindowBlur, { once: true });
+  };
+  const consumeSuppressedSortClick = (columnId: string) => {
+    if (suppressedSortClickRef.current?.columnId !== columnId) {
+      return false;
+    }
+
+    clearSuppressedSortClick();
+
+    return true;
+  };
+  const activateHeaderSort = (column: CominsTableRuntimeColumn<TData>) => {
     if (!column.sort) {
       return;
     }
@@ -1604,7 +1672,13 @@ function CominsTableInner<TData>(
     setColumnMoveTargetId(null);
   };
 
-  useEffect(() => () => clearColumnPointerInteraction(), []);
+  useEffect(
+    () => () => {
+      clearColumnPointerInteraction();
+      clearSuppressedSortClick();
+    },
+    [],
+  );
 
   const beginColumnPointerInteraction = (options: CominsColumnPointerOptions) => {
     if (options.event.button !== 0) {
@@ -1615,7 +1689,7 @@ function CominsTableInner<TData>(
     const isMousePointer = pointerType === "mouse" || pointerType === "";
     const suppressPendingSort = () => {
       if (options.sortColumnId) {
-        suppressedSortColumnIdRef.current = options.sortColumnId;
+        suppressNextSortClick(options.sortColumnId);
       }
     };
     const activateCurrent = (x: number, y: number) => {
@@ -1682,16 +1756,31 @@ function CominsTableInner<TData>(
         }
       }
 
+      if (current === interaction && current.cancelSort) {
+        scheduleSuppressedSortClickClear();
+      }
+
       clearColumnPointerInteraction();
     };
-    const handlePointerCancel = () => clearColumnPointerInteraction();
+    const handlePointerCancel = () => {
+      clearSuppressedSortClick();
+      clearColumnPointerInteraction();
+    };
     const handleKeyDown = (keyEvent: KeyboardEvent) => {
       if (keyEvent.key === "Escape") {
         keyEvent.preventDefault();
+
+        if (columnPointerInteractionRef.current === interaction && interaction.cancelSort) {
+          keepSuppressedSortClickUntilPointerEnd();
+        }
+
         clearColumnPointerInteraction();
       }
     };
-    const handleWindowBlur = () => clearColumnPointerInteraction();
+    const handleWindowBlur = () => {
+      clearSuppressedSortClick();
+      clearColumnPointerInteraction();
+    };
     const interaction: CominsColumnPointerInteraction = {
       active: false,
       blocked: false,
@@ -1712,6 +1801,7 @@ function CominsTableInner<TData>(
     };
 
     clearColumnPointerInteraction();
+    clearSuppressedSortClick();
 
     if (!isMousePointer) {
       interaction.timer = window.setTimeout(() => {
@@ -1750,9 +1840,15 @@ function CominsTableInner<TData>(
         const targetIndex = visibleColumns.findIndex((visibleColumn) => visibleColumn.id === targetId);
 
         if (targetIndex >= 0) {
-          commitState((stateCurrent) => moveCominsColumn(stateCurrent, column.id, targetIndex), {
-            columnLayoutChanged: true,
-          });
+          const current = stateRef.current;
+          const next = moveCominsColumn(current, column.id, targetIndex);
+
+          if (
+            next !== current &&
+            next.columnOrder.some((columnId, index) => columnId !== current.columnOrder[index])
+          ) {
+            commitState(next, { columnLayoutChanged: true });
+          }
         }
       },
       event,
@@ -1781,9 +1877,15 @@ function CominsTableInner<TData>(
         const targetIndex = visibleColumns.findIndex((visibleColumn) => visibleColumn.id === targetId);
 
         if (targetIndex >= 0) {
-          commitState((stateCurrent) => moveCominsColumnGroup(stateCurrent, group.id, targetIndex), {
-            columnLayoutChanged: true,
-          });
+          const current = stateRef.current;
+          const next = moveCominsColumnGroup(current, group.id, targetIndex);
+
+          if (
+            next !== current &&
+            next.columnOrder.some((columnId, index) => columnId !== current.columnOrder[index])
+          ) {
+            commitState(next, { columnLayoutChanged: true });
+          }
         }
       },
       event,
@@ -2166,6 +2268,10 @@ function CominsTableInner<TData>(
           headerProps.onClick?.(event);
 
           if (event.defaultPrevented || !column.sort) {
+            return;
+          }
+
+          if (consumeSuppressedSortClick(column.id)) {
             return;
           }
 
