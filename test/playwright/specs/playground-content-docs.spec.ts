@@ -21,7 +21,7 @@ const featurePages = [
   ["/examples/crud", "추가, 수정, 삭제, 초기화, 필터링"],
   ["/examples/size", "300px 고정 높이와 부모 컨테이너 500px"],
   ["/examples/theme", "CSS 변수와 theme class"],
-  ["/examples/header", "1Depth 컬럼"],
+  ["/examples/header", "6px 이상 드래그하면 placeholder"],
   ["/examples/column-groups", "2Depth Header"],
   ["/performance/infinite-scroll", "viewport 하단 근접"],
   ["/performance/lazy-load", "append-mode public API"],

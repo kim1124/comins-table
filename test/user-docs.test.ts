@@ -181,4 +181,13 @@ describe("comins-table user documentation contract", () => {
     expect(cell).toContain("onClickCell");
     expect(cell).toContain("onClickRow");
   });
+
+  it("keeps English and Korean Virtual List Search guidance single-selection-only", () => {
+    const englishCell = readWorkspaceFile("docs/user/08-cell.md");
+    const koreanCell = readWorkspaceFile("docs/ko/08-cell.md");
+
+    expect(englishCell).toContain("Search remains single-selection-only and is available only while exactly one Row is selected.");
+    expect(koreanCell).toContain("`searchable: true`인 경우 정확히 하나의 Row가 선택되었을 때만 검색 input을 표시");
+    expect(koreanCell).not.toContain("Row/Cell selection 상태에 의존하지 않는다");
+  });
 });

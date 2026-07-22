@@ -117,7 +117,7 @@ Virtual List Row 선택 기준:
 }
 ```
 
-`searchFilter` payload는 `item`, `itemIndex`, `value`만 받는다. 여기서 `value`는 검색 input 값이다. 검색 input은 `searchable: true`인 virtual-list Cell에 표시되며 Row/Cell selection 상태에 의존하지 않는다.
+`searchFilter` payload는 `item`, `itemIndex`, `value`만 받는다. 여기서 `value`는 검색 input 값이다. 검색 input은 `searchable: true`이고 정확히 하나의 Row가 선택된 virtual-list Cell에만 표시된다.
 
 Cell 내부 입력 컴포넌트는 immutable update로 외부 `data` 또는 store를 갱신해야 한다.
 
