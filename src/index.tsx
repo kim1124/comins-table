@@ -31,7 +31,7 @@ import {
   updateCominsRows,
 } from "./core";
 import { getCominsColumnMouseIntent } from "./column-pointer";
-import { renderCominsBuiltInComponent } from "./component-renderer";
+import { renderCominsBuiltInComponent, type CominsBuiltInComponentInteraction } from "./component-renderer";
 import { getCominsSummaryValues } from "./summary";
 import {
   flattenCominsTree,
@@ -551,6 +551,7 @@ function renderCominsComponentSlots<TData>(
   components: ReadonlyArray<CominsRenderableComponent<TData>> | undefined,
   payload: CominsRenderablePayload<TData>,
   direction: "left" | "right",
+  interaction?: CominsBuiltInComponentInteraction,
 ) {
   return getRenderableCominsComponents(components, payload)
     .map((component, index) => ({ component, index }))
@@ -563,7 +564,7 @@ function renderCominsComponentSlots<TData>(
         data-comins-component-id={component.id ?? `${component.type}-${index}`}
         key={component.id ?? `${component.type}-${index}`}
       >
-        {renderCominsBuiltInComponent(component as never, payload as never)}
+        {renderCominsBuiltInComponent(component as never, payload as never, interaction)}
       </span>
     ));
 }
@@ -572,7 +573,10 @@ function renderCominsContentWithComponents<TData>(
   content: React.ReactNode,
   components: ReadonlyArray<CominsRenderableComponent<TData>> | undefined,
   payload: CominsRenderablePayload<TData>,
-  options: { showContent?: boolean } = {},
+  options: {
+    interaction?: CominsBuiltInComponentInteraction;
+    showContent?: boolean;
+  } = {},
 ) {
   if (!components?.length) {
     return content;
@@ -585,8 +589,8 @@ function renderCominsContentWithComponents<TData>(
     return content;
   }
 
-  const leftSlots = renderCominsComponentSlots(renderableComponents, payload, "left");
-  const rightSlots = renderCominsComponentSlots(renderableComponents, payload, "right");
+  const leftSlots = renderCominsComponentSlots(renderableComponents, payload, "left", options.interaction);
+  const rightSlots = renderCominsComponentSlots(renderableComponents, payload, "right", options.interaction);
 
   if (!showContent) {
     return (
@@ -1788,7 +1792,15 @@ function CominsTableInner<TData>(
     });
   };
 
-  const selectRowFromClick = (event: React.MouseEvent, entry: VisibleRowEntry<TData>) => {
+  type CominsRowSelectionModifierEvent = Pick<
+    React.KeyboardEvent | React.MouseEvent,
+    "ctrlKey" | "metaKey" | "shiftKey"
+  >;
+
+  const selectRowFromInteraction = (
+    event: CominsRowSelectionModifierEvent,
+    entry: VisibleRowEntry<TData>,
+  ) => {
     if (event.shiftKey && lastRowAnchorRef.current !== null) {
       selectRowRangeByIds(lastRowAnchorRef.current, entry.rowId);
       lastRowAnchorRef.current = entry.rowId;
@@ -2488,7 +2500,7 @@ function CominsTableInner<TData>(
 
                   if (!(event as React.MouseEvent<HTMLTableRowElement> & { __cominsCellSelectionHandled?: boolean })
                     .__cominsCellSelectionHandled) {
-                    selectRowFromClick(event, entry);
+                    selectRowFromInteraction(event, entry);
                   }
                   onClickRow?.(createRowPayload(event, entry));
                 }}
@@ -2533,6 +2545,22 @@ function CominsTableInner<TData>(
                   );
                   const cellProps = resolveRenderableCellProps(column, cellPayload);
                   const cellDisabled = rowRuntimeProps.disabled || isRenderableCellDisabled(cellProps, cellPayload);
+                  const componentInteraction: CominsBuiltInComponentInteraction = {
+                    requestRowSelection: ({ event, mode }) => {
+                      if (cellDisabled) {
+                        return false;
+                      }
+
+                      if (mode === "exclusive") {
+                        commitState((current) => selectRow(current, entry.rowId));
+                        lastRowAnchorRef.current = entry.rowId;
+                        return true;
+                      }
+
+                      selectRowFromInteraction(event, entry);
+                      return true;
+                    },
+                  };
                   const cellClassName = toClassName(getRenderableCellClassName(cellProps, cellPayload));
                   const cellStyle = getRenderableCellStyle(cellProps, cellPayload);
                   const hasCellComponents = Boolean(column.cell?.components?.length);
@@ -2565,6 +2593,7 @@ function CominsTableInner<TData>(
                     column.cell.renderer(cellPayload)
                   ) : hasCellComponents ? (
                     renderCominsContentWithComponents(formattedCellValue, cellComponents, cellPayload, {
+                      interaction: componentInteraction,
                       showContent: false,
                     })
                   ) : (

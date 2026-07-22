@@ -12,7 +12,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 type Row = {
   enabled: boolean;
   id: string;
-  items?: Array<{ data?: { group: string }; label: string; value: string }>;
+  items?: Array<{ data?: { group: string }; disabled?: boolean; label: string; value: string }>;
   name: string;
   optionA: boolean;
   progress: number;
@@ -715,8 +715,206 @@ describe("comins-table component renderer API", () => {
     expect(document.body.querySelector("[role='menu']")).toBeNull();
   });
 
-  it("enables virtual-list more only for single selection without hijacking item events", () => {
-    const ref = createRef<CominsTableRef<Row>>();
+  it("selects the owning row from a virtual-list item without invoking cell or row click callbacks", () => {
+    const onClickCell = vi.fn();
+    const onClickItem = vi.fn();
+    const onClickRow = vi.fn();
+    const columns: Array<CominsTableColumn<Row>> = [
+      {
+        cell: {
+          components: [
+            {
+              type: "virtual-list",
+              items: ({ row }) => row.data.items ?? [],
+              onClickItem,
+            },
+          ],
+        },
+        field: "items",
+        label: "Items",
+      },
+    ];
+    const element = render(
+      <CominsTable
+        columns={columns}
+        data={listRows}
+        getRowId={(row) => row.id}
+        onClickCell={onClickCell}
+        onClickRow={onClickRow}
+        rowHeight={180}
+      />,
+    );
+    const firstItem = element.querySelector<HTMLButtonElement>(
+      "[data-testid='virtual-list-a-items'] [data-comins-virtual-list-item='true']",
+    );
+
+    act(() => {
+      firstItem?.click();
+    });
+
+    expect(element.querySelector("[data-testid='row-a']")?.getAttribute("data-selected-row")).toBe("true");
+    expect(element.querySelector("[data-testid='cell-a-items']")?.getAttribute("data-selected")).toBeNull();
+    expect(firstItem?.getAttribute("aria-selected")).toBe("true");
+    expect(onClickItem).toHaveBeenCalledTimes(1);
+    expect(onClickCell).not.toHaveBeenCalled();
+    expect(onClickRow).not.toHaveBeenCalled();
+  });
+
+  it("applies Ctrl, Cmd, and Shift Row selection semantics from virtual-list items", () => {
+    const columns: Array<CominsTableColumn<Row>> = [
+      {
+        cell: {
+          components: [
+            {
+              type: "virtual-list",
+              items: ({ row }) => row.data.items ?? [],
+            },
+          ],
+        },
+        field: "items",
+        label: "Items",
+      },
+    ];
+    const element = render(<CominsTable columns={columns} data={listRows} getRowId={(row) => row.id} rowHeight={180} />);
+    const firstItem = element.querySelector<HTMLButtonElement>(
+      "[data-testid='virtual-list-a-items'] [data-comins-virtual-list-item='true']",
+    );
+    const secondItem = element.querySelector<HTMLButtonElement>(
+      "[data-testid='virtual-list-b-items'] [data-comins-virtual-list-item='true']",
+    );
+
+    act(() => {
+      firstItem?.click();
+      secondItem?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, ctrlKey: true }));
+    });
+
+    expect(element.querySelector("[data-testid='row-a']")?.getAttribute("data-selected-row")).toBe("true");
+    expect(element.querySelector("[data-testid='row-b']")?.getAttribute("data-selected-row")).toBe("true");
+
+    act(() => {
+      firstItem?.click();
+      secondItem?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, metaKey: true }));
+    });
+
+    expect(element.querySelector("[data-testid='row-a']")?.getAttribute("data-selected-row")).toBe("true");
+    expect(element.querySelector("[data-testid='row-b']")?.getAttribute("data-selected-row")).toBe("true");
+
+    act(() => {
+      firstItem?.click();
+      secondItem?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, shiftKey: true }));
+    });
+
+    expect(element.querySelector("[data-testid='row-a']")?.getAttribute("data-selected-row")).toBe("true");
+    expect(element.querySelector("[data-testid='row-b']")?.getAttribute("data-selected-row")).toBe("true");
+  });
+
+  it("selects the owning row from virtual-list Enter and Space activation", () => {
+    const onClickCell = vi.fn();
+    const onClickItem = vi.fn();
+    const onClickRow = vi.fn();
+    const columns: Array<CominsTableColumn<Row>> = [
+      {
+        cell: {
+          components: [
+            {
+              type: "virtual-list",
+              items: ({ row }) => row.data.items ?? [],
+              onClickItem,
+            },
+          ],
+        },
+        field: "items",
+        label: "Items",
+      },
+    ];
+    const element = render(
+      <CominsTable
+        columns={columns}
+        data={listRows}
+        getRowId={(row) => row.id}
+        onClickCell={onClickCell}
+        onClickRow={onClickRow}
+        rowHeight={180}
+      />,
+    );
+    const firstItem = element.querySelector<HTMLButtonElement>(
+      "[data-testid='virtual-list-a-items'] [data-comins-virtual-list-item='true']",
+    );
+    const secondItem = element.querySelector<HTMLButtonElement>(
+      "[data-testid='virtual-list-b-items'] [data-comins-virtual-list-item='true']",
+    );
+
+    act(() => {
+      firstItem?.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Enter" }));
+    });
+
+    expect(element.querySelector("[data-testid='row-a']")?.getAttribute("data-selected-row")).toBe("true");
+    expect(firstItem?.getAttribute("aria-selected")).toBe("true");
+
+    act(() => {
+      secondItem?.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: " " }));
+    });
+
+    expect(element.querySelector("[data-testid='row-a']")?.getAttribute("data-selected-row")).toBeNull();
+    expect(element.querySelector("[data-testid='row-b']")?.getAttribute("data-selected-row")).toBe("true");
+    expect(secondItem?.getAttribute("aria-selected")).toBe("true");
+    expect(onClickItem).toHaveBeenCalledTimes(2);
+    expect(onClickCell).not.toHaveBeenCalled();
+    expect(onClickRow).not.toHaveBeenCalled();
+  });
+
+  it("rejects virtual-list item activation for disabled rows and disabled items", () => {
+    const onClickItem = vi.fn();
+    const disabledRows = listRows.map((row) =>
+      row.id === "a"
+        ? {
+            ...row,
+            items: row.items?.map((item, index) => (index === 0 ? { ...item, disabled: true } : item)),
+          }
+        : row,
+    );
+    const columns: Array<CominsTableColumn<Row>> = [
+      {
+        cell: {
+          components: [
+            {
+              type: "virtual-list",
+              items: ({ row }) => row.data.items ?? [],
+              onClickItem,
+            },
+          ],
+        },
+        field: "items",
+        label: "Items",
+      },
+    ];
+    const element = render(
+      <CominsTable
+        columns={columns}
+        data={disabledRows}
+        getRowId={(row) => row.id}
+        rowHeight={180}
+        rowProps={{ disabled: (row) => row.id === "b" }}
+      />,
+    );
+    const disabledItem = element.querySelector<HTMLButtonElement>(
+      "[data-testid='virtual-list-a-items'] [data-comins-virtual-list-item='true']",
+    );
+    const disabledRowItem = element.querySelector<HTMLButtonElement>(
+      "[data-testid='virtual-list-b-items'] [data-comins-virtual-list-item='true']",
+    );
+
+    act(() => {
+      disabledItem?.click();
+      disabledRowItem?.click();
+    });
+
+    expect(element.querySelector("[data-testid='row-a']")?.getAttribute("data-selected-row")).toBeNull();
+    expect(element.querySelector("[data-testid='row-b']")?.getAttribute("data-selected-row")).toBeNull();
+    expect(onClickItem).not.toHaveBeenCalled();
+  });
+
+  it("selects the owning row exclusively while expanding virtual-list More", () => {
     const onClickItem = vi.fn();
     const onContextMenuItem = vi.fn();
     const columns: Array<CominsTableColumn<Row>> = [
@@ -740,18 +938,10 @@ describe("comins-table component renderer API", () => {
         label: "Items",
       },
     ];
-    const element = render(<CominsTable columns={columns} data={listRows} getRowId={(row) => row.id} ref={ref} rowHeight={120} />);
+    const element = render(<CominsTable columns={columns} data={listRows} getRowId={(row) => row.id} rowHeight={120} />);
     const firstList = element.querySelector("[data-testid='virtual-list-a-items']");
 
     expect(firstList?.querySelectorAll("[data-comins-virtual-list-item='true']")).toHaveLength(5);
-
-    const overflowIndicator = firstList?.querySelector<HTMLElement>("[data-testid='virtual-list-overflow-a-items']");
-
-    expect(overflowIndicator?.tagName).toBe("SPAN");
-
-    act(() => {
-      ref.current?.setSelectedRow(0);
-    });
 
     const overflowButton = firstList?.querySelector<HTMLButtonElement>("[data-testid='virtual-list-overflow-a-items']");
 
@@ -791,10 +981,28 @@ describe("comins-table component renderer API", () => {
         value: "alpha-1",
       }),
     );
+
+    const secondItem = element.querySelector<HTMLButtonElement>(
+      "[data-testid='virtual-list-b-items'] [data-comins-virtual-list-item='true']",
+    );
+
+    act(() => {
+      secondItem?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, ctrlKey: true }));
+    });
+
+    expect(element.querySelector("[data-testid='row-a']")?.getAttribute("data-selected-row")).toBe("true");
+    expect(element.querySelector("[data-testid='row-b']")?.getAttribute("data-selected-row")).toBe("true");
+
+    act(() => {
+      firstList?.querySelector<HTMLButtonElement>("[data-testid='virtual-list-overflow-a-items']")?.click();
+    });
+
+    expect(element.querySelector("[data-testid='row-a']")?.getAttribute("data-selected-row")).toBe("true");
+    expect(element.querySelector("[data-testid='row-b']")?.getAttribute("data-selected-row")).toBeNull();
+    expect(firstList?.getAttribute("data-comins-virtual-list-expanded")).toBe("true");
   });
 
   it("gates virtual-list search and full scroll behind a single selected row", () => {
-    const ref = createRef<CominsTableRef<Row>>();
     const searchFilter = vi.fn(
       ({ item, itemIndex, value }) => itemIndex === 1 || item.label.toLowerCase().includes(String(value).toLowerCase()),
     );
@@ -828,13 +1036,13 @@ describe("comins-table component renderer API", () => {
       },
     ];
     const element = render(
-      <CominsTable columns={columns} data={rows} getRowId={(row) => row.id} ref={ref} rowHeight={120} />,
+      <CominsTable columns={columns} data={rows} getRowId={(row) => row.id} rowHeight={120} />,
     );
     const firstList = element.querySelector<HTMLElement>("[data-testid='virtual-list-a-items']");
 
     expect(firstList?.querySelectorAll("[data-comins-virtual-list-item='true']")).toHaveLength(5);
     expect(firstList?.textContent).not.toContain("Large item 10000");
-    expect(firstList?.querySelector("[data-testid='virtual-list-overflow-a-items']")?.tagName).toBe("SPAN");
+    expect(firstList?.querySelector("[data-testid='virtual-list-overflow-a-items']")?.tagName).toBe("BUTTON");
 
     const firstSearch = element.querySelector<HTMLInputElement>("[data-testid='virtual-list-search-a-items']");
 
@@ -854,7 +1062,7 @@ describe("comins-table component renderer API", () => {
     expect(firstList?.textContent).not.toContain("Large item 10000");
 
     act(() => {
-      ref.current?.setSelectedRow(0);
+      firstList?.querySelector<HTMLButtonElement>("[data-comins-virtual-list-item='true']")?.click();
     });
 
     const selectedSearch = element.querySelector<HTMLInputElement>("[data-testid='virtual-list-search-a-items']");
@@ -888,12 +1096,18 @@ describe("comins-table component renderer API", () => {
     expect(searchFilter.mock.calls[0]?.[0]).not.toHaveProperty("column");
     expect(searchFilter.mock.calls[0]?.[0]).not.toHaveProperty("row");
 
+    const secondItem = element.querySelector<HTMLButtonElement>(
+      "[data-testid='virtual-list-b-items'] [data-comins-virtual-list-item='true']",
+    );
+
     act(() => {
-      ref.current?.setSelectedRows([0, 1]);
+      secondItem?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, ctrlKey: true }));
     });
 
+    expect(element.querySelector("[data-testid='row-a']")?.getAttribute("data-selected-row")).toBe("true");
+    expect(element.querySelector("[data-testid='row-b']")?.getAttribute("data-selected-row")).toBe("true");
     expect(element.querySelector("[data-testid='virtual-list-search-a-items']")).toBeNull();
     expect(firstList?.querySelectorAll("[data-comins-virtual-list-item='true']")).toHaveLength(5);
-    expect(firstList?.querySelector("[data-testid='virtual-list-overflow-a-items']")?.tagName).toBe("SPAN");
+    expect(firstList?.querySelector("[data-testid='virtual-list-overflow-a-items']")?.tagName).toBe("BUTTON");
   });
 });

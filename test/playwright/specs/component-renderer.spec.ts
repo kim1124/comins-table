@@ -508,6 +508,21 @@ test("virtual-list component scrolls lower items and exposes more/search example
   await expect(firstList).not.toContainText("검색-6");
   await expect(page.getByTestId("virtual-list-overflow-virtual-list-a-virtual-list-component")).toContainText("...");
 
+  const firstPreviewItem = firstList.locator("[data-comins-virtual-list-item='true']").first();
+  const secondPreviewItem = page
+    .getByTestId("virtual-list-virtual-list-b-virtual-list-component")
+    .locator("[data-comins-virtual-list-item='true']")
+    .first();
+
+  await firstPreviewItem.click();
+  await expect(page.getByTestId("row-virtual-list-a")).toHaveAttribute("data-selected-row", "true");
+  await expect(firstPreviewItem).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByTestId("component-event-log")).toContainText("Virtual List 클릭:검색-1");
+
+  await secondPreviewItem.click({ modifiers: ["ControlOrMeta"] });
+  await expect(page.getByTestId("row-virtual-list-a")).toHaveAttribute("data-selected-row", "true");
+  await expect(page.getByTestId("row-virtual-list-b")).toHaveAttribute("data-selected-row", "true");
+
   const heights = await dataTable.evaluate((element) => {
     const style = window.getComputedStyle(element);
     return {
@@ -522,13 +537,11 @@ test("virtual-list component scrolls lower items and exposes more/search example
   const moreList = page.getByTestId("virtual-list-virtual-list-more-a-virtual-list-more-component");
   const moreButton = page.getByTestId("virtual-list-overflow-virtual-list-more-a-virtual-list-more-component");
   await expect(moreButton).toBeVisible();
-  await expect.poll(() => moreButton.evaluate((element) => element.tagName)).toBe("SPAN");
-  await page.getByTestId("cell-virtual-list-more-a-id").click();
-  await expect(page.getByTestId("row-virtual-list-more-a")).toHaveAttribute("data-selected-row", "true");
   await expect.poll(() => moreButton.evaluate((element) => element.tagName)).toBe("BUTTON");
   await moreButton.click();
   await expect(moreList).toHaveAttribute("data-comins-virtual-list-expanded", "true");
   await expect(page.getByTestId("row-virtual-list-more-a")).toHaveAttribute("data-selected-row", "true");
+  await expect(page.getByTestId("row-virtual-list-more-b")).not.toHaveAttribute("data-selected-row", "true");
   const expandedItemCount = await moreList.locator("[data-comins-virtual-list-item='true']").count();
   expect(expandedItemCount).toBeGreaterThan(0);
   expect(expandedItemCount).toBeLessThan(30);
@@ -537,6 +550,18 @@ test("virtual-list component scrolls lower items and exposes more/search example
     element.dispatchEvent(new Event("scroll", { bubbles: true }));
   });
   await expect(moreList.getByText("검색-10000")).toBeVisible();
+
+  await page
+    .getByTestId("virtual-list-virtual-list-more-b-virtual-list-more-component")
+    .locator("[data-comins-virtual-list-item='true']")
+    .first()
+    .click({ modifiers: ["ControlOrMeta"] });
+  await expect(page.getByTestId("row-virtual-list-more-a")).toHaveAttribute("data-selected-row", "true");
+  await expect(page.getByTestId("row-virtual-list-more-b")).toHaveAttribute("data-selected-row", "true");
+  await moreButton.click();
+  await expect(page.getByTestId("row-virtual-list-more-a")).toHaveAttribute("data-selected-row", "true");
+  await expect(page.getByTestId("row-virtual-list-more-b")).not.toHaveAttribute("data-selected-row", "true");
+  await expect(moreList).toHaveAttribute("data-comins-virtual-list-expanded", "true");
 
   await expect(page.getByTestId("virtual-list-overflow-virtual-list-search-a-virtual-list-search-component")).toContainText("...");
   await expect(page.getByTestId("virtual-list-search-virtual-list-search-a-virtual-list-search-component")).toHaveCount(0);
@@ -549,18 +574,30 @@ test("virtual-list component scrolls lower items and exposes more/search example
   await expect(searchList).not.toContainText("검색-10000");
   await expect(searchList.locator("[data-comins-virtual-list-item='true']")).toHaveCount(5);
 
-  await page.getByTestId("cell-virtual-list-search-a-id").click();
+  const searchPreviewItem = searchList.locator("[data-comins-virtual-list-item='true']").first();
+  await searchPreviewItem.click();
+  await expect(page.getByTestId("row-virtual-list-search-a")).toHaveAttribute("data-selected-row", "true");
+  await expect(searchPreviewItem).toHaveAttribute("aria-selected", "true");
   const search = page.getByTestId("virtual-list-search-virtual-list-search-a-virtual-list-search-component");
   await expect(search).toBeEnabled();
   await search.fill("검색-9999");
   await expect(searchList).toContainText("검색-9999");
   await expect(searchList.locator("[data-comins-virtual-list-item='true']")).toHaveCount(1);
 
-  await searchList.locator("[data-comins-virtual-list-item='true']").first().click();
+  const filteredSearchItem = searchList.locator("[data-comins-virtual-list-item='true']").first();
+  await filteredSearchItem.focus();
+  await filteredSearchItem.press("Enter");
+  await expect(page.getByTestId("row-virtual-list-search-a")).toHaveAttribute("data-selected-row", "true");
   await expect(searchList.locator("[aria-selected='true']")).toContainText("검색-9999");
   await expect(page.getByTestId("component-event-log")).toContainText("Virtual List 클릭:검색-9999");
 
-  await page.getByTestId("cell-virtual-list-search-b-id").click({ modifiers: ["ControlOrMeta"] });
+  await page
+    .getByTestId("virtual-list-virtual-list-search-b-virtual-list-search-component")
+    .locator("[data-comins-virtual-list-item='true']")
+    .first()
+    .click({ modifiers: ["ControlOrMeta"] });
+  await expect(page.getByTestId("row-virtual-list-search-a")).toHaveAttribute("data-selected-row", "true");
+  await expect(page.getByTestId("row-virtual-list-search-b")).toHaveAttribute("data-selected-row", "true");
   await expect(page.getByTestId("virtual-list-search-virtual-list-search-a-virtual-list-search-component")).toHaveCount(0);
   await expect(searchList.locator("[data-comins-virtual-list-item='true']")).toHaveCount(5);
   await expect(page.getByTestId("virtual-list-overflow-virtual-list-search-a-virtual-list-search-component")).toContainText("...");
