@@ -28,6 +28,14 @@ describe("README preview contract", () => {
     expect(controlledModel).not.toContain("Apply each callback payload to the owning state");
   });
 
+  it("describes the Ref API as current Header view state access", () => {
+    const readme = readFileSync("README.md", "utf8");
+    const refApi = getReadmeSection(readme, "Ref API");
+
+    expect(refApi).toContain("read and update the current Header view state");
+    expect(refApi).not.toContain("controlled Header state");
+  });
+
   it("keeps the README architecture and public boundaries structurally stable", () => {
     const readme = readFileSync("README.md", "utf8");
     const headings = readme.match(/^## .+$/gmu) ?? [];
@@ -59,11 +67,22 @@ describe("README preview contract", () => {
       .split("\n")
       .filter((line) => line.startsWith("| `comins-table"));
     expect(packageEntries).toHaveLength(5);
+    expect(packageEntries.map((line) => line.split("|")[1]?.trim())).toEqual([
+      "`comins-table`",
+      "`comins-table/core`",
+      "`comins-table/clipboard`",
+      "`comins-table/selection`",
+      "`comins-table/styles.css`",
+    ]);
 
     const support = getReadmeSection(readme, "Support");
     for (const surface of ["React", "React DOM", "TypeScript", "Chrome and Edge", "Firefox and Safari", "SSR", "Runtime network behavior"]) {
       expect(support).toContain(`| ${surface} |`);
     }
+    expect(support).toContain("| React | `>=18.0.0 <20.0.0` |");
+    expect(support).toContain("| React DOM | `>=18.0.0 <20.0.0` |");
+    expect(support).toContain("| SSR | Client boundary required; server rendering is not currently supported |");
+    expect(support).toContain("| Runtime network behavior | No package-owned requests, remote assets, telemetry, or error reporting |");
 
     const boundaries = getReadmeSection(readme, "Current Boundaries");
     for (const boundary of ["Server-side Row models", "Row grouping", "pivoting", "charts", "AI assistance", "remote Tree loading", "hierarchy pagination", "Tree Row drag", "Tree Row copy/paste", "visual fill handle", "Firefox", "Safari", "SSR"]) {
@@ -74,6 +93,7 @@ describe("README preview contract", () => {
     expect(tree).toContain("`expand(nodeIds?)`");
     expect(tree).toContain("`fold(nodeIds?)`");
     expect(tree).toContain("ancestor remains folded");
+    expect(tree).toContain("an omitted argument targets every branch and an empty array is a no-op");
 
     const trustedPublishing = getReadmeSection(readme, "Trusted Publishing");
     for (const term of ["`publish.yml`", "OIDC", "`npm stage publish`", "protected `npm` environment"]) {

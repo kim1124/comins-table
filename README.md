@@ -184,7 +184,7 @@ tableRef.current?.expand(); // all Tree Grid branches
 tableRef.current?.fold(); // all Tree Grid branches
 ```
 
-`setSelectedRow`, `setSelectedRows`, and `setMoveTargetRow` use the visible Row index after current sorting and pagination. `getColumnLayout`, `setColumnLayout`, `getSortState`, `setSortState`, and `clearSort` expose the controlled Header state. `expand(nodeIds?)` and `fold(nodeIds?)` accept readonly Tree Grid node-id arrays; flat tables ignore them.
+`setSelectedRow`, `setSelectedRows`, and `setMoveTargetRow` use the visible Row index after current sorting and pagination. `getColumnLayout`, `setColumnLayout`, `getSortState`, `setSortState`, and `clearSort` read and update the current Header view state. `expand(nodeIds?)` and `fold(nodeIds?)` accept readonly Tree Grid node-id arrays; flat tables ignore them.
 
 ## Playground
 
