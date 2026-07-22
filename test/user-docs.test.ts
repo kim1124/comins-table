@@ -167,4 +167,18 @@ describe("comins-table user documentation contract", () => {
     expect(tree).toContain("cell.renderer");
     expect(tree).toContain("10000");
   });
+
+  it("documents column drag activation and Virtual List row selection", () => {
+    const header = readWorkspaceFile("docs/user/06-header.md");
+    const cell = readWorkspaceFile("docs/user/08-cell.md");
+
+    expect(header).toContain("6-pixel");
+    expect(header).toContain("source placeholder");
+    expect(header).toContain("non-mouse");
+    expect(cell).toContain("Ctrl");
+    expect(cell).toContain("Shift");
+    expect(cell).toContain("More");
+    expect(cell).toContain("onClickCell");
+    expect(cell).toContain("onClickRow");
+  });
 });

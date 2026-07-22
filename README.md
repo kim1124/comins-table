@@ -129,7 +129,7 @@ import {
 
 - Controlled `data` and `onChangeData` flow for application-owned state.
 - Column definitions with `field`, `id`, `label`, `sort`, width constraints, row/cell `props`, header configuration, and cell configuration.
-- Header visibility, keyboard sorting, `aria-sort`, resize, long-press column reorder, and layout persistence.
+- Header visibility, keyboard sorting, `aria-sort`, resize, 6-pixel horizontal-drag column reorder with source placeholder, and layout persistence.
 - Two-level headers through `columnGroups`.
 - Row click, double click, keyboard callbacks, context menu callbacks, row selection, row drag reorder, row copy, and row paste.
 - Cell formatting, custom renderer, cell events, single-cell selection, range selection, and drag range selection.

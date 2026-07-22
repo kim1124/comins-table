@@ -20,7 +20,7 @@ test("playground renders Header and Cell component renderer examples", async ({ 
   await page.goto("/");
 
   await page.goto("/examples/header");
-  await expect(page.getByTestId("feature-option-description").first()).toContainText("1Depth 컬럼");
+  await expect(page.getByTestId("feature-option-description").first()).toContainText("6px 이상 드래그하면 placeholder");
   await expect(page.getByRole("button", { name: "Header components 예제 표시" })).toHaveCount(0);
   await expect(page.getByTestId("header-renderer-example")).toHaveCount(0);
 

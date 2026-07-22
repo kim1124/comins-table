@@ -83,7 +83,7 @@ const componentExamples: Array<{
     title: "Virtual Scroll Item List 기본 예제",
   },
   {
-    description: "단일 Row 선택 시 More 버튼(...)으로 5개 preview에서 전체 목록 virtual scroll로 확장하는 예제입니다.",
+    description: "Item 클릭으로 일반 Row 선택 규칙을 적용하고, More 클릭으로 해당 Row를 단독 선택한 뒤 전체 목록을 확장하는 예제입니다.",
     id: "virtual-list-more",
     title: "Virtual Scroll Item List More 예제",
   },

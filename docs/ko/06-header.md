@@ -1,6 +1,6 @@
 # Header
 
-Header는 표시/숨김, DOM props, label, column boundary resize, TH 영역 1초 long-press column move, keyboard sort, `aria-sort`, animated sort indicator, layout save/load를 제공한다. Layout save/load는 ref method로 처리한다.
+Header는 표시/숨김, DOM props, label, column boundary resize, column move, keyboard sort, `aria-sort`, animated sort indicator, layout save/load를 제공한다. Layout save/load는 ref method로 처리한다.
 
 ```tsx
 const tableRef = useRef<CominsTableRef<Row>>(null);
@@ -131,9 +131,13 @@ Phase 2 Header components는 `button`, `input`, `checkbox`, `radio`, `select`, `
 - Resize line은 평소에는 숨겨지고, 컬럼 경계에 hover하거나 resize 중일 때만 표시된다.
 - 최초 resize width는 현재 렌더링된 `TH`의 실제 너비를 기준으로 계산한다.
 - TH body 영역은 column move 후보 영역이며 cursor는 `grab`이다.
-- 왼쪽 버튼을 1초 이상 누르면 column move mode가 되고 cursor는 `grabbing`이다.
-- Column move mode에서는 이동 중인 header ghost와 drop marker를 표시한다.
-- 1초 전에 pointer move가 발생하면 column move와 sort click을 모두 취소한다.
+- 마우스 왼쪽 버튼을 누른 상태에서 수평 이동이 수직 이동보다 크고 6픽셀에 도달하면 column move mode가 즉시 활성화되며 cursor는 `grabbing`이다.
+- 6픽셀 미만에서 Pointer Up하면 일반 click과 sort 동작을 유지한다. 수직 이동 의도가 확인되면 대기 중인 column move와 sort를 모두 취소한다.
+- Column move mode에서는 원본 Header를 source placeholder로 표시하고, 이동 중인 header ghost와 drop marker를 함께 표시한다.
+- 유효한 target 위에서 Pointer Up한 경우에만 이동을 반영한다. Pointer cancel, `Escape`, window blur는 layout 변경 없이 취소한다.
+- non-mouse pointer 입력은 1초 long-press 호환 동작을 유지한다.
+- Parent group도 동일한 동작을 사용하며 child columns를 하나의 block으로 이동한다.
+- 전용 drag handle은 유지 중인 향후 대안이며 현재 제공되는 public API가 아니다.
 - Sort cycle은 `none -> asc -> desc -> none`이다.
 - Sort 가능한 Header는 focus 가능하며 `Enter` 또는 `Space`로 sort cycle을 실행한다.
 - Sort 가능한 Header는 `aria-sort="none" | "ascending" | "descending"` 상태를 노출한다.
@@ -151,7 +155,7 @@ Playground 검증 기준:
 - 컬럼 동적 표시 예제는 Checkbox 목록형 Select Box에서 선택된 column id만 `columns` prop에 전달하며, 1Depth와 2Depth 모두 같은 동작을 확인한다.
 - Header sort 접근성은 mouse click, keyboard `Enter`/`Space`, `aria-sort`, sort indicator 상태를 함께 검증한다.
 - Resize는 width 변경, 최초 drag jump 없음, column move 미발생을 함께 확인한다.
-- Move는 1초 long-press, 이동 ghost, drop marker, 의도한 column order 변경을 함께 확인한다.
+- Move는 마우스 수평 6픽셀 활성화, source placeholder, 이동 ghost, drop marker, 의도한 column order 변경을 함께 확인한다.
 - 2 Depth Header는 parent resize 비율 유지, parent block move, child group 밖 이동 미지원, ungrouped `rowSpan=2`, header/body leaf cell geometry alignment를 함께 확인한다.
 - Virtualized mode에서는 header/body가 다른 table이어도 resize 후 column left/width가 같아야 한다.
 - 사용자가 header 위치, resize, sort 표시 문제를 지적한 경우 Playwright assertion 외에 screenshot 또는 DOM geometry evidence를 report에 남긴다.
