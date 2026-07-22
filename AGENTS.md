@@ -3,12 +3,17 @@
 
 ## Scope
 
-- This repository is one independent Comins npm frontend module.
-- Read this file and any closer `AGENTS.md`; record the adopted `COMINS_CONTRACT` version and read the governance source explicitly for policy, security, release, or public API work.
-- Do not use KMSF workspace commands, source synchronization, or release flows without a migration-history request; keep `AGENTS.override.md` uncommitted and temporary.
-- Use `gpt-5.6-sol` with `xhigh` reasoning as the default for all Comins work.
-- For vulnerability investigation, runtime memory leaks, retention, out-of-memory failures, or security work, use `gpt-5.6-sol` with at least `xhigh`.
-- For instruction planning, Plan mode, or authoring or updating an implementation plan, use `gpt-5.6-sol` with at least `max`.
+- This repository is one independent Comins module and Git change boundary.
+- Read this file and only the closer `AGENTS.md` files that apply to the target path. Read Governance policy explicitly only for public API, security, release, licensing, or common-policy work.
+- Do not use KMSF workspace commands, source synchronization, or release flows without a migration-history request. Keep `AGENTS.override.md` temporary and uncommitted.
+
+## Work Routing
+
+- **Inspection or research:** inspect relevant sources and report evidence; do not edit, create a work report, or run product gates by default.
+- **Documentation, guidance, or configuration:** make the scoped change directly; run diff, reference, instruction, and parse checks without product TDD or browser gates.
+- **Clear local behavior:** define acceptance or reproduce the defect, add the smallest regression test first when it materially improves confidence, implement, run focused checks, then run the module baseline once.
+- **Complex or high-risk behavior:** research material unknowns, close decisions, use an approved design or plan when needed, test incrementally, and run the applicable broad gate once after the meaningful change.
+- **Security, release, external, or destructive work:** follow the canonical Governance policy and obtain the approval required for the affected operation.
 
 ## Change Boundaries
 
@@ -25,21 +30,21 @@
 
 ## Verification
 
-- Define and run the baseline verification command for meaningful changes, plus focused browser verification for interaction, layout, rendering, or keyboard behavior.
-- Classify failures as product behavior, test contract, or execution environment before changing code or repeating broad gates.
+- Select checks by change type, report failed or unrun required checks, and run the unchanged broad gate only once unless new evidence or changed state justifies a retry.
+- Classify failures as product behavior, test contract, or execution environment before changing code or repeating a gate.
 
 ## Reporting
 
-- For behavior, public API, configuration, security, release, or test-contract changes, update the report with changed files, commands, results, and residual risks; do not create one for inspection-only work without a maintainer request.
+- Update the repository's work report only for meaningful behavior, public API, configuration, security, release, or test-contract changes when that repository has a report convention.
 <!-- comins-reference:managed-end -->
 
 ## Module Guidance
 
-- This repository is the source of truth for the Comins Table controlled React data table library, Playground, public documentation, tests, and releases. Run commands from the repository root, and preserve KMSF references under `reports/` as historical evidence.
+- This repository is the source of truth for the Comins Table controlled React data table library, Playground, public documentation, tests, and releases. Preserve KMSF references under `reports/` as historical evidence.
 - Treat the application-owned `data` flow and change callbacks, documented public types, package exports (`comins-table`, `/core`, `/clipboard`, `/selection`, and `/styles.css`), and client-only browser boundary as public API constraints.
 - Keep library implementation in `src/`, Playground code in `example/`, English-first public guidance in `docs/user/`, matching Korean guidance in `docs/ko/` when public behavior changes, tests in `test/`, and durable work reports in `reports/YYYY-MM-DD.md`.
 - Keep third-party table or grid benchmark research, comparison matrices, copied samples, screenshots, license notes, source snapshots, and raw measurements under the ignored `.local/benchmarks/` tree. Public documentation may describe Comins behavior but must not contain named competitor comparisons; never bypass hygiene or add allowlist exceptions for local-only material.
-- Run `npm run verify` as the baseline gate for library, type, or build changes; it includes repository hygiene, security, lint, unit, and build checks. Enable repository hooks once per clone with `npm run setup:hooks`; pre-commit validates staged content and the local Git identity, while pre-push validates each new commit range. Use `npm run check:hygiene -- --staged` to validate the exact index snapshot independently, and report every failed or unrun check.
+- Run `npm run setup:hooks` once per clone. Run `npm run verify` as the baseline gate for library, type, or build changes.
 - For public documentation changes, run `npm run test:run -- test/user-docs.test.ts`. For Playground or UI changes, run the affected Playwright spec, and use `npm run test:e2e -- --workers=1` when shared interaction or routing can change.
 - For virtualization, scrolling, or memory-counter changes, run the focused performance spec first and run `npm run test:perf -- --workers=1` once after a meaningful code or test-contract change. Treat a local `listen EPERM` bind failure as an execution-environment failure unless evidence shows otherwise.
-- Before a release request, also run `npm run test:consumer` and `npm run verify:package-artifact`, then extract and Gitleaks-scan that exact artifact before publication.
+- For release work, follow `SECURITY.md` and the repository publish workflow. Verify the exact artifact selected for publication and report any consumer/publish artifact mismatch instead of claiming complete coverage.
