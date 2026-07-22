@@ -6,6 +6,10 @@ export type CominsTreeNode<TItem> = {
   item: TItem;
 };
 
+export type CominsTreeExpansionOptions = {
+  defaultExpandAll?: boolean;
+};
+
 export type CominsVisibleTreeRow<TItem> = {
   depth: number;
   expanded: boolean;
@@ -90,6 +94,7 @@ function updateCominsTreeNodeAtPath<TItem>(
 export function flattenCominsTree<TItem>(
   nodes: readonly CominsTreeNode<TItem>[],
   getRowId: (item: TItem, index: number) => CominsRowId,
+  options: CominsTreeExpansionOptions = {},
 ): CominsVisibleTreeRow<TItem>[] {
   const index = createCominsTreeNodeIndex(nodes, getRowId);
   const visibleRows: CominsVisibleTreeRow<TItem>[] = [];
@@ -99,7 +104,7 @@ export function flattenCominsTree<TItem>(
       const path = [...parentPath, childIndex];
       const children = node.children ?? [];
       const hasChildren = children.length > 0;
-      const expanded = node.expand === true;
+      const expanded = node.expand ?? options.defaultExpandAll ?? false;
       const rowId = index.idByPath.get(getPathKey(path));
 
       if (rowId === undefined) {
@@ -127,6 +132,7 @@ export function toggleCominsTreeNode<TItem>(
   nodes: readonly CominsTreeNode<TItem>[],
   rowId: CominsRowId,
   getRowId: (item: TItem, index: number) => CominsRowId,
+  options: CominsTreeExpansionOptions = {},
 ): CominsTreeNode<TItem>[] {
   const path = createCominsTreeNodeIndex(nodes, getRowId).byId.get(rowId);
 
@@ -134,7 +140,10 @@ export function toggleCominsTreeNode<TItem>(
     return [...nodes];
   }
 
-  return updateCominsTreeNodeAtPath(nodes, path, (node) => ({ ...node, expand: node.expand !== true }));
+  return updateCominsTreeNodeAtPath(nodes, path, (node) => ({
+    ...node,
+    expand: !(node.expand ?? options.defaultExpandAll ?? false),
+  }));
 }
 
 export function updateCominsTreeItem<TItem>(

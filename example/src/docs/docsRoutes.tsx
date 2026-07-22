@@ -19,6 +19,7 @@ import {
   refApiSamples,
   rowSamples,
   sizeSamples,
+  summaryRowSamples,
   themeSamples,
   treeGridSamples,
 } from "./codeSamples";
@@ -207,8 +208,20 @@ export const docsPages: DocsPage[] = [
   }),
   featurePage({
     body: paragraphs([
+      "Summary Row supports count, sum, avg, min, max, and custom aggregators against the complete controlled data array.",
+      "Detailed column configuration adds visible-column colSpan, aggregate output format, className, and style while preserving the existing shorthand API.",
+    ]),
+    category: "Row / Context",
+    codeSamples: summaryRowSamples,
+    featureId: "summary-row",
+    path: "/examples/summary-row",
+  }),
+  featurePage({
+    body: paragraphs([
       "Tree Grid receives controlled nested nodes in the `{ item, expand, children }` shape. Existing columns, cell formatters, and callbacks continue to receive the business object in `item`.",
-      "Every `getRowId(item)` result must be globally unique across all tree levels. Expanding a node changes only the controlled tree data and the visible pre-order rows.",
+      "Every `getRowId(item)` result must be globally unique across all tree levels. `defaultExpandAll` defaults to true, while an explicit node.expand value takes precedence.",
+      "The ref methods `expand(nodeIds?)` and `fold(nodeIds?)` accept node id arrays. Omitting the array targets every branch; an empty array is a no-op, and a collapsed unrequested ancestor blocks targeted descendant expansion.",
+      "Tree item columns continue to support rowProps, Component Cell definitions, and custom React renderers. The virtual example renders a bounded DOM window over exactly 10000 expanded nodes.",
       "The summary row aggregates leaf items only, including leaves under collapsed parents. Pagination, lazy loading, infinite scrolling, and row drag are intentionally unavailable in Tree Grid V1. Row-level copy/paste is also unavailable because it requires a hierarchy-aware insertion contract.",
       "Tree expansion is hierarchy visibility, not the future flat Row Expand detail area or Row Grouping state model.",
     ]),
@@ -248,8 +261,9 @@ export const docsPages: DocsPage[] = [
   },
   {
     body: paragraphs([
-      "`CominsTableRef<TData>` exposes only the imperative controls needed for selection, sort, layout, and row movement.",
+      "`CominsTableRef<TData>` exposes imperative controls for selection, sort, layout, row movement, and Tree Grid expansion.",
       "`setSelectedRow`, `setSelectedRows`, and `setMoveTargetRow` use the visible index after current sorting and pagination are applied.",
+      "`expand(nodeIds?)` and `fold(nodeIds?)` accept Tree Grid node id arrays. Omitting the argument targets all branches; flat tables treat both methods as no-ops.",
       "Data changes stay in the controlled `data` and `onChangeData` flow instead of being owned by the ref.",
     ]),
     category: "API",

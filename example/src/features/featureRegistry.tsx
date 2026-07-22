@@ -13,6 +13,7 @@ import { LoadingStateFeature } from "./LoadingStateFeature";
 import { PaginationFeature } from "./PaginationFeature";
 import { RowFeature } from "./RowFeature";
 import { SizeFeature } from "./SizeFeature";
+import { SummaryRowFeature } from "./SummaryRowFeature";
 import { ThemeFeature } from "./ThemeFeature";
 import { TreeGridFeature } from "./TreeGridFeature";
 import type { FeatureDefinition, FeatureId } from "./types";
@@ -200,6 +201,19 @@ export const featureRegistry: FeatureDefinition[] = [
     summary: "Row style, drag, disabled, and custom behavior example.",
   },
   {
+    Component: SummaryRowFeature,
+    description: "Example page for built-in aggregates, visible-column colSpan, output formatting, and summary styling.",
+    id: "summary-row",
+    label: "Summary Row",
+    options: [
+      { description: "Built-in count, sum, avg, min, and max aggregators.", example: "{ amount: 'sum' }", name: "summary.columns" },
+      { description: "Merges the configured cell across the following visible columns.", example: "{ aggregate: 'sum', colSpan: 2 }", name: "colSpan" },
+      { description: "Formats an aggregate result as text or a ReactNode.", example: "format: ({ value }) => ...", name: "format" },
+      { description: "Applies className and style to the summary row or configured cell.", example: "{ className, style }", name: "style / class" },
+    ],
+    summary: "Summary aggregates with colSpan, format, and row or cell styling.",
+  },
+  {
     Component: TreeGridFeature,
     description: "Example page for controlled nested rows, hierarchy expansion, and leaf-only summary values.",
     id: "tree-grid",
@@ -208,9 +222,12 @@ export const featureRegistry: FeatureDefinition[] = [
       { description: "Enables the controlled Tree Grid input branch.", example: "tree", name: "tree" },
       { description: "Nested nodes with the business row in item.", example: "[{ item, expand, children }]", name: "data" },
       { description: "Globally unique id resolver for every item at every depth.", example: "(item) => item.id", name: "getRowId" },
+      { description: "Controls the fallback expansion state for nodes without expand.", example: "defaultExpandAll={false}", name: "defaultExpandAll" },
+      { description: "Expands or folds node id arrays, or every branch when omitted.", example: "ref.current?.expand(ids)", name: "expand / fold" },
+      { description: "Uses existing Component Cell and renderer definitions with node.item.", example: "cell.components / cell.renderer", name: "component / renderer" },
       { description: "Uses only leaf items for configured aggregate values.", example: "{ columns: { age: 'sum' } }", name: "summary" },
     ],
-    summary: "Controlled nested rows with existing item columns, hierarchy expansion, and leaf-only summary values.",
+    summary: "Controlled nested rows with array ref expansion, 10000-node virtualization, components, renderers, and styling.",
   },
   {
     Component: ContextMenuFeature,

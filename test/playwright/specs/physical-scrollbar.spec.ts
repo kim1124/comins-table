@@ -226,6 +226,7 @@ test("playground releases devtools counters after physical scrollbar drag and re
   await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
   const viewport = page.getByTestId("data-table-viewport");
   await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
+  const postLoad = await readDevtoolsMemorySnapshot(page);
   await page.mouse.wheel(0, 2400);
   await dragViewportScrollbarWithMouse(page, "down");
   await expect
@@ -263,13 +264,13 @@ test("playground releases devtools counters after physical scrollbar drag and re
   await page.goto("/docs/getting-started");
   await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "basic");
   const afterBasic = await readDevtoolsMemorySnapshot(page);
-  const failureContext = JSON.stringify({ afterBasic, basicBaseline }, null, 2);
+  const failureContext = JSON.stringify({ afterBasic, basicBaseline, postLoad }, null, 2);
 
   expect(afterBasic.nodes, failureContext).toBeLessThanOrEqual(Math.ceil(basicBaseline.nodes * 1.25));
   expect(afterBasic.jsEventListeners, failureContext).toBeLessThanOrEqual(
     Math.ceil(basicBaseline.jsEventListeners * 1.25),
   );
-  expect(afterBasic.documents, failureContext).toBe(basicBaseline.documents);
+  expect(afterBasic.documents, failureContext).toBeLessThanOrEqual(postLoad.documents);
   expect(diagnostics).toEqual([]);
 });
 

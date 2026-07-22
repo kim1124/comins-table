@@ -134,6 +134,8 @@ export type CominsCellKeyboardEventPayload<TData, TValue = unknown> = CominsCell
 
 export type CominsTableRef<TData = unknown> = {
   clearSort: () => void;
+  expand: (nodeIds?: readonly CominsRowId[]) => void;
+  fold: (nodeIds?: readonly CominsRowId[]) => void;
   getColumnLayout: () => CominsColumnLayout;
   getSortState: () => CominsSortState | null;
   setColumnLayout: (layout: CominsColumnLayout) => void;
@@ -224,6 +226,7 @@ export type CominsTreeTableProps<TData> = Omit<
   | "tree"
 > & {
   data: readonly CominsTreeNode<TData>[];
+  defaultExpandAll?: boolean;
   getRowId: (item: TData, index: number) => CominsRowId;
   hasMoreRows?: never;
   infiniteScroll?: never;
@@ -250,6 +253,8 @@ type VisibleRowEntry<TData> = {
 
 type CominsTreeRenderContext<TData> = {
   entriesByRowId: Map<CominsRowId, CominsVisibleTreeRow<TData>>;
+  onExpand: (nodeIds?: readonly CominsRowId[]) => void;
+  onFold: (nodeIds?: readonly CominsRowId[]) => void;
   onToggle: (rowId: CominsRowId) => void;
   summaryRows: readonly TData[];
 };
@@ -858,6 +863,93 @@ function getSortedCominsTree<TData>(
   });
 }
 
+function setCominsTreeExpansion<TData>(
+  data: readonly CominsTreeNode<TData>[],
+  nodeIds: readonly CominsRowId[] | undefined,
+  expanded: boolean,
+  getRowId: (item: TData, index: number) => CominsRowId,
+  defaultExpandAll: boolean,
+): readonly CominsTreeNode<TData>[] {
+  if (nodeIds?.length === 0) {
+    return data;
+  }
+
+  type ExpansionEntry = {
+    ancestorIds: readonly CominsRowId[];
+    hasChildren: boolean;
+    node: CominsTreeNode<TData>;
+    rowId: CominsRowId;
+  };
+
+  const entries: ExpansionEntry[] = [];
+  const idByNode = new Map<CominsTreeNode<TData>, CominsRowId>();
+  let itemIndex = 0;
+
+  const visit = (nodes: readonly CominsTreeNode<TData>[], ancestorIds: readonly CominsRowId[]) => {
+    nodes.forEach((node) => {
+      const rowId = getRowId(node.item, itemIndex);
+      const hasChildren = Boolean(node.children?.length);
+      itemIndex += 1;
+      entries.push({ ancestorIds, hasChildren, node, rowId });
+      idByNode.set(node, rowId);
+
+      if (node.children?.length) {
+        visit(node.children, [...ancestorIds, rowId]);
+      }
+    });
+  };
+
+  visit(data, []);
+
+  const requestedIds = nodeIds ? new Set(nodeIds) : null;
+  const targets = entries.filter((entry) => entry.hasChildren && (!requestedIds || requestedIds.has(entry.rowId)));
+  const requestedBranchIds = new Set(targets.map((entry) => entry.rowId));
+  const expandedById = new Map(
+    entries.map((entry) => [entry.rowId, entry.node.expand ?? defaultExpandAll] as const),
+  );
+  const changes = new Map<CominsRowId, boolean>();
+
+  targets.forEach((entry) => {
+    const ancestorsAllowExpand =
+      !expanded ||
+      !requestedIds ||
+      entry.ancestorIds.every((ancestorId) => expandedById.get(ancestorId) === true || requestedBranchIds.has(ancestorId));
+    const currentExpanded = entry.node.expand ?? defaultExpandAll;
+
+    if (ancestorsAllowExpand && currentExpanded !== expanded) {
+      changes.set(entry.rowId, expanded);
+    }
+  });
+
+  if (changes.size === 0) {
+    return data;
+  }
+
+  const applyChanges = (nodes: readonly CominsTreeNode<TData>[]): readonly CominsTreeNode<TData>[] => {
+    let changed = false;
+    const nextNodes = nodes.map((node) => {
+      const rowId = idByNode.get(node);
+      const nextExpanded = rowId === undefined ? undefined : changes.get(rowId);
+      const nextChildren = node.children ? applyChanges(node.children) : node.children;
+
+      if (nextExpanded === undefined && nextChildren === node.children) {
+        return node;
+      }
+
+      changed = true;
+      return {
+        ...node,
+        children: nextChildren,
+        ...(nextExpanded === undefined ? {} : { expand: nextExpanded }),
+      };
+    });
+
+    return changed ? nextNodes : nodes;
+  };
+
+  return applyChanges(data);
+}
+
 function CominsTableInner<TData>(
   {
     "buffer-size": bufferSize,
@@ -1166,6 +1258,44 @@ function CominsTableInner<TData>(
     () => (summary ? getCominsSummaryValues(treeContext?.summaryRows ?? state.rows, visibleColumns, summary) : null),
     [state.rows, summary, treeContext?.summaryRows, visibleColumns],
   );
+  const summaryCells = useMemo(() => {
+    if (!summary) {
+      return [];
+    }
+
+    const cells: Array<{
+      className?: string;
+      colSpan: number;
+      column: CominsTableRuntimeColumn<TData>;
+      style?: React.CSSProperties;
+      value: React.ReactNode;
+    }> = [];
+    let columnIndex = 0;
+
+    while (columnIndex < visibleColumns.length) {
+      const column = visibleColumns[columnIndex]!;
+      const configuredColumn = summary.columns[column.id];
+      const config =
+        typeof configuredColumn === "object" && configuredColumn !== null ? configuredColumn : undefined;
+      const requestedColSpan = config?.colSpan;
+      const normalizedColSpan =
+        typeof requestedColSpan === "number" && Number.isFinite(requestedColSpan)
+          ? Math.max(1, Math.floor(requestedColSpan))
+          : 1;
+      const colSpan = Math.min(normalizedColSpan, visibleColumns.length - columnIndex);
+
+      cells.push({
+        className: config?.className,
+        colSpan,
+        column,
+        style: config?.style,
+        value: summaryValues?.[column.id] ?? (cells.length === 0 ? summary.label : null),
+      });
+      columnIndex += colSpan;
+    }
+
+    return cells;
+  }, [summary, summaryValues, visibleColumns]);
   const sortedRowIndexes = useMemo(
     () => (treeContext || !state.sort ? null : getCominsSortedRowIndexes(state)),
     [state, treeContext],
@@ -1387,6 +1517,8 @@ function CominsTableInner<TData>(
     ref,
     () => ({
       clearSort: () => commitState((current) => clearCominsSortState(current), { sortChanged: true }),
+      expand: (nodeIds) => treeContext?.onExpand(nodeIds),
+      fold: (nodeIds) => treeContext?.onFold(nodeIds),
       getColumnLayout: () => serializeCominsColumnLayout(state),
       getSortState: () => state.sort,
       setColumnLayout: (layout) =>
@@ -2673,10 +2805,19 @@ function CominsTableInner<TData>(
           <table className="comins-table__table comins-table__summary-table min-w-full table-fixed" style={{ width: tableWidth }}>
             {renderColumnSizing()}
             <tfoot>
-              <tr className="comins-table__summary-row">
-                {visibleColumns.map((column, index) => (
-                  <td className="comins-table__summary-cell px-3 py-2" data-testid={`summary-cell-${column.id}`} key={column.id}>
-                    {summaryValues?.[column.id] ?? (index === 0 ? summary.label : null)}
+              <tr
+                className={["comins-table__summary-row", summary.className].filter(Boolean).join(" ")}
+                style={summary.style}
+              >
+                {summaryCells.map((cell) => (
+                  <td
+                    className={["comins-table__summary-cell px-3 py-2", cell.className].filter(Boolean).join(" ")}
+                    colSpan={cell.colSpan}
+                    data-testid={`summary-cell-${cell.column.id}`}
+                    key={cell.column.id}
+                    style={cell.style}
+                  >
+                    {cell.value}
                   </td>
                 ))}
               </tr>
@@ -2701,6 +2842,7 @@ function CominsTableInner<TData>(
 function CominsTreeTableInner<TData>(
   {
     data,
+    defaultExpandAll = true,
     getRowId,
     hasMoreRows: _hasMoreRows,
     infiniteScroll: _infiniteScroll,
@@ -2720,9 +2862,13 @@ function CominsTreeTableInner<TData>(
   }: CominsTreeTableProps<TData>,
   ref: React.ForwardedRef<CominsTableRef<TData>>,
 ) {
+  const initialDefaultExpandAll = useRef(defaultExpandAll).current;
   const [treeSort, setTreeSort] = useState<CominsSortState | null>(null);
   const sortedTree = useMemo(() => getSortedCominsTree(data, props.columns, treeSort), [data, props.columns, treeSort]);
-  const visibleTreeRows = useMemo(() => flattenCominsTree(sortedTree, getRowId), [getRowId, sortedTree]);
+  const visibleTreeRows = useMemo(
+    () => flattenCominsTree(sortedTree, getRowId, { defaultExpandAll: initialDefaultExpandAll }),
+    [getRowId, initialDefaultExpandAll, sortedTree],
+  );
   const entriesByRowId = useMemo(
     () => new Map(visibleTreeRows.map((entry) => [entry.rowId, entry] as const)),
     [visibleTreeRows],
@@ -2730,10 +2876,25 @@ function CominsTreeTableInner<TData>(
   const treeContext = useMemo<CominsTreeRenderContext<TData>>(
     () => ({
       entriesByRowId,
-      onToggle: (rowId) => onChangeData?.(toggleCominsTreeNode(data, rowId, getRowId)),
+      onExpand: (nodeIds) => {
+        const nextData = setCominsTreeExpansion(data, nodeIds, true, getRowId, initialDefaultExpandAll);
+
+        if (nextData !== data) {
+          onChangeData?.([...nextData]);
+        }
+      },
+      onFold: (nodeIds) => {
+        const nextData = setCominsTreeExpansion(data, nodeIds, false, getRowId, initialDefaultExpandAll);
+
+        if (nextData !== data) {
+          onChangeData?.([...nextData]);
+        }
+      },
+      onToggle: (rowId) =>
+        onChangeData?.(toggleCominsTreeNode(data, rowId, getRowId, { defaultExpandAll: initialDefaultExpandAll })),
       summaryRows: getCominsTreeLeafItems(data),
     }),
-    [data, entriesByRowId, getRowId, onChangeData],
+    [data, entriesByRowId, getRowId, initialDefaultExpandAll, onChangeData],
   );
   const handleFlatDataChange = (nextRows: TData[]) => {
     let nextTree: readonly CominsTreeNode<TData>[] = data;

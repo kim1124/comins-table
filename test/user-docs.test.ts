@@ -20,6 +20,7 @@ const userDocs = [
   "15-infinite-scroll.md",
   "16-lazy-load.md",
   "17-tree-grid.md",
+  "18-summary-row.md",
 ];
 
 const implementedTerms = [
@@ -146,5 +147,24 @@ describe("comins-table user documentation contract", () => {
     expect(virtualization).toContain('"buffer-size"');
     expect(virtualization).toContain("rowHeight");
     expect(virtualization).toContain("--comins-table-row-height");
+  });
+
+  it("documents the detailed Summary Row and Tree Grid control contracts", () => {
+    const summary = readWorkspaceFile("docs/user/18-summary-row.md");
+    const tree = readWorkspaceFile("docs/user/17-tree-grid.md");
+
+    expect(summary).toContain("count");
+    expect(summary).toContain("sum");
+    expect(summary).toContain("avg");
+    expect(summary).toContain("colSpan");
+    expect(summary).toContain("format");
+    expect(summary).toContain("className");
+    expect(summary).toContain("style");
+    expect(tree).toContain("defaultExpandAll");
+    expect(tree).toContain("expand(nodeIds?)");
+    expect(tree).toContain("fold(nodeIds?)");
+    expect(tree).toContain("cell.components");
+    expect(tree).toContain("cell.renderer");
+    expect(tree).toContain("10000");
   });
 });

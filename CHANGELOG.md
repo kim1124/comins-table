@@ -1,5 +1,13 @@
 # Comins Table
 
+## Unreleased
+
+## 0.1.2 - 2026-07-22
+
+- Extended Summary Row with descriptor-based `colSpan`, aggregate output `format`, and row or cell `className` and `style`.
+- Added Tree Grid `defaultExpandAll` and array-based `CominsTableRef.expand(nodeIds?)` / `fold(nodeIds?)` controls.
+- Added dedicated Summary Row and expanded Tree Grid Playground examples, including component and renderer cells plus exactly 10000 virtualized nodes.
+
 ## 0.1.1
 
 - Prepared a privacy-safe metadata release candidate pending npm account email verification.

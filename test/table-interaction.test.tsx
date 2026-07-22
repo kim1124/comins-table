@@ -112,6 +112,45 @@ describe("comins-table keyboard interaction", () => {
     expect(element.querySelector("[data-testid='summary-cell-age']")?.textContent).toBe("73");
   });
 
+  it("renders summary row and cell styling with visible-column colSpan", () => {
+    const element = renderTableElement(
+      <CominsTable
+        columns={[
+          { field: "name", id: "label", label: "Label" },
+          { field: "name", id: "name", label: "Name" },
+          { field: "age", id: "age", label: "Age" },
+        ]}
+        data={rows}
+        getRowId={(row) => row.id}
+        summary={{
+          className: "summary-row-custom",
+          columns: {
+            age: "sum",
+            label: {
+              aggregate: "count",
+              className: "summary-cell-custom",
+              colSpan: 2,
+              format: ({ value }) => `Rows ${String(value)}`,
+              style: { textAlign: "center" },
+            },
+          },
+          style: { fontWeight: 800 },
+        }}
+      />,
+    );
+    const summaryRow = element.querySelector<HTMLTableRowElement>(".comins-table__summary-row");
+    const labelCell = element.querySelector<HTMLTableCellElement>("[data-testid='summary-cell-label']");
+
+    expect(summaryRow?.className).toContain("summary-row-custom");
+    expect(summaryRow?.style.fontWeight).toBe("800");
+    expect(labelCell?.className).toContain("summary-cell-custom");
+    expect(labelCell?.style.textAlign).toBe("center");
+    expect(labelCell?.colSpan).toBe(2);
+    expect(labelCell?.textContent).toBe("Rows 2");
+    expect(element.querySelector("[data-testid='summary-cell-name']")).toBeNull();
+    expect(element.querySelector("[data-testid='summary-cell-age']")?.textContent).toBe("73");
+  });
+
   it("applies the shared COMINS typography class and 12px base text class", () => {
     const element = renderTable();
     const table = element.querySelector(".comins-table");
