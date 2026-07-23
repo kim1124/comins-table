@@ -15,7 +15,7 @@ Comins Table is a controlled React data table for data-heavy application screens
 | --- | --- |
 | Controlled data | Application-owned `data`, CRUD helpers, `onChangeData`, pagination, sorting, and layout callbacks |
 | Rendering and scale | Fixed-height virtualization with a tested 100,000-row route, infinite scroll, append-mode lazy loading, loading, and empty states |
-| Interaction | Accessible Header sorting, resize, 6-pixel horizontal column reorder with source placeholder, Row and Cell selection, ranges, clipboard, and context menu callbacks |
+| Interaction | Accessible single and opt-in multi-column Header sorting, resize, 6-pixel horizontal column reorder with source placeholder, Row and Cell selection, ranges, clipboard, and context menu callbacks |
 | Data structure | Summary Row count/sum/avg/min/max/custom aggregation, `colSpan`, `format`, style/class hooks, and controlled Tree Grid expand/fold |
 | Custom UI | Cell/Header renderers, built-in button/input/checkbox/radio/select/toggle/progress/menu/Virtual List components, and CSS-variable themes |
 
@@ -99,9 +99,24 @@ Comins Table is a CSR-focused controlled component for application-owned data. T
 
 Only `onChangeData` requires application write-back. It emits the next flat Row array or Tree Grid node array after table-owned mutations; pass that array back through `data` to retain the change.
 
-Selection, column layout, and sort are internal view state. `onChangeSelection`, `onChangeColumnLayout`, and `onChangeSort` observe those changes so an application can coordinate or persist them externally; the table updates the corresponding view state even when a callback is omitted.
+Selection, column layout, and sort are internal view state. `onChangeSelection`, `onChangeColumnLayout`, `onChangeSort`, and `onChangeSortModel` observe those changes so an application can coordinate or persist them externally; the table updates the corresponding view state even when a callback is omitted.
 
-Where restoration is supported, use the supported Ref API: `setSelectedRow` and `setSelectedRows` restore Row selection by visible index, `setColumnLayout` restores layout, and `setSortState` and `clearSort` restore or clear sorting. `getColumnLayout` and `getSortState` read the current layout and sort state.
+Where restoration is supported, use the supported Ref API: `setSelectedRow` and `setSelectedRows` restore Row selection by visible index, `setColumnLayout` restores layout, and `setSortState` and `clearSort` restore or clear sorting. `setSortModel` restores the complete ordered model; `getColumnLayout`, `getSortState`, and `getSortModel` read the current layout and sort state.
+
+### Multi-column Sort
+
+Set `multiSort` to opt into ordered multi-column sorting. Normal Header click or `Enter`/`Space` keeps single sorting; hold `Shift` while using the same input to add, update, or remove one rule without replacing the others. Active Headers display their 1-based priority.
+
+```tsx
+<CominsTable
+  columns={columns}
+  data={data}
+  multiSort
+  onChangeSortModel={(model) => saveSortModel(model)}
+/>
+```
+
+`getSortModel()` and `setSortModel(model)` read and restore the full model. The existing `getSortState()`, `setSortState(rule)`, and `onChangeSort` APIs remain the single-rule compatibility surface. Two-level child Columns and Tree Grid sibling sets use the same ordered comparison rules.
 
 ## Package Entry Points
 
@@ -174,6 +189,11 @@ tableRef.current?.getColumnLayout();
 tableRef.current?.setColumnLayout(savedLayout);
 tableRef.current?.getSortState();
 tableRef.current?.setSortState({ columnId: "age", direction: "desc" });
+tableRef.current?.getSortModel();
+tableRef.current?.setSortModel([
+  { columnId: "team", direction: "asc" },
+  { columnId: "age", direction: "desc" },
+]);
 tableRef.current?.clearSort();
 tableRef.current?.setSelectedRow(0);
 tableRef.current?.setSelectedRows([0, 1]);
@@ -184,7 +204,7 @@ tableRef.current?.expand(); // all Tree Grid branches
 tableRef.current?.fold(); // all Tree Grid branches
 ```
 
-`setSelectedRow`, `setSelectedRows`, and `setMoveTargetRow` use the visible Row index after current sorting and pagination. `getColumnLayout`, `setColumnLayout`, `getSortState`, `setSortState`, and `clearSort` read and update the current Header view state. `expand(nodeIds?)` and `fold(nodeIds?)` accept readonly Tree Grid node-id arrays; flat tables ignore them.
+`setSelectedRow`, `setSelectedRows`, and `setMoveTargetRow` use the visible Row index after current sorting and pagination. `getColumnLayout`, `setColumnLayout`, `getSortState`, `setSortState`, `getSortModel`, `setSortModel`, and `clearSort` read and update the current Header view state. `expand(nodeIds?)` and `fold(nodeIds?)` accept readonly Tree Grid node-id arrays; flat tables ignore them.
 
 ## Playground
 

@@ -30,6 +30,7 @@ const implementedTerms = [
   "onChangeSelection",
   "onChangeColumnLayout",
   "onChangeSort",
+  "onChangeSortModel",
   "onClickCell",
   "onClickRow",
   "createCominsTableState",
@@ -38,6 +39,7 @@ const implementedTerms = [
   "deleteCominsRows",
   "queryCominsRows",
   "setCominsPagination",
+  "setCominsSortModel",
   "serializeCominsColumnLayout",
   "applyCominsColumnLayout",
   "selectRow",
@@ -74,6 +76,10 @@ const implementedTerms = [
   "lazyLoadThreshold",
   "onLazyLoad",
   "CominsTreeNode",
+  "CominsSortModel",
+  "multiSort",
+  "getSortModel",
+  "setSortModel",
   "summary",
   "tree",
 ];
@@ -185,6 +191,27 @@ describe("comins-table user documentation contract", () => {
     expect(cell).toContain("More");
     expect(cell).toContain("onClickCell");
     expect(cell).toContain("onClickRow");
+  });
+
+  it("documents and demonstrates the opt-in multi-column sort contract", () => {
+    const englishHeader = readWorkspaceFile("docs/user/06-header.md");
+    const koreanHeader = readWorkspaceFile("docs/ko/06-header.md");
+    const playground = readWorkspaceFile("example/src/features/HeaderFeature.tsx");
+    const optionGuide = readWorkspaceFile("example/src/docs/dataTableOptionGuide.ts");
+    const readme = readWorkspaceFile("README.md");
+
+    for (const document of [englishHeader, koreanHeader, readme]) {
+      expect(document).toContain("multiSort");
+      expect(document).toContain("onChangeSortModel");
+      expect(document).toContain("getSortModel");
+      expect(document).toContain("setSortModel");
+    }
+
+    expect(playground).toContain('data-testid="header-example-multi-sort"');
+    expect(playground).toContain("multiSort");
+    expect(playground).toContain("onChangeSortModel={setSortModel}");
+    expect(playground).toContain("Shift+Enter/Space");
+    expect(optionGuide).toContain("ordered multi-column sort model");
   });
 
   it("keeps English and Korean Virtual List Search guidance single-selection-only", () => {

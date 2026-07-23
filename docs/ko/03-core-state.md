@@ -9,6 +9,7 @@ import {
   createCominsTableState,
   serializeCominsColumnLayout,
   setCominsPagination,
+  setCominsSortModel,
   setCominsSortState,
 } from "comins-table";
 
@@ -23,8 +24,14 @@ const state = createCominsTableState({
 
 const paged = setCominsPagination(state, { pageIndex: 0, pageSize: 25 });
 const sorted = setCominsSortState(paged, { columnId: "age", direction: "asc" });
+const multiSorted = setCominsSortModel(sorted, [
+  { columnId: "role", direction: "asc" },
+  { columnId: "age", direction: "desc" },
+]);
 const layout = serializeCominsColumnLayout(sorted);
 const restored = applyCominsColumnLayout(sorted, layout);
 ```
 
 Column layout persistence는 표시/숨김, 너비, 위치만 저장한다.
+
+`setCominsSortState`는 전체 정렬 모델을 단일 조건으로 교체한다. `setCominsSortModel`은 우선순위가 있는 `CominsSortModel`을 적용하여 다중 컬럼 정렬을 수행한다. 중복 조건과 존재하지 않거나 정렬할 수 없는 Column 조건은 정규화 과정에서 제거한다.

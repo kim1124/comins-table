@@ -130,6 +130,24 @@ tableRef.current?.setColumnLayout(layout);`,
     language: "tsx",
     title: "Header move and persistence",
   },
+  {
+    code: `const [sortModel, setSortModel] = useState<CominsSortModel>([]);
+
+<CominsTable
+  columns={columns}
+  data={rows}
+  multiSort
+  onChangeSortModel={setSortModel}
+  ref={tableRef}
+/>;
+
+tableRef.current?.setSortModel([
+  { columnId: "role", direction: "asc" },
+  { columnId: "age", direction: "desc" },
+]);`,
+    language: "tsx",
+    title: "Shift-assisted multi-column sort",
+  },
 ];
 
 export const headerGroupSamples: DocsCodeSample[] = [
@@ -467,11 +485,13 @@ export const refApiSamples: DocsCodeSample[] = [
   expand: (nodeIds?: readonly CominsRowId[]) => void;
   fold: (nodeIds?: readonly CominsRowId[]) => void;
   getColumnLayout: () => CominsColumnLayout;
+  getSortModel: () => CominsSortModel;
   getSortState: () => CominsSortState | null;
   setColumnLayout: (layout: CominsColumnLayout) => void;
   setMoveTargetRow: (targetIdx: number, sourceIdx: number) => void;
   setSelectedRow: (index: number) => void;
   setSelectedRows: (indexes: number[]) => void;
+  setSortModel: (sortModel: CominsSortModel) => void;
   setSortState: (sort: CominsSortState | null) => void;
 };`,
     language: "ts",
@@ -484,6 +504,10 @@ tableRef.current?.setSelectedRow(0);
 tableRef.current?.setSelectedRows([0, 2]);
 tableRef.current?.setMoveTargetRow(2, 0);
 tableRef.current?.setColumnLayout(savedLayout);
+tableRef.current?.setSortModel([
+  { columnId: "role", direction: "asc" },
+  { columnId: "age", direction: "desc" },
+]);
 tableRef.current?.clearSort();
 tableRef.current?.expand(["department-1", "team-1-1"]);
 tableRef.current?.fold();`,

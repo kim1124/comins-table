@@ -27,6 +27,7 @@ import {
   setCominsHeaderVisible,
   setCominsPagination,
   setCominsColumnWidth,
+  setCominsSortModel,
   setCominsSortState,
   setCominsTableTheme,
   sortCominsRows,
@@ -366,6 +367,96 @@ describe("comins-table basic core", () => {
 
     const sorted = sortCominsRows(createState(), { columnId: "age", direction: "asc" });
     expect(sorted.rows.map((row) => row.name)).toEqual(["Alpha", "Beta"]);
+  });
+
+  it("sorts rows by an ordered multi-column model while preserving legacy state", () => {
+    const multiRows = [
+      { age: 30, id: "a", name: "Zeta", profile: { score: 1 } },
+      { age: 40, id: "b", name: "Alpha", profile: { score: 1 } },
+      { age: 40, id: "c", name: "Beta", profile: { score: 1 } },
+      { age: 40, id: "d", name: "Alpha", profile: { score: 2 } },
+    ];
+    let state = createCominsTableState<PersonRow>({
+      columns: [
+        { field: "profile.score", label: "Group", sort: true },
+        { field: "age", label: "Age", sort: true },
+        { field: "name", label: "Name", sort: true },
+      ],
+      getRowId: (row) => row.id,
+      rows: multiRows,
+    });
+
+    state = setCominsSortModel(state, [
+      { columnId: "profile.score", direction: "asc" },
+      { columnId: "age", direction: "desc" },
+      { columnId: "name", direction: "asc" },
+    ]);
+
+    expect(state.sort).toEqual({ columnId: "profile.score", direction: "asc" });
+    expect(state.sortModel).toEqual([
+      { columnId: "profile.score", direction: "asc" },
+      { columnId: "age", direction: "desc" },
+      { columnId: "name", direction: "asc" },
+    ]);
+    expect(getCominsPageRows(state).map((row) => row.id)).toEqual(["b", "c", "a", "d"]);
+
+    state = setCominsSortState(state, { columnId: "name", direction: "desc" });
+    expect(state.sortModel).toEqual([{ columnId: "name", direction: "desc" }]);
+  });
+
+  it("normalizes duplicate and non-sortable multi-sort rules and keeps stable ties", () => {
+    const equalRows = [
+      { age: 30, id: "first", name: "Same", profile: { score: 1 } },
+      { age: 30, id: "second", name: "Same", profile: { score: 1 } },
+    ];
+    let state = createCominsTableState<PersonRow>({
+      columns,
+      getRowId: (row) => row.id,
+      rows: equalRows,
+    });
+
+    state = setCominsSortModel(state, [
+      { columnId: "age", direction: "asc" },
+      { columnId: "age", direction: "desc" },
+      { columnId: "missing", direction: "asc" },
+      { columnId: "profile.score", direction: "asc" },
+      { columnId: "name", direction: "asc" },
+    ]);
+
+    expect(state.sortModel).toEqual([
+      { columnId: "age", direction: "asc" },
+      { columnId: "name", direction: "asc" },
+    ]);
+    expect(getCominsPageRows(state).map((row) => row.id)).toEqual(["first", "second"]);
+  });
+
+  it("applies custom comparators at each multi-sort priority", () => {
+    const comparatorRows = [
+      { age: 20, id: "a", name: "bb", profile: { score: 1 } },
+      { age: 40, id: "b", name: "a", profile: { score: 1 } },
+      { age: 30, id: "c", name: "cc", profile: { score: 1 } },
+    ];
+    let state = createCominsTableState<PersonRow>({
+      columns: [
+        { field: "profile.score", label: "Group", sort: true },
+        {
+          field: "name",
+          label: "Name length",
+          sort: (left, right) => String(left).length - String(right).length,
+        },
+        { field: "age", label: "Age", sort: true },
+      ],
+      getRowId: (row) => row.id,
+      rows: comparatorRows,
+    });
+
+    state = setCominsSortModel(state, [
+      { columnId: "profile.score", direction: "asc" },
+      { columnId: "name", direction: "asc" },
+      { columnId: "age", direction: "desc" },
+    ]);
+
+    expect(getCominsPageRows(state).map((row) => row.id)).toEqual(["b", "c", "a"]);
   });
 
   it("formats repeated row object payloads with the row id index", () => {

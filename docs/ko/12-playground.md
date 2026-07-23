@@ -20,7 +20,7 @@ npm run dev
 - `/examples/size`: `300px` 기본 높이와 상위 컨테이너 `500px`를 따르는 테이블 높이 예제. 기존 브라우저 `100%` 예제 카드는 제거되었다.
 - `/examples/theme`: CSS custom properties, theme class, rowHeight 동기화 계약
 - `/examples/loading`: 초기 skeleton, 재조회 overlay, 빈 데이터 상태
-- `/examples/header`: 1Depth Header 이동, resize, 컬럼 설정 저장/불러오기, Header 표시 토글, Header 컬럼별 Checkbox Select Box 숨김/표시. 컬럼 설정 저장/불러오기는 컬럼 표시 상태도 함께 저장한다.
+- `/examples/header`: 1Depth Header 이동, resize, 컬럼 설정 저장/불러오기, Header 표시 토글, Header 컬럼별 Checkbox Select Box 숨김/표시, Multi-column Sort. 컬럼 설정 저장/불러오기는 컬럼 표시 상태도 함께 저장한다. 다중 정렬 예제는 일반 클릭 또는 `Enter`/`Space`의 단일 정렬과 `Shift` 조작의 조건 추가를 구분하고 현재 `CominsSortModel`을 함께 출력한다.
 - `/examples/column-groups`: 2Depth Header 이동, resize, 컬럼/그룹 숨김/표시. `/examples/header-groups`는 legacy URL 호환용 redirect로 유지한다.
 - `/examples/body`: legacy URL 호환용 redirect. 실제 화면은 `/performance/virtualization`으로 이동한다.
 - `/examples/cell`: `cell.format`, `cell.props`, `cell.renderer`, cell event Alert, clipboard guard

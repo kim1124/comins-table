@@ -357,6 +357,11 @@ test("general samples render thirty rows per page", async ({ page }) => {
       page.getByTestId(testId).locator(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
     ).toHaveCount(30);
   }
+  await expect(
+    page
+      .getByTestId("header-example-multi-sort")
+      .locator(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
+  ).toHaveCount(6);
 
   await page.goto("/examples/column-groups");
   for (const testId of ["header-example-groups", "column-group-dynamic-columns"]) {
@@ -401,6 +406,7 @@ test("header page keeps only requested actions and state outputs", async ({ page
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "Header 기본 기능" })).toBeVisible();
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "Header 숨김 / 표시" })).toBeVisible();
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "컬럼 설정 저장 / 불러오기" })).toBeVisible();
+  await expect(page.getByTestId("feature-option-heading").filter({ hasText: "Multi-column Sort" })).toBeVisible();
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "컬럼 동적 표시" })).toHaveCount(0);
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "2중 헤더 예제" })).toHaveCount(0);
   await expect(page.getByTestId("header-example-basic").getByRole("button", { exact: true, name: "초기화" })).toBeVisible();
@@ -408,6 +414,7 @@ test("header page keeps only requested actions and state outputs", async ({ page
   await expect(page.getByTestId("header-example-layout").getByRole("button", { exact: true, name: "저장" })).toBeVisible();
   await expect(page.getByTestId("header-example-layout").getByRole("button", { exact: true, name: "불러오기" })).toBeVisible();
   await expect(page.getByTestId("header-example-layout").getByRole("button", { exact: true, name: "초기화" })).toBeVisible();
+  await expect(page.getByTestId("header-example-multi-sort").getByRole("button", { exact: true, name: "Sort 초기화" })).toBeVisible();
   await expect(page.getByRole("button", { exact: true, name: "복원" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Header components/u })).toHaveCount(0);
   await expect(page.getByTestId("header-component-table")).toHaveCount(0);

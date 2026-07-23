@@ -648,6 +648,13 @@
   z-index: 60;
 }
 
+.comins-sort-meta {
+  align-items: center;
+  display: inline-flex;
+  gap: 3px;
+  min-width: 0;
+}
+
 .comins-sort-indicator {
   display: none;
   justify-content: center;
@@ -669,6 +676,32 @@
   display: inline-flex;
   opacity: 1;
   transform: scale(1) rotate(180deg);
+}
+
+.comins-sort-priority {
+  align-items: center;
+  background: color-mix(in srgb, var(--comins-table-accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--comins-table-accent) 48%, transparent);
+  border-radius: 999px;
+  color: var(--comins-table-accent);
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 800;
+  height: 16px;
+  justify-content: center;
+  line-height: 1;
+  min-width: 16px;
+  padding: 0 4px;
+}
+
+.comins-table__sort-status {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
 .comins-row-selected {

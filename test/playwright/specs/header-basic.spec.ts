@@ -52,10 +52,11 @@ test("playground verifies header resize, column position change, and layout rest
   await page.goto("/");
   await page.goto("/examples/header");
 
-  await expect(page.getByTestId("feature-sample-card")).toHaveCount(3);
+  await expect(page.getByTestId("feature-sample-card")).toHaveCount(4);
   await expect(page.getByTestId("header-example-basic")).toBeVisible();
   await expect(page.getByTestId("header-example-visibility")).toBeVisible();
   await expect(page.getByTestId("header-example-layout")).toBeVisible();
+  await expect(page.getByTestId("header-example-multi-sort")).toBeVisible();
   await expect(page.getByTestId("header-example-groups")).toHaveCount(0);
   await expect(page.getByTestId("header-example-dynamic-columns")).toHaveCount(0);
 
@@ -93,6 +94,52 @@ test("playground verifies header resize, column position change, and layout rest
   await basicExample.getByRole("button", { exact: true, name: "초기화" }).click();
   await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("Column1");
 
+  expect(diagnostics).toEqual([]);
+});
+
+test("playground demonstrates ordered multi-column sorting for child headers and keyboard input", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/examples/header");
+
+  const example = page.getByTestId("header-example-multi-sort");
+  const groupHeader = example.getByTestId("header-group-work");
+  const roleHeader = example.getByTestId("header-role");
+  const ageHeader = example.getByTestId("header-age");
+  const nameHeader = example.getByTestId("header-name");
+  const sortModel = example.getByTestId("multi-sort-model-json");
+
+  await expect(groupHeader).not.toHaveAttribute("aria-sort", /.+/u);
+  await roleHeader.click();
+  await ageHeader.click({ modifiers: ["Shift"] });
+
+  await expect(roleHeader).toHaveAttribute("aria-sort", "ascending");
+  await expect(ageHeader).not.toHaveAttribute("aria-sort", /.+/u);
+  await expect(roleHeader).toHaveAttribute("data-sort-priority", "1");
+  await expect(ageHeader).toHaveAttribute("data-sort-priority", "2");
+  await expect(example.getByTestId("sort-priority-role")).toHaveText("1");
+  await expect(example.getByTestId("sort-priority-age")).toHaveText("2");
+  await expect(sortModel).toContainText('"columnId": "role"');
+  await expect(sortModel).toContainText('"columnId": "age"');
+  await expect(
+    example.locator(".comins-table__body-table tbody tr[data-comins-row-data-index]").evaluateAll((rows) =>
+      rows.map((row) => row.getAttribute("data-testid")),
+    ),
+  ).resolves.toEqual(["row-multi-4", "row-multi-5", "row-multi-3", "row-multi-1", "row-multi-2", "row-multi-6"]);
+
+  await nameHeader.focus();
+  await nameHeader.press("Shift+Enter");
+  await expect(nameHeader).toHaveAttribute("data-sort-priority", "3");
+  await expect(example.getByTestId("sort-priority-name")).toHaveText("3");
+  await expect(sortModel).toContainText('"columnId": "name"');
+  await expect(
+    example.locator(".comins-table__body-table tbody tr[data-comins-row-data-index]").evaluateAll((rows) =>
+      rows.map((row) => row.getAttribute("data-testid")),
+    ),
+  ).resolves.toEqual(["row-multi-5", "row-multi-4", "row-multi-3", "row-multi-2", "row-multi-1", "row-multi-6"]);
+
+  await example.getByRole("button", { exact: true, name: "Sort 초기화" }).click();
+  await expect(sortModel).toHaveText("활성화된 정렬 조건 없음");
+  await expect(example.locator("[data-sort-priority]")).toHaveCount(0);
   expect(diagnostics).toEqual([]);
 });
 

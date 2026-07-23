@@ -926,6 +926,162 @@ describe("comins-table keyboard interaction", () => {
     ]);
   });
 
+  it("adds, updates, removes, restores, and clears ordered multi-sort rules", () => {
+    const ref = createRef<CominsTableRef<PersonRow>>();
+    const onChangeSort = vi.fn();
+    const onChangeSortModel = vi.fn();
+    const multiRows: PersonRow[] = [
+      { age: 31, id: "a", name: "Beta" },
+      { age: 31, id: "b", name: "Alpha" },
+      { age: 27, id: "c", name: "Gamma" },
+    ];
+    const element = renderTableElement(
+      <CominsTable
+        columns={[
+          { field: "name", label: "Name", sort: true },
+          { field: "age", label: "Age", sort: true },
+        ]}
+        data={multiRows}
+        getRowId={(row) => row.id}
+        multiSort
+        onChangeSort={onChangeSort}
+        onChangeSortModel={onChangeSortModel}
+        ref={ref}
+      />,
+    );
+    const nameHeader = element.querySelector<HTMLElement>("[data-testid='header-name']")!;
+    const ageHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
+
+    act(() => ageHeader.click());
+    act(() => nameHeader.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true })));
+
+    expect(ref.current?.getSortModel()).toEqual([
+      { columnId: "age", direction: "asc" },
+      { columnId: "name", direction: "asc" },
+    ]);
+    expect(onChangeSort).toHaveBeenLastCalledWith({ columnId: "age", direction: "asc" });
+    expect(onChangeSortModel).toHaveBeenLastCalledWith([
+      { columnId: "age", direction: "asc" },
+      { columnId: "name", direction: "asc" },
+    ]);
+    expect([...element.querySelectorAll("tbody tr")].map((row) => row.getAttribute("data-testid"))).toEqual([
+      "row-c",
+      "row-b",
+      "row-a",
+    ]);
+    expect(ageHeader.getAttribute("data-sort-priority")).toBe("1");
+    expect(nameHeader.getAttribute("data-sort-priority")).toBe("2");
+    expect(ageHeader.getAttribute("aria-sort")).toBe("ascending");
+    expect(nameHeader.getAttribute("aria-sort")).toBeNull();
+    expect(element.querySelector("[data-testid='sort-priority-age']")?.textContent).toBe("1");
+    expect(element.querySelector("[data-testid='sort-priority-name']")?.textContent).toBe("2");
+
+    act(() => nameHeader.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true })));
+    expect(ref.current?.getSortModel()).toEqual([
+      { columnId: "age", direction: "asc" },
+      { columnId: "name", direction: "desc" },
+    ]);
+    expect([...element.querySelectorAll("tbody tr")].map((row) => row.getAttribute("data-testid"))).toEqual([
+      "row-c",
+      "row-a",
+      "row-b",
+    ]);
+
+    act(() => nameHeader.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true })));
+    expect(ref.current?.getSortModel()).toEqual([{ columnId: "age", direction: "asc" }]);
+
+    act(() => {
+      nameHeader.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Enter", shiftKey: true }));
+    });
+    expect(ref.current?.getSortModel()).toEqual([
+      { columnId: "age", direction: "asc" },
+      { columnId: "name", direction: "asc" },
+    ]);
+
+    act(() => {
+      ref.current?.setSortModel([
+        { columnId: "name", direction: "desc" },
+        { columnId: "age", direction: "asc" },
+      ]);
+    });
+    expect(ref.current?.getSortState()).toEqual({ columnId: "name", direction: "desc" });
+    expect(ref.current?.getSortModel()).toEqual([
+      { columnId: "name", direction: "desc" },
+      { columnId: "age", direction: "asc" },
+    ]);
+
+    act(() => ref.current?.clearSort());
+    expect(ref.current?.getSortState()).toBeNull();
+    expect(ref.current?.getSortModel()).toEqual([]);
+  });
+
+  it("keeps Shift activation on the single-sort path unless multiSort is enabled", () => {
+    const ref = createRef<CominsTableRef<PersonRow>>();
+    const element = renderTableElement(
+      <CominsTable
+        columns={[
+          { field: "name", label: "Name", sort: true },
+          { field: "age", label: "Age", sort: true },
+        ]}
+        data={threeRows}
+        getRowId={(row) => row.id}
+        ref={ref}
+      />,
+    );
+
+    act(() => element.querySelector<HTMLElement>("[data-testid='header-age']")?.click());
+    act(() => {
+      element
+        .querySelector<HTMLElement>("[data-testid='header-name']")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true }));
+    });
+
+    expect(ref.current?.getSortModel()).toEqual([{ columnId: "name", direction: "asc" }]);
+  });
+
+  it("normalizes and reports sort rules when sortable columns are removed", () => {
+    const ref = createRef<CominsTableRef<PersonRow>>();
+    const onChangeSort = vi.fn();
+    const onChangeSortModel = vi.fn();
+    const getRowId = (row: PersonRow) => row.id;
+    const initialColumns = [
+      { field: "name", label: "Name", sort: true },
+      { field: "age", label: "Age", sort: true },
+    ];
+    const element = renderTableElement(
+      <CominsTable
+        columns={initialColumns}
+        data={threeRows}
+        getRowId={getRowId}
+        onChangeSort={onChangeSort}
+        onChangeSortModel={onChangeSortModel}
+        ref={ref}
+      />,
+    );
+
+    act(() => ref.current?.setSortModel([{ columnId: "age", direction: "asc" }]));
+    onChangeSort.mockClear();
+    onChangeSortModel.mockClear();
+
+    act(() => {
+      root?.render(
+        <CominsTable
+          columns={[{ field: "name", label: "Name", sort: true }]}
+          data={threeRows}
+          getRowId={getRowId}
+          onChangeSort={onChangeSort}
+          onChangeSortModel={onChangeSortModel}
+          ref={ref}
+        />,
+      );
+    });
+
+    expect(element.querySelector("[data-testid='header-age']")).toBeNull();
+    expect(ref.current?.getSortModel()).toEqual([]);
+    expect(onChangeSort).toHaveBeenLastCalledWith(null);
+    expect(onChangeSortModel).toHaveBeenLastCalledWith([]);
+  });
+
   it("exposes aria-sort and keyboard activation for sortable headers", () => {
     const element = renderTableElement(
       <CominsTable columns={columns} data={threeRows} getRowId={(row) => row.id} />,

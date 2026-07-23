@@ -171,7 +171,17 @@ test("playground verifies 100000 row virtualization perf smoke @perf", async ({ 
     .poll(() => page.getByTestId("data-table-viewport").evaluate((element) => element.scrollHeight))
     .toBeGreaterThan(100_000);
 
-  const scrollDispatchMs = await page.getByTestId("data-table-viewport").evaluate((element) => {
+  const viewport = page.getByTestId("data-table-viewport");
+  const table = viewport.locator("..");
+  await table.getByTestId("header-name").click();
+  await table.getByTestId("header-age").click({ modifiers: ["Shift"] });
+  await table.getByTestId("header-role").click({ modifiers: ["Shift"] });
+  await expect(table.getByTestId("header-name")).toHaveAttribute("data-sort-priority", "1");
+  await expect(table.getByTestId("header-age")).toHaveAttribute("data-sort-priority", "2");
+  await expect(table.getByTestId("header-role")).toHaveAttribute("data-sort-priority", "3");
+  await expect.poll(() => viewport.locator(".comins-table__body-table tbody tr").count()).toBeLessThan(80);
+
+  const scrollDispatchMs = await viewport.evaluate((element) => {
     const startedAt = performance.now();
 
     element.scrollTop = element.scrollHeight;
@@ -181,7 +191,7 @@ test("playground verifies 100000 row virtualization perf smoke @perf", async ({ 
   });
   await expect
     .poll(() =>
-      page.getByTestId("data-table-viewport").evaluate((element) => {
+      viewport.evaluate((element) => {
         const rows = Array.from(
           element.querySelectorAll<HTMLTableRowElement>(
             ".comins-table__body-table tbody tr[data-comins-row-data-index]",
@@ -193,7 +203,7 @@ test("playground verifies 100000 row virtualization perf smoke @perf", async ({ 
       }),
     )
     .toBeGreaterThan(99_950);
-  const metrics = await page.getByTestId("data-table-viewport").evaluate((element) => {
+  const metrics = await viewport.evaluate((element) => {
     const rows = Array.from(
       element.querySelectorAll<HTMLTableRowElement>(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
     );

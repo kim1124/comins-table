@@ -32,3 +32,5 @@ Implemented routes include:
 - `/selection/cell-range`
 
 Route changes unmount the previous page and example subtree. The playground is meant to demonstrate implemented APIs, not roadmap-only features.
+
+The `/examples/header` route includes an explicit Multi-column Sort sample. Use a normal Header click or `Enter`/`Space` for single sorting, and hold `Shift` with the same input to add or update ordered rules while inspecting the live `CominsSortModel` output.

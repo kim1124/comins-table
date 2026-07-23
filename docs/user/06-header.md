@@ -9,7 +9,40 @@ const columns: Array<CominsTableColumn<PersonRow>> = [
 ];
 ```
 
-Use `onChangeSort` for controlled sort updates and `onChangeColumnLayout` for width, order, and visibility persistence.
+Use `onChangeSort` to observe the primary sort rule and `onChangeColumnLayout` for width, order, and visibility persistence.
+
+## Multi-column sort
+
+Single-column sorting remains the default. Enable ordered multi-column sorting explicitly with `multiSort` and observe the complete model through `onChangeSortModel`.
+
+```tsx
+const [sortModel, setSortModel] = useState<CominsSortModel>([]);
+const tableRef = useRef<CominsTableRef<PersonRow>>(null);
+
+<CominsTable
+  ref={tableRef}
+  columns={columns}
+  data={rows}
+  multiSort
+  onChangeSortModel={setSortModel}
+/>
+
+tableRef.current?.setSortModel([
+  { columnId: "department", direction: "asc" },
+  { columnId: "salary", direction: "desc" },
+]);
+```
+
+- A normal click or `Enter`/`Space` keeps the existing single-column `none -> asc -> desc -> none` cycle.
+- `Shift` plus click or `Enter`/`Space` appends a new ascending rule, updates an existing rule in place, or removes its descending rule.
+- Header badges show the 1-based comparison priority. Removing a rule compacts the remaining priorities.
+- `getSortModel()` and `setSortModel(model)` read and restore the full ordered model. `getSortState()` and `setSortState(rule)` remain available for one-rule compatibility; `setSortState` replaces the full model.
+- `clearSort()` clears every rule. `onChangeSort` continues to observe the first rule, while `onChangeSortModel` observes the complete model.
+- Hidden sortable Columns keep their rules. Removed or non-sortable Columns are removed from the model.
+- Two-level parent Group Headers are not sortable. Their sortable child Columns participate normally.
+- Tree Grid applies the same ordered comparator to each sibling set without flattening parents and descendants together.
+
+During multi-sort only the first rule exposes `aria-sort="ascending"` or `"descending"`. Secondary Headers include an accessible priority description because ARIA does not provide a native multi-key priority attribute.
 
 ## Column reorder
 

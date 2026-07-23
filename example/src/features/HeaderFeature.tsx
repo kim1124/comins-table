@@ -4,6 +4,7 @@ import { Eye, EyeOff, RotateCcw, Save, Upload } from "lucide-react";
 import {
   CominsTable,
   type CominsColumnLayout,
+  type CominsSortModel,
   type CominsTableRef,
 } from "../../../src";
 import { ActionButton, FeatureControls } from "../components/FeatureControls";
@@ -19,6 +20,23 @@ type HeaderLayoutSnapshot = {
   columnIds: string[];
   layout: CominsColumnLayout;
 };
+
+const multiSortRows: PersonRow[] = [
+  { age: 31, id: "multi-1", name: "Beta", role: "Owner" },
+  { age: 31, id: "multi-2", name: "Alpha", role: "Owner" },
+  { age: 27, id: "multi-3", name: "Gamma", role: "Owner" },
+  { age: 42, id: "multi-4", name: "Delta", role: "Editor" },
+  { age: 42, id: "multi-5", name: "Charlie", role: "Editor" },
+  { age: 20, id: "multi-6", name: "Echo", role: "Viewer" },
+];
+
+const multiSortColumns = [
+  { field: "role", label: "Role", minWidth: 120, sort: true },
+  { field: "age", label: "Age", minWidth: 100, sort: true },
+  { field: "name", label: "Name", minWidth: 140, sort: true },
+];
+
+const multiSortColumnGroups = [{ children: ["role", "age"], id: "work", label: "Work profile" }];
 
 function normalizeHeaderColumnIds(columnIds: unknown, fallbackColumnIds: string[]) {
   if (!Array.isArray(columnIds)) {
@@ -49,6 +67,7 @@ function parseHeaderLayoutSnapshot(value: string): HeaderLayoutSnapshot {
 export function HeaderFeature() {
   const basicTableRef = useRef<CominsTableRef<PersonRow>>(null);
   const layoutTableRef = useRef<CominsTableRef<PersonRow>>(null);
+  const multiSortTableRef = useRef<CominsTableRef<PersonRow>>(null);
   const pendingLayoutRef = useRef<CominsColumnLayout | null>(null);
   const [rows] = useState(() => createExampleRows(100));
   const columns = useMemo(() => createBaseColumns(), []);
@@ -57,6 +76,7 @@ export function HeaderFeature() {
   const [, setBasicLayout] = useState<CominsColumnLayout>(() => cloneDefaultLayout());
   const [layoutState, setLayoutState] = useState<CominsColumnLayout>(() => cloneGroupLayout());
   const [savedLayout, setSavedLayout] = useState("");
+  const [sortModel, setSortModel] = useState<CominsSortModel>([]);
   const [visibilityShowHeader, setVisibilityShowHeader] = useState(true);
   const [visibilityColumnIds, setVisibilityColumnIds] = useState(() => dynamicColumnOptions.map((option) => option.value));
   const [layoutColumnIds, setLayoutColumnIds] = useState(() => [...allHeaderColumnIds]);
@@ -229,6 +249,38 @@ export function HeaderFeature() {
               onChangeColumnLayout={setLayoutState}
               pagination={{ pageIndex: 0, pageSize: 30 }}
               ref={layoutTableRef}
+              theme={{ density: "compact" }}
+            />
+          </FeatureSampleSection>
+        </section>
+
+        <section data-testid="header-example-multi-sort">
+          <FeatureSampleSection
+            description="일반 클릭은 단일 정렬을 유지하고 Shift+클릭 또는 Shift+Enter/Space는 하위 Column 정렬 조건을 우선순위 순서로 추가합니다."
+            id="header-multi-sort"
+            title="Multi-column Sort"
+          >
+            <FeatureControls
+              actions={
+                <ActionButton icon={<RotateCcw />} onClick={() => multiSortTableRef.current?.clearSort()}>
+                  Sort 초기화
+                </ActionButton>
+              }
+            />
+            <pre className="state-output" data-testid="multi-sort-model-json">
+              {sortModel.length > 0 ? JSON.stringify(sortModel, null, 2) : "활성화된 정렬 조건 없음"}
+            </pre>
+            <CominsTable
+              className="example-table header-example-table"
+              columnGroups={multiSortColumnGroups}
+              columns={multiSortColumns}
+              data={multiSortRows}
+              data-testid="header-multi-sort-viewport"
+              getRowId={(row) => row.id}
+              multiSort
+              onChangeSortModel={setSortModel}
+              pagination={{ pageIndex: 0, pageSize: 30 }}
+              ref={multiSortTableRef}
               theme={{ density: "compact" }}
             />
           </FeatureSampleSection>
