@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { CominsTable, cominsTablePackage, type CominsTreeNode } from "../src";
+import {
+  CominsTable,
+  cominsTablePackage,
+  type CominsSortModel,
+  type CominsTreeNode,
+} from "../src";
 
 describe("comins-table public API", () => {
   it("exports the package marker and table component", () => {
@@ -147,6 +152,37 @@ describe("comins-table public API", () => {
         data={data}
         getRowId={(item) => item.id}
         onChangeData={() => undefined}
+        tree
+      />,
+    ).toBeTruthy();
+  });
+
+  it("accepts the additive multi-column sort API for flat and Tree tables", () => {
+    const sortModel: CominsSortModel = [
+      { columnId: "name", direction: "asc" },
+      { columnId: "age", direction: "desc" },
+    ];
+    const rows = [{ age: 20, id: "a", name: "Alpha" }];
+    const treeRows: CominsTreeNode<(typeof rows)[number]>[] = [{ item: rows[0]! }];
+
+    expect(
+      <CominsTable
+        columns={[
+          { field: "name", label: "Name", sort: true },
+          { field: "age", label: "Age", sort: true },
+        ]}
+        data={rows}
+        multiSort
+        onChangeSortModel={(nextModel) => expect(nextModel).toEqual(sortModel)}
+      />,
+    ).toBeTruthy();
+    expect(
+      <CominsTable
+        columns={[{ field: "name", label: "Name", sort: true }]}
+        data={treeRows}
+        getRowId={(item) => item.id}
+        multiSort
+        onChangeSortModel={() => undefined}
         tree
       />,
     ).toBeTruthy();

@@ -27,6 +27,7 @@ import {
   serializeCominsColumnLayout,
   setCominsColumnWidth,
   setCominsColumnGroupWidth,
+  setCominsSortModel,
   setCominsSortState,
   updateCominsRows,
 } from "./core";
@@ -71,6 +72,7 @@ import type {
   CominsPaginationState,
   CominsRowId,
   CominsSelectionState,
+  CominsSortModel,
   CominsSortState,
 } from "./core";
 
@@ -152,11 +154,13 @@ export type CominsTableRef<TData = unknown> = {
   expand: (nodeIds?: readonly CominsRowId[]) => void;
   fold: (nodeIds?: readonly CominsRowId[]) => void;
   getColumnLayout: () => CominsColumnLayout;
+  getSortModel: () => CominsSortModel;
   getSortState: () => CominsSortState | null;
   setColumnLayout: (layout: CominsColumnLayout) => void;
   setMoveTargetRow: (targetIdx: number, sourceIdx: number) => void;
   setSelectedRow: (index: number) => void;
   setSelectedRows: (indexes: number[]) => void;
+  setSortModel: (sortModel: CominsSortModel) => void;
   setSortState: (sort: CominsSortState | null) => void;
 };
 
@@ -194,10 +198,12 @@ export type CominsTableProps<TData> = {
   loading?: boolean;
   loadingComponent?: React.ReactNode;
   loadingMore?: boolean;
+  multiSort?: boolean;
   onChangeColumnLayout?: (layout: CominsColumnLayout) => void;
   onChangeData?: (data: TData[]) => void;
   onChangeSelection?: (selection: CominsSelectionState) => void;
   onChangeSort?: (sort: CominsSortState | null) => void;
+  onChangeSortModel?: (sortModel: CominsSortModel) => void;
   onClickCell?: (payload: CominsCellEventPayload<TData>) => void;
   onClickRow?: (payload: CominsRowEventPayload<TData>) => void;
   onContextMenuCell?: (payload: CominsCellEventPayload<TData>) => void;
@@ -511,6 +517,7 @@ function createHeaderComponentPayload<TData>(
   columnIndex: number,
 ): CominsHeaderComponentPayload<TData> {
   const columnState = state.columnState[column.id];
+  const sortRule = getSortRule(state.sortModel, column.id);
 
   return {
     column: createComponentColumnPayload(column, columnIndex),
@@ -519,8 +526,10 @@ function createHeaderComponentPayload<TData>(
       width: columnState?.width ?? column.width,
     },
     sort: {
-      direction: state.sort?.columnId === column.id ? state.sort.direction : null,
+      count: state.sortModel.length,
+      direction: sortRule?.rule.direction ?? null,
       enabled: Boolean(column.sort),
+      priority: sortRule?.priority ?? null,
     },
   };
 }
@@ -791,20 +800,72 @@ function getNextSort(current: CominsSortState | null, columnId: string): CominsS
   return null;
 }
 
-function getSortIndicatorState(current: CominsSortState | null, columnId: string) {
-  if (current?.columnId !== columnId) {
-    return "none";
+function getNextSortModel(current: CominsSortModel, columnId: string, additive: boolean): CominsSortState[] {
+  const currentIndex = current.findIndex((rule) => rule.columnId === columnId);
+  const currentRule = currentIndex < 0 ? null : current[currentIndex] ?? null;
+  const nextRule = getNextSort(currentRule, columnId);
+
+  if (!additive) {
+    return nextRule ? [nextRule] : [];
   }
 
-  return current.direction;
+  if (!nextRule) {
+    return current.filter((rule) => rule.columnId !== columnId);
+  }
+
+  if (currentIndex < 0) {
+    return [...current, nextRule];
+  }
+
+  return current.map((rule, index) => (index === currentIndex ? nextRule : rule));
 }
 
-function getAriaSortState(current: CominsSortState | null, columnId: string) {
-  if (current?.columnId !== columnId) {
+function getSortRule(current: CominsSortModel, columnId: string) {
+  const index = current.findIndex((rule) => rule.columnId === columnId);
+
+  return index < 0 ? null : { priority: index + 1, rule: current[index]! };
+}
+
+function getSortIndicatorState(current: CominsSortModel, columnId: string) {
+  const currentRule = getSortRule(current, columnId)?.rule;
+
+  if (!currentRule) {
     return "none";
   }
 
-  return current.direction === "asc" ? "ascending" : "descending";
+  return currentRule.direction;
+}
+
+function getAriaSortState(current: CominsSortModel, columnId: string) {
+  const currentRule = getSortRule(current, columnId);
+
+  if (!currentRule) {
+    return current.length > 1 ? undefined : "none";
+  }
+
+  if (currentRule.priority > 1) {
+    return undefined;
+  }
+
+  return currentRule.rule.direction === "asc" ? "ascending" : "descending";
+}
+
+function areSortStatesEqual(left: CominsSortState | null, right: CominsSortState | null) {
+  if (!left || !right) {
+    return left === right;
+  }
+
+  return left.columnId === right.columnId && left.direction === right.direction;
+}
+
+function areSortModelsEqual(left: CominsSortModel, right: CominsSortModel) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every(
+    (rule, index) => rule.columnId === right[index]?.columnId && rule.direction === right[index]?.direction,
+  );
 }
 
 function areRowIdSequencesEqual(left: readonly CominsRowId[], right: readonly CominsRowId[]) {
@@ -858,27 +919,33 @@ function compareTreeValues(left: unknown, right: unknown) {
 function getSortedCominsTree<TData>(
   data: readonly CominsTreeNode<TData>[],
   columns: readonly CominsTableColumn<TData>[],
-  sort: CominsSortState | null,
+  sortModel: CominsSortModel,
 ) {
-  if (!sort) {
-    return data;
-  }
-
-  const column = columns.find((candidate) => (candidate.id ?? candidate.field) === sort.columnId);
-
-  if (!column?.sort) {
+  if (sortModel.length === 0) {
     return data;
   }
 
   return sortCominsTreeSiblings(data, (leftRow, rightRow) => {
-    const leftValue = getTreeNestedFieldValue(leftRow, column.field);
-    const rightValue = getTreeNestedFieldValue(rightRow, column.field);
-    const result =
-      typeof column.sort === "function"
-        ? column.sort(leftValue, rightValue, leftRow, rightRow)
-        : compareTreeValues(leftValue, rightValue);
+    for (const rule of sortModel) {
+      const column = columns.find((candidate) => (candidate.id ?? candidate.field) === rule.columnId);
 
-    return sort.direction === "desc" ? result * -1 : result;
+      if (!column?.sort) {
+        continue;
+      }
+
+      const leftValue = getTreeNestedFieldValue(leftRow, column.field);
+      const rightValue = getTreeNestedFieldValue(rightRow, column.field);
+      const result =
+        typeof column.sort === "function"
+          ? column.sort(leftValue, rightValue, leftRow, rightRow)
+          : compareTreeValues(leftValue, rightValue);
+
+      if (result !== 0) {
+        return rule.direction === "desc" ? result * -1 : result;
+      }
+    }
+
+    return 0;
   });
 }
 
@@ -990,10 +1057,12 @@ function CominsTableInner<TData>(
     loading = false,
     loadingComponent,
     loadingMore = false,
+    multiSort = false,
     onChangeColumnLayout,
     onChangeData,
     onChangeSelection,
     onChangeSort,
+    onChangeSortModel,
     onClickCell,
     onClickRow,
     onContextMenuCell,
@@ -1180,21 +1249,32 @@ function CominsTableInner<TData>(
     }
 
     stateInputRef.current = { columnGroups, columns, data: effectiveData, getRowId, pagination, showHeader };
-    setState((current) => {
-      const next = createCominsTableState({
-        columnLayout: serializeCominsColumnLayout(current),
-        columnGroups,
-        columns,
-        getRowId,
-        pagination: pagination ?? current.pagination,
-        rows: effectiveData,
-        showHeader,
-        sort: current.sort,
-        theme: current.theme,
-      });
-
-      return canPreserveSelection(current, next) ? { ...next, selection: current.selection } : next;
+    const current = stateRef.current;
+    const nextState = createCominsTableState({
+      columnLayout: serializeCominsColumnLayout(current),
+      columnGroups,
+      columns,
+      getRowId,
+      pagination: pagination ?? current.pagination,
+      rows: effectiveData,
+      showHeader,
+      sortModel: current.sortModel,
+      theme: current.theme,
     });
+    const next = canPreserveSelection(current, nextState)
+      ? { ...nextState, selection: current.selection }
+      : nextState;
+
+    stateRef.current = next;
+    setState(next);
+
+    if (!areSortStatesEqual(next.sort, current.sort)) {
+      onChangeSort?.(next.sort);
+    }
+
+    if (!areSortModelsEqual(next.sortModel, current.sortModel)) {
+      onChangeSortModel?.(next.sortModel);
+    }
   }, [columnGroups, columns, effectiveData, getRowId, pagination, showHeader]);
 
   useEffect(() => {
@@ -1240,7 +1320,7 @@ function CominsTableInner<TData>(
   const notifyChanges = (
     current: CominsTableState<TData>,
     next: CominsTableState<TData>,
-    options: { columnLayoutChanged?: boolean; sortChanged?: boolean } = {},
+    options: { columnLayoutChanged?: boolean } = {},
   ) => {
     if (next.rows !== current.rows) {
       onChangeData?.(next.rows);
@@ -1254,14 +1334,18 @@ function CominsTableInner<TData>(
       onChangeColumnLayout?.(serializeCominsColumnLayout(next));
     }
 
-    if (options.sortChanged || next.sort !== current.sort) {
+    if (!areSortStatesEqual(next.sort, current.sort)) {
       onChangeSort?.(next.sort);
+    }
+
+    if (!areSortModelsEqual(next.sortModel, current.sortModel)) {
+      onChangeSortModel?.(next.sortModel);
     }
   };
 
   const commitState = (
     updater: CominsTableState<TData> | ((current: CominsTableState<TData>) => CominsTableState<TData>),
-    options: { columnLayoutChanged?: boolean; sortChanged?: boolean } = {},
+    options: { columnLayoutChanged?: boolean } = {},
   ) => {
     const current = stateRef.current;
     const next = typeof updater === "function" ? updater(current) : updater;
@@ -1316,7 +1400,7 @@ function CominsTableInner<TData>(
     return cells;
   }, [summary, summaryValues, visibleColumns]);
   const sortedRowIndexes = useMemo(
-    () => (treeContext || !state.sort ? null : getCominsSortedRowIndexes(state)),
+    () => (treeContext || state.sortModel.length === 0 ? null : getCominsSortedRowIndexes(state)),
     [state, treeContext],
   );
   const visibleRowCount = sortedRowIndexes?.length ?? state.rows.length;
@@ -1566,14 +1650,14 @@ function CominsTableInner<TData>(
 
     return true;
   };
-  const activateHeaderSort = (column: CominsTableRuntimeColumn<TData>) => {
+  const activateHeaderSort = (column: CominsTableRuntimeColumn<TData>, additive: boolean) => {
     if (!column.sort) {
       return;
     }
 
-    commitState((current) => setCominsSortState(current, getNextSort(current.sort, column.id)), {
-      sortChanged: true,
-    });
+    commitState((current) =>
+      setCominsSortModel(current, getNextSortModel(current.sortModel, column.id, multiSort && additive)),
+    );
   };
 
   const getColumnMoveTargetId = (clientX: number, clientY: number) => {
@@ -1598,58 +1682,58 @@ function CominsTableInner<TData>(
   useImperativeHandle(
     ref,
     () => ({
-      clearSort: () => commitState((current) => clearCominsSortState(current), { sortChanged: true }),
+      clearSort: () => commitState((current) => clearCominsSortState(current)),
       expand: (nodeIds) => treeContext?.onExpand(nodeIds),
       fold: (nodeIds) => treeContext?.onFold(nodeIds),
       getColumnLayout: () => serializeCominsColumnLayout(state),
+      getSortModel: () => state.sortModel,
       getSortState: () => state.sort,
       setColumnLayout: (layout) =>
         commitState((current) => applyCominsColumnLayout(current, layout), { columnLayoutChanged: true }),
       setMoveTargetRow: (targetIdx, sourceIdx) =>
-        commitState(
-          (current) => {
-            if (treeContext) {
-              return current;
-            }
+        commitState((current) => {
+          if (treeContext) {
+            return current;
+          }
 
-            const visibleRowIds = getCominsSortedRowIndexes(current).flatMap((dataIndex) => {
-              const rowId = current.rowIds[dataIndex];
+          const visibleRowIds = getCominsSortedRowIndexes(current).flatMap((dataIndex) => {
+            const rowId = current.rowIds[dataIndex];
 
-              return rowId === undefined ? [] : [rowId];
-            });
-            const sourceRowId = visibleRowIds[sourceIdx];
+            return rowId === undefined ? [] : [rowId];
+          });
+          const sourceRowId = visibleRowIds[sourceIdx];
 
-            if (sourceRowId === undefined || targetIdx < 0 || sourceIdx < 0) {
-              return current;
-            }
+          if (sourceRowId === undefined || targetIdx < 0 || sourceIdx < 0) {
+            return current;
+          }
 
-            const nextVisibleRowIds = visibleRowIds.filter((rowId) => rowId !== sourceRowId);
-            const targetPosition = Math.min(nextVisibleRowIds.length, targetIdx);
-            nextVisibleRowIds.splice(targetPosition, 0, sourceRowId);
+          const nextVisibleRowIds = visibleRowIds.filter((rowId) => rowId !== sourceRowId);
+          const targetPosition = Math.min(nextVisibleRowIds.length, targetIdx);
+          nextVisibleRowIds.splice(targetPosition, 0, sourceRowId);
 
-            const rowById = new Map(current.rowIds.map((rowId, index) => [rowId, current.rows[index]] as const));
-            const nextRows = nextVisibleRowIds.flatMap((rowId) => {
-              const row = rowById.get(rowId);
+          const rowById = new Map(current.rowIds.map((rowId, index) => [rowId, current.rows[index]] as const));
+          const nextRows = nextVisibleRowIds.flatMap((rowId) => {
+            const row = rowById.get(rowId);
 
-              return row === undefined ? [] : [row];
-            });
+            return row === undefined ? [] : [row];
+          });
 
-            if (nextRows.length !== current.rows.length) {
-              return current;
-            }
+          if (nextRows.length !== current.rows.length) {
+            return current;
+          }
 
-            return {
-              ...current,
-              rowIds: nextVisibleRowIds,
-              rows: nextRows,
-              sort: null,
-            };
-          },
-          { sortChanged: true },
-        ),
+          return {
+            ...current,
+            rowIds: nextVisibleRowIds,
+            rows: nextRows,
+            sort: null,
+            sortModel: [],
+          };
+        }),
       setSelectedRow: (index) => selectRowsByVisibleIndexes([index]),
       setSelectedRows: (indexes) => selectRowsByVisibleIndexes(indexes),
-      setSortState: (sort) => commitState((current) => setCominsSortState(current, sort), { sortChanged: true }),
+      setSortModel: (sortModel) => commitState((current) => setCominsSortModel(current, sortModel)),
+      setSortState: (sort) => commitState((current) => setCominsSortState(current, sort)),
     }),
     [rowWindow.entries, state, treeContext],
   );
@@ -2228,8 +2312,10 @@ function CominsTableInner<TData>(
     const safeIndex = index >= 0 ? index : fallbackIndex;
     const columnState = state.columnState[column.id];
     const headerProps = column.header?.props ?? {};
-    const sortIndicatorState = getSortIndicatorState(state.sort, column.id);
+    const sortRule = getSortRule(state.sortModel, column.id);
+    const sortIndicatorState = getSortIndicatorState(state.sortModel, column.id);
     const sortIndicatorVisible = sortIndicatorState === "asc" || sortIndicatorState === "desc";
+    const showSortPriority = sortRule !== null && state.sortModel.length > 1;
     const isMovingGroupChild = Boolean(movingGroup?.children.includes(column.id));
     const isColumnPlaceholder = movingColumnId === column.id || isMovingGroupChild;
     const headerClassName = [
@@ -2259,10 +2345,12 @@ function CominsTableInner<TData>(
         data-column-placeholder={isColumnPlaceholder ? "true" : undefined}
         data-comins-column-id={column.id}
         data-comins-column-index={safeIndex}
-        data-sort-direction={state.sort?.columnId === column.id ? state.sort.direction : undefined}
+        data-sort-count={sortRule ? state.sortModel.length : undefined}
+        data-sort-direction={sortRule?.rule.direction}
+        data-sort-priority={sortRule?.priority}
         data-sortable={column.sort ? "true" : "false"}
         data-testid={`header-${column.id}`}
-        aria-sort={column.sort ? getAriaSortState(state.sort, column.id) : undefined}
+        aria-sort={column.sort ? getAriaSortState(state.sortModel, column.id) : undefined}
         key={`column-${column.id}`}
         onClick={(event) => {
           headerProps.onClick?.(event);
@@ -2275,7 +2363,7 @@ function CominsTableInner<TData>(
             return;
           }
 
-          activateHeaderSort(column);
+          activateHeaderSort(column, event.shiftKey);
         }}
         onKeyDown={(event) => {
           headerProps.onKeyDown?.(event);
@@ -2286,7 +2374,7 @@ function CominsTableInner<TData>(
 
           if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
             event.preventDefault();
-            activateHeaderSort(column);
+            activateHeaderSort(column, event.shiftKey);
           }
         }}
         onPointerDown={(event) => beginHeaderPointerInteraction(event, column)}
@@ -2308,15 +2396,31 @@ function CominsTableInner<TData>(
           <span className="comins-table__header-label">
             {column.header?.renderer ? headerRendererBody : column.label}
           </span>
-          <span
-            aria-hidden="true"
-            className="comins-sort-indicator"
-            data-sort-state={sortIndicatorState}
-            data-sort-visible={sortIndicatorVisible ? "true" : undefined}
-            data-testid={`sort-indicator-${column.id}`}
-          >
-            <ArrowUp className="comins-sort-icon" focusable="false" size={14} strokeWidth={2.25} />
+          <span className="comins-sort-meta" data-sort-visible={sortIndicatorVisible ? "true" : undefined}>
+            <span
+              aria-hidden="true"
+              className="comins-sort-indicator"
+              data-sort-state={sortIndicatorState}
+              data-sort-visible={sortIndicatorVisible ? "true" : undefined}
+              data-testid={`sort-indicator-${column.id}`}
+            >
+              <ArrowUp className="comins-sort-icon" focusable="false" size={14} strokeWidth={2.25} />
+            </span>
+            {showSortPriority ? (
+              <span
+                aria-hidden="true"
+                className="comins-sort-priority"
+                data-testid={`sort-priority-${column.id}`}
+              >
+                {sortRule.priority}
+              </span>
+            ) : null}
           </span>
+          {showSortPriority ? (
+            <span className="comins-table__sort-status">
+              {`Sorted ${sortRule.rule.direction === "asc" ? "ascending" : "descending"}, priority ${sortRule.priority} of ${state.sortModel.length}`}
+            </span>
+          ) : null}
           <span className="comins-table__header-slot" data-comins-header-slot="right">
             {headerRightSlots}
           </span>
@@ -2989,6 +3093,7 @@ function CominsTreeTableInner<TData>(
     loadingMore: _loadingMore,
     onChangeData,
     onChangeSort,
+    onChangeSortModel,
     onLazyLoad: _onLazyLoad,
     onLoadMore: _onLoadMore,
     rowProps,
@@ -2998,8 +3103,11 @@ function CominsTreeTableInner<TData>(
   ref: React.ForwardedRef<CominsTableRef<TData>>,
 ) {
   const initialDefaultExpandAll = useRef(defaultExpandAll).current;
-  const [treeSort, setTreeSort] = useState<CominsSortState | null>(null);
-  const sortedTree = useMemo(() => getSortedCominsTree(data, props.columns, treeSort), [data, props.columns, treeSort]);
+  const [treeSortModel, setTreeSortModel] = useState<CominsSortModel>([]);
+  const sortedTree = useMemo(
+    () => getSortedCominsTree(data, props.columns, treeSortModel),
+    [data, props.columns, treeSortModel],
+  );
   const visibleTreeRows = useMemo(
     () => flattenCominsTree(sortedTree, getRowId, { defaultExpandAll: initialDefaultExpandAll }),
     [getRowId, initialDefaultExpandAll, sortedTree],
@@ -3059,9 +3167,10 @@ function CominsTreeTableInner<TData>(
     lazyLoadThreshold: undefined,
     loadingMore: false,
     onChangeData: handleFlatDataChange,
-    onChangeSort: (nextSort) => {
-      setTreeSort(nextSort);
-      onChangeSort?.(nextSort);
+    onChangeSort,
+    onChangeSortModel: (nextSortModel) => {
+      setTreeSortModel(nextSortModel);
+      onChangeSortModel?.(nextSortModel);
     },
     onLazyLoad: undefined,
     onLoadMore: undefined,

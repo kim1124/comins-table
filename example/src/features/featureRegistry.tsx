@@ -88,12 +88,14 @@ export const featureRegistry: FeatureDefinition[] = [
     label: "Header Basics",
     options: [
       { description: "Column definitions for header label, sorting, and formatting.", example: "{ label, field, sort }", name: "columns" },
+      { description: "Enables Shift-assisted priority sorting across multiple Columns.", example: "multiSort", name: "multiSort" },
+      { description: "Observes the complete ordered sort model.", example: "onChangeSortModel={setSortModel}", name: "onChangeSortModel" },
       { description: "Controls whether headers are rendered.", example: "showHeader={showHeader}", name: "showHeader" },
       { description: "Saves column order and width.", example: "getColumnLayout()", name: "getColumnLayout" },
       { description: "Restores or resets column order and width.", example: "setColumnLayout(layout)", name: "setColumnLayout" },
       { description: "Callback for column resize and reorder state changes.", example: "onChangeColumnLayout={setColumnLayout}", name: "onChangeColumnLayout" },
     ],
-    summary: "Header basics, hide/show behavior, and column layout persistence example.",
+    summary: "Header basics, multi-column sorting, hide/show behavior, and column layout persistence examples.",
   },
   {
     Component: ColumnGroupFeature,

@@ -232,6 +232,73 @@ describe("comins-table tree grid", () => {
     ]);
   });
 
+  it("applies an ordered multi-sort model to every Tree sibling set", () => {
+    const onChangeSortModel = vi.fn();
+    const multiTree: CominsTreeNode<PersonRow>[] = [
+      {
+        children: [
+          { item: { age: 20, id: "child-a", name: "Member" } },
+          { item: { age: 30, id: "child-b", name: "Member" } },
+        ],
+        item: { age: 10, id: "root-a", name: "Group" },
+      },
+      {
+        children: [{ item: { age: 15, id: "child-c", name: "Member" } }],
+        item: { age: 40, id: "root-b", name: "Group" },
+      },
+    ];
+
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    act(() => {
+      root?.render(
+        <CominsTable
+          columns={columns}
+          data={multiTree}
+          getRowId={(item) => item.id}
+          multiSort
+          onChangeSortModel={onChangeSortModel}
+          tree
+        />,
+      );
+    });
+
+    act(() => container?.querySelector<HTMLElement>("[data-testid='header-name']")?.click());
+    act(() => {
+      container
+        ?.querySelector<HTMLElement>("[data-testid='header-age']")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true }));
+    });
+
+    expect(onChangeSortModel).toHaveBeenLastCalledWith([
+      { columnId: "name", direction: "asc" },
+      { columnId: "age", direction: "asc" },
+    ]);
+    expect(Array.from(container.querySelectorAll("tr[data-comins-row-data-index]")).map((row) => row.getAttribute("data-testid"))).toEqual([
+      "row-root-a",
+      "row-child-a",
+      "row-child-b",
+      "row-root-b",
+      "row-child-c",
+    ]);
+
+    act(() => {
+      container
+        ?.querySelector<HTMLElement>("[data-testid='header-age']")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true }));
+    });
+
+    expect(Array.from(container.querySelectorAll("tr[data-comins-row-data-index]")).map((row) => row.getAttribute("data-testid"))).toEqual([
+      "row-root-b",
+      "row-child-c",
+      "row-root-a",
+      "row-child-b",
+      "row-child-a",
+    ]);
+  });
+
   it("does not apply flat row copy and paste operations to Tree Grid data", () => {
     const onChangeData = vi.fn();
     const onKeyDownRow = vi.fn();

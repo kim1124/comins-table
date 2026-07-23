@@ -66,6 +66,7 @@ export function BodyFeature() {
           field: "role",
           label: "Column3",
           minWidth: 100,
+          sort: true,
           width: 100,
         },
         {
@@ -301,6 +302,7 @@ export function BodyFeature() {
           data={rows}
           data-testid="data-table-viewport"
           getRowId={(_row, index) => index}
+          multiSort
           pagination={{ pageIndex: 0, pageSize: rows.length }}
           theme={{ density: "compact" }}
           virtualized

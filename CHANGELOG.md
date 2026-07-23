@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.1.4 - 2026-07-23
+
+- Added opt-in priority-based multi-column sorting for flat and Tree Grid data, including Shift-assisted Header input, sort-model callbacks and Ref methods, accessibility metadata, documentation, and a runnable Playground example.
+
 ## 0.1.3 - 2026-07-22
 
 - Added 6-pixel mouse Header reorder activation with source placeholder, ghost, target marker, vertical-intent cancellation, and preserved non-mouse long-press compatibility.

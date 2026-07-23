@@ -29,6 +29,40 @@ tableRef.current?.setSortState({ columnId: "age", direction: "desc" });
 tableRef.current?.clearSort();
 ```
 
+## Multi-column Sort
+
+기본값은 기존 단일 정렬이다. `multiSort`를 명시하면 `Shift` 조작으로 우선순위가 있는 복수 정렬 조건을 만들 수 있고 `onChangeSortModel`로 전체 모델을 확인할 수 있다.
+
+```tsx
+const [sortModel, setSortModel] = useState<CominsSortModel>([]);
+
+<CominsTable
+  ref={tableRef}
+  columns={columns}
+  data={data}
+  multiSort
+  onChangeSortModel={setSortModel}
+/>
+
+tableRef.current?.setSortModel([
+  { columnId: "department", direction: "asc" },
+  { columnId: "salary", direction: "desc" },
+]);
+```
+
+동작 기준:
+
+- 일반 click 또는 `Enter`/`Space`는 기존 단일 `none -> asc -> desc -> none` cycle을 유지한다.
+- `Shift`와 click 또는 `Enter`/`Space`를 함께 사용하면 새 `asc` 조건 추가, 기존 조건 방향 변경, `desc` 조건 제거를 수행한다.
+- Header 숫자 badge는 1부터 시작하는 비교 우선순위다. 중간 조건을 제거하면 이후 우선순위가 자동으로 당겨진다.
+- `getSortModel()`/`setSortModel(model)`은 전체 모델을 조회·복원한다. 기존 `getSortState()`/`setSortState(rule)`은 단일 호환 API이며 `setSortState`는 전체 모델을 하나의 조건으로 교체한다.
+- `clearSort()`는 전체 조건을 제거한다. `onChangeSort`는 첫 번째 조건을, `onChangeSortModel`은 전체 모델 변경을 관찰한다.
+- 숨겨진 sortable Column의 조건은 유지하고, 제거되거나 `sort: false`가 된 Column의 조건은 모델에서 제거한다.
+- 2 Depth Parent Header는 정렬되지 않으며 sortable child Column은 동일하게 복수 정렬에 참여한다.
+- Tree Grid는 parent와 descendant를 평탄화하지 않고 각 sibling 집합에 같은 복합 comparator를 적용한다.
+
+Multi-column Sort 중에는 첫 번째 조건에만 `aria-sort="ascending" | "descending"`를 적용한다. ARIA는 복수 정렬 우선순위를 직접 표현하지 않으므로 2순위 이후 Header에는 접근 가능한 priority 설명을 함께 제공한다.
+
 ## 2 Depth Header
 
 2 Depth Header는 기존 flat `columns`를 유지하고, 별도 `columnGroups`로 부모 header를 정의한다.
@@ -144,7 +178,7 @@ Phase 2 Header components는 `button`, `input`, `checkbox`, `radio`, `select`, `
 - Sort icon은 `lucide-react` 기반이며 asc/desc/none 전환 시 CSS rotate/opacity animation으로 표시한다.
 - Header menu 버튼 클릭은 sort, resize, column move를 발생시키지 않는다.
 - Header menu는 바깥 클릭, `Escape`, item 선택 시 닫히며 `onBeforeChange`가 `false`를 반환하면 open/close를 취소한다.
-- Multi-column sort는 후속 설계 항목이다.
+- Multi-column Sort는 `multiSort`를 명시한 경우 `Shift` 조작으로 활성화되며 각 Header에 우선순위 badge를 표시한다.
 
 Playground 검증 기준:
 
@@ -154,6 +188,7 @@ Playground 검증 기준:
 - 2 Depth group 표시/숨김은 단일 toggle control로 검증한다.
 - 컬럼 동적 표시 예제는 Checkbox 목록형 Select Box에서 선택된 column id만 `columns` prop에 전달하며, 1Depth와 2Depth 모두 같은 동작을 확인한다.
 - Header sort 접근성은 mouse click, keyboard `Enter`/`Space`, `aria-sort`, sort indicator 상태를 함께 검증한다.
+- Multi-column Sort 예제는 2 Depth child Column의 `Shift` click/keyboard 조작, priority badge, 전체 Sort Model JSON을 함께 검증한다.
 - Resize는 width 변경, 최초 drag jump 없음, column move 미발생을 함께 확인한다.
 - Move는 마우스 수평 6픽셀 활성화, source placeholder, 이동 ghost, drop marker, 의도한 column order 변경을 함께 확인한다.
 - 2 Depth Header는 parent resize 비율 유지, parent block move, child group 밖 이동 미지원, ungrouped `rowSpan=2`, header/body leaf cell geometry alignment를 함께 확인한다.

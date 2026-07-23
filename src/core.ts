@@ -17,6 +17,8 @@ export type CominsSortState = {
   direction: CominsSortDirection;
 };
 
+export type CominsSortModel = readonly CominsSortState[];
+
 export type CominsCellFormatParams<TData, TValue = unknown> = {
   column: CominsTableRuntimeColumn<TData, TValue>;
   row: TData;
@@ -100,8 +102,10 @@ export type CominsHeaderComponentPayload<TData, TValue = unknown> = {
     width?: number;
   };
   sort: {
+    count: number;
     direction: CominsSortDirection | null;
     enabled: boolean;
+    priority: number | null;
   };
 };
 
@@ -364,6 +368,7 @@ export type CominsTableState<TData> = {
   selection: CominsSelectionState;
   showHeader: boolean;
   sort: CominsSortState | null;
+  sortModel: CominsSortModel;
   theme: CominsTableTheme;
 };
 
@@ -376,6 +381,7 @@ export type CominsTableStateInput<TData> = {
   rows: readonly TData[];
   showHeader?: boolean;
   sort?: CominsSortState | null;
+  sortModel?: CominsSortModel;
   theme?: CominsTableTheme;
 };
 
@@ -684,6 +690,39 @@ function findColumn<TData>(state: CominsTableState<TData>, columnId: string) {
   return state.columns.find((column) => column.id === columnId);
 }
 
+function areSortModelsEqual(left: CominsSortModel, right: CominsSortModel) {
+  return (
+    left.length === right.length &&
+    left.every(
+      (rule, index) => rule.columnId === right[index]?.columnId && rule.direction === right[index]?.direction,
+    )
+  );
+}
+
+function normalizeSortModel<TData>(
+  columns: ReadonlyArray<CominsTableRuntimeColumn<TData>>,
+  sortModel: CominsSortModel,
+): CominsSortState[] {
+  const sortableColumnIds = new Set(columns.filter((column) => Boolean(column.sort)).map((column) => column.id));
+  const usedColumnIds = new Set<string>();
+  const normalized: CominsSortState[] = [];
+
+  for (const rule of sortModel) {
+    if (
+      !sortableColumnIds.has(rule.columnId) ||
+      usedColumnIds.has(rule.columnId) ||
+      (rule.direction !== "asc" && rule.direction !== "desc")
+    ) {
+      continue;
+    }
+
+    usedColumnIds.add(rule.columnId);
+    normalized.push({ columnId: rule.columnId, direction: rule.direction });
+  }
+
+  return normalized;
+}
+
 function getNestedFieldValue(row: unknown, field: string): unknown {
   return field.split(".").reduce<unknown>((value, key) => {
     if (value == null || typeof value !== "object") {
@@ -866,11 +905,13 @@ export function createCominsTableState<TData>({
   rows,
   showHeader = true,
   sort = null,
+  sortModel,
   theme = {},
 }: CominsTableStateInput<TData>): CominsTableState<TData> {
   const nextRows = useRowsReference(rows);
   const nextColumns = normalizeColumns(columns);
   const nextColumnGroups = normalizeColumnGroups(nextColumns, columnGroups);
+  const nextSortModel = normalizeSortModel(nextColumns, sortModel ?? (sort ? [sort] : []));
 
   return {
     columnOrder: normalizeColumnOrder(nextColumns, columnLayout, nextColumnGroups),
@@ -887,7 +928,8 @@ export function createCominsTableState<TData>({
     rows: nextRows,
     selection: createEmptySelection(),
     showHeader,
-    sort,
+    sort: nextSortModel[0] ?? null,
+    sortModel: nextSortModel,
     theme,
   };
 }
@@ -970,14 +1012,29 @@ export function setCominsSortState<TData>(
   state: CominsTableState<TData>,
   sort: CominsSortState | null,
 ) {
+  return setCominsSortModel(state, sort ? [sort] : []);
+}
+
+export function setCominsSortModel<TData>(
+  state: CominsTableState<TData>,
+  sortModel: CominsSortModel,
+) {
+  const nextSortModel = normalizeSortModel(state.columns, sortModel);
+  const nextSort = nextSortModel[0] ?? null;
+
+  if (areSortModelsEqual(state.sortModel, nextSortModel)) {
+    return state;
+  }
+
   return {
     ...state,
-    sort,
+    sort: nextSort,
+    sortModel: nextSortModel,
   };
 }
 
 export function clearCominsSortState<TData>(state: CominsTableState<TData>) {
-  return setCominsSortState(state, null);
+  return setCominsSortModel(state, []);
 }
 
 export function setCominsColumnWidth<TData>(
@@ -1469,27 +1526,34 @@ export function getCominsHeaderRows<TData>(state: CominsTableState<TData>): Arra
 export function getCominsSortedRowIndexes<TData>(state: CominsTableState<TData>) {
   const indexes = state.rows.map((_row, index) => index);
 
-  if (!state.sort) {
-    return indexes;
-  }
-
-  const column = findColumn(state, state.sort.columnId);
-
-  if (!column || !column.sort) {
+  if (state.sortModel.length === 0) {
     return indexes;
   }
 
   return [...indexes].sort((leftIndex, rightIndex) => {
     const leftRow = state.rows[leftIndex]!;
     const rightRow = state.rows[rightIndex]!;
-    const leftValue = getCominsCellValue(state, leftRow, column.id);
-    const rightValue = getCominsCellValue(state, rightRow, column.id);
-    const result =
-      typeof column.sort === "function"
-        ? column.sort(leftValue, rightValue, leftRow, rightRow)
-        : defaultCompare(leftValue, rightValue);
 
-    return state.sort?.direction === "desc" ? result * -1 : result;
+    for (const rule of state.sortModel) {
+      const column = findColumn(state, rule.columnId);
+
+      if (!column?.sort) {
+        continue;
+      }
+
+      const leftValue = getCominsCellValue(state, leftRow, column.id);
+      const rightValue = getCominsCellValue(state, rightRow, column.id);
+      const result =
+        typeof column.sort === "function"
+          ? column.sort(leftValue, rightValue, leftRow, rightRow)
+          : defaultCompare(leftValue, rightValue);
+
+      if (result !== 0) {
+        return rule.direction === "desc" ? result * -1 : result;
+      }
+    }
+
+    return leftIndex - rightIndex;
   });
 }
 

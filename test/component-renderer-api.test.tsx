@@ -607,6 +607,41 @@ describe("comins-table component renderer API", () => {
     expect(element.textContent).not.toContain("Header Component");
   });
 
+  it("provides ordered multi-sort metadata to custom header renderers", () => {
+    const columns: Array<CominsTableColumn<Row>> = ["name", "progress"].map((field) => ({
+      field,
+      label: field,
+      sort: true,
+      header: {
+        renderer: ({ column, sort }) => (
+          <span
+            data-count={sort.count}
+            data-direction={sort.direction ?? "none"}
+            data-priority={sort.priority ?? "none"}
+            data-testid={`sort-payload-${column.id}`}
+          >
+            {column.label}
+          </span>
+        ),
+      },
+    }));
+    const element = render(
+      <CominsTable columns={columns} data={baseRows} getRowId={(row) => row.id} multiSort />,
+    );
+    const nameHeader = element.querySelector<HTMLElement>("[data-testid='header-name']")!;
+    const progressHeader = element.querySelector<HTMLElement>("[data-testid='header-progress']")!;
+
+    act(() => nameHeader.click());
+    act(() => progressHeader.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true })));
+
+    expect(element.querySelector("[data-testid='sort-payload-name']")).toMatchObject({
+      dataset: expect.objectContaining({ count: "2", direction: "asc", priority: "1" }),
+    });
+    expect(element.querySelector("[data-testid='sort-payload-progress']")).toMatchObject({
+      dataset: expect.objectContaining({ count: "2", direction: "asc", priority: "2" }),
+    });
+  });
+
   it("opens inline header menu, calls before/open/select, and closes after item select", () => {
     const onBeforeChange = vi.fn(() => true);
     const onOpenChange = vi.fn();
