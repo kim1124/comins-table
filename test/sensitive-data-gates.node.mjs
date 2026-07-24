@@ -84,6 +84,8 @@ test('pins shared Gitleaks, hooks, scripts, and workflows', () => {
   const prePush = read('.githooks/pre-push');
   const verify = read('.github/workflows/verify.yml');
   const publish = read('.github/workflows/publish.yml');
+  const consumerSmoke = read('scripts/consumer-smoke.mjs');
+  const viteConfig = read('vite.config.ts');
   const packageJson = JSON.parse(read('package.json'));
 
   assert.match(config, /^minVersion = "v8\.30\.1"$/m);
@@ -115,11 +117,25 @@ test('pins shared Gitleaks, hooks, scripts, and workflows', () => {
   assert.match(publish, /verify-package-artifact\.mjs/);
   assert.match(publish, /tar -xzf "\$package_file"/);
   assert.match(publish, /gitleaks dir/);
+  assert.match(consumerSmoke, /process\.argv\[2\]/);
+  assert.match(consumerSmoke, /await access\(tarballPath\)/);
+  const packStep = publish.indexOf('name: Pack and scan the exact artifact');
+  const consumerStep = publish.indexOf('name: Test consumer against exact artifact');
+  const uploadStep = publish.indexOf('uses: actions/upload-artifact');
+  assert.ok(packStep >= 0);
+  assert.ok(consumerStep > packStep);
+  assert.ok(uploadStep > consumerStep);
+  assert.equal([...publish.matchAll(/npm run test:consumer/g)].length, 1);
+  assert.match(
+    publish,
+    /npm run test:consumer -- "\$\{\{ steps\.pack\.outputs\.package-file \}\}"/,
+  );
   assert.match(publish, /npm stage publish \.\/package-artifact\/\*\.tgz/);
 
   assert.match(packageJson.scripts['test:security'], /node --test/);
   assert.equal(packageJson.scripts['verify:package-artifact'], 'node scripts/verify-package-artifact.mjs');
   assert.match(packageJson.scripts.verify, /test:security/);
+  assert.match(viteConfig, /"\.worktrees\/\*\*"/);
 });
 
 test('accepts a matching public noreply identity', () => {

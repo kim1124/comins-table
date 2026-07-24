@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const projectRoot = dirname(fileURLToPath(import.meta.url));
@@ -28,19 +28,29 @@ function runNpm(args, options = {}) {
 }
 
 try {
-  runNpm(["run", "build"]);
-  const packed = JSON.parse(runNpm(["pack", "--json", "--pack-destination", temporaryRoot]));
-  const tarballName = packed[0]?.filename;
-  assert.equal(typeof tarballName, "string", "npm pack did not return a tarball filename");
-  assert.ok(Array.isArray(packed[0]?.files) && packed[0].files.length > 0, "npm pack returned no files");
-  const packageFiles = packed[0].files.map((file) => file.path);
-  const repositoryOnlyRoots = [".githooks", ".local", "reports", "scripts", "test"];
-  for (const path of packageFiles) {
-    assert.equal(
-      repositoryOnlyRoots.some((root) => path === root || path.startsWith(`${root}/`)),
-      false,
-      `repository-only file leaked into package: ${path}`,
-    );
+  const providedTarball = process.argv[2];
+  let tarballPath;
+
+  if (providedTarball) {
+    tarballPath = resolve(repositoryRoot, providedTarball);
+    assert.match(tarballPath, /\.tgz$/, "provided package artifact must be a .tgz file");
+    await access(tarballPath);
+  } else {
+    runNpm(["run", "build"]);
+    const packed = JSON.parse(runNpm(["pack", "--json", "--pack-destination", temporaryRoot]));
+    const tarballName = packed[0]?.filename;
+    assert.equal(typeof tarballName, "string", "npm pack did not return a tarball filename");
+    assert.ok(Array.isArray(packed[0]?.files) && packed[0].files.length > 0, "npm pack returned no files");
+    const packageFiles = packed[0].files.map((file) => file.path);
+    const repositoryOnlyRoots = [".githooks", ".local", "reports", "scripts", "test"];
+    for (const path of packageFiles) {
+      assert.equal(
+        repositoryOnlyRoots.some((root) => path === root || path.startsWith(`${root}/`)),
+        false,
+        `repository-only file leaked into package: ${path}`,
+      );
+    }
+    tarballPath = join(temporaryRoot, tarballName);
   }
 
   const consumerRoot = join(temporaryRoot, "consumer");
@@ -52,7 +62,7 @@ try {
 
   execFileSync(
     "npm",
-    ["install", "--ignore-scripts", "--no-audit", "--no-fund", "--no-package-lock", join(temporaryRoot, tarballName), "react@18", "react-dom@18"],
+    ["install", "--ignore-scripts", "--no-audit", "--no-fund", "--no-package-lock", tarballPath, "react@18", "react-dom@18"],
     { cwd: consumerRoot, env: npmEnvironment, stdio: "inherit" },
   );
 
