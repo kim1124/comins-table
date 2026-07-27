@@ -32,6 +32,7 @@ const featurePages = [
   ["/examples/summary-row", "count, sum, avg, max, min"],
   ["/examples/tree-grid", "3개 Department, 9개 Team, 18개 Member"],
   ["/examples/context-menu", "우클릭"],
+  ["/api/ref", "현재 visible index"],
 ] as const;
 
 test("feature pages render docs in the main content area", async ({ page }) => {
@@ -76,6 +77,7 @@ test("ref api page documents ref type and visible-index semantics", async ({ pag
   await expect(main).toContainText("expand");
   await expect(main).toContainText("fold");
   await expect(main).toContainText("visible index");
+  await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "ref-api");
   await expect(main).not.toContainText("DataTableProps<T>");
 
   expect(diagnostics).toEqual([]);

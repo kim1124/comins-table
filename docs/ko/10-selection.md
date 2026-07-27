@@ -24,3 +24,5 @@ Core helper는 `selectRow`, `selectRows`, `selectCell`, `selectCellRange`, `getC
 일반 클릭은 선택 Row를 교체하고, Ctrl/Cmd+클릭은 Row를 추가/해제하며, Shift+클릭은 마지막 anchor부터 현재 visible Row까지 범위를 선택한다. `cellSelection`을 활성화한 상태에서 Cell 사이를 drag하면 Cell range가 생성된다.
 
 controlled React 사용법은 [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard)에서 확인한다. 이 예제는 `onChangeSelection` 전체 payload와 `copyable`, `pasteable` guard를 함께 표시한다.
+
+[`/api/ref`](http://127.0.0.1:4002/api/ref) live 예제는 `setSelectedRow(index)`와 `setSelectedRows(indexes)`를 실행한다. 두 method의 index는 sort와 pagination 적용 후 현재 보이는 Row 기준이다.

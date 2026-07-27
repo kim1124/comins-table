@@ -582,18 +582,30 @@ export const refApiSamples: DocsCodeSample[] = [
   {
     code: `const tableRef = useRef<CominsTableRef<UserRow>>(null);
 
+<CominsTable
+  ref={tableRef}
+  columns={columns}
+  data={rows}
+  getRowId={(row) => row.id}
+  onChangeData={setRows}
+  onChangeSelection={setSelection}
+  onChangeSortModel={setSortModel}
+/>;
+
 tableRef.current?.setSelectedRow(0);
 tableRef.current?.setSelectedRows([0, 2]);
 tableRef.current?.setMoveTargetRow(2, 0);
-tableRef.current?.setColumnLayout(savedLayout);
 tableRef.current?.setSortModel([
   { columnId: "role", direction: "asc" },
   { columnId: "age", direction: "desc" },
 ]);
 tableRef.current?.clearSort();
-tableRef.current?.expand(["department-1", "team-1-1"]);
-tableRef.current?.fold();`,
+
+const savedLayout = tableRef.current?.getColumnLayout();
+if (savedLayout) {
+  tableRef.current?.setColumnLayout(savedLayout);
+}`,
     language: "tsx",
-    title: "Ref usage",
+    title: "Controlled Flat Table ref usage",
   },
 ];

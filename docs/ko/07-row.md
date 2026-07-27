@@ -55,6 +55,8 @@ const tableRef = useRef<CominsTableRef<PersonRow>>(null);
 tableRef.current?.setMoveTargetRow(2, 0);
 ```
 
+[`/api/ref`](http://127.0.0.1:4002/api/ref) live 예제는 `setMoveTargetRow(2, 0)`이 active sort를 해제하고 visible Row 이동 결과를 controlled `onChangeData`로 반영하는 흐름을 보여준다.
+
 선택 기준:
 
 - 최초 렌더링 시 row selection은 없다.

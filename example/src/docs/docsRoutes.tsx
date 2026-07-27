@@ -272,20 +272,21 @@ export const docsPages: DocsPage[] = [
     summary: "Documents only the currently implemented props, events, ref methods, and core helpers.",
     title: "Props",
   },
-  {
+  featurePage({
     body: paragraphs([
       "`CominsTableRef<TData>` exposes imperative controls for selection, sort, layout, row movement, and Tree Grid expansion.",
       "`setSelectedRow`, `setSelectedRows`, and `setMoveTargetRow` use the visible index after current sorting and pagination are applied.",
-      "`expand(nodeIds?)` and `fold(nodeIds?)` accept Tree Grid node id arrays. Omitting the argument targets all branches; flat tables treat both methods as no-ops.",
+      "Use the Tree Grid route for live `expand(nodeIds?)` and `fold(nodeIds?)` controls. Flat tables treat both hierarchy methods as no-ops.",
       "Data changes stay in the controlled `data` and `onChangeData` flow instead of being owned by the ref.",
     ]),
     category: "API",
     codeSamples: refApiSamples,
+    featureId: "ref-api",
     label: "Ref API",
     path: "/api/ref",
     summary: "Review implemented ref methods and core helper boundaries.",
     title: "Ref API",
-  },
+  }),
   featurePage({
     body: paragraphs([
       "The pagination prop passes the current pageIndex and pageSize to CominsTable.",

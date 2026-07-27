@@ -11,6 +11,7 @@ import { InfiniteScrollFeature } from "./InfiniteScrollFeature";
 import { LazyLoadFeature } from "./LazyLoadFeature";
 import { LoadingStateFeature } from "./LoadingStateFeature";
 import { PaginationFeature } from "./PaginationFeature";
+import { RefApiFeature } from "./RefApiFeature";
 import { RowFeature } from "./RowFeature";
 import { SelectionClipboardFeature } from "./SelectionClipboardFeature";
 import { SizeFeature } from "./SizeFeature";
@@ -267,6 +268,19 @@ export const featureRegistry: FeatureDefinition[] = [
       { description: "Overrides output order and header names.", example: "{ columnOrder, headerOverrides }", name: "export options" },
     ],
     summary: "CSV and JSON export helper output example.",
+  },
+  {
+    Component: RefApiFeature,
+    description: "Live Flat Table example for selection, sort, layout, and Row movement ref methods.",
+    id: "ref-api",
+    label: "Ref API",
+    options: [
+      { description: "Selects Rows by current visible indexes.", example: "setSelectedRows([0, 2])", name: "setSelectedRows" },
+      { description: "Applies and clears an ordered sort model.", example: "setSortModel(model) / clearSort()", name: "sort ref" },
+      { description: "Reads and restores Column order and width.", example: "getColumnLayout() / setColumnLayout(layout)", name: "layout ref" },
+      { description: "Moves a controlled Row by current visible indexes.", example: "setMoveTargetRow(2, 0)", name: "setMoveTargetRow" },
+    ],
+    summary: "Imperative Flat Table controls with visible callback state.",
   },
 ];
 

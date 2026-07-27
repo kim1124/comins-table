@@ -247,6 +247,34 @@ describe("comins-table user documentation contract", () => {
     expect(optionGuide).toContain("ordered multi-column sort model");
   });
 
+  it("links Flat Table Ref methods to the live visible-index example", () => {
+    const documents = [
+      readWorkspaceFile("docs/user/06-header.md"),
+      readWorkspaceFile("docs/user/07-row.md"),
+      readWorkspaceFile("docs/user/10-selection.md"),
+      readWorkspaceFile("docs/ko/06-header.md"),
+      readWorkspaceFile("docs/ko/07-row.md"),
+      readWorkspaceFile("docs/ko/10-selection.md"),
+    ];
+
+    for (const document of documents) {
+      expect(document).toContain("/api/ref");
+    }
+
+    const playground = readWorkspaceFile("example/src/features/RefApiFeature.tsx");
+    for (const term of [
+      "setSelectedRows",
+      "setSortModel",
+      "clearSort",
+      "getColumnLayout",
+      "setColumnLayout",
+      "setMoveTargetRow",
+      "onChangeData",
+    ]) {
+      expect(playground).toContain(term);
+    }
+  });
+
   it("keeps English and Korean Virtual List Search guidance single-selection-only", () => {
     const englishCell = readWorkspaceFile("docs/user/08-cell.md");
     const koreanCell = readWorkspaceFile("docs/ko/08-cell.md");
