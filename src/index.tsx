@@ -1093,6 +1093,7 @@ function CominsTableInner<TData>(
   const copiedCellRef = useRef<CominsCopiedCell | null>(null);
   const copiedRangeRef = useRef<CominsCopiedCellRange | null>(null);
   const copiedRowRef = useRef<CominsCopiedRow<TData> | null>(null);
+  const activePointerGestureCleanupRef = useRef<(() => void) | null>(null);
   const columnPointerInteractionRef = useRef<CominsColumnPointerInteraction | null>(null);
   const lastCellAnchorRef = useRef<CominsCellAddress | null>(null);
   const lazyAbortControllerRef = useRef<AbortController | null>(null);
@@ -1139,6 +1140,16 @@ function CominsTableInner<TData>(
   const virtualBufferSize = Math.max(0, Math.floor(Number.isFinite(bufferSize) ? Number(bufferSize) : 10));
   const resolvedLazyLoadBatchSize = Math.max(1, Math.floor(lazyLoadBatchSize));
   const resolvedLazyLoadThreshold = Math.max(0, Math.floor(lazyLoadThreshold ?? infiniteScrollThreshold));
+  const clearActivePointerGesture = () => {
+    const cleanup = activePointerGestureCleanupRef.current;
+
+    activePointerGestureCleanupRef.current = null;
+    cleanup?.();
+  };
+  const registerActivePointerGesture = (cleanup: () => void) => {
+    clearActivePointerGesture();
+    activePointerGestureCleanupRef.current = cleanup;
+  };
 
   const requestLazyLoad = (reason: CominsLazyLoadReason) => {
     if (!lazyLoad || lazyLoadMode !== "append" || !onLazyLoad || lazyLoadingReasonRef.current) {
@@ -1289,6 +1300,8 @@ function CominsTableInner<TData>(
 
   useEffect(() => {
     return () => {
+      clearActivePointerGesture();
+
       if (scrollFrameRef.current !== null) {
         window.cancelAnimationFrame(scrollFrameRef.current);
       }
@@ -2145,15 +2158,31 @@ function CominsTableInner<TData>(
         updateCellRangeDrag(nextAddress);
       }
     };
-    const handlePointerUp = () => {
-      endCellRangeDrag();
+    const cleanup = () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerCancel);
+      window.removeEventListener("blur", handlePointerCancel);
+
+      if (activePointerGestureCleanupRef.current === cleanup) {
+        activePointerGestureCleanupRef.current = null;
+      }
+    };
+    const handlePointerUp = () => {
+      cleanup();
+      endCellRangeDrag();
+    };
+    const handlePointerCancel = () => {
+      cleanup();
+      endCellRangeDrag();
     };
 
     event.preventDefault();
+    registerActivePointerGesture(cleanup);
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerCancel);
+    window.addEventListener("blur", handlePointerCancel);
   };
   const beginRowHandlePointerDrag = (
     event: React.PointerEvent<HTMLElement>,
@@ -2195,9 +2224,18 @@ function CominsTableInner<TData>(
 
       updateTarget(moveEvent.clientX, moveEvent.clientY);
     };
-    const handlePointerUp = (upEvent: PointerEvent) => {
+    const cleanup = () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerCancel);
+      window.removeEventListener("blur", handlePointerCancel);
+
+      if (activePointerGestureCleanupRef.current === cleanup) {
+        activePointerGestureCleanupRef.current = null;
+      }
+    };
+    const handlePointerUp = (upEvent: PointerEvent) => {
+      cleanup();
       updateTarget(upEvent.clientX, upEvent.clientY);
 
       const targetIndex = rowMoveStateRef.current?.targetDataIndex;
@@ -2207,10 +2245,17 @@ function CominsTableInner<TData>(
         commitState((current) => moveCominsRow(current, sourceRowId, targetIndex));
       }
     };
+    const handlePointerCancel = () => {
+      cleanup();
+      setActiveRowMoveState(null);
+    };
 
     updateTarget(event.clientX, event.clientY);
+    registerActivePointerGesture(cleanup);
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerCancel);
+    window.addEventListener("blur", handlePointerCancel);
   };
   const movingColumn = movingColumnId
     ? visibleColumns.find((visibleColumn) => visibleColumn.id === movingColumnId)
@@ -2292,13 +2337,29 @@ function CominsTableInner<TData>(
                   { columnLayoutChanged: true },
                 );
               };
-              const handlePointerUp = () => {
-                setResizingColumnId(null);
+              const cleanup = () => {
                 window.removeEventListener("pointermove", handlePointerMove);
                 window.removeEventListener("pointerup", handlePointerUp);
+                window.removeEventListener("pointercancel", handlePointerCancel);
+                window.removeEventListener("blur", handlePointerCancel);
+
+                if (activePointerGestureCleanupRef.current === cleanup) {
+                  activePointerGestureCleanupRef.current = null;
+                }
               };
+              const handlePointerUp = () => {
+                cleanup();
+                setResizingColumnId(null);
+              };
+              const handlePointerCancel = () => {
+                cleanup();
+                setResizingColumnId(null);
+              };
+              registerActivePointerGesture(cleanup);
               window.addEventListener("pointermove", handlePointerMove);
               window.addEventListener("pointerup", handlePointerUp);
+              window.addEventListener("pointercancel", handlePointerCancel);
+              window.addEventListener("blur", handlePointerCancel);
             }}
           >
             <span className="comins-table__resize-line" />
@@ -2473,13 +2534,29 @@ function CominsTableInner<TData>(
                 { columnLayoutChanged: true },
               );
             };
-            const handlePointerUp = () => {
-              setResizingColumnId(null);
+            const cleanup = () => {
               window.removeEventListener("pointermove", handlePointerMove);
               window.removeEventListener("pointerup", handlePointerUp);
+              window.removeEventListener("pointercancel", handlePointerCancel);
+              window.removeEventListener("blur", handlePointerCancel);
+
+              if (activePointerGestureCleanupRef.current === cleanup) {
+                activePointerGestureCleanupRef.current = null;
+              }
             };
+            const handlePointerUp = () => {
+              cleanup();
+              setResizingColumnId(null);
+            };
+            const handlePointerCancel = () => {
+              cleanup();
+              setResizingColumnId(null);
+            };
+            registerActivePointerGesture(cleanup);
             window.addEventListener("pointermove", handlePointerMove);
             window.addEventListener("pointerup", handlePointerUp);
+            window.addEventListener("pointercancel", handlePointerCancel);
+            window.addEventListener("blur", handlePointerCancel);
           }}
         >
           <span className="comins-table__resize-line" />
@@ -2957,10 +3034,18 @@ function CominsTableInner<TData>(
                       }}
                       onKeyDown={(event) => handleCellKeyDown(event, entry, column, columnIndex, address, cellDisabled)}
                       onMouseDown={(event) => beginCellRangeDrag(event, address, cellDisabled)}
-                      onMouseOver={() => updateCellRangeDrag(address)}
+                      onMouseOver={(event) => {
+                        if (event.buttons === 1 && !activePointerGestureCleanupRef.current) {
+                          updateCellRangeDrag(address);
+                        }
+                      }}
                       onMouseUp={endCellRangeDrag}
                       onPointerDown={(event) => beginCellRangePointerDrag(event, address, cellDisabled)}
-                      onPointerEnter={() => updateCellRangeDrag(address)}
+                      onPointerEnter={(event) => {
+                        if (event.buttons === 1) {
+                          updateCellRangeDrag(address);
+                        }
+                      }}
                       onPointerMove={(event) => {
                         if (event.buttons === 1) {
                           updateCellRangeDrag(address);
