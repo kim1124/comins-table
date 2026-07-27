@@ -386,6 +386,40 @@ export const cellSamples: DocsCodeSample[] = [
   },
 ];
 
+export const selectionClipboardSamples: DocsCodeSample[] = [
+  {
+    code: `const [rows, setRows] = useState(initialRows);
+const [selection, setSelection] = useState<CominsSelectionState>({
+  cell: null,
+  range: null,
+  rowIds: [],
+});
+
+const columns = [
+  { field: "name", label: "Name" },
+  { field: "age", label: "Age" },
+  {
+    field: "locked",
+    label: "Protected",
+    cell: { props: { copyable: false, pasteable: false } },
+  },
+];
+
+<CominsTable
+  cellSelection
+  columns={columns}
+  data={rows}
+  getRowId={(row) => row.id}
+  onChangeData={setRows}
+  onChangeSelection={setSelection}
+/>;
+
+<pre>{JSON.stringify(selection, null, 2)}</pre>;`,
+    language: "tsx",
+    title: "Controlled selection and clipboard",
+  },
+];
+
 export const componentSamples: DocsCodeSample[] = [
   {
     code: `const columns = [

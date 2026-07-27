@@ -18,6 +18,7 @@ import {
   paginationSamples,
   refApiSamples,
   rowSamples,
+  selectionClipboardSamples,
   sizeSamples,
   summaryRowSamples,
   themeSamples,
@@ -191,6 +192,18 @@ export const docsPages: DocsPage[] = [
     codeSamples: cellSamples,
     featureId: "cell",
     path: "/examples/cell",
+  }),
+  featurePage({
+    body: paragraphs([
+      "Keep application Rows in React state and pass onChangeData so keyboard paste results remain controlled.",
+      "Use onChangeSelection to observe Row, Cell, and Range selection. Hold Ctrl/Cmd to toggle Rows, Shift to select a Row range, or drag between Cells to select a Cell range.",
+      "Set cell.props.copyable or cell.props.pasteable to false when a Column must not participate in clipboard operations.",
+    ]),
+    category: "Examples",
+    codeSamples: selectionClipboardSamples,
+    featureId: "selection-clipboard",
+    label: "Selection & Clipboard",
+    path: "/examples/selection-clipboard",
   }),
   featurePage({
     body: paragraphs(["Review built-in controls and custom renderers for headers and cells."]),

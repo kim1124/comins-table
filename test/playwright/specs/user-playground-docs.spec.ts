@@ -29,6 +29,7 @@ const featurePages = [
   { feature: "lazy-load", label: "Lazy Load", route: "/performance/lazy-load" },
   { feature: "body", label: "Virtualization", route: "/performance/virtualization" },
   { feature: "cell", label: "Cells", route: "/examples/cell" },
+  { feature: "selection-clipboard", label: "Selection & Clipboard", route: "/examples/selection-clipboard" },
   { feature: "component", label: "Components", route: "/examples/component" },
   { feature: "row", label: "Rows", route: "/examples/row" },
   { feature: "summary-row", label: "Summary Row", route: "/examples/summary-row" },

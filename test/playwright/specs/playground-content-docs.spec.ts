@@ -27,6 +27,7 @@ const featurePages = [
   ["/performance/lazy-load", "append-mode public API"],
   ["/performance/virtualization", "대용량 데이터"],
   ["/examples/cell", "Td Cell 포맷"],
+  ["/examples/selection-clipboard", "Row/Cell/Range selection"],
   ["/examples/row", "Tr Row 스타일"],
   ["/examples/summary-row", "count, sum, avg, max, min"],
   ["/examples/tree-grid", "3개 Department, 9개 Team, 18개 Member"],

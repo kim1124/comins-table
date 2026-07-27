@@ -12,6 +12,7 @@ import { LazyLoadFeature } from "./LazyLoadFeature";
 import { LoadingStateFeature } from "./LoadingStateFeature";
 import { PaginationFeature } from "./PaginationFeature";
 import { RowFeature } from "./RowFeature";
+import { SelectionClipboardFeature } from "./SelectionClipboardFeature";
 import { SizeFeature } from "./SizeFeature";
 import { SummaryRowFeature } from "./SummaryRowFeature";
 import { ThemeFeature } from "./ThemeFeature";
@@ -173,6 +174,19 @@ export const featureRegistry: FeatureDefinition[] = [
       { description: "Column-level className, style, copy, and paste options.", example: "columns[].cell.props", name: "cell.props" },
     ],
     summary: "Cell formatting, styling, events, and context menu example.",
+  },
+  {
+    Component: SelectionClipboardFeature,
+    description: "Controlled React example for Row, Cell, and Range selection with keyboard clipboard changes.",
+    id: "selection-clipboard",
+    label: "Selection & Clipboard",
+    options: [
+      { description: "Reports the complete Row, Cell, and Range selection state.", example: "onChangeSelection={setSelection}", name: "onChangeSelection" },
+      { description: "Enables Cell and Range selection interaction.", example: "cellSelection", name: "cellSelection" },
+      { description: "Commits keyboard paste results back to consumer state.", example: "onChangeData={setRows}", name: "onChangeData" },
+      { description: "Protects a Column from clipboard reads and writes.", example: "{ copyable: false, pasteable: false }", name: "cell.props" },
+    ],
+    summary: "Consumer-owned selection state and controlled clipboard data updates.",
   },
   {
     Component: ComponentFeature,

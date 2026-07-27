@@ -110,6 +110,7 @@ describe("comins-table user documentation contract", () => {
     expect(readme).toContain("docs/user/01-quick-start.md");
     expect(readme).toContain("/examples/summary-row");
     expect(readme).toContain("/examples/tree-grid");
+    expect(readme).toContain("/examples/selection-clipboard");
     expect(readme).toContain("docs/user/17-tree-grid.md");
     expect(readme).toContain("docs/user/18-summary-row.md");
     expect(readme).not.toContain("does not currently ship a browser example server");
@@ -172,6 +173,24 @@ describe("comins-table user documentation contract", () => {
     }
 
     expect(playground).not.toContain("onLazyLoad=");
+  });
+
+  it("documents the controlled Selection and Clipboard React example", () => {
+    const docs = [
+      readWorkspaceFile("docs/user/09-clipboard.md"),
+      readWorkspaceFile("docs/user/10-selection.md"),
+      readWorkspaceFile("docs/ko/09-clipboard.md"),
+      readWorkspaceFile("docs/ko/10-selection.md"),
+    ].join("\n");
+    const playground = readWorkspaceFile("example/src/features/SelectionClipboardFeature.tsx");
+
+    for (const term of ["onChangeSelection", "cellSelection", "copyable", "pasteable", "Ctrl", "Shift"]) {
+      expect(docs).toContain(term);
+      expect(playground).toContain(term);
+    }
+
+    expect(docs).toContain("/examples/selection-clipboard");
+    expect(playground).toContain("onChangeData={setRows}");
   });
 
   it("documents the detailed Summary Row and Tree Grid control contracts", () => {

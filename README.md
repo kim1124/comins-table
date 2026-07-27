@@ -212,7 +212,7 @@ tableRef.current?.fold(); // all Tree Grid branches
 npm run dev
 ```
 
-The local Playground starts at [`/docs/getting-started`](http://127.0.0.1:4002/docs/getting-started). Key routes include [`/examples/summary-row`](http://127.0.0.1:4002/examples/summary-row), [`/examples/tree-grid`](http://127.0.0.1:4002/examples/tree-grid), [`/examples/component`](http://127.0.0.1:4002/examples/component), and [`/performance/virtualization`](http://127.0.0.1:4002/performance/virtualization).
+The local Playground starts at [`/docs/getting-started`](http://127.0.0.1:4002/docs/getting-started). Key routes include [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard), [`/examples/summary-row`](http://127.0.0.1:4002/examples/summary-row), [`/examples/tree-grid`](http://127.0.0.1:4002/examples/tree-grid), [`/examples/component`](http://127.0.0.1:4002/examples/component), and [`/performance/virtualization`](http://127.0.0.1:4002/performance/virtualization).
 
 ## Documentation
 
