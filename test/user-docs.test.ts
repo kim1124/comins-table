@@ -160,6 +160,20 @@ describe("comins-table user documentation contract", () => {
     expect(virtualization).toContain("--comins-table-row-height");
   });
 
+  it("documents and demonstrates controlled Infinite Scroll ownership", () => {
+    const englishDocs = readWorkspaceFile("docs/user/15-infinite-scroll.md");
+    const koreanDocs = readWorkspaceFile("docs/ko/15-infinite-scroll.md");
+    const playground = readWorkspaceFile("example/src/features/InfiniteScrollFeature.tsx");
+
+    for (const term of ["infiniteScroll", "hasMoreRows", "loadingMore", "onLoadMore"]) {
+      expect(englishDocs).toContain(term);
+      expect(koreanDocs).toContain(term);
+      expect(playground).toContain(term);
+    }
+
+    expect(playground).not.toContain("onLazyLoad=");
+  });
+
   it("documents the detailed Summary Row and Tree Grid control contracts", () => {
     const summary = readWorkspaceFile("docs/user/18-summary-row.md");
     const tree = readWorkspaceFile("docs/user/17-tree-grid.md");

@@ -140,12 +140,12 @@ export const featureRegistry: FeatureDefinition[] = [
     id: "infinite-scroll",
     label: "Infinite Scroll",
     options: [
-      { description: "Enables append-mode lazy loading.", example: "lazyLoad", name: "lazyLoad" },
-      { description: "Remote API batch size.", example: "lazyLoadBatchSize={40}", name: "lazyLoadBatchSize" },
-      { description: "Distance from the bottom that triggers loading.", example: "lazyLoadThreshold={140}", name: "lazyLoadThreshold" },
-      { description: "Calls the remote API with offset, limit, and signal.", example: "onLazyLoad={fetchRows}", name: "onLazyLoad" },
+      { description: "Enables the controlled bottom-threshold callback.", example: "infiniteScroll", name: "infiniteScroll" },
+      { description: "Stops bottom-threshold callbacks when false.", example: "hasMoreRows={rows.length < total}", name: "hasMoreRows" },
+      { description: "Prevents duplicate requests and renders the loading row.", example: "loadingMore={loadingMore}", name: "loadingMore" },
+      { description: "Lets the consumer append its next remote batch.", example: "onLoadMore={appendRows}", name: "onLoadMore" },
     ],
-    summary: "Infinite scroll example that appends remote API batches.",
+    summary: "Controlled infinite scroll with consumer-owned rows and request lifecycle.",
   },
   {
     Component: LazyLoadFeature,

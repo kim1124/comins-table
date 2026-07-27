@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const dummyJsonUrl = /https:\/\/dummyjson\.com\/users.*/u;
 
-test("infinite scroll example appends remote rows near the bottom", async ({ page }) => {
+test("controlled infinite scroll appends once, stops at exhaustion, and refreshes", async ({ page }) => {
   const requestSkips: number[] = [];
 
   await page.route(dummyJsonUrl, async (route) => {
@@ -23,7 +23,7 @@ test("infinite scroll example appends remote rows near the bottom", async ({ pag
       json: {
         limit,
         skip,
-        total: 240,
+        total: 80,
         users: Array.from({ length: limit }, (_value, index) => {
           const id = skip + index + 1;
 
@@ -44,13 +44,19 @@ test("infinite scroll example appends remote rows near the bottom", async ({ pag
 
   await expect(page.locator("h1", { hasText: "Infinite Scroll" })).toBeVisible();
   await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "infinite-scroll");
-  await expect(page.getByTestId("infinite-load-count")).toContainText("Loaded 40 / 240");
+  await expect(page.locator(".docs-article")).toContainText("onLoadMore");
+  await expect(page.locator(".docs-article")).toContainText("hasMoreRows");
+  await expect(page.locator(".docs-code")).not.toContainText("onLazyLoad");
+  await expect(page.locator(".docs-code")).not.toContainText("lazyLoad");
+  await expect(page.getByTestId("infinite-load-count")).toContainText("Loaded 40 / 80");
   await expect(page.getByTestId("row-dummy-1")).toBeVisible();
   await expect(page.getByTestId("cell-dummy-1-name")).toContainText("Remote 1");
 
   await page.getByTestId("infinite-scroll-viewport").evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+    for (let index = 0; index < 3; index += 1) {
+      element.scrollTop = element.scrollHeight;
+      element.dispatchEvent(new Event("scroll", { bubbles: true }));
+    }
   });
 
   const loadingRow = page.getByTestId("data-table-infinite-loading-row");
@@ -59,7 +65,8 @@ test("infinite scroll example appends remote rows near the bottom", async ({ pag
   await expect(loadingRow).toHaveCSS("justify-content", "flex-start");
   await expect(loadingRow).toHaveCSS("padding-left", "10px");
   await expect(loadingRow).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-  await expect(page.getByTestId("infinite-load-count")).toContainText("Loaded 80 / 240");
+  await expect.poll(() => requestSkips.filter((skip) => skip === 40).length).toBe(1);
+  await expect(page.getByTestId("infinite-load-count")).toContainText("Loaded 80 / 80");
   await expect(page.getByTestId("data-table-infinite-loading-row")).toHaveCount(0);
 
   await page.getByTestId("infinite-scroll-viewport").evaluate((element) => {
@@ -67,11 +74,13 @@ test("infinite scroll example appends remote rows near the bottom", async ({ pag
     element.dispatchEvent(new Event("scroll", { bubbles: true }));
   });
 
-  await expect(page.getByTestId("infinite-load-count")).toContainText("Loaded 120 / 240");
+  await page.waitForTimeout(200);
+  expect(requestSkips.filter((skip) => skip === 40)).toHaveLength(1);
+  await expect(page.getByTestId("infinite-load-count")).toContainText("Loaded 80 / 80");
   await expect(page.getByTestId("data-table-infinite-loading-row")).toHaveCount(0);
 
   await page.getByRole("button", { exact: true, name: "새로고침" }).click();
-  await expect(page.getByTestId("infinite-load-count")).toContainText("Loaded 40 / 240");
+  await expect(page.getByTestId("infinite-load-count")).toContainText("Loaded 40 / 80");
   await expect(page.getByTestId("row-dummy-1")).toBeVisible();
-  expect(requestSkips).toEqual([0, 40, 80, 0]);
+  expect(requestSkips).toEqual([0, 40, 0]);
 });

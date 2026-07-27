@@ -288,9 +288,10 @@ export const docsPages: DocsPage[] = [
   }),
   featurePage({
     body: paragraphs([
-      "The infinite scroll example appends offset/limit batches from a remote API when the viewport nears the bottom.",
-      "`onLazyLoad` receives offset, limit, and AbortSignal, then uses the response total to decide whether more requests are needed.",
-      "Refresh replaces the internal row array with the offset 0 result and starts loading from the beginning.",
+      "The application owns rows, request cancellation, and remote offset calculation in the controlled Infinite Scroll example.",
+      "When the viewport nears the bottom, CominsTable calls `onLoadMore`; `loadingMore` blocks duplicates and `hasMoreRows` stops requests at exhaustion.",
+      "Refresh aborts the pending application request, replaces rows from offset 0, and starts loading from the beginning.",
+      "Use Lazy Load when CominsTable should request `{ offset, limit, reason, signal }` batches through `onLazyLoad` instead.",
     ]),
     category: "Body / Performance",
     codeSamples: infiniteScrollSamples,

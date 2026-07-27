@@ -215,40 +215,88 @@ const overrides = useState({});
 
 export const infiniteScrollSamples: DocsCodeSample[] = [
   {
-    code: `const [refreshVersion, setRefreshVersion] = useState(0);
+    code: `const [rows, setRows] = useState<PersonRow[]>([]);
+const [total, setTotal] = useState(0);
+const [initialLoading, setInitialLoading] = useState(true);
+const [loadingMore, setLoadingMore] = useState(false);
+const pendingRequestRef = useRef(false);
+const activeRequestRef = useRef<AbortController | null>(null);
 
-const loadRows = useCallback(async ({ offset, limit, signal }) => {
+const fetchBatch = async (offset: number, signal: AbortSignal) => {
   const params = new URLSearchParams({
-    delay: "500",
-    limit: String(limit),
+    limit: "40",
     select: "id,firstName,lastName,age,email,role",
     skip: String(offset),
   });
   const response = await fetch(\`https://dummyjson.com/users?\${params}\`, { signal });
   const result = await response.json();
 
-  return {
-    rows: result.users.map(toPersonRow),
-    total: result.total,
-  };
-}, [refreshVersion]);
+  return { rows: result.users.map(toPersonRow), total: result.total };
+};
 
-const refreshRows = () => setRefreshVersion((current) => current + 1);
+const replaceRows = useCallback(async () => {
+  activeRequestRef.current?.abort();
+  const controller = new AbortController();
+  activeRequestRef.current = controller;
+  pendingRequestRef.current = true;
+  setInitialLoading(true);
 
-<Button onClick={refreshRows}>Refresh</Button>
+  try {
+    const result = await fetchBatch(0, controller.signal);
+    if (!controller.signal.aborted) {
+      setRows(result.rows);
+      setTotal(result.total);
+    }
+  } finally {
+    if (activeRequestRef.current === controller) {
+      activeRequestRef.current = null;
+      pendingRequestRef.current = false;
+      setInitialLoading(false);
+    }
+  }
+}, []);
+
+useEffect(() => {
+  void replaceRows();
+  return () => activeRequestRef.current?.abort();
+}, [replaceRows]);
+
+const appendRows = useCallback(async () => {
+  if (pendingRequestRef.current || rows.length >= total) return;
+
+  const controller = new AbortController();
+  activeRequestRef.current = controller;
+  pendingRequestRef.current = true;
+  setLoadingMore(true);
+
+  try {
+    const result = await fetchBatch(rows.length, controller.signal);
+    setRows((current) => [...current, ...result.rows]);
+    setTotal(result.total);
+  } finally {
+    if (activeRequestRef.current === controller) {
+      activeRequestRef.current = null;
+      pendingRequestRef.current = false;
+      setLoadingMore(false);
+    }
+  }
+}, [rows.length, total]);
+
 <CominsTable
   columns={columns}
-  data={[]}
+  data={rows}
   getRowId={(row) => row.id}
-  lazyLoad
-  lazyLoadBatchSize={40}
-  lazyLoadThreshold={140}
-  onLazyLoad={loadRows}
-  pagination={{ pageIndex: 0, pageSize: 240 }}
+  hasMoreRows={rows.length < total}
+  infiniteScroll
+  infiniteScrollThreshold={140}
+  loading={initialLoading}
+  loadingMore={loadingMore}
+  onLoadMore={() => void appendRows()}
+  pagination={{ pageIndex: 0, pageSize: Math.max(rows.length, 40) }}
   virtualized
 />;`,
     language: "tsx",
-    title: "Remote infinite scroll",
+    title: "Controlled remote infinite scroll",
   },
 ];
 

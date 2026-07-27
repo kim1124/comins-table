@@ -1,7 +1,7 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
 
-import { CominsTable, type CominsTableColumn, type CominsLazyLoadRequest } from "../../../src";
+import { CominsTable, type CominsTableColumn } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Button } from "../components/ui/button";
 import type { PersonRow } from "../fixtures/people";
@@ -36,20 +36,25 @@ function toPersonRow(user: DummyUser): PersonRow {
   };
 }
 
-function buildInfiniteScrollUrl(request: CominsLazyLoadRequest) {
+function buildInfiniteScrollUrl(offset: number, limit: number) {
   const params = new URLSearchParams({
     delay: "500",
-    limit: String(request.limit),
+    limit: String(limit),
     select: "id,firstName,lastName,age,email,role",
-    skip: String(request.offset),
+    skip: String(offset),
   });
 
   return `${DUMMY_USERS_URL}?${params.toString()}`;
 }
 
 export function InfiniteScrollFeature() {
-  const [status, setStatus] = useState({ loaded: 0, total: 0 });
-  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [rows, setRows] = useState<PersonRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const activeRequestRef = useRef<AbortController | null>(null);
+  const pendingRequestRef = useRef(false);
+  const requestVersionRef = useRef(0);
   const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(
     () => [
       {
@@ -81,50 +86,126 @@ export function InfiniteScrollFeature() {
     ],
     [],
   );
-  const loadRows = useCallback(
-    async (request: CominsLazyLoadRequest) => {
-      const response = await fetch(buildInfiniteScrollUrl(request), { signal: request.signal });
+  const loadInitialRows = useCallback(async () => {
+    const requestVersion = requestVersionRef.current + 1;
+    requestVersionRef.current = requestVersion;
+    activeRequestRef.current?.abort();
+
+    const controller = new AbortController();
+    activeRequestRef.current = controller;
+    pendingRequestRef.current = true;
+    setInitialLoading(true);
+    setLoadingMore(false);
+    setRows([]);
+    setTotal(0);
+
+    try {
+      const response = await fetch(buildInfiniteScrollUrl(0, BATCH_SIZE), {
+        signal: controller.signal,
+      });
       const result = (await response.json()) as DummyUsersResponse;
-      const rows = result.users.map(toPersonRow);
 
-      setStatus({ loaded: request.offset + rows.length, total: result.total });
+      if (controller.signal.aborted || requestVersion !== requestVersionRef.current) {
+        return;
+      }
 
-      return { rows, total: result.total };
-    },
-    [refreshVersion],
-  );
-  const refreshRows = () => {
-    setStatus({ loaded: 0, total: 0 });
-    setRefreshVersion((current) => current + 1);
-  };
+      setRows(result.users.map(toPersonRow));
+      setTotal(result.total);
+    } catch {
+      // Request failure and retry UI remain application-owned in this focused example.
+    } finally {
+      if (requestVersion === requestVersionRef.current) {
+        activeRequestRef.current = null;
+        pendingRequestRef.current = false;
+        setInitialLoading(false);
+      }
+    }
+  }, []);
+  const appendRows = useCallback(async () => {
+    const offset = rows.length;
+
+    if (pendingRequestRef.current || offset === 0 || (total > 0 && offset >= total)) {
+      return;
+    }
+
+    const requestVersion = requestVersionRef.current + 1;
+    requestVersionRef.current = requestVersion;
+    const controller = new AbortController();
+    activeRequestRef.current = controller;
+    pendingRequestRef.current = true;
+    setLoadingMore(true);
+
+    try {
+      const response = await fetch(buildInfiniteScrollUrl(offset, BATCH_SIZE), {
+        signal: controller.signal,
+      });
+      const result = (await response.json()) as DummyUsersResponse;
+
+      if (controller.signal.aborted || requestVersion !== requestVersionRef.current) {
+        return;
+      }
+
+      const nextRows = result.users.map(toPersonRow);
+      setRows((currentRows) => {
+        if (currentRows.length !== offset) {
+          return currentRows;
+        }
+
+        const currentIds = new Set(currentRows.map((row) => row.id));
+        return [...currentRows, ...nextRows.filter((row) => !currentIds.has(row.id))];
+      });
+      setTotal(result.total);
+    } catch {
+      // Preserve the current rows so the consumer can choose its own retry policy.
+    } finally {
+      if (requestVersion === requestVersionRef.current) {
+        activeRequestRef.current = null;
+        pendingRequestRef.current = false;
+        setLoadingMore(false);
+      }
+    }
+  }, [rows.length, total]);
+
+  useEffect(() => {
+    void loadInitialRows();
+
+    return () => {
+      requestVersionRef.current += 1;
+      activeRequestRef.current?.abort();
+      activeRequestRef.current = null;
+      pendingRequestRef.current = false;
+    };
+  }, [loadInitialRows]);
 
   return (
     <section className="feature-panel">
       <FeatureSampleSection
-        description="Infinite Scroll 예제는 원격 API에서 offset/limit batch를 받아 viewport 하단 근접 시 Row를 계속 append합니다."
+        description="소비자가 rows와 요청 상태를 소유하고, viewport 하단 근접 시 onLoadMore를 받아 원격 batch를 append합니다."
         id="infinite-scroll"
         title="Infinite Scroll"
       >
         <div className="table-toolbar">
-          <Button aria-label="새로고침" onClick={refreshRows} variant="outline">
+          <Button aria-label="새로고침" onClick={() => void loadInitialRows()} variant="outline">
             <RotateCcw aria-hidden="true" size={16} />
             새로고침
           </Button>
           <span className="table-toolbar__state" data-testid="infinite-load-count">
-            Loaded {status.loaded} / {status.total}
+            Loaded {rows.length} / {total}
           </span>
         </div>
         <CominsTable
           className="example-table"
           columns={columns}
-          data={[]}
+          data={rows}
           data-testid="infinite-scroll-viewport"
           getRowId={(row) => row.id}
-          lazyLoad
-          lazyLoadBatchSize={BATCH_SIZE}
-          lazyLoadThreshold={140}
-          onLazyLoad={loadRows}
-          pagination={{ pageIndex: 0, pageSize: 240 }}
+          hasMoreRows={rows.length < total}
+          infiniteScroll
+          infiniteScrollThreshold={140}
+          loading={initialLoading}
+          loadingMore={loadingMore}
+          onLoadMore={() => void appendRows()}
+          pagination={{ pageIndex: 0, pageSize: Math.max(rows.length, BATCH_SIZE) }}
           skeletonRowCount={5}
           theme={{ density: "compact" }}
           virtualized
