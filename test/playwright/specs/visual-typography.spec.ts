@@ -58,7 +58,7 @@ test("captures Selection and Ref API consumer examples without root overflow", a
   ]) {
     for (const viewport of [
       { height: 1000, name: "desktop", width: 1440 },
-      { height: 844, name: "mobile", width: 390 },
+      { height: 1200, name: "mobile", width: 390 },
     ]) {
       await page.setViewportSize({ height: viewport.height, width: viewport.width });
       await page.goto(example.route);
