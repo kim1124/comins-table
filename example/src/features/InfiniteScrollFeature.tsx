@@ -52,6 +52,7 @@ export function InfiniteScrollFeature() {
   const [total, setTotal] = useState(0);
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const activeRequestRef = useRef<AbortController | null>(null);
   const pendingRequestRef = useRef(false);
   const requestVersionRef = useRef(0);
@@ -175,7 +176,7 @@ export function InfiniteScrollFeature() {
       activeRequestRef.current = null;
       pendingRequestRef.current = false;
     };
-  }, [loadInitialRows]);
+  }, [loadInitialRows, refreshVersion]);
 
   return (
     <section className="feature-panel">
@@ -185,7 +186,11 @@ export function InfiniteScrollFeature() {
         title="Infinite Scroll"
       >
         <div className="table-toolbar">
-          <Button aria-label="새로고침" onClick={() => void loadInitialRows()} variant="outline">
+          <Button
+            aria-label="새로고침"
+            onClick={() => setRefreshVersion((current) => current + 1)}
+            variant="outline"
+          >
             <RotateCcw aria-hidden="true" size={16} />
             새로고침
           </Button>
@@ -194,6 +199,7 @@ export function InfiniteScrollFeature() {
           </span>
         </div>
         <CominsTable
+          key={refreshVersion}
           className="example-table"
           columns={columns}
           data={rows}

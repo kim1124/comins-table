@@ -219,6 +219,7 @@ export const infiniteScrollSamples: DocsCodeSample[] = [
 const [total, setTotal] = useState(0);
 const [initialLoading, setInitialLoading] = useState(true);
 const [loadingMore, setLoadingMore] = useState(false);
+const [refreshVersion, setRefreshVersion] = useState(0);
 const pendingRequestRef = useRef(false);
 const activeRequestRef = useRef<AbortController | null>(null);
 
@@ -259,7 +260,7 @@ const replaceRows = useCallback(async () => {
 useEffect(() => {
   void replaceRows();
   return () => activeRequestRef.current?.abort();
-}, [replaceRows]);
+}, [replaceRows, refreshVersion]);
 
 const appendRows = useCallback(async () => {
   if (pendingRequestRef.current || rows.length >= total) return;
@@ -282,19 +283,23 @@ const appendRows = useCallback(async () => {
   }
 }, [rows.length, total]);
 
-<CominsTable
-  columns={columns}
-  data={rows}
-  getRowId={(row) => row.id}
-  hasMoreRows={rows.length < total}
-  infiniteScroll
-  infiniteScrollThreshold={140}
-  loading={initialLoading}
-  loadingMore={loadingMore}
-  onLoadMore={() => void appendRows()}
-  pagination={{ pageIndex: 0, pageSize: Math.max(rows.length, 40) }}
-  virtualized
-/>;`,
+<>
+  <button onClick={() => setRefreshVersion((current) => current + 1)}>Refresh</button>
+  <CominsTable
+    key={refreshVersion}
+    columns={columns}
+    data={rows}
+    getRowId={(row) => row.id}
+    hasMoreRows={rows.length < total}
+    infiniteScroll
+    infiniteScrollThreshold={140}
+    loading={initialLoading}
+    loadingMore={loadingMore}
+    onLoadMore={() => void appendRows()}
+    pagination={{ pageIndex: 0, pageSize: Math.max(rows.length, 40) }}
+    virtualized
+  />
+</>;`,
     language: "tsx",
     title: "Controlled remote infinite scroll",
   },
