@@ -310,10 +310,17 @@ test("pagination page owns the table paging example above virtualization", async
   await expect(page.getByRole("button", { exact: true, name: "이전 페이지" })).toBeDisabled();
   await expect(page.getByRole("button", { exact: true, name: "다음 페이지" })).toBeEnabled();
   await expect(page.getByRole("button", { exact: true, name: "마지막 페이지" })).toBeEnabled();
+  await expect(page.getByTestId("row-a")).toBeVisible();
   await page.getByRole("button", { exact: true, name: "다음 페이지" }).click();
+  await expect(page.getByTestId("row-a")).toHaveCount(0);
+  await expect(page.getByTestId("row-row-30")).toBeVisible();
   await expect(page.getByTestId("pagination-control")).toContainText("2 / 4");
   await expect(page.getByTestId("pagination-state")).toContainText("Page 2");
   await page.getByRole("button", { exact: true, name: "마지막 페이지" }).click();
+  await expect(page.getByTestId("row-row-90")).toBeVisible();
+  await expect(
+    page.getByTestId("pagination-viewport").locator("tbody tr[data-comins-row-data-index]"),
+  ).toHaveCount(10);
   await expect(page.getByTestId("pagination-control")).toContainText("4 / 4");
   await expect(page.getByTestId("pagination-state")).toContainText("Page 4");
   await page.getByRole("button", { exact: true, name: "첫 페이지" }).click();
