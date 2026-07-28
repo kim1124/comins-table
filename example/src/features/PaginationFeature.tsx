@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 import { CominsTable } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
@@ -33,7 +32,7 @@ export function PaginationFeature() {
                   size="icon"
                   title="첫 페이지"
                 >
-                  <ChevronsLeft aria-hidden="true" size={16} />
+                  <span aria-hidden="true" className="ui-pagination__glyph">«</span>
                 </PaginationButton>
               </PaginationItem>
               <PaginationItem>
@@ -44,7 +43,7 @@ export function PaginationFeature() {
                   size="icon"
                   title="이전 페이지"
                 >
-                  <ChevronLeft aria-hidden="true" size={16} />
+                  <span aria-hidden="true" className="ui-pagination__glyph">‹</span>
                 </PaginationButton>
               </PaginationItem>
               <PaginationItem>
@@ -60,7 +59,7 @@ export function PaginationFeature() {
                   size="icon"
                   title="다음 페이지"
                 >
-                  <ChevronRight aria-hidden="true" size={16} />
+                  <span aria-hidden="true" className="ui-pagination__glyph">›</span>
                 </PaginationButton>
               </PaginationItem>
               <PaginationItem>
@@ -71,7 +70,7 @@ export function PaginationFeature() {
                   size="icon"
                   title="마지막 페이지"
                 >
-                  <ChevronsRight aria-hidden="true" size={16} />
+                  <span aria-hidden="true" className="ui-pagination__glyph">»</span>
                 </PaginationButton>
               </PaginationItem>
             </PaginationContent>

@@ -1,4 +1,3 @@
-import { Search } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 
@@ -29,7 +28,7 @@ export function DocsTopNav() {
       </div>
       <div className="global-data-table-search" ref={searchRef}>
         <label className="example-search">
-          <Search aria-hidden="true" size={16} />
+          <span aria-hidden="true" className="example-search__icon" />
           <input
             aria-label="Search all docs"
             onBlur={(event) => {

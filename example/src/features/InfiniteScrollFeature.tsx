@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useState } from "react";
-import { RotateCcw } from "lucide-react";
 
 import { CominsTable, type CominsTableColumn, type CominsLazyLoadRequest } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
@@ -107,7 +106,6 @@ export function InfiniteScrollFeature() {
       >
         <div className="table-toolbar">
           <Button aria-label="새로고침" onClick={refreshRows} variant="outline">
-            <RotateCcw aria-hidden="true" size={16} />
             새로고침
           </Button>
           <span className="table-toolbar__state" data-testid="infinite-load-count">

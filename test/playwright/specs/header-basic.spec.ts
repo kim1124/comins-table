@@ -306,7 +306,9 @@ test("playground verifies header-wide show and hide removes the whole header are
 
   const visibilityExample = page.getByTestId("header-example-visibility");
   const toggle = visibilityExample.getByRole("button", { exact: true, name: "Header 표시" });
+  const headerSelect = page.getByRole("button", { name: "컬럼 선택" }).first();
   await expect(visibilityExample.getByRole("button", { exact: true, name: "표시 컬럼" })).toHaveCount(0);
+  await expect(headerSelect.locator("svg")).toHaveCount(0);
   const columnSelect = visibilityExample.getByTestId("header-visibility-column-select-trigger");
   await expect(columnSelect).toHaveClass(/ui-selectbox-trigger/u);
   await expect(columnSelect).toContainText("5개 컬럼");
