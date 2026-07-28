@@ -39,6 +39,7 @@
 - **버전·배포:** 이번 구현에서 버전을 올리거나 publish하지 않는다. patch release는 별도 승인 후 수행한다.
 - **GIF:** 현재 README demo GIF는 즉시 재생성한다. 요청된 주제별 GIF 4종 추가는 Lucide 제거와 분리한다.
 - **메뉴:** Lucide 제거는 기존 Playground route 안의 표현 교체이므로 메뉴를 추가하지 않는다.
+- **문서 검증:** 영문·한글 문서는 함께 갱신하되 사람용 문구를 exact-string 신규 assertion으로 고정하지 않고 기존 사용자 문서 게이트로 검증한다.
 
 ## Files And Interfaces
 
@@ -67,7 +68,7 @@
 - `test/package-artifact-gate.node.mjs`: artifact gate 회귀 fixture.
 - `test/public-api-boundary.test.ts`: manifest/scaffold 의존성 부재 계약.
 - `test/table-interaction.test.tsx`: 정렬 표시 DOM 계약.
-- `test/user-docs.test.ts`: 영문·한글 설명 정합성.
+- `test/user-docs.test.ts`: 기존 영문·한글 사용자 문서 게이트 실행.
 - `test/playwright/specs/header-basic.spec.ts`
 - `test/playwright/specs/playground-layout-polish.spec.ts`
 - `docs/user/06-header.md`, `docs/ko/06-header.md`: CSS 기반 표시 설명.
@@ -505,7 +506,7 @@ git commit -m "refactor: remove lucide from playground"
 - Modify: `test/public-api-boundary.test.ts`
 - Modify: `docs/user/06-header.md`
 - Modify: `docs/ko/06-header.md`
-- Modify: `test/user-docs.test.ts`
+- Verify: `test/user-docs.test.ts`
 
 **Interfaces:**
 
@@ -524,18 +525,11 @@ expect(componentsJson.iconLibrary).toBeUndefined();
 expect(packageJson.files).toContain("THIRD_PARTY_NOTICES.md");
 ```
 
-- [ ] 영문·한글 header 문서가 모두 module-owned CSS 정렬 표시를 설명하는지 문서 테스트를 추가한다.
+- [ ] focused boundary 테스트를 실행해 현재 manifest·scaffold 때문에 RED를 확인한다.
 
-```ts
-expect(englishHeaderDoc).toContain("module-owned CSS");
-expect(koreanHeaderDoc).toContain("Comins가 소유한 CSS");
-```
+Run: `npm run test:run -- test/public-api-boundary.test.ts`
 
-- [ ] focused 테스트를 실행해 현재 manifest·scaffold·문서 때문에 RED를 확인한다.
-
-Run: `npm run test:run -- test/public-api-boundary.test.ts test/user-docs.test.ts`
-
-Expected: `lucide-react`, `iconLibrary`, notice file 목록, 문서 문구 assertion 실패.
+Expected: `lucide-react`, `iconLibrary`, notice file 목록 assertion 실패.
 
 - [ ] `package.json`에서 `lucide-react`를 제거하고 `files`에 `THIRD_PARTY_NOTICES.md`를 추가한다.
 
@@ -657,7 +651,7 @@ Korean:
   따라 회전하거나 사라집니다.
 ```
 
-- [ ] focused unit/docs 테스트를 재실행한다.
+- [ ] focused boundary 테스트와 기존 사용자 문서 게이트를 실행한다.
 
 Run: `npm run test:run -- test/public-api-boundary.test.ts test/user-docs.test.ts`
 
