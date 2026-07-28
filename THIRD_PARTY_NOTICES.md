@@ -1,6 +1,6 @@
 # Legacy Third-Party Notices
 
-Comins Table versions 0.1.1 through 0.1.4 included portions of Lucide in their
+Comins Table versions 0.1.0 through 0.1.4 included portions of Lucide in their
 generated JavaScript bundles. Current source and generated artifacts do not
 depend on or bundle Lucide. The notices below are retained for those legacy
 published artifacts.

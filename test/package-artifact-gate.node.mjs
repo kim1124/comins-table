@@ -14,6 +14,7 @@ const failure = 'package-artifact-check: failed\n';
 function fixture({
   files = ['dist', 'README.md', 'CHANGELOG.md'],
   dependencies,
+  optionalDependencies,
   indexSource = 'export const value = 1;\n',
   mapSources = ['../src/index.ts'],
 } = {}) {
@@ -35,6 +36,7 @@ function fixture({
     version: '1.0.0',
     files,
     dependencies,
+    optionalDependencies,
     scripts: {
       prepack: "node -e \"require('node:fs').writeFileSync('should-not-exist','blocked')\"",
     },
@@ -79,6 +81,19 @@ test('fails closed without a non-empty package files allow-list', () => {
 test('fails when the packed manifest declares lucide-react', () => {
   const cwd = fixture({
     dependencies: { 'lucide-react': '^0.468.0' },
+  });
+  try {
+    const result = run(cwd);
+    assert.equal(result.status, 1);
+    assert.equal(result.stderr, failure);
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('fails when the packed manifest declares lucide-react in optionalDependencies', () => {
+  const cwd = fixture({
+    optionalDependencies: { 'lucide-react': '^0.468.0' },
   });
   try {
     const result = run(cwd);

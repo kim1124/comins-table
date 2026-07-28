@@ -27,7 +27,13 @@ function readPackedFile(filename, path) {
 
 function assertNoBundledThirdPartySources(filename, paths) {
   const manifest = JSON.parse(readPackedFile(filename, 'package.json'));
-  if (manifest.dependencies?.['lucide-react']) {
+  const dependencySections = [
+    manifest.dependencies,
+    manifest.optionalDependencies,
+    manifest.peerDependencies,
+    manifest.devDependencies,
+  ];
+  if (dependencySections.some((section) => section?.['lucide-react'])) {
     throw new Error('forbidden runtime dependency');
   }
 

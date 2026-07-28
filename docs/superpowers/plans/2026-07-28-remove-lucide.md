@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**완료 상태:** Task 1~6의 로컬 구현·검증을 완료했다. 상세 결과는 [2026-07-28 작업 보고](../../../reports/2026-07-28.md)에 기록했으며 publish, tag, GitHub Release는 수행하지 않았다.
+
 **Goal:** `lucide-react`의 런타임 의존성, 소스 import, 번들 코드, 공개 GIF 노출을 모두 제거하고, Comins가 직접 소유하는 CSS·텍스트 기반 표시로 대체한다.
 
 **Architecture:** 라이브러리의 정렬 표시는 DOM과 CSS만으로 그리며 기존 `aria-sort`·정렬 상태 계약을 유지한다. Playground의 텍스트 버튼은 장식 아이콘을 제거하고, 의미 전달에 필요한 검색·선택·페이지 이동 표시는 독립 작성한 CSS 또는 유니코드 glyph로 대체한다. 패키지 검증기는 배포 tarball의 manifest, JavaScript, source map을 검사하여 의도하지 않은 외부 패키지 코드가 다시 번들에 들어가는 것을 차단한다.
@@ -14,7 +16,7 @@
 - 사용자 소유의 미추적 파일 `.playwright-cli/`, `output/`, `reports/2026-07-27.md`는 읽기 전용으로 취급하고 수정·삭제·커밋하지 않는다.
 - 실행 시 현재 작업 트리가 계속 dirty이면 `superpowers:using-git-worktrees`를 사용해 별도 worktree에서 구현한다.
 - 현재와 향후 산출물에서 Lucide 코드·의존성·아이콘 DOM을 제거하되, 과거 배포본의 사실을 기록하는 `THIRD_PARTY_NOTICES.md`의 Lucide 문자열은 의도적인 법적 고지로 유지한다.
-- 이미 공개된 npm `0.1.1`~`0.1.4`의 tarball과 Git 이력은 변경하지 않는다. unpublish, history rewrite, push, publish, tag, GitHub Release는 이 계획의 범위 밖이다.
+- 이미 공개된 npm `0.1.0`~`0.1.4`의 tarball과 Git 이력은 변경하지 않는다. unpublish, history rewrite, push, publish, tag, GitHub Release는 이 계획의 범위 밖이다.
 - `reports/2026-07-22.md` 등 과거 기록의 Lucide 언급은 당시 사실이므로 수정하지 않는다.
 - README GIF는 실제 Playground의 `/readme-demo` 경로에서 다시 생성한다. `.playwright-cli/` 또는 `output/`의 Visual Companion/수동 mockup 산출물을 사용하지 않는다.
 - 신규 npm 의존성은 추가하지 않는다.
@@ -35,7 +37,7 @@
 
 - **대체 방식:** 다른 icon package로 교체하지 않고 CSS와 접근성 안전한 text glyph만 사용한다.
 - **공개 API:** Table의 props, types, exports, 정렬 callback과 ARIA 동작을 유지한다.
-- **과거 artifact:** npm `0.1.1`~`0.1.4`는 변경하지 않고 현재 저장소와 다음 artifact에 legacy notice를 제공한다.
+- **과거 artifact:** npm `0.1.0`~`0.1.4`는 변경하지 않고 현재 저장소와 다음 artifact에 legacy notice를 제공한다.
 - **버전·배포:** 이번 구현에서 버전을 올리거나 publish하지 않는다. patch release는 별도 승인 후 수행한다.
 - **GIF:** 현재 README demo GIF는 즉시 재생성한다. 요청된 주제별 GIF 4종 추가는 Lucide 제거와 분리한다.
 - **메뉴:** Lucide 제거는 기존 Playground route 안의 표현 교체이므로 메뉴를 추가하지 않는다.
@@ -45,7 +47,7 @@
 
 ### Create
 
-- `THIRD_PARTY_NOTICES.md`: npm `0.1.1`~`0.1.4`에 포함된 Lucide/Feather 코드의 legacy notice.
+- `THIRD_PARTY_NOTICES.md`: npm `0.1.0`~`0.1.4`에 포함된 Lucide/Feather 코드의 legacy notice.
 - `reports/2026-07-28.md`: 변경 범위, 검증 결과, 과거 배포본 잔여 리스크 기록.
 
 ### Modify
@@ -97,7 +99,7 @@
 - 실패 시 기존의 비공개형 메시지 `package-artifact-check: failed`만 stderr에 출력한다.
 - tarball의 `package/package.json`, `package/dist/*.js`, `package/dist/*.js.map`만 검사한다.
 
-- [ ] Fixture 생성 함수에 `dependencies`, `indexSource`, `mapSources` 입력을 추가하고 기본 source map은 모듈 자체 소스만 가리키도록 한다.
+- [x] Fixture 생성 함수에 `dependencies`, `indexSource`, `mapSources` 입력을 추가하고 기본 source map은 모듈 자체 소스만 가리키도록 한다.
 
 ```js
 function fixture({
@@ -140,7 +142,7 @@ function fixture({
 
 기존 empty allow-list test의 `fixture([])` 호출은 `fixture({ files: [] })`로 함께 변경한다.
 
-- [ ] 다음 세 회귀 테스트를 추가한다.
+- [x] 다음 세 회귀 테스트를 추가한다.
 
 ```js
 test("fails when the packed manifest declares lucide-react", () => {
@@ -171,13 +173,13 @@ test("fails when shipped JavaScript contains a node_modules bundle region", () =
 });
 ```
 
-- [ ] 회귀 테스트를 실행해 기존 검사기가 새 조건을 차단하지 못하는 RED를 확인한다.
+- [x] 회귀 테스트를 실행해 기존 검사기가 새 조건을 차단하지 못하는 RED를 확인한다.
 
 Run: `node --test test/package-artifact-gate.node.mjs`
 
 Expected: 새 세 테스트 중 하나 이상이 `Expected values to be strictly equal: 0 !== 1`로 실패한다.
 
-- [ ] packed file을 읽고 manifest·JS·source map을 검사하는 함수를 구현한다.
+- [x] packed file을 읽고 manifest·JS·source map을 검사하는 함수를 구현한다.
 
 ```js
 function readPackedFile(filename, path) {
@@ -214,15 +216,15 @@ function assertNoBundledThirdPartySources(filename, paths) {
 }
 ```
 
-- [ ] `npm pack --json`의 파일 목록 검증 직후 `assertNoBundledThirdPartySources(filename, paths)`를 호출한다.
+- [x] `npm pack --json`의 파일 목록 검증 직후 `assertNoBundledThirdPartySources(filename, paths)`를 호출한다.
 
-- [ ] fixture 테스트를 재실행해 GREEN을 확인한다.
+- [x] fixture 테스트를 재실행해 GREEN을 확인한다.
 
 Run: `node --test test/package-artifact-gate.node.mjs`
 
 Expected: 모든 package-artifact 테스트 통과.
 
-- [ ] 변경을 로컬 커밋한다.
+- [x] 변경을 로컬 커밋한다.
 
 ```bash
 git add scripts/verify-package-artifact.mjs test/package-artifact-gate.node.mjs
@@ -246,7 +248,7 @@ git commit -m "test: guard packaged third-party bundles"
 - `.comins-sort-icon`은 `<svg>`에서 장식용 `<span aria-hidden="true">`으로 변경한다.
 - 기존 asc/desc parent rotation과 none opacity 규칙을 유지한다.
 
-- [ ] 정렬 후 indicator에 SVG가 없고 module-owned span이 있는지 회귀 테스트를 먼저 추가한다.
+- [x] 정렬 후 indicator에 SVG가 없고 module-owned span이 있는지 회귀 테스트를 먼저 추가한다.
 
 ```tsx
 const indicator = element.querySelector("[data-testid='sort-indicator-age']")!;
@@ -255,13 +257,13 @@ expect(indicator.querySelector("svg")).toBeNull();
 expect(indicator.querySelector("span.comins-sort-icon")).not.toBeNull();
 ```
 
-- [ ] focused unit 테스트를 실행해 현재 Lucide SVG 때문에 RED가 발생함을 확인한다.
+- [x] focused unit 테스트를 실행해 현재 Lucide SVG 때문에 RED가 발생함을 확인한다.
 
 Run: `npm run test:run -- test/table-interaction.test.tsx`
 
 Expected: `querySelector("svg")`가 현재 SVG를 반환하여 실패.
 
-- [ ] `src/index.tsx`의 `ArrowUp` import와 JSX를 제거하고 다음 DOM으로 교체한다.
+- [x] `src/index.tsx`의 `ArrowUp` import와 JSX를 제거하고 다음 DOM으로 교체한다.
 
 ```tsx
 <span
@@ -275,7 +277,7 @@ Expected: `querySelector("svg")`가 현재 SVG를 반환하여 실패.
 </span>
 ```
 
-- [ ] `styles.css`와 `example/src/styles.css`에 동일한 module-owned arrow CSS를 추가한다.
+- [x] `styles.css`와 `example/src/styles.css`에 동일한 module-owned arrow CSS를 추가한다.
 
 ```css
 .comins-sort-icon {
@@ -308,7 +310,7 @@ Expected: `querySelector("svg")`가 현재 SVG를 반환하여 실패.
 }
 ```
 
-- [ ] unit과 header visual/interaction spec을 실행한다.
+- [x] unit과 header visual/interaction spec을 실행한다.
 
 Run: `npm run test:run -- test/table-interaction.test.tsx`
 
@@ -318,7 +320,7 @@ Run: `npm run test:e2e -- test/playwright/specs/header-quality.spec.ts --workers
 
 Expected: 정렬 전/오름차순/내림차순 indicator의 방향·정렬·클릭 영역 검증 PASS.
 
-- [ ] 변경을 로컬 커밋한다.
+- [x] 변경을 로컬 커밋한다.
 
 ```bash
 git add src/index.tsx styles.css example/src/styles.css test/table-interaction.test.tsx
@@ -349,7 +351,7 @@ git commit -m "refactor: replace table sort icon with css"
 - 검색 input, MultiSelect, Pagination은 의미를 보조하는 CSS 또는 유니코드 glyph를 유지한다.
 - icon-only Pagination 버튼은 기존 `aria-label`과 `title`을 유지하고 glyph는 `aria-hidden="true"`로 둔다.
 
-- [ ] Basic CRUD layout 계약을 “버튼 5개, SVG 0개, 기존 tone 유지”로 먼저 변경한다.
+- [x] Basic CRUD layout 계약을 “버튼 5개, SVG 0개, 기존 tone 유지”로 먼저 변경한다.
 
 ```ts
 const actionButtons = card.locator(".feature-action-button");
@@ -358,7 +360,7 @@ await expect(actionButtons.locator("svg")).toHaveCount(0);
 await expect(card.locator(".feature-action-button__icon")).toHaveCount(0);
 ```
 
-- [ ] Pagination과 Header MultiSelect의 장식 SVG 부재·접근성 이름 유지 assertion을 추가한다.
+- [x] Pagination과 Header MultiSelect의 장식 SVG 부재·접근성 이름 유지 assertion을 추가한다.
 
 ```ts
 const nextPage = page.getByRole("button", { name: "다음 페이지" });
@@ -369,13 +371,13 @@ const headerSelect = page.getByRole("button", { name: "컬럼 선택" }).first()
 await expect(headerSelect.locator("svg")).toHaveCount(0);
 ```
 
-- [ ] focused E2E를 실행해 현재 Lucide SVG 때문에 RED를 확인한다.
+- [x] focused E2E를 실행해 현재 Lucide SVG 때문에 RED를 확인한다.
 
 Run: `npm run test:e2e -- test/playwright/specs/header-basic.spec.ts test/playwright/specs/playground-layout-polish.spec.ts --workers=1`
 
 Expected: SVG count 및 glyph class assertion 실패.
 
-- [ ] `FeatureControls.ActionButtonProps`에서 `icon`을 제거하고 장식 span을 삭제한다.
+- [x] `FeatureControls.ActionButtonProps`에서 `icon`을 제거하고 장식 span을 삭제한다.
 
 ```tsx
 type ActionButtonProps = Omit<ButtonProps, "variant"> & {
@@ -401,11 +403,11 @@ export function ActionButton({
 }
 ```
 
-- [ ] Basic CRUD, Column Group, Core, Header의 모든 `icon` prop과 Lucide import를 제거한다.
+- [x] Basic CRUD, Column Group, Core, Header의 모든 `icon` prop과 Lucide import를 제거한다.
 
-- [ ] Infinite Scroll과 Lazy Load의 새로고침 버튼에서 Lucide icon을 제거하되 visible text와 `aria-label="새로고침"`을 유지한다.
+- [x] Infinite Scroll과 Lazy Load의 새로고침 버튼에서 Lucide icon을 제거하되 visible text와 `aria-label="새로고침"`을 유지한다.
 
-- [ ] DocsTopNav 검색 표시를 CSS glyph로 교체한다.
+- [x] DocsTopNav 검색 표시를 CSS glyph로 교체한다.
 
 ```tsx
 <span aria-hidden="true" className="example-search__icon" />
@@ -432,7 +434,7 @@ export function ActionButton({
 }
 ```
 
-- [ ] MultiSelect check·chevron을 CSS glyph로 교체한다.
+- [x] MultiSelect check·chevron을 CSS glyph로 교체한다.
 
 ```tsx
 <span
@@ -462,7 +464,7 @@ export function ActionButton({
 }
 ```
 
-- [ ] Pagination의 네 icon-only 버튼을 접근성 이름이 있는 text glyph로 교체한다.
+- [x] Pagination의 네 icon-only 버튼을 접근성 이름이 있는 text glyph로 교체한다.
 
 ```tsx
 <span aria-hidden="true" className="ui-pagination__glyph">«</span>
@@ -480,15 +482,15 @@ export function ActionButton({
 }
 ```
 
-- [ ] `.feature-action-button__icon` 및 Lucide SVG만을 위한 CSS를 제거한다.
+- [x] `.feature-action-button__icon` 및 Lucide SVG만을 위한 CSS를 제거한다.
 
-- [ ] focused E2E를 재실행해 GREEN을 확인한다.
+- [x] focused E2E를 재실행해 GREEN을 확인한다.
 
 Run: `npm run test:e2e -- test/playwright/specs/header-basic.spec.ts test/playwright/specs/playground-layout-polish.spec.ts --workers=1`
 
 Expected: 버튼 수, accessible name, 선택 상태, SVG 부재 검증 PASS.
 
-- [ ] 변경을 로컬 커밋한다.
+- [x] 변경을 로컬 커밋한다.
 
 ```bash
 git add example/src test/playwright/specs/header-basic.spec.ts test/playwright/specs/playground-layout-polish.spec.ts
@@ -514,7 +516,7 @@ git commit -m "refactor: remove lucide from playground"
 - `package.json#files`에 `THIRD_PARTY_NOTICES.md`를 넣어 다음 patch artifact에도 legacy notice가 포함되도록 한다.
 - 패키지 버전은 변경하지 않는다.
 
-- [ ] public boundary 테스트에 manifest와 scaffold에서 Lucide 설정이 없는 계약을 먼저 추가한다.
+- [x] public boundary 테스트에 manifest와 scaffold에서 Lucide 설정이 없는 계약을 먼저 추가한다.
 
 ```ts
 const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
@@ -525,13 +527,13 @@ expect(componentsJson.iconLibrary).toBeUndefined();
 expect(packageJson.files).toContain("THIRD_PARTY_NOTICES.md");
 ```
 
-- [ ] focused boundary 테스트를 실행해 현재 manifest·scaffold 때문에 RED를 확인한다.
+- [x] focused boundary 테스트를 실행해 현재 manifest·scaffold 때문에 RED를 확인한다.
 
 Run: `npm run test:run -- test/public-api-boundary.test.ts`
 
 Expected: `lucide-react`, `iconLibrary`, notice file 목록 assertion 실패.
 
-- [ ] `package.json`에서 `lucide-react`를 제거하고 `files`에 `THIRD_PARTY_NOTICES.md`를 추가한다.
+- [x] `package.json`에서 `lucide-react`를 제거하고 `files`에 `THIRD_PARTY_NOTICES.md`를 추가한다.
 
 ```json
 "files": [
@@ -543,14 +545,14 @@ Expected: `lucide-react`, `iconLibrary`, notice file 목록 assertion 실패.
 ]
 ```
 
-- [ ] `components.json`의 `"iconLibrary": "lucide"` key를 제거한다.
+- [x] `components.json`의 `"iconLibrary": "lucide"` key를 제거한다.
 
-- [ ] `THIRD_PARTY_NOTICES.md`를 다음 범위로 작성한다.
+- [x] `THIRD_PARTY_NOTICES.md`를 다음 범위로 작성한다.
 
 ```md
 # Legacy Third-Party Notices
 
-Comins Table versions 0.1.1 through 0.1.4 included portions of Lucide in their
+Comins Table versions 0.1.0 through 0.1.4 included portions of Lucide in their
 generated JavaScript bundles. Current source and generated artifacts do not
 depend on or bundle Lucide. The notices below are retained for those legacy
 published artifacts.
@@ -621,7 +623,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-- [ ] lockfile을 현재 manifest에 맞게 갱신하고 설치 트리의 불필요한 Lucide package를 정리한다.
+- [x] lockfile을 현재 manifest에 맞게 갱신하고 설치 트리의 불필요한 Lucide package를 정리한다.
 
 Run: `npm install --package-lock-only --ignore-scripts`
 
@@ -635,7 +637,7 @@ Run: `npm ls lucide-react --all`
 
 Expected: `(empty)` dependency tree 출력.
 
-- [ ] 영문·한글 Header 문서를 동일 의미로 갱신한다.
+- [x] 영문·한글 Header 문서를 동일 의미로 갱신한다.
 
 English:
 
@@ -651,13 +653,13 @@ Korean:
   따라 회전하거나 사라집니다.
 ```
 
-- [ ] focused boundary 테스트와 기존 사용자 문서 게이트를 실행한다.
+- [x] focused boundary 테스트와 기존 사용자 문서 게이트를 실행한다.
 
 Run: `npm run test:run -- test/public-api-boundary.test.ts test/user-docs.test.ts`
 
 Expected: PASS.
 
-- [ ] 새 빌드와 실제 package artifact gate를 실행한다.
+- [x] 새 빌드와 실제 package artifact gate를 실행한다.
 
 Run: `npm run build`
 
@@ -667,7 +669,7 @@ Run: `npm run verify:package-artifact`
 
 Expected: `comins-table-0.1.4.tgz` 한 줄 출력 및 exit 0.
 
-- [ ] tarball 내용을 확인하고 이 단계에서 생성한 정확한 artifact만 제거한다.
+- [x] tarball 내용을 확인하고 이 단계에서 생성한 정확한 artifact만 제거한다.
 
 Run: `tar -tzf comins-table-0.1.4.tgz`
 
@@ -677,7 +679,7 @@ Run: `rm -f comins-table-0.1.4.tgz`
 
 Expected: 생성 artifact만 제거되고 작업 트리에 `.tgz`가 남지 않음.
 
-- [ ] 변경을 로컬 커밋한다.
+- [x] 변경을 로컬 커밋한다.
 
 ```bash
 git add package.json package-lock.json components.json THIRD_PARTY_NOTICES.md docs/user/06-header.md docs/ko/06-header.md test/public-api-boundary.test.ts test/user-docs.test.ts
@@ -699,19 +701,19 @@ git commit -m "chore: remove lucide dependency and add legacy notice"
 - GIF의 route, viewport, capture sequence는 `scripts/capture-readme-demo.mjs`의 기존 계약을 사용한다.
 - 이번 작업에서는 현재 단일 demo GIF만 라이선스 안전한 표면으로 재생성한다. 별도 요청된 CRUD·컬럼 이동·대용량 가상 스크롤·테마 GIF 4종 추가는 독립 기능 문서 작업으로 남긴다.
 
-- [ ] active source와 빌드에 Lucide가 없는지 capture 전 확인한다.
+- [x] active source와 빌드에 Lucide가 없는지 capture 전 확인한다.
 
 Run: `rg -n 'lucide-react|className="lucide|//#region node_modules/lucide' src example dist package.json package-lock.json components.json`
 
 Expected: match 없음.
 
-- [ ] 실제 Playground `/readme-demo`에서 GIF를 재생성한다.
+- [x] 실제 Playground `/readme-demo`에서 GIF를 재생성한다.
 
 Run: `npm run docs:readme-gif`
 
 Expected: `docs/assets/comins-table-demo.gif` 갱신, capture script exit 0.
 
-- [ ] README preview test와 capture route E2E를 실행한다.
+- [x] README preview test와 capture route E2E를 실행한다.
 
 Run: `npm run test:run -- test/readme-preview.test.ts`
 
@@ -721,17 +723,17 @@ Run: `npm run test:e2e -- test/playwright/specs/readme-demo.spec.ts --workers=1`
 
 Expected: capture sequence와 실제 Playground 상태 검증 PASS.
 
-- [ ] GIF metadata를 repository inspector로 확인한다.
+- [x] GIF metadata를 repository inspector로 확인한다.
 
 Run: `swift scripts/inspect-readme-gif.swift docs/assets/comins-table-demo.gif`
 
 Expected: frame count, canvas size, duration, loop count가 JSON으로 출력되고 metadata gate를 통과.
 
-- [ ] 로컬 이미지 뷰어로 생성된 GIF를 확인해 정렬 표시가 CSS arrow이고 Visual Companion branding이 없음을 확인한다.
+- [x] 로컬 이미지 뷰어로 생성된 GIF를 확인해 정렬 표시가 CSS arrow이고 Visual Companion branding이 없음을 확인한다.
 
-- [ ] inspection script가 만든 임시 산출물이 있으면 script가 출력한 task 전용 임시 경로만 정리하고, 사용자 소유 `output/`은 건드리지 않는다.
+- [x] inspection script가 만든 임시 산출물이 있으면 script가 출력한 task 전용 임시 경로만 정리하고, 사용자 소유 `output/`은 건드리지 않는다.
 
-- [ ] 변경을 로컬 커밋한다.
+- [x] 변경을 로컬 커밋한다.
 
 ```bash
 git add docs/assets/comins-table-demo.gif
@@ -750,7 +752,7 @@ git commit -m "docs: regenerate readme demo without lucide"
 - 보고서에는 작업 일시, 요약, 변경 파일, 수행한 검증, 결과, 잔여 이슈를 기록한다.
 - 과거 npm tarball은 수정되지 않았으며 patch publish는 별도 승인 대상임을 명시한다.
 
-- [ ] 의도적인 legacy notice와 과거 reports를 제외한 현재 surface를 정적 검사한다.
+- [x] 의도적인 legacy notice와 과거 reports를 제외한 현재 surface를 정적 검사한다.
 
 Run: `rg -n 'lucide-react|className="lucide|//#region node_modules/lucide' src example dist package.json package-lock.json components.json docs/user docs/ko README.md`
 
@@ -760,13 +762,13 @@ Run: `npm ls lucide-react --all`
 
 Expected: `(empty)` dependency tree 출력.
 
-- [ ] 라이브러리 baseline을 실행한다.
+- [x] 라이브러리 baseline을 실행한다.
 
 Run: `npm run verify`
 
 Expected: lint, typecheck, unit, build, package/security 관련 baseline PASS.
 
-- [ ] 영향받은 Playground spec을 한 번 묶어 실행한다.
+- [x] 영향받은 Playground spec을 한 번 묶어 실행한다.
 
 Run:
 
@@ -783,13 +785,13 @@ npm run test:e2e -- \
 
 Expected: PASS.
 
-- [ ] 공유 UI와 routing 회귀를 닫기 위해 전체 Playground E2E를 실행한다.
+- [x] 공유 UI와 routing 회귀를 닫기 위해 전체 Playground E2E를 실행한다.
 
 Run: `npm run test:e2e -- --workers=1`
 
 Expected: PASS. `listen EPERM`이면 제품 실패로 오판하지 않고 실행 환경 실패로 보고한다.
 
-- [ ] `reports/2026-07-28.md`를 다음 구조로 작성한다.
+- [x] `reports/2026-07-28.md`를 다음 구조로 작성한다.
 
 ```md
 # 2026-07-28
@@ -814,12 +816,12 @@ Expected: PASS. `listen EPERM`이면 제품 실패로 오판하지 않고 실행
 
 ## 잔여 이슈
 
-- npm 0.1.1~0.1.4 tarball은 불변 공개 artifact이므로 Lucide 코드가 남아 있다.
+- npm 0.1.0~0.1.4 tarball은 불변 공개 artifact이므로 Lucide 코드가 남아 있다.
 - 고지와 제거가 반영된 patch publish, tag, GitHub Release는 별도 승인 후 진행한다.
 - CRUD·컬럼 이동·대용량 가상 스크롤·테마 GIF 4종 추가는 별도 문서 개선 범위다.
 ```
 
-- [ ] diff와 작업 트리 경계를 확인한다.
+- [x] diff와 작업 트리 경계를 확인한다.
 
 Run: `git diff --check`
 
@@ -829,7 +831,7 @@ Run: `git status --short`
 
 Expected: 계획된 파일 외 새 변경 없음. 사용자 소유 `.playwright-cli/`, `output/`, `reports/2026-07-27.md`는 미추적 상태 그대로이며 staging되지 않음.
 
-- [ ] 보고서를 로컬 커밋한다.
+- [x] 보고서를 로컬 커밋한다.
 
 ```bash
 git add reports/2026-07-28.md

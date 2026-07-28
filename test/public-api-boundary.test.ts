@@ -58,9 +58,15 @@ describe("comins-table public API boundary", () => {
   it("keeps Lucide out of the package manifest", () => {
     const packageJson = JSON.parse(readPackageFile("package.json")) as {
       dependencies?: Record<string, string>;
+      optionalDependencies?: Record<string, string>;
+      peerDependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
     };
 
     expect(packageJson.dependencies?.["lucide-react"]).toBeUndefined();
+    expect(packageJson.optionalDependencies?.["lucide-react"]).toBeUndefined();
+    expect(packageJson.peerDependencies?.["lucide-react"]).toBeUndefined();
+    expect(packageJson.devDependencies?.["lucide-react"]).toBeUndefined();
   });
 
   it("keeps Lucide out of the playground scaffold", () => {
