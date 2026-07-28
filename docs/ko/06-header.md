@@ -175,7 +175,8 @@ Phase 2 Header components는 `button`, `input`, `checkbox`, `radio`, `select`, `
 - Sort cycle은 `none -> asc -> desc -> none`이다.
 - Sort 가능한 Header는 focus 가능하며 `Enter` 또는 `Space`로 sort cycle을 실행한다.
 - Sort 가능한 Header는 `aria-sort="none" | "ascending" | "descending"` 상태를 노출한다.
-- Sort icon은 `lucide-react` 기반이며 asc/desc/none 전환 시 CSS rotate/opacity animation으로 표시한다.
+- 정렬 표시는 Comins가 소유한 CSS로 그리며 `asc`, `desc`, 미정렬 상태에
+  따라 회전하거나 사라집니다.
 - Header menu 버튼 클릭은 sort, resize, column move를 발생시키지 않는다.
 - Header menu는 바깥 클릭, `Escape`, item 선택 시 닫히며 `onBeforeChange`가 `false`를 반환하면 open/close를 취소한다.
 - Multi-column Sort는 `multiSort`를 명시한 경우 `Shift` 조작으로 활성화되며 각 Header에 우선순위 badge를 표시한다.

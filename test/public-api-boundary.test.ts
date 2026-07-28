@@ -55,6 +55,30 @@ describe("comins-table public API boundary", () => {
     expect(source).not.toMatch(/from ["'](?:radix-ui|@radix-ui|tailwindcss|@tailwindcss|class-variance-authority)/u);
   });
 
+  it("keeps Lucide out of the package manifest", () => {
+    const packageJson = JSON.parse(readPackageFile("package.json")) as {
+      dependencies?: Record<string, string>;
+    };
+
+    expect(packageJson.dependencies?.["lucide-react"]).toBeUndefined();
+  });
+
+  it("keeps Lucide out of the playground scaffold", () => {
+    const componentsJson = JSON.parse(readPackageFile("components.json")) as {
+      iconLibrary?: string;
+    };
+
+    expect(componentsJson.iconLibrary).toBeUndefined();
+  });
+
+  it("ships the legacy third-party notice in package artifacts", () => {
+    const packageJson = JSON.parse(readPackageFile("package.json")) as {
+      files?: string[];
+    };
+
+    expect(packageJson.files).toContain("THIRD_PARTY_NOTICES.md");
+  });
+
   it("ships a dependency-free COMINS mint component skin as optional CSS", () => {
     const stylesPath = new URL("styles.css", packageRoot);
     const styles = existsSync(stylesPath) ? readPackageFile("styles.css") : "";

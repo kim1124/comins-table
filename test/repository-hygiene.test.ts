@@ -88,7 +88,13 @@ describe('repository hygiene', () => {
     const packageJson = JSON.parse(readFileSync(join(repositoryRoot, 'package.json'), 'utf8')) as {
       files: string[];
     };
-    expect(packageJson.files).toEqual(['dist', 'README.md', 'styles.css', 'CHANGELOG.md']);
+    expect(packageJson.files).toEqual([
+      'dist',
+      'README.md',
+      'styles.css',
+      'CHANGELOG.md',
+      'THIRD_PARTY_NOTICES.md',
+    ]);
     for (const path of ['scripts', 'test', 'reports', '.githooks', '.local']) {
       expect(packageJson.files).not.toContain(path);
     }
