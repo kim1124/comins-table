@@ -104,6 +104,20 @@ test('fails when the packed manifest declares lucide-react in optionalDependenci
   }
 });
 
+test('fails when optionalDependencies contains a falsy lucide-react declaration', () => {
+  const cwd = fixture({
+    optionalDependencies: { 'lucide-react': '' },
+  });
+  try {
+    const result = run(cwd);
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, '');
+    assert.equal(result.stderr, failure);
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
 test('fails when a shipped source map exposes bundled node_modules sources', () => {
   const cwd = fixture({
     mapSources: ['../src/index.ts', '../node_modules/lucide-react/dist/cjs/lucide-react.js'],

@@ -33,8 +33,12 @@ function assertNoBundledThirdPartySources(filename, paths) {
     manifest.peerDependencies,
     manifest.devDependencies,
   ];
-  if (dependencySections.some((section) => section?.['lucide-react'])) {
-    throw new Error('forbidden runtime dependency');
+  if (
+    dependencySections.some(
+      (section) => section != null && Object.hasOwn(section, 'lucide-react'),
+    )
+  ) {
+    throw new Error('forbidden dependency declaration');
   }
 
   for (const path of paths.filter((value) => /^dist\/.*\.js$/.test(value))) {

@@ -173,6 +173,11 @@ test("fails when shipped JavaScript contains a node_modules bundle region", () =
 });
 ```
 
+**Targeted completion note (2026-07-28):** `optionalDependencies`에
+`"lucide-react": ""`가 있는 falsy-value fixture를 추가했다. 기존 truthiness
+검사에서 status `0`으로 실패하는 RED를 확인한 뒤 key-presence 검사로 7/7
+GREEN을 확인했다.
+
 - [x] 회귀 테스트를 실행해 기존 검사기가 새 조건을 차단하지 못하는 RED를 확인한다.
 
 Run: `node --test test/package-artifact-gate.node.mjs`
@@ -191,8 +196,18 @@ function readPackedFile(filename, path) {
 
 function assertNoBundledThirdPartySources(filename, paths) {
   const manifest = JSON.parse(readPackedFile(filename, "package.json"));
-  if (manifest.dependencies?.["lucide-react"]) {
-    throw new Error("forbidden runtime dependency");
+  const dependencySections = [
+    manifest.dependencies,
+    manifest.optionalDependencies,
+    manifest.peerDependencies,
+    manifest.devDependencies,
+  ];
+  if (
+    dependencySections.some(
+      (section) => section != null && Object.hasOwn(section, "lucide-react"),
+    )
+  ) {
+    throw new Error("forbidden dependency declaration");
   }
 
   for (const path of paths.filter((value) => /^dist\/.*\.js$/.test(value))) {
