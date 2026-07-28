@@ -33,7 +33,7 @@ function assertNoBundledThirdPartySources(filename, paths) {
 
   for (const path of paths.filter((value) => /^dist\/.*\.js$/.test(value))) {
     const source = readPackedFile(filename, path);
-    if (/(?:^|\n)\/#region node_modules\//.test(source) || /lucide-react/.test(source)) {
+    if (/(?:^|\n)\/\/#region node_modules\//.test(source) || /lucide-react/.test(source)) {
       throw new Error('bundled third-party JavaScript');
     }
   }

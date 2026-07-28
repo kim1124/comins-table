@@ -104,7 +104,7 @@ test('fails when a shipped source map exposes bundled node_modules sources', () 
 
 test('fails when shipped JavaScript contains a node_modules bundle region', () => {
   const cwd = fixture({
-    indexSource: '//#region node_modules/lucide-react/dist/cjs/lucide-react.js\n',
+    indexSource: '//#region node_modules/third-party-package/index.js\n',
   });
   try {
     const result = run(cwd);
