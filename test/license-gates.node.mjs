@@ -413,6 +413,35 @@ test('rejects an artifact without the Comins license', () => {
   }
 });
 
+test('rejects an artifact whose runtime dependency boundary differs from the repository', () => {
+  const root = fixture({
+    entries: [{
+      name: 'automatic-runtime',
+      version: '1.0.0',
+      license: 'MIT',
+      dev: false,
+    }],
+  });
+  const packageRoot = join(root, 'artifact', 'package');
+  mkdirSync(packageRoot, { recursive: true });
+  const manifest = readJson(root, 'package.json');
+  manifest.dependencies = {
+    ...manifest.dependencies,
+    'unexpected-runtime': '1.0.0',
+  };
+  writeJson(packageRoot, 'package.json', manifest);
+  write(packageRoot, 'LICENSE', 'MIT\n');
+  execFileSync('tar', ['-czf', 'fixture.tgz', '-C', 'artifact', 'package'], {
+    cwd: root,
+  });
+
+  try {
+    expectStructuralFailure(run(root, '--artifact', 'fixture.tgz'));
+  } finally {
+    remove(root);
+  }
+});
+
 test('does not expose package contacts or license bodies in review output', () => {
   const root = fixture({
     entries: [{

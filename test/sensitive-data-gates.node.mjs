@@ -137,8 +137,12 @@ test('pins shared Gitleaks, hooks, scripts, and workflows', () => {
   assert.match(publish, /npm stage publish \.\/package-artifact\/\*\.tgz/);
 
   assert.match(packageJson.scripts['test:security'], /node --test/);
+  assert.equal(packageJson.scripts['check:licenses'], 'node scripts/check-licenses.mjs');
+  assert.equal(packageJson.scripts['test:licenses'], 'node --test test/license-gates.node.mjs');
   assert.equal(packageJson.scripts['verify:package-artifact'], 'node scripts/verify-package-artifact.mjs');
   assert.match(packageJson.scripts.verify, /test:security/);
+  assert.match(packageJson.scripts.verify, /test:licenses/);
+  assert.match(packageJson.scripts.verify, /check:licenses/);
   assert.match(viteConfig, /"\.worktrees\/\*\*"/);
 });
 

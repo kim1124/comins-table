@@ -15,6 +15,7 @@ function fixture({
   files = ['dist', 'README.md', 'CHANGELOG.md'],
   dependencies,
   optionalDependencies,
+  includeLicense = true,
   indexSource = 'export const value = 1;\n',
   mapSources = ['../src/index.ts'],
 } = {}) {
@@ -30,15 +31,32 @@ function fixture({
   }));
   writeFileSync(join(cwd, 'README.md'), '# Fixture\n');
   writeFileSync(join(cwd, 'CHANGELOG.md'), '# Changes\n');
-  writeFileSync(join(cwd, 'LICENSE'), 'MIT\n');
-  writeFileSync(join(cwd, 'package.json'), JSON.stringify({
+  if (includeLicense) writeFileSync(join(cwd, 'LICENSE'), 'MIT\n');
+  const packageJson = {
     name: 'comins-artifact-fixture',
     version: '1.0.0',
+    license: 'MIT',
     files,
     dependencies,
     optionalDependencies,
     scripts: {
       prepack: "node -e \"require('node:fs').writeFileSync('should-not-exist','blocked')\"",
+    },
+  };
+  writeFileSync(join(cwd, 'package.json'), JSON.stringify(packageJson));
+  writeFileSync(join(cwd, 'package-lock.json'), JSON.stringify({
+    name: packageJson.name,
+    version: packageJson.version,
+    lockfileVersion: 3,
+    requires: true,
+    packages: {
+      '': {
+        name: packageJson.name,
+        version: packageJson.version,
+        license: packageJson.license,
+        dependencies,
+        optionalDependencies,
+      },
     },
   }));
   return cwd;
@@ -68,6 +86,18 @@ test('creates one ignored-script artifact covered by the files allow-list', () =
 
 test('fails closed without a non-empty package files allow-list', () => {
   const cwd = fixture({ files: [] });
+  try {
+    const result = run(cwd);
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, '');
+    assert.equal(result.stderr, failure);
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('fails when the exact artifact omits the Comins license', () => {
+  const cwd = fixture({ includeLicense: false });
   try {
     const result = run(cwd);
     assert.equal(result.status, 1);

@@ -379,6 +379,19 @@ function readPackedFile(filename, path) {
   });
 }
 
+function dependencyRecord(value) {
+  if (value == null) return {};
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('invalid dependency boundary');
+  }
+
+  const entries = Object.entries(value);
+  if (entries.some(([name, version]) => !nonEmptyString(name) || typeof version !== 'string')) {
+    throw new Error('invalid dependency boundary');
+  }
+  return Object.fromEntries(entries.sort(([left], [right]) => left.localeCompare(right)));
+}
+
 function inspectArtifact(root, value) {
   const relative = safeArtifactPath(value);
   const filename = resolve(root, relative);
@@ -392,6 +405,16 @@ function inspectArtifact(root, value) {
   if (!nonEmptyString(packedManifest.license)) throw new Error('missing packed license');
 
   const repositoryManifest = readJson(resolve(root, 'package.json'));
+  if (packedManifest.license !== repositoryManifest.license) {
+    throw new Error('packed license drift');
+  }
+  for (const section of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
+    const packed = dependencyRecord(packedManifest[section]);
+    const repository = dependencyRecord(repositoryManifest[section]);
+    if (JSON.stringify(packed) !== JSON.stringify(repository)) {
+      throw new Error('packed dependency drift');
+    }
+  }
   if (
     Array.isArray(repositoryManifest.files)
     && repositoryManifest.files.includes('THIRD_PARTY_NOTICES.md')
