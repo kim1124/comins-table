@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Comins GitHub Issue Analysis",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "classification",
+    "summary",
+    "confirmedFacts",
+    "reproduction",
+    "affectedAreas",
+    "probableCause",
+    "recommendedSolution",
+    "proposedScope",
+    "risks",
+    "validationStrategy",
+    "questions",
+    "readiness"
+  ],
+  "properties": {
+    "classification": {
+      "type": "string",
+      "enum": [
+        "bug",
+        "performance",
+        "feature",
+        "documentation",
+        "question",
+        "security",
+        "unknown"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "confirmedFacts": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "reproduction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "notes"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "confirmed",
+            "not-reproduced",
+            "not-applicable",
+            "needs-information"
+          ]
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "affectedAreas": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "probableCause": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "recommendedSolution": {
+      "type": "string",
+      "minLength": 1
+    },
+    "proposedScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inScope",
+        "outOfScope"
+      ],
+      "properties": {
+        "inScope": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "outOfScope": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "validationStrategy": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "readiness": {
+      "type": "string",
+      "enum": [
+        "needs-information",
+        "maintainer-review",
+        "implementation-ready",
+        "security-routing"
+      ]
+    }
+  }
+}
