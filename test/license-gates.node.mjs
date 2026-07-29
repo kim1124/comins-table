@@ -43,6 +43,22 @@ const reservedFontNames = [
   'Spoqa Han Sans JP',
   'Spoqa Han Sans Neo',
 ];
+const currentReviewEntries = [
+  { name: 'lightningcss', version: '1.32.0', license: 'MPL-2.0', dev: true },
+  { name: 'lightningcss-android-arm64', version: '1.32.0', license: 'MPL-2.0', dev: true, optional: true },
+  { name: 'lightningcss-darwin-arm64', version: '1.32.0', license: 'MPL-2.0', dev: true, optional: true },
+  { name: 'lightningcss-darwin-x64', version: '1.32.0', license: 'MPL-2.0', dev: true, optional: true },
+  { name: 'lightningcss-freebsd-x64', version: '1.32.0', license: 'MPL-2.0', dev: true, optional: true },
+  { name: 'lightningcss-linux-arm-gnueabihf', version: '1.32.0', license: 'MPL-2.0', dev: true, optional: true },
+  { name: 'lightningcss-linux-arm64-gnu', version: '1.32.0', license: 'MPL-2.0', dev: true, optional: true },
+  { name: 'lightningcss-linux-arm64-musl', version: '1.32.0', license: 'MPL-2.0', dev: true, optional: true },
+  { name: 'lightningcss-linux-x64-gnu', version: '1.32.0', license: 'MPL-2.0', dev: true, optional: true },
+  { name: 'lightningcss-linux-x64-musl', version: '1.32.0', license: 'MPL-2.0', dev: true, optional: true },
+  { name: 'lightningcss-win32-arm64-msvc', version: '1.32.0', license: 'MPL-2.0', dev: true, optional: true },
+  { name: 'lightningcss-win32-x64-msvc', version: '1.32.0', license: 'MPL-2.0', dev: true, optional: true },
+  { name: 'lru-cache', version: '11.5.2', license: 'BlueOak-1.0.0', dev: true },
+  { name: 'mdn-data', version: '2.27.1', license: 'CC0-1.0', dev: true },
+];
 
 function writeJson(root, path, value) {
   const filename = join(root, path);
@@ -477,7 +493,7 @@ test('rejects missing fonts, incomplete OFL text, package-boundary drift, and em
   }
 });
 
-test('keeps the current repository blocked on exact non-automatic dependencies', () => {
+test('blocks the exact current non-automatic dependencies without approvals', () => {
   const expected = [
     'license-check: review required: lightningcss@1.32.0 (MPL-2.0; development-only-tooling)',
     'license-check: review required: lightningcss-android-arm64@1.32.0 (MPL-2.0; development-only-tooling)',
@@ -494,10 +510,18 @@ test('keeps the current repository blocked on exact non-automatic dependencies',
     'license-check: review required: lru-cache@11.5.2 (BlueOak-1.0.0; development-only-tooling)',
     'license-check: review required: mdn-data@2.27.1 (CC0-1.0; development-only-tooling)',
   ];
-  const result = run(repositoryRoot);
+  const root = fixture({ entries: currentReviewEntries });
+  try {
+    const result = run(root);
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, '');
+    assert.deepEqual(result.stderr.trimEnd().split('\n'), expected);
+    assert.doesNotMatch(result.stderr, /Copyright|Permission is hereby granted/);
+  } finally {
+    remove(root);
+  }
+});
 
-  assert.equal(result.status, 1);
-  assert.equal(result.stdout, '');
-  assert.deepEqual(result.stderr.trimEnd().split('\n'), expected);
-  assert.doesNotMatch(result.stderr, /Copyright|Permission is hereby granted/);
+test('accepts the current repository after exact scoped maintainer approval', () => {
+  expectSuccess(run(repositoryRoot));
 });
