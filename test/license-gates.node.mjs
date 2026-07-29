@@ -43,6 +43,7 @@ const reservedFontNames = [
   'Spoqa Han Sans JP',
   'Spoqa Han Sans Neo',
 ];
+const spoqaLicenseText = readFileSync(join(repositoryRoot, spoqaLicense), 'utf8');
 const currentReviewEntries = [
   { name: 'lightningcss', version: '1.32.0', license: 'MPL-2.0', dev: true },
   { name: 'lightningcss-android-arm64', version: '1.32.0', license: 'MPL-2.0', dev: true, optional: true },
@@ -202,15 +203,7 @@ function writeSpoqaAssets(root, evidence = assetEvidence()) {
   for (const font of spoqaFonts) {
     write(root, font, Buffer.concat([Buffer.from('wOF2'), Buffer.alloc(12)]));
   }
-  write(
-    root,
-    spoqaLicense,
-    [
-      'SIL OPEN FONT LICENSE Version 1.1',
-      ...reservedFontNames.map((name) => `Reserved Font Name ${name}`),
-      '',
-    ].join('\n'),
-  );
+  write(root, spoqaLicense, spoqaLicenseText);
   write(root, readmeGif, Buffer.concat([Buffer.from('GIF87a'), Buffer.alloc(12)]));
   if (evidence) writeJson(root, 'THIRD_PARTY_ASSETS.json', evidence);
 }
@@ -259,6 +252,48 @@ test('passes routine dependencies with exact automatic SPDX metadata', () => {
     } finally {
       remove(root);
     }
+  }
+});
+
+test('rejects package and lockfile root dependency drift', () => {
+  const root = fixture();
+  const lockfile = readJson(root, 'package-lock.json');
+  lockfile.packages[''].devDependencies = {};
+  writeJson(root, 'package-lock.json', lockfile);
+
+  try {
+    expectStructuralFailure(run(root));
+  } finally {
+    remove(root);
+  }
+});
+
+test('rejects a root dependency without lock package metadata', () => {
+  const root = fixture();
+  const lockfile = readJson(root, 'package-lock.json');
+  delete lockfile.packages['node_modules/automatic-tool'];
+  writeJson(root, 'package-lock.json', lockfile);
+
+  try {
+    expectStructuralFailure(run(root));
+  } finally {
+    remove(root);
+  }
+});
+
+test('rejects an external peer without lock package metadata', () => {
+  const root = fixture();
+  const manifest = readJson(root, 'package.json');
+  const lockfile = readJson(root, 'package-lock.json');
+  manifest.peerDependencies = { 'external-peer': '^1.0.0' };
+  lockfile.packages[''].peerDependencies = manifest.peerDependencies;
+  writeJson(root, 'package.json', manifest);
+  writeJson(root, 'package-lock.json', lockfile);
+
+  try {
+    expectStructuralFailure(run(root));
+  } finally {
+    remove(root);
   }
 });
 
@@ -442,6 +477,43 @@ test('rejects an artifact whose runtime dependency boundary differs from the rep
   }
 });
 
+test('rejects a component name that can inject diagnostic lines', () => {
+  const root = fixture({
+    entries: [{
+      name: 'reviewed-tool',
+      version: '1.0.0',
+      license: 'MPL-2.0',
+      dev: true,
+    }],
+  });
+  const lockfile = readJson(root, 'package-lock.json');
+  lockfile.packages['node_modules/reviewed-tool'].name = 'reviewed-tool\nPRIVATE-COMPONENT';
+  writeJson(root, 'package-lock.json', lockfile);
+
+  try {
+    expectStructuralFailure(run(root));
+  } finally {
+    remove(root);
+  }
+});
+
+test('rejects a license value that can inject diagnostic lines', () => {
+  const root = fixture({
+    entries: [{
+      name: 'reviewed-tool',
+      version: '1.0.0',
+      license: 'MPL-2.0\nPRIVATE-LICENSE-BODY',
+      dev: true,
+    }],
+  });
+
+  try {
+    expectStructuralFailure(run(root));
+  } finally {
+    remove(root);
+  }
+});
+
 test('does not expose package contacts or license bodies in review output', () => {
   const root = fixture({
     entries: [{
@@ -497,6 +569,14 @@ test('rejects missing fonts, incomplete OFL text, package-boundary drift, and em
         'Reserved Font Name Spoqa Han Sans Neo',
         '',
       ].join('\n'),
+    ),
+    (root) => write(
+      root,
+      spoqaLicense,
+      spoqaLicenseText.replace(
+        /\nPERMISSION AND CONDITIONS[\s\S]*\nTERMINATION/,
+        '\nTERMINATION',
+      ),
     ),
     (root) => {
       const manifest = readJson(root, 'package.json');

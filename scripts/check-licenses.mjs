@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, isAbsolute, resolve } from 'node:path';
 
@@ -61,6 +62,7 @@ const SPOQA_FONTS = [
   'example/public/fonts/spoqa/SpoqaHanSansNeo-Regular.woff2',
 ];
 const SPOQA_LICENSE = 'example/public/fonts/spoqa/LICENSE.SpoqaHanSans.txt';
+const SPOQA_LICENSE_SHA256 = 'd9574d06965f8a559e73540ac5d8e99f22bcf69a0440e916ec9b9e48464b5093';
 const README_GIF = 'docs/assets/comins-table-demo.gif';
 const ASSET_EVIDENCE = 'THIRD_PARTY_ASSETS.json';
 const RESERVED_FONT_NAMES = [
@@ -77,6 +79,18 @@ function nonEmptyString(value) {
   return typeof value === 'string' && value.trim() === value && value.length > 0;
 }
 
+function packageIdentifier(value) {
+  return nonEmptyString(value)
+    && value.length <= 214
+    && /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/.test(value);
+}
+
+function licenseIdentifier(value) {
+  return nonEmptyString(value)
+    && value.length <= 128
+    && /^[A-Za-z0-9][A-Za-z0-9.+() -]*$/.test(value);
+}
+
 function exactKeys(value, expected) {
   if (value == null || typeof value !== 'object' || Array.isArray(value)) return false;
   const actual = Object.keys(value).sort();
@@ -88,6 +102,13 @@ function uniqueStringList(value) {
   return Array.isArray(value)
     && value.length > 0
     && value.every(nonEmptyString)
+    && new Set(value).size === value.length;
+}
+
+function uniquePackageList(value) {
+  return Array.isArray(value)
+    && value.length > 0
+    && value.every(packageIdentifier)
     && new Set(value).size === value.length;
 }
 
@@ -108,9 +129,9 @@ function publicApprover(value) {
 
 function validApproval(approval) {
   return exactKeys(approval, APPROVAL_KEYS)
-    && uniqueStringList(approval.components)
+    && uniquePackageList(approval.components)
     && exactVersion(approval.version)
-    && nonEmptyString(approval.license)
+    && licenseIdentifier(approval.license)
     && USE_SURFACES.has(approval.useSurface)
     && typeof approval.distributed === 'boolean'
     && uniqueStringList(approval.conditions)
@@ -139,12 +160,14 @@ function loadApprovals(root) {
 }
 
 function packageName(path, entry) {
-  if (nonEmptyString(entry.name)) return entry.name;
-  const marker = 'node_modules/';
-  const index = path.lastIndexOf(marker);
-  if (index < 0) throw new Error('invalid package path');
-  const name = path.slice(index + marker.length);
-  if (!nonEmptyString(name) || name.includes('/node_modules/')) {
+  let name = entry.name;
+  if (name == null) {
+    const marker = 'node_modules/';
+    const index = path.lastIndexOf(marker);
+    if (index < 0) throw new Error('invalid package path');
+    name = path.slice(index + marker.length);
+  }
+  if (!packageIdentifier(name) || name.includes('/node_modules/')) {
     throw new Error('invalid package name');
   }
   return name;
@@ -249,9 +272,11 @@ function inspectAssets(root, manifest) {
   }
 
   const licenseText = readFileSync(resolve(root, SPOQA_LICENSE), 'utf8');
+  const normalizedLicenseText = licenseText.replace(/\r\n/g, '\n').trimEnd();
   if (
     !licenseText.includes('SIL OPEN FONT LICENSE Version 1.1')
     || RESERVED_FONT_NAMES.some((name) => !hasReservedFontName(licenseText, name))
+    || createHash('sha256').update(normalizedLicenseText).digest('hex') !== SPOQA_LICENSE_SHA256
   ) {
     throw new Error('invalid OFL evidence');
   }
@@ -307,6 +332,32 @@ function inspectDependencies(root) {
     throw new Error('invalid package metadata');
   }
 
+  const lockRoot = lockfile.packages[''];
+  if (lockRoot == null || typeof lockRoot !== 'object' || Array.isArray(lockRoot)) {
+    throw new Error('invalid lock root');
+  }
+  const dependencySections = [
+    'dependencies',
+    'optionalDependencies',
+    'peerDependencies',
+    'devDependencies',
+  ];
+  for (const section of dependencySections) {
+    const declared = dependencyRecord(manifest[section]);
+    const locked = dependencyRecord(lockRoot[section]);
+    if (JSON.stringify(declared) !== JSON.stringify(locked)) {
+      throw new Error('stale lock root');
+    }
+  }
+  const directNames = new Set(
+    dependencySections.flatMap((section) => Object.keys(dependencyRecord(manifest[section]))),
+  );
+  for (const name of directNames) {
+    if (!Object.hasOwn(lockfile.packages, `node_modules/${name}`)) {
+      throw new Error('missing direct package metadata');
+    }
+  }
+
   inspectAssets(root, manifest);
   const approvals = loadApprovals(root);
   const review = [];
@@ -317,7 +368,10 @@ function inspectDependencies(root) {
     }
     const name = packageName(path, entry);
     if (!exactVersion(entry.version)) throw new Error('invalid dependency version');
-    const license = nonEmptyString(entry.license) ? entry.license : 'missing';
+    const license = entry.license == null || entry.license === ''
+      ? 'missing'
+      : entry.license;
+    if (!licenseIdentifier(license)) throw new Error('invalid license identifier');
     if (AUTOMATIC_LICENSES.has(license)) continue;
 
     const surface = useSurface(name, entry, manifest);
