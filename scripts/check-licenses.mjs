@@ -85,10 +85,81 @@ function packageIdentifier(value) {
     && /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/.test(value);
 }
 
+function licenseAtom(value) {
+  if (
+    AUTOMATIC_LICENSES.has(value)
+    || value === 'missing'
+    || value === 'NOASSERTION'
+    || value === 'UNLICENSED'
+  ) {
+    return true;
+  }
+  if (
+    /^(?:DocumentRef-[A-Za-z0-9.-]+:)?LicenseRef-[A-Za-z0-9.-]+$/.test(value)
+  ) {
+    return true;
+  }
+  return /^[A-Za-z0-9][A-Za-z0-9.-]*\+?$/.test(value)
+    && (value.includes('-') || /\d/.test(value));
+}
+
 function licenseIdentifier(value) {
-  return nonEmptyString(value)
-    && value.length <= 128
-    && /^[A-Za-z0-9][A-Za-z0-9.+() -]*$/.test(value);
+  if (
+    !nonEmptyString(value)
+    || value.length > 128
+    || !/^[A-Za-z0-9.+(): -]+$/.test(value)
+  ) {
+    return false;
+  }
+
+  const tokens = value
+    .replaceAll('(', ' ( ')
+    .replaceAll(')', ' ) ')
+    .split(' ')
+    .filter(Boolean);
+  let cursor = 0;
+
+  function primary() {
+    if (tokens[cursor] === '(') {
+      cursor += 1;
+      if (!expression() || tokens[cursor] !== ')') return false;
+      cursor += 1;
+      return true;
+    }
+    if (!licenseAtom(tokens[cursor])) return false;
+    cursor += 1;
+    return true;
+  }
+
+  function withExpression() {
+    if (!primary()) return false;
+    if (tokens[cursor] === 'WITH') {
+      cursor += 1;
+      if (!licenseAtom(tokens[cursor])) return false;
+      cursor += 1;
+    }
+    return true;
+  }
+
+  function andExpression() {
+    if (!withExpression()) return false;
+    while (tokens[cursor] === 'AND') {
+      cursor += 1;
+      if (!withExpression()) return false;
+    }
+    return true;
+  }
+
+  function expression() {
+    if (!andExpression()) return false;
+    while (tokens[cursor] === 'OR') {
+      cursor += 1;
+      if (!andExpression()) return false;
+    }
+    return true;
+  }
+
+  return expression() && cursor === tokens.length;
 }
 
 function exactKeys(value, expected) {

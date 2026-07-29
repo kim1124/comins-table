@@ -514,6 +514,23 @@ test('rejects a license value that can inject diagnostic lines', () => {
   }
 });
 
+test('rejects a single-line license body instead of printing it', () => {
+  const root = fixture({
+    entries: [{
+      name: 'reviewed-tool',
+      version: '1.0.0',
+      license: 'Permission is hereby granted free of charge',
+      dev: true,
+    }],
+  });
+
+  try {
+    expectStructuralFailure(run(root));
+  } finally {
+    remove(root);
+  }
+});
+
 test('does not expose package contacts or license bodies in review output', () => {
   const root = fixture({
     entries: [{
