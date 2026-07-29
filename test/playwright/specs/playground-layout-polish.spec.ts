@@ -308,10 +308,13 @@ test("pagination page owns the table paging example above virtualization", async
   await expect(page.getByTestId("pagination-state")).toContainText("Page 1");
   await expect(page.getByRole("button", { exact: true, name: "첫 페이지" })).toBeDisabled();
   await expect(page.getByRole("button", { exact: true, name: "이전 페이지" })).toBeDisabled();
-  await expect(page.getByRole("button", { exact: true, name: "다음 페이지" })).toBeEnabled();
+  const nextPage = page.getByRole("button", { exact: true, name: "다음 페이지" });
+  await expect(nextPage).toBeEnabled();
+  await expect(nextPage.locator("svg")).toHaveCount(0);
+  await expect(nextPage.locator(".ui-pagination__glyph")).toHaveCount(1);
   await expect(page.getByRole("button", { exact: true, name: "마지막 페이지" })).toBeEnabled();
   await expect(page.getByTestId("row-a")).toBeVisible();
-  await page.getByRole("button", { exact: true, name: "다음 페이지" }).click();
+  await nextPage.click();
   await expect(page.getByTestId("row-a")).toHaveCount(0);
   await expect(page.getByTestId("row-row-30")).toBeVisible();
   await expect(page.getByTestId("pagination-control")).toContainText("2 / 4");
@@ -638,9 +641,11 @@ test("example controls stay in one horizontal row with overflow scrolling", asyn
 
   await page.goto("/examples/crud");
   const crudControlRow = page.getByTestId("feature-control-row");
+  const actionButtons = crudControlRow.locator(".feature-action-button");
   await expect(crudControlRow).toBeVisible();
-  await expect(crudControlRow.locator("button")).toHaveCount(5);
-  await expect(crudControlRow.locator("button svg")).toHaveCount(5);
+  await expect(actionButtons).toHaveCount(5);
+  await expect(actionButtons.locator("svg")).toHaveCount(0);
+  await expect(crudControlRow.locator(".feature-action-button__icon")).toHaveCount(0);
   const rowMetrics = await crudControlRow.evaluate((element) => {
     const children = [...element.children].map((child) => child.getBoundingClientRect());
     const firstTop = children[0]?.top ?? 0;

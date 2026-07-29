@@ -1,6 +1,5 @@
 import type React from "react";
 import { Fragment, forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { ArrowUp } from "lucide-react";
 
 import {
   applyCominsColumnLayout,
@@ -2465,7 +2464,7 @@ function CominsTableInner<TData>(
               data-sort-visible={sortIndicatorVisible ? "true" : undefined}
               data-testid={`sort-indicator-${column.id}`}
             >
-              <ArrowUp className="comins-sort-icon" focusable="false" size={14} strokeWidth={2.25} />
+              <span className="comins-sort-icon" />
             </span>
             {showSortPriority ? (
               <span

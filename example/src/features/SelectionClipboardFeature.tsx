@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { RotateCcw } from "lucide-react";
 
 import {
   CominsTable,
@@ -56,7 +55,6 @@ export function SelectionClipboardFeature() {
       >
         <div className="table-toolbar">
           <Button onClick={resetSample} variant="outline">
-            <RotateCcw aria-hidden="true" size={16} />
             예제 초기화
           </Button>
           <span className="table-toolbar__state">
