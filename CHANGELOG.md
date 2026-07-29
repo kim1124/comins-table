@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.1.5 - 2026-07-29
+
+- Removed Lucide from the library, Playground, generated bundles, package dependency tree, and component scaffold while preserving the public sorting and accessibility contracts with module-owned CSS and text glyphs.
+- Added package-artifact regression gates and retained the Lucide/Feather notices required for immutable `0.1.0` through `0.1.4` artifacts.
+- Regenerated the README product demo for the dependency-free UI and upgraded the Playground's React Router development dependency to the security-fixed `8.3.0` line.
+
 ## 0.1.4 - 2026-07-23
 
 - Added opt-in priority-based multi-column sorting for flat and Tree Grid data, including Shift-assisted Header input, sort-model callbacks and Ref methods, accessibility metadata, documentation, and a runnable Playground example.
