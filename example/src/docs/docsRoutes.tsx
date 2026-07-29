@@ -18,6 +18,7 @@ import {
   paginationSamples,
   refApiSamples,
   rowSamples,
+  selectionClipboardSamples,
   sizeSamples,
   summaryRowSamples,
   themeSamples,
@@ -193,6 +194,18 @@ export const docsPages: DocsPage[] = [
     path: "/examples/cell",
   }),
   featurePage({
+    body: paragraphs([
+      "Keep application Rows in React state and pass onChangeData so keyboard paste results remain controlled.",
+      "Use onChangeSelection to observe Row, Cell, and Range selection. Hold Ctrl/Cmd to toggle Rows, Shift to select a Row range, or drag between Cells to select a Cell range.",
+      "Set cell.props.copyable or cell.props.pasteable to false when a Column must not participate in clipboard operations.",
+    ]),
+    category: "Examples",
+    codeSamples: selectionClipboardSamples,
+    featureId: "selection-clipboard",
+    label: "Selection & Clipboard",
+    path: "/examples/selection-clipboard",
+  }),
+  featurePage({
     body: paragraphs(["Review built-in controls and custom renderers for headers and cells."]),
     category: "Cell",
     codeSamples: componentSamples,
@@ -259,20 +272,21 @@ export const docsPages: DocsPage[] = [
     summary: "Documents only the currently implemented props, events, ref methods, and core helpers.",
     title: "Props",
   },
-  {
+  featurePage({
     body: paragraphs([
       "`CominsTableRef<TData>` exposes imperative controls for selection, sort, layout, row movement, and Tree Grid expansion.",
       "`setSelectedRow`, `setSelectedRows`, and `setMoveTargetRow` use the visible index after current sorting and pagination are applied.",
-      "`expand(nodeIds?)` and `fold(nodeIds?)` accept Tree Grid node id arrays. Omitting the argument targets all branches; flat tables treat both methods as no-ops.",
+      "Use the Tree Grid route for live `expand(nodeIds?)` and `fold(nodeIds?)` controls. Flat tables treat both hierarchy methods as no-ops.",
       "Data changes stay in the controlled `data` and `onChangeData` flow instead of being owned by the ref.",
     ]),
     category: "API",
     codeSamples: refApiSamples,
+    featureId: "ref-api",
     label: "Ref API",
     path: "/api/ref",
     summary: "Review implemented ref methods and core helper boundaries.",
     title: "Ref API",
-  },
+  }),
   featurePage({
     body: paragraphs([
       "The pagination prop passes the current pageIndex and pageSize to CominsTable.",
@@ -288,9 +302,10 @@ export const docsPages: DocsPage[] = [
   }),
   featurePage({
     body: paragraphs([
-      "The infinite scroll example appends offset/limit batches from a remote API when the viewport nears the bottom.",
-      "`onLazyLoad` receives offset, limit, and AbortSignal, then uses the response total to decide whether more requests are needed.",
-      "Refresh replaces the internal row array with the offset 0 result and starts loading from the beginning.",
+      "The application owns rows, request cancellation, and remote offset calculation in the controlled Infinite Scroll example.",
+      "When the viewport nears the bottom, CominsTable calls `onLoadMore`; `loadingMore` blocks duplicates and `hasMoreRows` stops requests at exhaustion.",
+      "Refresh aborts the pending application request, replaces rows from offset 0, and starts loading from the beginning.",
+      "Use Lazy Load when CominsTable should request `{ offset, limit, reason, signal }` batches through `onLazyLoad` instead.",
     ]),
     category: "Body / Performance",
     codeSamples: infiniteScrollSamples,

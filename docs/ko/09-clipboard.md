@@ -37,3 +37,7 @@ const filled = fillCominsCellRange(pastedRange, {
 ```
 
 Range paste는 현재 table boundary 안에서만 적용한다.
+
+React에서는 `data={rows}`와 `onChangeData={setRows}`를 함께 전달하면 Ctrl/Cmd+C, Ctrl/Cmd+V 결과가 controlled state에 반영된다. 보호해야 하는 Column은 `cell.props.copyable`과 `cell.props.pasteable`을 `false`로 설정한다.
+
+[`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard)에서 `cellSelection`, `onChangeSelection`, protected Column을 함께 확인할 수 있다.

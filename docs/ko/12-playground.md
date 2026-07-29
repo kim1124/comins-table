@@ -24,6 +24,7 @@ npm run dev
 - `/examples/column-groups`: 2Depth Header 이동, resize, 컬럼/그룹 숨김/표시. `/examples/header-groups`는 legacy URL 호환용 redirect로 유지한다.
 - `/examples/body`: legacy URL 호환용 redirect. 실제 화면은 `/performance/virtualization`으로 이동한다.
 - `/examples/cell`: `cell.format`, `cell.props`, `cell.renderer`, cell event Alert, clipboard guard
+- `/examples/selection-clipboard`: controlled React data, `onChangeSelection`, Row/Cell/Range 선택, Ctrl/Cmd+C, Ctrl/Cmd+V, Column clipboard guard
 - `/examples/component`: Header와 Cell에 적용되는 built-in component와 custom renderer. Component 예제는 렌더링 결과 중심으로 표시한다.
 - `/examples/row`: drag handle reorder, `rowProps.draggable`, row disabled, row custom formatting, row event Alert, row keyboard copy/paste
 - `/examples/summary-row`: 기본 집계, visible-column `colSpan`, 집계 결과 `format`, Row/Cell class 및 style
@@ -32,7 +33,7 @@ npm run dev
 - `/examples/export`: `exportCominsRowsToCsv`, `exportCominsRowsToJson` helper 출력 예제
 - `/api/props`: 현재 구현된 props, events, ref/core 항목
 - `/api/ref`: 현재 구현된 ref method와 core helper 경계
-- `/performance/infinite-scroll`: 원격 API batch를 append하는 `lazyLoad`, `onLazyLoad` 기반 Infinite Scroll 예제
+- `/performance/infinite-scroll`: 소비자가 rows와 요청 lifecycle을 소유하고 `onLoadMore`, `hasMoreRows`, `loadingMore`를 연결하는 Controlled Infinite Scroll 예제
 - `/performance/lazy-load`: append-mode `lazyLoad`, `onLazyLoad`, Loading / Empty / Infinite Scroll 연동 예제
 - `/performance/virtualization`: 10만 Row 기본 로드, virtualized large-row 사용 기준과 검증 주의사항
 

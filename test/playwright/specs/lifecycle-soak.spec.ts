@@ -25,6 +25,8 @@ test("playground repeatedly destroys and recreates feature content without stale
     await page.getByRole("link", { exact: true, name: "Header Basics" }).click();
     await page.getByRole("link", { exact: true, name: "Virtualization" }).click();
     await page.getByRole("link", { exact: true, name: "Cells" }).click();
+    await page.getByRole("link", { exact: true, name: "Selection & Clipboard" }).click();
+    await page.getByRole("link", { exact: true, name: "Ref API" }).click();
     await page.getByRole("link", { exact: true, name: "Getting Started" }).click();
   }
 

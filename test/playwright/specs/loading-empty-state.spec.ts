@@ -25,4 +25,10 @@ test("loading example shows skeleton, overlay, and empty states without hiding t
   await page.getByRole("button", { exact: true, name: "빈 데이터" }).click();
   await expect(page.getByTestId("data-table-empty-state")).toContainText("표시할 데이터가 없습니다.");
   await expect(page.getByRole("columnheader", { exact: true, name: "Column1" })).toBeVisible();
+
+  await page.getByRole("button", { exact: true, name: "데이터 표시" }).click();
+  await expect(page.getByTestId("row-a")).toBeVisible();
+  await expect(page.getByTestId("data-table-empty-state")).toHaveCount(0);
+  await expect(page.getByTestId("data-table-loading-overlay")).toHaveCount(0);
+  await expect(page.getByRole("columnheader", { exact: true, name: "Column1" })).toBeVisible();
 });

@@ -96,6 +96,8 @@ async function warmMemoryBaseline(page: Page) {
     ["Components", "component"],
     ["Rows", "row"],
     ["Context Menu", "context-menu"],
+    ["Selection & Clipboard", "selection-clipboard"],
+    ["Ref API", "ref-api"],
   ] as const;
 
   for (const [label, featureId] of sequence) {
@@ -348,6 +350,8 @@ test("full audit keeps feature lifecycle counters within 10 percent @perf", asyn
       ["Components", "component"],
       ["Rows", "row"],
       ["Context Menu", "context-menu"],
+      ["Selection & Clipboard", "selection-clipboard"],
+      ["Ref API", "ref-api"],
     ] as const;
 
     for (let round = 0; round < 5; round += 1) {

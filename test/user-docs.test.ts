@@ -110,6 +110,7 @@ describe("comins-table user documentation contract", () => {
     expect(readme).toContain("docs/user/01-quick-start.md");
     expect(readme).toContain("/examples/summary-row");
     expect(readme).toContain("/examples/tree-grid");
+    expect(readme).toContain("/examples/selection-clipboard");
     expect(readme).toContain("docs/user/17-tree-grid.md");
     expect(readme).toContain("docs/user/18-summary-row.md");
     expect(readme).not.toContain("does not currently ship a browser example server");
@@ -158,6 +159,38 @@ describe("comins-table user documentation contract", () => {
     expect(virtualization).toContain('"buffer-size"');
     expect(virtualization).toContain("rowHeight");
     expect(virtualization).toContain("--comins-table-row-height");
+  });
+
+  it("documents and demonstrates controlled Infinite Scroll ownership", () => {
+    const englishDocs = readWorkspaceFile("docs/user/15-infinite-scroll.md");
+    const koreanDocs = readWorkspaceFile("docs/ko/15-infinite-scroll.md");
+    const playground = readWorkspaceFile("example/src/features/InfiniteScrollFeature.tsx");
+
+    for (const term of ["infiniteScroll", "hasMoreRows", "loadingMore", "onLoadMore"]) {
+      expect(englishDocs).toContain(term);
+      expect(koreanDocs).toContain(term);
+      expect(playground).toContain(term);
+    }
+
+    expect(playground).not.toContain("onLazyLoad=");
+  });
+
+  it("documents the controlled Selection and Clipboard React example", () => {
+    const docs = [
+      readWorkspaceFile("docs/user/09-clipboard.md"),
+      readWorkspaceFile("docs/user/10-selection.md"),
+      readWorkspaceFile("docs/ko/09-clipboard.md"),
+      readWorkspaceFile("docs/ko/10-selection.md"),
+    ].join("\n");
+    const playground = readWorkspaceFile("example/src/features/SelectionClipboardFeature.tsx");
+
+    for (const term of ["onChangeSelection", "cellSelection", "copyable", "pasteable", "Ctrl", "Shift"]) {
+      expect(docs).toContain(term);
+      expect(playground).toContain(term);
+    }
+
+    expect(docs).toContain("/examples/selection-clipboard");
+    expect(playground).toContain("onChangeData={setRows}");
   });
 
   it("documents the detailed Summary Row and Tree Grid control contracts", () => {
@@ -212,6 +245,34 @@ describe("comins-table user documentation contract", () => {
     expect(playground).toContain("onChangeSortModel={setSortModel}");
     expect(playground).toContain("Shift+Enter/Space");
     expect(optionGuide).toContain("ordered multi-column sort model");
+  });
+
+  it("links Flat Table Ref methods to the live visible-index example", () => {
+    const documents = [
+      readWorkspaceFile("docs/user/06-header.md"),
+      readWorkspaceFile("docs/user/07-row.md"),
+      readWorkspaceFile("docs/user/10-selection.md"),
+      readWorkspaceFile("docs/ko/06-header.md"),
+      readWorkspaceFile("docs/ko/07-row.md"),
+      readWorkspaceFile("docs/ko/10-selection.md"),
+    ];
+
+    for (const document of documents) {
+      expect(document).toContain("/api/ref");
+    }
+
+    const playground = readWorkspaceFile("example/src/features/RefApiFeature.tsx");
+    for (const term of [
+      "setSelectedRows",
+      "setSortModel",
+      "clearSort",
+      "getColumnLayout",
+      "setColumnLayout",
+      "setMoveTargetRow",
+      "onChangeData",
+    ]) {
+      expect(playground).toContain(term);
+    }
   });
 
   it("keeps English and Korean Virtual List Search guidance single-selection-only", () => {

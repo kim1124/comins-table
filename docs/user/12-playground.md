@@ -17,6 +17,7 @@ Implemented routes include:
 - `/examples/header`
 - `/examples/column-groups`
 - `/examples/cell`
+- `/examples/selection-clipboard`
 - `/examples/component`
 - `/examples/row`
 - `/examples/summary-row`
@@ -34,3 +35,5 @@ Implemented routes include:
 Route changes unmount the previous page and example subtree. The playground is meant to demonstrate implemented APIs, not roadmap-only features.
 
 The `/examples/header` route includes an explicit Multi-column Sort sample. Use a normal Header click or `Enter`/`Space` for single sorting, and hold `Shift` with the same input to add or update ordered rules while inspecting the live `CominsSortModel` output.
+
+The `/examples/selection-clipboard` route demonstrates controlled React Rows, visible `onChangeSelection` state, Row/Cell/Range selection, Ctrl/Cmd+C, Ctrl/Cmd+V, and per-Column clipboard guards.

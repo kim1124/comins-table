@@ -195,3 +195,5 @@ Playground 검증 기준:
 - 2 Depth Header는 parent resize 비율 유지, parent block move, child group 밖 이동 미지원, ungrouped `rowSpan=2`, header/body leaf cell geometry alignment를 함께 확인한다.
 - Virtualized mode에서는 header/body가 다른 table이어도 resize 후 column left/width가 같아야 한다.
 - 사용자가 header 위치, resize, sort 표시 문제를 지적한 경우 Playwright assertion 외에 screenshot 또는 DOM geometry evidence를 report에 남긴다.
+
+[`/api/ref`](http://127.0.0.1:4002/api/ref) live 예제는 Flat Table에서 `setSortModel`, `clearSort`, `getColumnLayout`, `setColumnLayout`을 실행한다. Layout method는 현재 Column 순서, 표시 상태, width를 저장하고 복원한다.

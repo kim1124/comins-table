@@ -48,3 +48,37 @@ test("captures data-table example visual typography screenshots", async ({ page 
     path: join(artifactDir, "data-table-mobile.png"),
   });
 });
+
+test("captures Selection and Ref API consumer examples without root overflow", async ({ page }) => {
+  await mkdir(artifactDir, { recursive: true });
+
+  for (const example of [
+    { name: "selection-clipboard", route: "/examples/selection-clipboard" },
+    { name: "ref-api", route: "/api/ref" },
+  ]) {
+    for (const viewport of [
+      { height: 1000, name: "desktop", width: 1440 },
+      { height: 1200, name: "mobile", width: 390 },
+    ]) {
+      await page.setViewportSize({ height: viewport.height, width: viewport.width });
+      await page.goto(example.route);
+      const featureContent = page.getByTestId("feature-content");
+      await expect(featureContent).toBeVisible();
+      const consumerCard = featureContent.getByTestId("feature-sample-card").first();
+      await expect(consumerCard).toBeVisible();
+      await expectBaseTypography(page);
+      await expectNoRootHorizontalOverflow(page);
+      const sidebar = page.locator(".docs-sidebar");
+      await sidebar.evaluate((element) => {
+        element.style.visibility = "hidden";
+      });
+      await consumerCard.screenshot({
+        animations: "disabled",
+        path: join(artifactDir, `${example.name}-${viewport.name}.png`),
+      });
+      await sidebar.evaluate((element) => {
+        element.style.visibility = "";
+      });
+    }
+  }
+});
