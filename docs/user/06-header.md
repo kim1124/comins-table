@@ -46,6 +46,8 @@ tableRef.current?.setSortModel([
 
 During multi-sort only the first rule exposes `aria-sort="ascending"` or `"descending"`. Secondary Headers include an accessible priority description because ARIA does not provide a native multi-key priority attribute.
 
+The live [`/api/ref`](http://127.0.0.1:4002/api/ref) example applies `setSortModel`, `clearSort`, `getColumnLayout`, and `setColumnLayout` against a Flat Table. Layout methods preserve current Column order, visibility, and width.
+
 ## Column reorder
 
 - A left-button mouse interaction activates column reorder at a 6-pixel horizontal drag threshold. Horizontal movement must be greater than vertical movement.

@@ -719,7 +719,7 @@ describe("comins-table keyboard interaction", () => {
 
     act(() => {
       anchorCell.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, button: 0 }));
-      focusCell.dispatchEvent(new MouseEvent("mouseover", { bubbles: true, button: 0 }));
+      focusCell.dispatchEvent(new MouseEvent("mouseover", { bubbles: true, button: 0, buttons: 1 }));
       focusCell.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, button: 0 }));
     });
 
@@ -733,6 +733,36 @@ describe("comins-table keyboard interaction", () => {
       { age: 31, id: "b", name: "Alpha" },
       { age: 42, id: "c", name: "Beta" },
     ]);
+  });
+
+  it("removes active global pointer listeners when unmounted during a cell range drag", () => {
+    const element = renderTable({ data: threeRows });
+    const anchorCell = element.querySelector("[data-testid='cell-a-name']")!;
+    const addEventListener = vi.spyOn(window, "addEventListener");
+    const removeEventListener = vi.spyOn(window, "removeEventListener");
+
+    try {
+      act(() => {
+        anchorCell.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+      });
+
+      const activePointerListeners = addEventListener.mock.calls.filter(
+        ([type]) => type === "pointermove" || type === "pointerup" || type === "pointercancel" || type === "blur",
+      );
+      expect(activePointerListeners).toHaveLength(4);
+
+      act(() => root?.unmount());
+      root = undefined;
+
+      for (const listener of activePointerListeners) {
+        expect(removeEventListener.mock.calls).toContainEqual(listener);
+      }
+    } finally {
+      addEventListener.mockRestore();
+      removeEventListener.mockRestore();
+    }
   });
 
   it("routes row and cell context menu callbacks with precise payloads", () => {

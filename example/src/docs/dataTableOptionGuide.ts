@@ -36,10 +36,12 @@ export const dataTableOptionGuide = [
   },
   {
     items: [
-      { description: "Selects a row by the current visible row index.", name: "setSelectedRow(index)" },
+      { description: "Selects one or more rows by the current visible row indexes.", name: "setSelectedRow(index) / setSelectedRows(indexes)" },
       { description: "Moves the current visible source row to the target visible position.", name: "setMoveTargetRow(targetIdx, sourceIdx)" },
       { description: "Returns visibility, order, and width state for columns.", name: "getColumnLayout()" },
+      { description: "Restores visibility, order, and width state for columns.", name: "setColumnLayout(layout)" },
       { description: "Returns or restores the complete ordered multi-column sort model.", name: "getSortModel() / setSortModel(model)" },
+      { description: "Clears every active sort rule.", name: "clearSort()" },
       { description: "Expands the supplied Tree Grid node id array, or every branch when omitted.", name: "expand(nodeIds?)" },
       { description: "Folds the supplied Tree Grid node id array, or every branch when omitted.", name: "fold(nodeIds?)" },
       { description: "Core helpers provide pure state logic for selection, clipboard, and layout serialization.", name: "core helper" },

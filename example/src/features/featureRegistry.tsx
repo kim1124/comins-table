@@ -11,7 +11,9 @@ import { InfiniteScrollFeature } from "./InfiniteScrollFeature";
 import { LazyLoadFeature } from "./LazyLoadFeature";
 import { LoadingStateFeature } from "./LoadingStateFeature";
 import { PaginationFeature } from "./PaginationFeature";
+import { RefApiFeature } from "./RefApiFeature";
 import { RowFeature } from "./RowFeature";
+import { SelectionClipboardFeature } from "./SelectionClipboardFeature";
 import { SizeFeature } from "./SizeFeature";
 import { SummaryRowFeature } from "./SummaryRowFeature";
 import { ThemeFeature } from "./ThemeFeature";
@@ -140,12 +142,12 @@ export const featureRegistry: FeatureDefinition[] = [
     id: "infinite-scroll",
     label: "Infinite Scroll",
     options: [
-      { description: "Enables append-mode lazy loading.", example: "lazyLoad", name: "lazyLoad" },
-      { description: "Remote API batch size.", example: "lazyLoadBatchSize={40}", name: "lazyLoadBatchSize" },
-      { description: "Distance from the bottom that triggers loading.", example: "lazyLoadThreshold={140}", name: "lazyLoadThreshold" },
-      { description: "Calls the remote API with offset, limit, and signal.", example: "onLazyLoad={fetchRows}", name: "onLazyLoad" },
+      { description: "Enables the controlled bottom-threshold callback.", example: "infiniteScroll", name: "infiniteScroll" },
+      { description: "Stops bottom-threshold callbacks when false.", example: "hasMoreRows={rows.length < total}", name: "hasMoreRows" },
+      { description: "Prevents duplicate requests and renders the loading row.", example: "loadingMore={loadingMore}", name: "loadingMore" },
+      { description: "Lets the consumer append its next remote batch.", example: "onLoadMore={appendRows}", name: "onLoadMore" },
     ],
-    summary: "Infinite scroll example that appends remote API batches.",
+    summary: "Controlled infinite scroll with consumer-owned rows and request lifecycle.",
   },
   {
     Component: LazyLoadFeature,
@@ -173,6 +175,19 @@ export const featureRegistry: FeatureDefinition[] = [
       { description: "Column-level className, style, copy, and paste options.", example: "columns[].cell.props", name: "cell.props" },
     ],
     summary: "Cell formatting, styling, events, and context menu example.",
+  },
+  {
+    Component: SelectionClipboardFeature,
+    description: "Controlled React example for Row, Cell, and Range selection with keyboard clipboard changes.",
+    id: "selection-clipboard",
+    label: "Selection & Clipboard",
+    options: [
+      { description: "Reports the complete Row, Cell, and Range selection state.", example: "onChangeSelection={setSelection}", name: "onChangeSelection" },
+      { description: "Enables Cell and Range selection interaction.", example: "cellSelection", name: "cellSelection" },
+      { description: "Commits keyboard paste results back to consumer state.", example: "onChangeData={setRows}", name: "onChangeData" },
+      { description: "Protects a Column from clipboard reads and writes.", example: "{ copyable: false, pasteable: false }", name: "cell.props" },
+    ],
+    summary: "Consumer-owned selection state and controlled clipboard data updates.",
   },
   {
     Component: ComponentFeature,
@@ -253,6 +268,19 @@ export const featureRegistry: FeatureDefinition[] = [
       { description: "Overrides output order and header names.", example: "{ columnOrder, headerOverrides }", name: "export options" },
     ],
     summary: "CSV and JSON export helper output example.",
+  },
+  {
+    Component: RefApiFeature,
+    description: "Live Flat Table example for selection, sort, layout, and Row movement ref methods.",
+    id: "ref-api",
+    label: "Ref API",
+    options: [
+      { description: "Selects Rows by current visible indexes.", example: "setSelectedRows([0, 2])", name: "setSelectedRows" },
+      { description: "Applies and clears an ordered sort model.", example: "setSortModel(model) / clearSort()", name: "sort ref" },
+      { description: "Reads and restores Column order and width.", example: "getColumnLayout() / setColumnLayout(layout)", name: "layout ref" },
+      { description: "Moves a controlled Row by current visible indexes.", example: "setMoveTargetRow(2, 0)", name: "setMoveTargetRow" },
+    ],
+    summary: "Imperative Flat Table controls with visible callback state.",
   },
 ];
 
