@@ -3,6 +3,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import {
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -30,11 +31,33 @@ const requiredInvalidations = [
   'use-surface',
   'distribution',
 ];
+const spoqaFonts = [
+  'example/public/fonts/spoqa/SpoqaHanSansNeo-Bold.woff2',
+  'example/public/fonts/spoqa/SpoqaHanSansNeo-Medium.woff2',
+  'example/public/fonts/spoqa/SpoqaHanSansNeo-Regular.woff2',
+];
+const spoqaLicense = 'example/public/fonts/spoqa/LICENSE.SpoqaHanSans.txt';
+const readmeGif = 'docs/assets/comins-table-demo.gif';
+const reservedFontNames = [
+  'Spoqa Han Sans',
+  'Spoqa Han Sans JP',
+  'Spoqa Han Sans Neo',
+];
 
 function writeJson(root, path, value) {
   const filename = join(root, path);
   mkdirSync(dirname(filename), { recursive: true });
   writeFileSync(filename, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function readJson(root, path) {
+  return JSON.parse(readFileSync(join(root, path), 'utf8'));
+}
+
+function write(root, path, value) {
+  const filename = join(root, path);
+  mkdirSync(dirname(filename), { recursive: true });
+  writeFileSync(filename, value);
 }
 
 function fixture({
@@ -113,6 +136,67 @@ function approvals(...items) {
     schemaVersion: 1,
     approvals: items,
   };
+}
+
+function assetEvidence() {
+  const common = {
+    component: 'Spoqa Han Sans Neo',
+    version: '3.3.0',
+    source: 'https://github.com/spoqa/spoqa-han-sans/releases/tag/v3.3.0',
+    sourceRevision: 'v3.3.0',
+    license: 'OFL-1.1',
+    modified: false,
+    repositoryDistributed: true,
+    packageDistributed: false,
+    reservedFontNames,
+    licenseFile: spoqaLicense,
+  };
+  return {
+    schemaVersion: 1,
+    assets: [
+      {
+        id: 'spoqa-han-sans-neo-3.3.0',
+        ...common,
+        useSurface: 'repository-asset',
+        generated: false,
+        obligations: [
+          'Keep the full OFL-1.1 text with every repository-distributed font copy.',
+          'Preserve the Reserved Font Names.',
+        ],
+        files: spoqaFonts,
+        containsFontBinary: true,
+      },
+      {
+        id: 'comins-table-readme-demo-gif',
+        ...common,
+        useSurface: 'generated-output',
+        generated: true,
+        obligations: [
+          'Keep the generated GIF outside the npm package.',
+          'Do not embed the source font binaries in the GIF.',
+        ],
+        files: [readmeGif],
+        containsFontBinary: false,
+      },
+    ],
+  };
+}
+
+function writeSpoqaAssets(root, evidence = assetEvidence()) {
+  for (const font of spoqaFonts) {
+    write(root, font, Buffer.concat([Buffer.from('wOF2'), Buffer.alloc(12)]));
+  }
+  write(
+    root,
+    spoqaLicense,
+    [
+      'SIL OPEN FONT LICENSE Version 1.1',
+      ...reservedFontNames.map((name) => `Reserved Font Name ${name}`),
+      '',
+    ].join('\n'),
+  );
+  write(root, readmeGif, Buffer.concat([Buffer.from('GIF87a'), Buffer.alloc(12)]));
+  if (evidence) writeJson(root, 'THIRD_PARTY_ASSETS.json', evidence);
 }
 
 function run(root, ...args) {
@@ -336,6 +420,60 @@ test('does not expose package contacts or license bodies in review output', () =
     assert.doesNotMatch(result.stderr, /private|contact|example\.com|Mozilla Public License/i);
   } finally {
     remove(root);
+  }
+});
+
+test('requires evidence for repository-distributed third-party assets', () => {
+  const root = fixture();
+  writeSpoqaAssets(root, null);
+  try {
+    expectStructuralFailure(run(root));
+    writeJson(root, 'THIRD_PARTY_ASSETS.json', assetEvidence());
+    expectSuccess(run(root));
+  } finally {
+    remove(root);
+  }
+});
+
+test('rejects missing fonts, incomplete OFL text, package-boundary drift, and embedded font bytes', () => {
+  const cases = [
+    (root) => rmSync(join(root, spoqaFonts[0])),
+    (root) => write(
+      root,
+      spoqaLicense,
+      'SIL OPEN FONT LICENSE Version 1.1\nReserved Font Name Spoqa Han Sans Neo\n',
+    ),
+    (root) => write(
+      root,
+      spoqaLicense,
+      [
+        'SIL OPEN FONT LICENSE Version 1.1',
+        'Reserved Font Name Spoqa Han Sans JP',
+        'Reserved Font Name Spoqa Han Sans Neo',
+        '',
+      ].join('\n'),
+    ),
+    (root) => {
+      const manifest = readJson(root, 'package.json');
+      manifest.files = ['example', 'dist'];
+      writeJson(root, 'package.json', manifest);
+    },
+    (root) => write(
+      root,
+      readmeGif,
+      Buffer.concat([Buffer.from('GIF87a'), Buffer.from('wOF2'), Buffer.alloc(8)]),
+    ),
+  ];
+
+  for (const mutate of cases) {
+    const root = fixture();
+    writeSpoqaAssets(root);
+    mutate(root);
+    try {
+      expectStructuralFailure(run(root));
+    } finally {
+      remove(root);
+    }
   }
 });
 

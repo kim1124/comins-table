@@ -37,6 +37,37 @@ const APPROVAL_KEYS = [
   'reviewDate',
   'invalidatesOn',
 ];
+const ASSET_KEYS = [
+  'id',
+  'component',
+  'version',
+  'source',
+  'sourceRevision',
+  'license',
+  'useSurface',
+  'modified',
+  'generated',
+  'repositoryDistributed',
+  'packageDistributed',
+  'reservedFontNames',
+  'obligations',
+  'licenseFile',
+  'files',
+  'containsFontBinary',
+];
+const SPOQA_FONTS = [
+  'example/public/fonts/spoqa/SpoqaHanSansNeo-Bold.woff2',
+  'example/public/fonts/spoqa/SpoqaHanSansNeo-Medium.woff2',
+  'example/public/fonts/spoqa/SpoqaHanSansNeo-Regular.woff2',
+];
+const SPOQA_LICENSE = 'example/public/fonts/spoqa/LICENSE.SpoqaHanSans.txt';
+const README_GIF = 'docs/assets/comins-table-demo.gif';
+const ASSET_EVIDENCE = 'THIRD_PARTY_ASSETS.json';
+const RESERVED_FONT_NAMES = [
+  'Spoqa Han Sans',
+  'Spoqa Han Sans JP',
+  'Spoqa Han Sans Neo',
+];
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -119,6 +150,128 @@ function packageName(path, entry) {
   return name;
 }
 
+function safeRepositoryPath(value) {
+  if (
+    !nonEmptyString(value)
+    || isAbsolute(value)
+    || value.split(/[\\/]/).includes('..')
+    || /[*?[\]]/.test(value)
+    || value.includes('\\')
+  ) {
+    throw new Error('unsafe repository path');
+  }
+  return value.replace(/^\.\//, '').replace(/\/$/, '');
+}
+
+function packageCovers(path, roots) {
+  return roots.some((root) => path === root || path.startsWith(`${root}/`));
+}
+
+function sameStringSet(actual, expected) {
+  return uniqueStringList(actual)
+    && actual.length === expected.length
+    && expected.every((value) => actual.includes(value));
+}
+
+function hasReservedFontName(text, name) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`Reserved Font Name ${escaped}(?:[.,;:]|$)`);
+  return text.split(/\r?\n/).some((line) => pattern.test(line));
+}
+
+function validAssetRecord(record) {
+  return exactKeys(record, ASSET_KEYS)
+    && nonEmptyString(record.id)
+    && record.component === 'Spoqa Han Sans Neo'
+    && record.version === '3.3.0'
+    && record.source === 'https://github.com/spoqa/spoqa-han-sans/releases/tag/v3.3.0'
+    && record.sourceRevision === 'v3.3.0'
+    && record.license === 'OFL-1.1'
+    && new Set(['repository-asset', 'generated-output']).has(record.useSurface)
+    && typeof record.modified === 'boolean'
+    && typeof record.generated === 'boolean'
+    && record.repositoryDistributed === true
+    && record.packageDistributed === false
+    && sameStringSet(record.reservedFontNames, RESERVED_FONT_NAMES)
+    && uniqueStringList(record.obligations)
+    && nonEmptyString(record.licenseFile)
+    && uniqueStringList(record.files)
+    && typeof record.containsFontBinary === 'boolean';
+}
+
+function inspectAssets(root, manifest) {
+  const triggerPaths = [...SPOQA_FONTS, SPOQA_LICENSE, README_GIF];
+  const hasTrackedAssets = triggerPaths.some((path) => existsSync(resolve(root, path)));
+  const evidencePath = resolve(root, ASSET_EVIDENCE);
+  if (!hasTrackedAssets && !existsSync(evidencePath)) return;
+  if (!existsSync(evidencePath)) throw new Error('missing asset evidence');
+
+  const evidence = readJson(evidencePath);
+  if (
+    !exactKeys(evidence, ['schemaVersion', 'assets'])
+    || evidence.schemaVersion !== 1
+    || !Array.isArray(evidence.assets)
+    || evidence.assets.length !== 2
+    || !evidence.assets.every(validAssetRecord)
+  ) {
+    throw new Error('invalid asset evidence');
+  }
+
+  const font = evidence.assets.find((record) => record.id === 'spoqa-han-sans-neo-3.3.0');
+  const gif = evidence.assets.find((record) => record.id === 'comins-table-readme-demo-gif');
+  if (
+    font == null
+    || gif == null
+    || font.useSurface !== 'repository-asset'
+    || font.modified !== false
+    || font.generated !== false
+    || font.containsFontBinary !== true
+    || font.licenseFile !== SPOQA_LICENSE
+    || !sameStringSet(font.files, SPOQA_FONTS)
+    || gif.useSurface !== 'generated-output'
+    || gif.modified !== false
+    || gif.generated !== true
+    || gif.containsFontBinary !== false
+    || gif.licenseFile !== SPOQA_LICENSE
+    || !sameStringSet(gif.files, [README_GIF])
+  ) {
+    throw new Error('invalid asset boundary');
+  }
+
+  const roots = Array.isArray(manifest.files)
+    ? manifest.files.map(safeRepositoryPath)
+    : [];
+  for (const path of [ASSET_EVIDENCE, SPOQA_LICENSE, ...SPOQA_FONTS, README_GIF]) {
+    const safePath = safeRepositoryPath(path);
+    if (!existsSync(resolve(root, safePath)) || packageCovers(safePath, roots)) {
+      throw new Error('invalid asset distribution');
+    }
+  }
+
+  const licenseText = readFileSync(resolve(root, SPOQA_LICENSE), 'utf8');
+  if (
+    !licenseText.includes('SIL OPEN FONT LICENSE Version 1.1')
+    || RESERVED_FONT_NAMES.some((name) => !hasReservedFontName(licenseText, name))
+  ) {
+    throw new Error('invalid OFL evidence');
+  }
+
+  for (const path of SPOQA_FONTS) {
+    const bytes = readFileSync(resolve(root, path));
+    if (bytes.subarray(0, 4).toString('ascii') !== 'wOF2') {
+      throw new Error('invalid font asset');
+    }
+  }
+
+  const gifBytes = readFileSync(resolve(root, README_GIF));
+  if (
+    !/^GIF8[79]a$/.test(gifBytes.subarray(0, 6).toString('ascii'))
+    || gifBytes.indexOf(Buffer.from('wOF2')) >= 0
+  ) {
+    throw new Error('invalid generated asset');
+  }
+}
+
 function useSurface(name, entry, rootManifest) {
   if (entry.dev === true) return 'development-only-tooling';
   if (Object.hasOwn(rootManifest.peerDependencies ?? {}, name)) {
@@ -154,6 +307,7 @@ function inspectDependencies(root) {
     throw new Error('invalid package metadata');
   }
 
+  inspectAssets(root, manifest);
   const approvals = loadApprovals(root);
   const review = [];
   for (const [path, entry] of Object.entries(lockfile.packages)) {
