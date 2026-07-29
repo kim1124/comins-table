@@ -1,8 +1,10 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { basename, isAbsolute } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const FAILURE = 'package-artifact-check: failed\n';
+const licenseChecker = fileURLToPath(new URL('./check-licenses.mjs', import.meta.url));
 
 function normalize(value) {
   const path = value.replaceAll('\\', '/').replace(/^\.\//, '').replace(/\/$/, '');
@@ -85,6 +87,9 @@ try {
     throw new Error('missing allow-list root');
   }
   assertNoBundledThirdPartySources(filename, paths);
+  execFileSync(process.execPath, [licenseChecker, '--artifact', filename], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
   process.stdout.write(`${filename}\n`);
 } catch {
   process.stderr.write(FAILURE);

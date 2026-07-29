@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "assets": [
+    {
+      "id": "spoqa-han-sans-neo-3.3.0",
+      "component": "Spoqa Han Sans Neo",
+      "version": "3.3.0",
+      "source": "https://github.com/spoqa/spoqa-han-sans/releases/tag/v3.3.0",
+      "sourceRevision": "v3.3.0",
+      "license": "OFL-1.1",
+      "useSurface": "repository-asset",
+      "modified": false,
+      "generated": false,
+      "repositoryDistributed": true,
+      "packageDistributed": false,
+      "reservedFontNames": [
+        "Spoqa Han Sans",
+        "Spoqa Han Sans JP",
+        "Spoqa Han Sans Neo"
+      ],
+      "obligations": [
+        "Keep the full OFL-1.1 text with every repository-distributed font copy.",
+        "Preserve the Reserved Font Names."
+      ],
+      "licenseFile": "example/public/fonts/spoqa/LICENSE.SpoqaHanSans.txt",
+      "files": [
+        "example/public/fonts/spoqa/SpoqaHanSansNeo-Bold.woff2",
+        "example/public/fonts/spoqa/SpoqaHanSansNeo-Medium.woff2",
+        "example/public/fonts/spoqa/SpoqaHanSansNeo-Regular.woff2"
+      ],
+      "containsFontBinary": true
+    },
+    {
+      "id": "comins-table-readme-demo-gif",
+      "component": "Spoqa Han Sans Neo",
+      "version": "3.3.0",
+      "source": "https://github.com/spoqa/spoqa-han-sans/releases/tag/v3.3.0",
+      "sourceRevision": "v3.3.0",
+      "license": "OFL-1.1",
+      "useSurface": "generated-output",
+      "modified": false,
+      "generated": true,
+      "repositoryDistributed": true,
+      "packageDistributed": false,
+      "reservedFontNames": [
+        "Spoqa Han Sans",
+        "Spoqa Han Sans JP",
+        "Spoqa Han Sans Neo"
+      ],
+      "obligations": [
+        "Keep the generated GIF outside the npm package.",
+        "Do not embed the source font binaries in the GIF."
+      ],
+      "licenseFile": "example/public/fonts/spoqa/LICENSE.SpoqaHanSans.txt",
+      "files": [
+        "docs/assets/comins-table-demo.gif"
+      ],
+      "containsFontBinary": false
+    }
+  ]
+}

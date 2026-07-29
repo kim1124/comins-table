@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added the Contract v1.4 lean license gate for lockfile metadata, scoped maintainer approvals, repository-only Spoqa asset evidence, and exact npm artifact verification.
+
 ## 0.1.5 - 2026-07-29
 
 - Added controlled Infinite Scroll, Selection & Clipboard, and live Ref API Playground examples with matching React consumer documentation and browser acceptance.
