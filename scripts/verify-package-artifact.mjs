@@ -18,6 +18,49 @@ function covered(path, roots) {
     || roots.some((root) => path === root || path.startsWith(`${root}/`));
 }
 
+function readPackedFile(filename, path) {
+  return execFileSync('tar', ['-xOzf', filename, `package/${path}`], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+}
+
+function assertNoBundledThirdPartySources(filename, paths) {
+  const manifest = JSON.parse(readPackedFile(filename, 'package.json'));
+  const dependencySections = [
+    manifest.dependencies,
+    manifest.optionalDependencies,
+    manifest.peerDependencies,
+    manifest.devDependencies,
+  ];
+  if (
+    dependencySections.some(
+      (section) => section != null && Object.hasOwn(section, 'lucide-react'),
+    )
+  ) {
+    throw new Error('forbidden dependency declaration');
+  }
+
+  for (const path of paths.filter((value) => /^dist\/.*\.js$/.test(value))) {
+    const source = readPackedFile(filename, path);
+    if (/(?:^|\n)\/\/#region node_modules\//.test(source) || /lucide-react/.test(source)) {
+      throw new Error('bundled third-party JavaScript');
+    }
+  }
+
+  for (const path of paths.filter((value) => /^dist\/.*\.js\.map$/.test(value))) {
+    const sourceMap = JSON.parse(readPackedFile(filename, path));
+    const sources = Array.isArray(sourceMap.sources) ? sourceMap.sources : [];
+    if (
+      sources.some((source) =>
+        /(^|\/)node_modules\//.test(String(source).replaceAll('\\', '/')),
+      )
+    ) {
+      throw new Error('bundled third-party source map');
+    }
+  }
+}
+
 try {
   const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
   if (!Array.isArray(packageJson.files) || packageJson.files.length === 0) {
@@ -41,6 +84,7 @@ try {
   if (!roots.every((root) => paths.some((path) => path === root || path.startsWith(`${root}/`)))) {
     throw new Error('missing allow-list root');
   }
+  assertNoBundledThirdPartySources(filename, paths);
   process.stdout.write(`${filename}\n`);
 } catch {
   process.stderr.write(FAILURE);

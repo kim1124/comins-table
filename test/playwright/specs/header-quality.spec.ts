@@ -59,10 +59,45 @@ test("header boundary resize is isolated from immediate column move and animated
   await ageHeader.click();
   await expect(indicator).toHaveAttribute("data-sort-state", "asc");
   await expect(indicator).toHaveCSS("opacity", "1");
+  await expect(indicator).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
+  const ascTransform = await indicator.evaluate((element) => getComputedStyle(element).transform);
+  const sortIcon = indicator.locator(".comins-sort-icon");
+  const sortIconBox = await sortIcon.boundingBox();
+  expect(sortIconBox).not.toBeNull();
+  expect(sortIconBox!.width).toBe(14);
+  expect(sortIconBox!.height).toBe(14);
+  const pseudoStyles = await sortIcon.evaluate((element) => {
+    const before = getComputedStyle(element, "::before");
+    const after = getComputedStyle(element, "::after");
+
+    return {
+      before: {
+        borderLeftStyle: before.borderLeftStyle,
+        borderLeftWidth: before.borderLeftWidth,
+        borderTopStyle: before.borderTopStyle,
+        borderTopWidth: before.borderTopWidth,
+        content: before.content,
+      },
+      after: {
+        backgroundColor: after.backgroundColor,
+        content: after.content,
+      },
+    };
+  });
+  expect(pseudoStyles.before.content).not.toBe("none");
+  expect(pseudoStyles.before.borderTopStyle).toBe("solid");
+  expect(pseudoStyles.before.borderTopWidth).toBe("2px");
+  expect(pseudoStyles.before.borderLeftStyle).toBe("solid");
+  expect(pseudoStyles.before.borderLeftWidth).toBe("2px");
+  expect(pseudoStyles.after.content).not.toBe("none");
+  expect(pseudoStyles.after.backgroundColor).not.toMatch(/^(?:rgba\(0, 0, 0, 0\)|transparent)$/u);
   await expect(page.getByTestId("header-proof-sort")).toHaveCount(0);
 
   await ageHeader.click();
   await expect(indicator).toHaveAttribute("data-sort-state", "desc");
+  await expect(indicator).toHaveCSS("transform", "matrix(-1, 0, 0, -1, 0, 0)");
+  const descTransform = await indicator.evaluate((element) => getComputedStyle(element).transform);
+  expect(descTransform).not.toBe(ascTransform);
 
   await ageHeader.click();
   await expect(indicator).toHaveAttribute("data-sort-state", "none");

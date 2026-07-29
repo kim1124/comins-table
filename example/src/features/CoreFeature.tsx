@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { CircleDot, Copy, Eraser, PaintBucket, Rows3, SquareMousePointer } from "lucide-react";
 
 import {
   CominsTable,
@@ -44,17 +43,15 @@ export function CoreFeature() {
       <FeatureControls
         actions={
           <>
-            <ActionButton icon={<CircleDot />} onClick={() => setCoreState((state) => selectRow(state, "a"))}>
+            <ActionButton onClick={() => setCoreState((state) => selectRow(state, "a"))}>
               Alpha 선택
             </ActionButton>
             <ActionButton
-              icon={<SquareMousePointer />}
               onClick={() => setCoreState((state) => selectCell(state, { columnId: "name", rowId: "a" }))}
             >
               Alpha 이름 셀 선택
             </ActionButton>
             <ActionButton
-              icon={<Copy />}
               onClick={() =>
                 setCoreState((state) =>
                   selectCellRange(state, {
@@ -67,7 +64,6 @@ export function CoreFeature() {
               범위 선택
             </ActionButton>
             <ActionButton
-              icon={<PaintBucket />}
               onClick={() =>
                 setCoreState((state) =>
                   fillCominsCellRange(state, {
@@ -82,10 +78,10 @@ export function CoreFeature() {
             >
               역할 아래로 채우기
             </ActionButton>
-            <ActionButton icon={<Eraser />} onClick={() => setCoreState((state) => clearCominsSelection(state))}>
+            <ActionButton onClick={() => setCoreState((state) => clearCominsSelection(state))}>
               선택 초기화
             </ActionButton>
-            <ActionButton icon={<Rows3 />} onClick={() => setLayoutJson(JSON.stringify(serializeCominsColumnLayout(coreState)))}>
+            <ActionButton onClick={() => setLayoutJson(JSON.stringify(serializeCominsColumnLayout(coreState)))}>
               레이아웃 직렬화
             </ActionButton>
           </>

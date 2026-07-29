@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState } from "react";
-import { Eye, EyeOff, RotateCcw } from "lucide-react";
 
 import { CominsTable, type CominsColumnLayout, type CominsTableRef } from "../../../src";
 import { ActionButton, FeatureControls } from "../components/FeatureControls";
@@ -45,7 +44,6 @@ export function ColumnGroupFeature() {
                 <>
                   <ActionButton
                     aria-pressed={profileGroupVisible}
-                    icon={profileGroupVisible ? <Eye /> : <EyeOff />}
                     onClick={() => {
                       const nextLayout = {
                         ...groupLayout,
@@ -57,7 +55,7 @@ export function ColumnGroupFeature() {
                   >
                     Header 그룹 1 표시
                   </ActionButton>
-                  <ActionButton icon={<RotateCcw />} onClick={resetGroupLayout}>
+                  <ActionButton onClick={resetGroupLayout}>
                     초기화
                   </ActionButton>
                 </>

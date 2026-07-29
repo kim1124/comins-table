@@ -36,6 +36,8 @@ tableRef.current?.setSortModel([
 - A normal click or `Enter`/`Space` keeps the existing single-column `none -> asc -> desc -> none` cycle.
 - `Shift` plus click or `Enter`/`Space` appends a new ascending rule, updates an existing rule in place, or removes its descending rule.
 - Header badges show the 1-based comparison priority. Removing a rule compacts the remaining priorities.
+- The sort indicator is drawn with module-owned CSS and rotates or fades for
+  `asc`, `desc`, and unsorted states.
 - `getSortModel()` and `setSortModel(model)` read and restore the full ordered model. `getSortState()` and `setSortState(rule)` remain available for one-rule compatibility; `setSortState` replaces the full model.
 - `clearSort()` clears every rule. `onChangeSort` continues to observe the first rule, while `onChangeSortModel` observes the complete model.
 - Hidden sortable Columns keep their rules. Removed or non-sortable Columns are removed from the model.

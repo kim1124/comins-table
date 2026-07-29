@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Eye, EyeOff, RotateCcw, Save, Upload } from "lucide-react";
 
 import {
   CominsTable,
@@ -124,7 +123,7 @@ export function HeaderFeature() {
           >
             <FeatureControls
               actions={
-                <ActionButton icon={<RotateCcw />} onClick={resetBasicLayout}>
+                <ActionButton onClick={resetBasicLayout}>
                   초기화
                 </ActionButton>
               }
@@ -162,7 +161,6 @@ export function HeaderFeature() {
               actions={
                 <ActionButton
                   aria-pressed={visibilityShowHeader}
-                  icon={visibilityShowHeader ? <Eye /> : <EyeOff />}
                   onClick={() => setVisibilityShowHeader((current) => !current)}
                 >
                   Header 표시
@@ -201,7 +199,6 @@ export function HeaderFeature() {
               actions={
                 <>
                   <ActionButton
-                    icon={<Save />}
                     onClick={() =>
                       setSavedLayout(
                         JSON.stringify(
@@ -218,7 +215,6 @@ export function HeaderFeature() {
                     저장
                   </ActionButton>
                   <ActionButton
-                    icon={<Upload />}
                     onClick={() => {
                       if (savedLayout) {
                         const nextSnapshot = parseHeaderLayoutSnapshot(savedLayout);
@@ -231,7 +227,7 @@ export function HeaderFeature() {
                   >
                     불러오기
                   </ActionButton>
-                  <ActionButton icon={<RotateCcw />} onClick={resetSavedLayout}>
+                  <ActionButton onClick={resetSavedLayout}>
                     초기화
                   </ActionButton>
                 </>
@@ -262,7 +258,7 @@ export function HeaderFeature() {
           >
             <FeatureControls
               actions={
-                <ActionButton icon={<RotateCcw />} onClick={() => multiSortTableRef.current?.clearSort()}>
+                <ActionButton onClick={() => multiSortTableRef.current?.clearSort()}>
                   Sort 초기화
                 </ActionButton>
               }

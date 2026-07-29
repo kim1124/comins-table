@@ -1118,6 +1118,8 @@ describe("comins-table keyboard interaction", () => {
     const ageHeader = element.querySelector("[data-testid='header-age']")!;
     const indicator = element.querySelector("[data-testid='sort-indicator-age']")!;
 
+    expect(indicator.querySelector("svg")).toBeNull();
+    expect(indicator.querySelector("span.comins-sort-icon")).not.toBeNull();
     expect(indicator.getAttribute("data-sort-state")).toBe("none");
 
     act(() => {

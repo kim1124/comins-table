@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Funnel, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 
 import { CominsTable, type CominsTableColumn, type CominsSelectionState } from "../../../src";
 import { ActionButton, FeatureControls } from "../components/FeatureControls";
@@ -108,17 +107,16 @@ export function BasicCrudFeature() {
         <FeatureControls
           actions={
             <>
-              <ActionButton icon={<Plus />} onClick={addRow}>
+              <ActionButton onClick={addRow}>
                 추가
               </ActionButton>
-              <ActionButton icon={<Pencil />} onClick={updateActiveRow}>
+              <ActionButton onClick={updateActiveRow}>
                 수정
               </ActionButton>
-              <ActionButton icon={<Trash2 />} onClick={deleteSelectedRows} tone="danger">
+              <ActionButton onClick={deleteSelectedRows} tone="danger">
                 삭제
               </ActionButton>
               <ActionButton
-                icon={<RotateCcw />}
                 onClick={() => {
                   setRows(createExampleRows(100));
                   setOwnersOnly(false);
@@ -132,7 +130,6 @@ export function BasicCrudFeature() {
                 초기화
               </ActionButton>
               <ActionButton
-                icon={<Funnel />}
                 onClick={() => {
                   setOwnersOnly((current) => !current);
                 }}

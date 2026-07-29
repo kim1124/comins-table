@@ -52,7 +52,8 @@
     "dist",
     "README.md",
     "styles.css",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "sideEffects": [
     "./styles.css"
@@ -73,8 +74,5 @@
     "typescript": "^7.0.2",
     "vite": "^8.1.5",
     "vitest": "^4.1.10"
-  },
-  "dependencies": {
-    "lucide-react": "^1.25.0"
   }
 }

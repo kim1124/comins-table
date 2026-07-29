@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown } from "lucide-react";
 
 export type MultiSelectOption = {
   label: string;
@@ -102,9 +101,11 @@ export function MultiSelect({ "data-testid": testId, label, onChange, options, v
           key={option.value}
         >
           <input checked={selectedValues.has(option.value)} onChange={() => toggleValue(option.value)} type="checkbox" />
-          <span className="ui-selectbox-option__check" aria-hidden="true">
-            {selectedValues.has(option.value) ? <Check size={14} /> : null}
-          </span>
+          <span
+            aria-hidden="true"
+            className="ui-selectbox-option__check"
+            data-selected={selectedValues.has(option.value) ? "true" : undefined}
+          />
           <span>{option.label}</span>
         </label>
       ))}
@@ -125,7 +126,7 @@ export function MultiSelect({ "data-testid": testId, label, onChange, options, v
       >
         <span className="ui-selectbox-trigger__label">{label}</span>
         <strong>{values.length}개 컬럼</strong>
-        <ChevronDown aria-hidden="true" size={16} />
+        <span aria-hidden="true" className="ui-selectbox-trigger__chevron" />
       </button>
       {typeof document === "undefined" ? popover : createPortal(popover, document.body)}
     </div>

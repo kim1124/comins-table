@@ -11,10 +11,23 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const checker = join(root, 'scripts', 'verify-package-artifact.mjs');
 const failure = 'package-artifact-check: failed\n';
 
-function fixture(files = ['dist', 'README.md', 'CHANGELOG.md']) {
+function fixture({
+  files = ['dist', 'README.md', 'CHANGELOG.md'],
+  dependencies,
+  optionalDependencies,
+  indexSource = 'export const value = 1;\n',
+  mapSources = ['../src/index.ts'],
+} = {}) {
   const cwd = mkdtempSync(join(tmpdir(), 'comins-table-package-'));
   mkdirSync(join(cwd, 'dist'));
-  writeFileSync(join(cwd, 'dist', 'index.js'), 'export {};\n');
+  writeFileSync(join(cwd, 'dist', 'index.js'), indexSource);
+  writeFileSync(join(cwd, 'dist', 'index.js.map'), JSON.stringify({
+    version: 3,
+    file: 'index.js',
+    sources: mapSources,
+    names: [],
+    mappings: '',
+  }));
   writeFileSync(join(cwd, 'README.md'), '# Fixture\n');
   writeFileSync(join(cwd, 'CHANGELOG.md'), '# Changes\n');
   writeFileSync(join(cwd, 'LICENSE'), 'MIT\n');
@@ -22,6 +35,8 @@ function fixture(files = ['dist', 'README.md', 'CHANGELOG.md']) {
     name: 'comins-artifact-fixture',
     version: '1.0.0',
     files,
+    dependencies,
+    optionalDependencies,
     scripts: {
       prepack: "node -e \"require('node:fs').writeFileSync('should-not-exist','blocked')\"",
     },
@@ -52,11 +67,77 @@ test('creates one ignored-script artifact covered by the files allow-list', () =
 });
 
 test('fails closed without a non-empty package files allow-list', () => {
-  const cwd = fixture([]);
+  const cwd = fixture({ files: [] });
   try {
     const result = run(cwd);
     assert.equal(result.status, 1);
     assert.equal(result.stdout, '');
+    assert.equal(result.stderr, failure);
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('fails when the packed manifest declares lucide-react', () => {
+  const cwd = fixture({
+    dependencies: { 'lucide-react': '^0.468.0' },
+  });
+  try {
+    const result = run(cwd);
+    assert.equal(result.status, 1);
+    assert.equal(result.stderr, failure);
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('fails when the packed manifest declares lucide-react in optionalDependencies', () => {
+  const cwd = fixture({
+    optionalDependencies: { 'lucide-react': '^0.468.0' },
+  });
+  try {
+    const result = run(cwd);
+    assert.equal(result.status, 1);
+    assert.equal(result.stderr, failure);
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('fails when optionalDependencies contains a falsy lucide-react declaration', () => {
+  const cwd = fixture({
+    optionalDependencies: { 'lucide-react': '' },
+  });
+  try {
+    const result = run(cwd);
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, '');
+    assert.equal(result.stderr, failure);
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('fails when a shipped source map exposes bundled node_modules sources', () => {
+  const cwd = fixture({
+    mapSources: ['../src/index.ts', '../node_modules/lucide-react/dist/cjs/lucide-react.js'],
+  });
+  try {
+    const result = run(cwd);
+    assert.equal(result.status, 1);
+    assert.equal(result.stderr, failure);
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('fails when shipped JavaScript contains a node_modules bundle region', () => {
+  const cwd = fixture({
+    indexSource: '//#region node_modules/third-party-package/index.js\n',
+  });
+  try {
+    const result = run(cwd);
+    assert.equal(result.status, 1);
     assert.equal(result.stderr, failure);
   } finally {
     rmSync(cwd, { recursive: true, force: true });

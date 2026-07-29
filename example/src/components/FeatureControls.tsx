@@ -29,11 +29,10 @@ export function FeatureControls({ actions, options }: FeatureControlsProps) {
 }
 
 type ActionButtonProps = Omit<ButtonProps, "variant"> & {
-  icon: React.ReactNode;
   tone?: ActionTone;
 };
 
-export function ActionButton({ children, className, icon, tone = "primary", ...props }: ActionButtonProps) {
+export function ActionButton({ children, className, tone = "primary", ...props }: ActionButtonProps) {
   return (
     <Button
       className={["feature-action-button", className].filter(Boolean).join(" ")}
@@ -41,9 +40,6 @@ export function ActionButton({ children, className, icon, tone = "primary", ...p
       variant={tone}
       {...props}
     >
-      <span aria-hidden="true" className="feature-action-button__icon">
-        {icon}
-      </span>
       <span>{children}</span>
     </Button>
   );
