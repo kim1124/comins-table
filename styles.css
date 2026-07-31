@@ -315,6 +315,7 @@
 
 .comins-table__body-viewport[data-virtualized="true"] {
   contain: layout paint;
+  overflow-anchor: none;
   position: relative;
   scroll-behavior: auto;
 }

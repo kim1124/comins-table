@@ -211,6 +211,62 @@ describe("comins-table keyboard interaction", () => {
     expect(customRows.length).toBe(42);
   });
 
+  it("keeps a fixed detail owner mounted when the virtual viewport starts inside its detail", () => {
+    const detailRows = manyRows.slice(0, 100);
+    const renderProps = (expandedRowIds: readonly string[]) => (
+      <CominsTable
+        buffer-size={2}
+        columns={columns}
+        data={detailRows}
+        data-testid="fixed-detail-viewport"
+        expandedRowIds={expandedRowIds}
+        getRowDetailHeight={() => 300}
+        getRowId={(row) => row.id}
+        onChangeExpandedRowIds={() => undefined}
+        renderRowDetail={({ row }) => <span>{`Detail ${row.id}`}</span>}
+        rowHeight={36}
+        virtualized
+      />
+    );
+    const element = renderTableElement(renderProps(["row-20"]));
+    const viewport = element.querySelector<HTMLElement>("[data-testid='fixed-detail-viewport']")!;
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+
+    try {
+      Object.defineProperties(viewport, {
+        clientHeight: { configurable: true, value: 180 },
+        scrollHeight: { configurable: true, value: 3900 },
+        scrollTop: { configurable: true, value: 800, writable: true },
+      });
+
+      act(() => {
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+
+      expect(element.querySelector("[data-testid='row-row-20']")).not.toBeNull();
+      expect(element.querySelector("[data-detail-for='row-20']")).not.toBeNull();
+      expect(
+        element.querySelector<HTMLElement>(".comins-table__body-virtual-sizer")?.style.height,
+      ).toBe("3900px");
+      expect(element.querySelectorAll("tbody tr[data-comins-row-data-index]").length).toBeLessThanOrEqual(16);
+
+      act(() => {
+        root?.render(renderProps([]));
+      });
+
+      expect(
+        element.querySelector<HTMLElement>(".comins-table__body-virtual-sizer")?.style.height,
+      ).toBe("3600px");
+    } finally {
+      requestAnimationFrame.mockRestore();
+    }
+  });
+
   it("calls onLoadMore once when infinite scroll reaches the bottom threshold", () => {
     const onLoadMore = vi.fn();
     const element = renderTableElement(

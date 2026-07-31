@@ -44,6 +44,29 @@ export type CominsScrollAnchor = {
   previousIndex: number;
 };
 
+export function getCominsDataSlotKey(rowId: CominsRowId) {
+  return `data:${typeof rowId}:${encodeURIComponent(String(rowId))}`;
+}
+
+export function createCominsDataVirtualSlot<TData>(input: {
+  dataIndex: number;
+  detail: CominsDataVirtualSlot<TData>["detail"] | null;
+  row: TData;
+  rowHeight: number;
+  rowId: CominsRowId;
+  visibleIndex: number;
+}): CominsDataVirtualSlot<TData> {
+  return {
+    dataIndex: input.dataIndex,
+    ...(input.detail ? { detail: input.detail } : {}),
+    key: getCominsDataSlotKey(input.rowId),
+    kind: "data",
+    row: input.row,
+    rowId: input.rowId,
+    visibleIndex: input.visibleIndex,
+  };
+}
+
 export function normalizeCominsDetailEstimate(value: number | undefined) {
   return typeof value === "number" && Number.isFinite(value) && value > 0
     ? value

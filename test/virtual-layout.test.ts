@@ -5,6 +5,7 @@ import {
   COMINS_MAX_PHYSICAL_TOTAL_HEIGHT,
   CominsHeightIndex,
   captureCominsScrollAnchor,
+  createCominsDataVirtualSlot,
   getCominsMixedVirtualRange,
   getCominsPhysicalScrollTop,
   getCominsSlotHeight,
@@ -161,5 +162,28 @@ describe("virtual layout", () => {
         36,
       ),
     ).toBe(42);
+  });
+
+  it("keeps collapsed data slots at rowHeight and adds fixed detail height", () => {
+    const collapsed = createCominsDataVirtualSlot({
+      dataIndex: 0,
+      detail: null,
+      row: { id: "a" },
+      rowHeight: 36,
+      rowId: "a",
+      visibleIndex: 0,
+    });
+    const expanded = createCominsDataVirtualSlot({
+      dataIndex: 1,
+      detail: { estimated: false, height: 300, mode: "fixed" },
+      row: { id: "b" },
+      rowHeight: 36,
+      rowId: "b",
+      visibleIndex: 1,
+    });
+
+    expect(getCominsSlotHeight(collapsed, 36)).toBe(36);
+    expect(getCominsSlotHeight(expanded, 36)).toBe(336);
+    expect(collapsed.key).not.toBe(expanded.key);
   });
 });

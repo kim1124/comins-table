@@ -1,5 +1,15 @@
 import type React from "react";
-import { Fragment, forwardRef, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  forwardRef,
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   applyCominsColumnLayout,
@@ -41,6 +51,21 @@ import {
   toggleCominsTreeNode,
   updateCominsTreeItem,
 } from "./tree";
+import {
+  CominsHeightIndex,
+  captureCominsScrollAnchor,
+  createCominsDataVirtualSlot,
+  getCominsDataSlotKey,
+  getCominsMixedVirtualRange,
+  getCominsPhysicalScrollTop,
+  getCominsScrollScale,
+  getCominsSlotHeight,
+  normalizeCominsDetailEstimate,
+  normalizeCominsDetailHeight,
+  resolveCominsAnchorLogicalScrollTop,
+  type CominsDataVirtualSlot,
+  type CominsVirtualSlot,
+} from "./virtual-layout";
 
 export * from "./core";
 export * from "./summary";
@@ -300,6 +325,31 @@ type VisibleRowEntry<TData> = {
   row: TData;
   rowId: CominsRowId;
   visibleIndex: number;
+};
+
+type CominsVirtualWindow<TData> = {
+  mixed: boolean;
+  renderOffset: number;
+  scrollHeight: number;
+  slots: Array<CominsVirtualSlot<TData>>;
+};
+
+type CominsMixedVirtualProjection<TData> = {
+  heightIndex: CominsHeightIndex;
+  keys: string[];
+  slots: Array<CominsDataVirtualSlot<TData>>;
+};
+
+type CominsPreviousVirtualProjection = {
+  mixed: false;
+  projectedDataIndexes: readonly number[];
+  rowHeight: number;
+  rowIds: readonly CominsRowId[];
+  visibleRowCount: number;
+} | {
+  heightIndex: CominsHeightIndex;
+  keys: readonly string[];
+  mixed: true;
 };
 
 type CominsTreeRenderContext<TData> = {
@@ -1146,6 +1196,7 @@ function CominsTableInner<TData>(
   const rangeDragMovedRef = useRef(false);
   const rowMoveStateRef = useRef<CominsRowMoveState | null>(null);
   const pendingScrollTopRef = useRef(0);
+  const previousVirtualProjectionRef = useRef<CominsPreviousVirtualProjection | null>(null);
   const scrollCommitTimeoutRef = useRef<number | null>(null);
   const scrollFrameRef = useRef<number | null>(null);
   const suppressedSortClickRef = useRef<CominsSuppressedSortClick | null>(null);
@@ -1483,12 +1534,127 @@ function CominsTableInner<TData>(
     () => (treeContext || state.sortModel.length === 0 ? null : getCominsSortedRowIndexes(state)),
     [state, treeContext],
   );
-  const visibleRowCount = sortedRowIndexes?.length ?? state.rows.length;
+  const projectedDataIndexes = useMemo(
+    () => sortedRowIndexes ?? state.rows.map((_row, index) => index),
+    [sortedRowIndexes, state.rows],
+  );
+  const visibleRowCount = projectedDataIndexes.length;
+  const effectiveExpandedRowIdSet = useMemo(() => {
+    if (!rowDetailEnabled) {
+      return new Set<CominsRowId>();
+    }
+
+    const next = new Set<CominsRowId>();
+
+    projectedDataIndexes.forEach((dataIndex, visibleIndex) => {
+      const row = state.rows[dataIndex];
+      const rowId = state.rowIds[dataIndex];
+
+      if (row === undefined || rowId === undefined || !expandedRowIdSet.has(rowId)) {
+        return;
+      }
+
+      const entry = { dataIndex, row, rowId, visibleIndex };
+      const params = { row: createEventRow(entry) };
+
+      if (isRowExpandable?.(params) !== false) {
+        next.add(rowId);
+      }
+    });
+
+    return next;
+  }, [
+    expandedRowIdSet,
+    isRowExpandable,
+    projectedDataIndexes,
+    rowDetailEnabled,
+    state.rowIds,
+    state.rows,
+  ]);
+  const mixedProjection = useMemo<CominsMixedVirtualProjection<TData> | null>(() => {
+    if (!virtualized || effectiveExpandedRowIdSet.size === 0) {
+      return null;
+    }
+
+    const safeRowHeight = Math.max(1, rowHeight);
+    const slots = projectedDataIndexes.flatMap<CominsDataVirtualSlot<TData>>(
+      (dataIndex, visibleIndex) => {
+        const row = state.rows[dataIndex];
+        const rowId = state.rowIds[dataIndex];
+
+        if (row === undefined || rowId === undefined) {
+          return [];
+        }
+
+        let detail: CominsDataVirtualSlot<TData>["detail"] | null = null;
+
+        if (effectiveExpandedRowIdSet.has(rowId)) {
+          const params = { row: createEventRow({ dataIndex, row, rowId, visibleIndex }) };
+          const normalized = normalizeCominsDetailHeight(getRowDetailHeight?.(params));
+
+          detail =
+            normalized.mode === "auto"
+              ? {
+                  estimated: true,
+                  height: normalizeCominsDetailEstimate(estimatedRowDetailHeight),
+                  mode: "auto",
+                }
+              : { estimated: false, height: normalized.height, mode: "fixed" };
+        }
+
+        return [
+          createCominsDataVirtualSlot({
+            dataIndex,
+            detail,
+            row,
+            rowHeight: safeRowHeight,
+            rowId,
+            visibleIndex,
+          }),
+        ];
+      },
+    );
+    const heightIndex = CominsHeightIndex.from(
+      slots.map((slot) => getCominsSlotHeight(slot, safeRowHeight)),
+    );
+
+    return {
+      heightIndex,
+      keys: slots.map((slot) => slot.key),
+      slots,
+    };
+  }, [
+    effectiveExpandedRowIdSet,
+    estimatedRowDetailHeight,
+    getRowDetailHeight,
+    projectedDataIndexes,
+    rowHeight,
+    state.rowIds,
+    state.rows,
+    virtualized,
+  ]);
   const pageStartIndex = Math.max(0, state.pagination.pageIndex) * Math.max(1, state.pagination.pageSize);
-  const rowWindow = useMemo(() => {
+  const rowWindow = useMemo<CominsVirtualWindow<TData>>(() => {
     if (virtualized) {
       const safeRowHeight = Math.max(1, rowHeight);
       const viewportHeight = containerHeight || rowHeight * 12;
+
+      if (mixedProjection) {
+        const range = getCominsMixedVirtualRange({
+          heightIndex: mixedProjection.heightIndex,
+          overscan: virtualBufferSize,
+          physicalScrollTop: scrollTop,
+          viewportHeight,
+        });
+
+        return {
+          mixed: true,
+          renderOffset: range.renderOffset,
+          scrollHeight: range.physicalScrollHeight,
+          slots: mixedProjection.slots.slice(range.startIndex, range.endIndex),
+        };
+      }
+
       const totalHeight = visibleRowCount * safeRowHeight;
       const maxPhysicalTotalHeight = 1_500_000;
       const physicalTotalHeight = Math.min(totalHeight, maxPhysicalTotalHeight);
@@ -1506,27 +1672,51 @@ function CominsTableInner<TData>(
       );
       const logicalTopSpacerHeight = startIndex * safeRowHeight;
       const renderOffset = scrollScale > 0 ? logicalTopSpacerHeight / scrollScale : logicalTopSpacerHeight;
-
-      return {
-        entries: createVisibleRowEntries(sortedRowIndexes, state.rows, state.rowIds, startIndex, endIndex),
-        renderOffset,
-        scrollHeight: physicalTotalHeight,
-      };
-    }
-
-    return {
-      entries: createVisibleRowEntries(
+      const entries = createVisibleRowEntries(
         sortedRowIndexes,
         state.rows,
         state.rowIds,
-        pageStartIndex,
-        pageStartIndex + Math.max(1, state.pagination.pageSize),
-      ),
+        startIndex,
+        endIndex,
+      );
+
+      return {
+        mixed: false,
+        renderOffset,
+        scrollHeight: physicalTotalHeight,
+        slots: entries.map((entry) =>
+          createCominsDataVirtualSlot({
+            ...entry,
+            detail: null,
+            rowHeight: safeRowHeight,
+          }),
+        ),
+      };
+    }
+
+    const entries = createVisibleRowEntries(
+      sortedRowIndexes,
+      state.rows,
+      state.rowIds,
+      pageStartIndex,
+      pageStartIndex + Math.max(1, state.pagination.pageSize),
+    );
+
+    return {
+      mixed: false,
       renderOffset: 0,
       scrollHeight: 0,
+      slots: entries.map((entry) =>
+        createCominsDataVirtualSlot({
+          ...entry,
+          detail: null,
+          rowHeight,
+        }),
+      ),
     };
   }, [
     containerHeight,
+    mixedProjection,
     pageStartIndex,
     rowHeight,
     scrollTop,
@@ -1535,6 +1725,135 @@ function CominsTableInner<TData>(
     state.rowIds,
     state.rows,
     virtualBufferSize,
+    virtualized,
+    visibleRowCount,
+  ]);
+  useLayoutEffect(() => {
+    if (!virtualized) {
+      previousVirtualProjectionRef.current = null;
+      return;
+    }
+
+    const nextProjection: CominsPreviousVirtualProjection = mixedProjection
+      ? {
+          heightIndex: mixedProjection.heightIndex,
+          keys: mixedProjection.keys,
+          mixed: true,
+        }
+      : {
+          mixed: false,
+          projectedDataIndexes,
+          rowHeight: Math.max(1, rowHeight),
+          rowIds: state.rowIds,
+          visibleRowCount,
+        };
+    const previousProjection = previousVirtualProjectionRef.current;
+
+    previousVirtualProjectionRef.current = nextProjection;
+
+    if (
+      !previousProjection ||
+      (previousProjection.mixed &&
+        nextProjection.mixed &&
+        previousProjection.heightIndex === nextProjection.heightIndex) ||
+      (!previousProjection.mixed && !nextProjection.mixed)
+    ) {
+      return;
+    }
+
+    const viewport = containerRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    const viewportHeight = viewport.clientHeight || containerHeight || rowHeight * 12;
+    const physicalScrollTop = viewport.scrollTop;
+    const anchor = previousProjection.mixed
+      ? captureCominsScrollAnchor({
+          heightIndex: previousProjection.heightIndex,
+          keys: previousProjection.keys,
+          logicalScrollTop: getCominsMixedVirtualRange({
+            heightIndex: previousProjection.heightIndex,
+            overscan: 0,
+            physicalScrollTop,
+            viewportHeight,
+          }).logicalScrollTop,
+        })
+      : (() => {
+          if (previousProjection.visibleRowCount === 0) {
+            return undefined;
+          }
+
+          const metrics = getCominsScrollScale(
+            previousProjection.visibleRowCount * previousProjection.rowHeight,
+            viewportHeight,
+          );
+          const logicalScrollTop = Math.min(
+            metrics.logicalScrollableHeight,
+            Math.max(0, physicalScrollTop) * metrics.scrollScale,
+          );
+          const previousIndex = Math.min(
+            previousProjection.visibleRowCount - 1,
+            Math.floor(logicalScrollTop / previousProjection.rowHeight),
+          );
+          const dataIndex = previousProjection.projectedDataIndexes[previousIndex];
+          const rowId = dataIndex === undefined ? undefined : previousProjection.rowIds[dataIndex];
+
+          return rowId === undefined
+            ? undefined
+            : {
+                key: getCominsDataSlotKey(rowId),
+                offsetWithinSlot: logicalScrollTop - previousIndex * previousProjection.rowHeight,
+                previousIndex,
+              };
+        })();
+
+    if (!anchor) {
+      return;
+    }
+
+    const nextLogicalScrollTop = nextProjection.mixed
+      ? resolveCominsAnchorLogicalScrollTop({
+          anchor,
+          nextHeightIndex: nextProjection.heightIndex,
+          nextKeys: nextProjection.keys,
+          previousKeys: previousProjection.mixed ? previousProjection.keys : nextProjection.keys,
+        })
+      : (() => {
+          const nextVisibleIndex = nextProjection.projectedDataIndexes.findIndex((dataIndex) => {
+            const rowId = nextProjection.rowIds[dataIndex];
+
+            return rowId !== undefined && getCominsDataSlotKey(rowId) === anchor.key;
+          });
+
+          return nextVisibleIndex === -1
+            ? 0
+            : nextVisibleIndex * nextProjection.rowHeight +
+                Math.min(anchor.offsetWithinSlot, nextProjection.rowHeight);
+        })();
+    const nextLogicalTotalHeight = nextProjection.mixed
+      ? nextProjection.heightIndex.getTotalHeight()
+      : nextProjection.visibleRowCount * nextProjection.rowHeight;
+    const nextPhysicalScrollTop = getCominsPhysicalScrollTop(
+      nextLogicalScrollTop,
+      nextLogicalTotalHeight,
+      viewport.clientHeight,
+    );
+
+    if (scrollFrameRef.current !== null) {
+      window.cancelAnimationFrame(scrollFrameRef.current);
+      scrollFrameRef.current = null;
+    }
+
+    viewport.scrollTop = nextPhysicalScrollTop;
+    pendingScrollTopRef.current = nextPhysicalScrollTop;
+    setScrollTop(nextPhysicalScrollTop);
+  }, [
+    mixedProjection,
+    projectedDataIndexes,
+    rowHeight,
+    state.rowIds,
     virtualized,
     visibleRowCount,
   ]);
@@ -1617,13 +1936,17 @@ function CominsTableInner<TData>(
   const stateRowCount =
     (shouldRenderSkeleton ? resolvedSkeletonRowCount : shouldRenderEmpty ? 1 : 0) +
     (shouldRenderInfiniteLoadingRow ? 1 : 0);
-  const renderedRowsHeight = (rowWindow.entries.length + stateRowCount) * rowHeight;
+  const renderedRowsHeight = (rowWindow.slots.length + stateRowCount) * rowHeight;
   const emptyFillerHeight = virtualized ? 0 : Math.max(0, containerHeight - renderedRowsHeight);
   const renderedHeaderVisible = state.showHeader && (persistHeaderWhenEmpty || !isEmpty || resolvedLoading);
 
   const isCopyPasteKey = (event: React.KeyboardEvent, key: "c" | "v") =>
     (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === key;
-  const getVisibleEntryByRenderedIndex = (index: number) => rowWindow.entries[index];
+  const getVisibleEntryByRenderedIndex = (index: number) => {
+    const slot = rowWindow.slots[index];
+
+    return slot?.kind === "data" ? slot : undefined;
+  };
   const getVisibleRowIdsBetween = (
     current: CominsTableState<TData>,
     anchorRowId: CominsRowId,
@@ -1815,7 +2138,7 @@ function CominsTableInner<TData>(
       setSortModel: (sortModel) => commitState((current) => setCominsSortModel(current, sortModel)),
       setSortState: (sort) => commitState((current) => setCominsSortState(current, sort)),
     }),
-    [rowWindow.entries, state, treeContext],
+    [rowWindow.slots, state, treeContext],
   );
 
   const clearColumnPointerInteraction = () => {
@@ -2810,18 +3133,32 @@ function CominsTableInner<TData>(
               </td>
             </tr>
           ) : null}
-          {rowWindow.entries.map((entry, entryIndex) => {
+          {rowWindow.slots.map((slot, entryIndex) => {
+            if (slot.kind !== "data") {
+              return null;
+            }
+
+            const entry = slot;
             const rowRuntimeProps = resolveRowProps(rowProps, entry.row, entry.visibleIndex);
             const isRowSelected = selectedRowIdSet.has(entry.rowId);
-            const isViewportEndRow = emptyFillerHeight === 0 && entryIndex === rowWindow.entries.length - 1;
+            const isViewportEndRow = emptyFillerHeight === 0 && entryIndex === rowWindow.slots.length - 1;
             const rowCustomBackground = getRowCustomBackground(rowRuntimeProps.style);
-            const rowRenderKey = virtualized ? `virtual-row-slot-${entryIndex}` : String(entry.rowId);
+            const rowRenderKey =
+              virtualized && rowWindow.mixed
+                ? entry.key
+                : virtualized
+                  ? `virtual-row-slot-${entryIndex}`
+                  : String(entry.rowId);
             const rowDetailParams: CominsRowDetailParams<TData> = { row: createEventRow(entry) };
             const rowDetailExpandable = rowDetailEnabled && (isRowExpandable?.(rowDetailParams) ?? true);
-            const rowDetailExpanded = rowDetailExpandable && !virtualized && expandedRowIdSet.has(entry.rowId);
-            const rowDetailHeight = rowDetailEnabled
-              ? getRowDetailHeight?.(rowDetailParams) ?? estimatedRowDetailHeight
-              : undefined;
+            const rowDetailExpanded = rowDetailExpandable && effectiveExpandedRowIdSet.has(entry.rowId);
+            const rowDetailHeight = rowWindow.mixed
+              ? entry.detail?.mode === "fixed"
+                ? entry.detail.height
+                : entry.detail?.mode
+              : rowDetailEnabled
+                ? getRowDetailHeight?.(rowDetailParams) ?? estimatedRowDetailHeight
+                : undefined;
             const rowDetailFixedHeight =
               typeof rowDetailHeight === "number"
                 ? Number.isFinite(rowDetailHeight) && rowDetailHeight > 0
@@ -3142,7 +3479,7 @@ function CominsTableInner<TData>(
                       {columnIndex === 0 && rowDetailEnabled ? (
                         <CominsRowDetailToggle
                           controlsId={rowDetailContentId}
-                          disabled={!rowDetailExpandable || !onChangeExpandedRowIds || virtualized}
+                          disabled={!rowDetailExpandable || !onChangeExpandedRowIds}
                           expanded={rowDetailExpanded}
                           id={rowDetailToggleId}
                           label={`${rowDetailExpanded ? "Collapse" : "Expand"} details for ${String(entry.rowId)}`}
@@ -3153,7 +3490,7 @@ function CominsTableInner<TData>(
                               rowDetailToggleElementsRef.current.delete(entry.rowId);
                             }
                           }}
-                          onToggle={() => toggleRowDetail(entry.rowId, rowDetailExpandable && !virtualized)}
+                          onToggle={() => toggleRowDetail(entry.rowId, rowDetailExpandable)}
                           testId={`row-detail-toggle-${String(entry.rowId)}`}
                         />
                       ) : null}
