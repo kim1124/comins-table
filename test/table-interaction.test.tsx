@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import type React from "react";
-import { act, createRef } from "react";
+import { act, createRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -2072,6 +2072,377 @@ describe("comins-table keyboard interaction", () => {
     expect(rowB.getAttribute("data-selected-row")).toBe("true");
   });
 
+  it("keeps owner and Detail together through sorting without mutating controlled expansion", () => {
+    const onChangeExpandedRowIds = vi.fn();
+    const element = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={threeRows}
+        expandedRowIds={["a", "c"]}
+        getRowId={(row) => row.id}
+        onChangeExpandedRowIds={onChangeExpandedRowIds}
+        renderRowDetail={({ row }) => <span>{`Detail ${row.id}`}</span>}
+      />,
+    );
+
+    act(() => {
+      element
+        .querySelector("[data-testid='header-age']")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(
+      [...element.querySelectorAll("tbody tr")].map(
+        (row) => row.getAttribute("data-testid") ?? `detail-${row.getAttribute("data-detail-for")}`,
+      ),
+    ).toEqual(["row-c", "detail-c", "row-a", "detail-a", "row-b"]);
+    expect(onChangeExpandedRowIds).not.toHaveBeenCalled();
+  });
+
+  it("keeps off-page Detail ids dormant and includes them in the next controlled callback", () => {
+    const onChangeExpandedRowIds = vi.fn();
+    const renderProps = (pageIndex: number) => (
+      <CominsTable
+        columns={columns}
+        data={threeRows}
+        expandedRowIds={["a", "c"]}
+        getRowId={(row) => row.id}
+        onChangeExpandedRowIds={onChangeExpandedRowIds}
+        pagination={{ pageIndex, pageSize: 1 }}
+        renderRowDetail={({ row }) => <span>{`Detail ${row.id}`}</span>}
+      />
+    );
+    const element = renderTableElement(renderProps(1));
+
+    expect(element.querySelector("[data-detail-for]")).toBeNull();
+    expect(element.querySelector("[data-testid='row-b']")).not.toBeNull();
+
+    act(() => {
+      element.querySelector<HTMLButtonElement>("[data-testid='row-detail-toggle-b']")?.click();
+    });
+
+    expect(onChangeExpandedRowIds).toHaveBeenLastCalledWith(["a", "c", "b"]);
+
+    act(() => {
+      root?.render(renderProps(0));
+    });
+
+    expect(element.querySelector("[data-testid='row-a']")?.nextElementSibling).toBe(
+      element.querySelector("[data-detail-for='a']"),
+    );
+    expect(element.querySelector("[data-detail-for='c']")).toBeNull();
+  });
+
+  it("uses owner business Row counts for lazy and infinite loading when Details are mounted", async () => {
+    let resolveInitial: ((result: { rows: PersonRow[]; total: number }) => void) | undefined;
+    const onLazyLoad = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<{ rows: PersonRow[]; total: number }>((resolve) => {
+            resolveInitial = resolve;
+          }),
+      )
+      .mockResolvedValueOnce({
+        rows: [{ age: 27, id: "c", name: "Gamma" }],
+        total: 3,
+      });
+    const lazyElement = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={[]}
+        data-testid="detail-lazy-viewport"
+        expandedRowIds={["a"]}
+        getRowId={(row) => row.id}
+        lazyLoad
+        lazyLoadBatchSize={2}
+        lazyLoadThreshold={80}
+        onLazyLoad={onLazyLoad}
+        pagination={{ pageIndex: 0, pageSize: 3 }}
+        renderRowDetail={({ row }) => <span>{`Detail ${row.id}`}</span>}
+      />,
+    );
+
+    await act(async () => {
+      resolveInitial?.({ rows, total: 3 });
+    });
+
+    expect(lazyElement.querySelectorAll("tbody tr")).toHaveLength(3);
+    expect(lazyElement.querySelectorAll("tbody tr[data-comins-row-data-index]")).toHaveLength(2);
+
+    const lazyViewport = lazyElement.querySelector<HTMLElement>("[data-testid='detail-lazy-viewport']")!;
+    Object.defineProperties(lazyViewport, {
+      clientHeight: { configurable: true, value: 300 },
+      scrollHeight: { configurable: true, value: 1000 },
+      scrollTop: { configurable: true, value: 650, writable: true },
+    });
+
+    await act(async () => {
+      lazyViewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+    });
+
+    expect(onLazyLoad).toHaveBeenLastCalledWith(
+      expect.objectContaining({ limit: 2, offset: 2, reason: "scroll" }),
+    );
+
+    act(() => root?.unmount());
+    container?.remove();
+    root = undefined;
+    container = undefined;
+
+    const onLoadMore = vi.fn();
+    const renderInfinite = (data: readonly PersonRow[], expandedRowIds: readonly string[]) => (
+      <CominsTable
+        columns={columns}
+        data={data}
+        data-testid="detail-infinite-viewport"
+        expandedRowIds={expandedRowIds}
+        getRowId={(row) => row.id}
+        hasMoreRows
+        infiniteScroll
+        onLoadMore={onLoadMore}
+        pagination={{ pageIndex: 0, pageSize: 3 }}
+        renderRowDetail={({ row }) => <span>{`Detail ${row.id}`}</span>}
+      />
+    );
+    const infiniteElement = renderTableElement(renderInfinite(rows, ["a"]));
+    const infiniteViewport = infiniteElement.querySelector<HTMLElement>("[data-testid='detail-infinite-viewport']")!;
+
+    Object.defineProperties(infiniteViewport, {
+      clientHeight: { configurable: true, value: 300 },
+      scrollHeight: { configurable: true, value: 1000 },
+      scrollTop: { configurable: true, value: 900, writable: true },
+    });
+
+    act(() => {
+      infiniteViewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+    });
+    expect(onLoadMore).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      root?.render(renderInfinite(rows, ["a", "b"]));
+    });
+    act(() => {
+      infiniteViewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+    });
+    expect(onLoadMore).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      root?.render(renderInfinite(threeRows, ["a", "b"]));
+    });
+    act(() => {
+      infiniteViewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+    });
+    expect(onLoadMore).toHaveBeenCalledTimes(2);
+  });
+
+  it("moves only owner business Rows and carries their Detail Slot", () => {
+    const ref = createRef<CominsTableRef<PersonRow>>();
+    const onChangeData = vi.fn();
+    const onChangeExpandedRowIds = vi.fn();
+    const element = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={threeRows}
+        expandedRowIds={["b"]}
+        getRowId={(row) => row.id}
+        onChangeData={onChangeData}
+        onChangeExpandedRowIds={onChangeExpandedRowIds}
+        ref={ref}
+        renderRowDetail={({ row }) => <button>{`Detail ${row.id}`}</button>}
+        rowProps={{ draggable: true }}
+      />,
+    );
+
+    expect(element.querySelector("[data-detail-for='b']")?.hasAttribute("data-comins-row-data-index")).toBe(false);
+
+    act(() => {
+      ref.current?.setMoveTargetRow(0, 1);
+    });
+
+    expect(
+      [...element.querySelectorAll("tbody tr")].map(
+        (row) => row.getAttribute("data-testid") ?? `detail-${row.getAttribute("data-detail-for")}`,
+      ),
+    ).toEqual(["row-b", "detail-b", "row-a", "row-c"]);
+    expect(onChangeData).toHaveBeenLastCalledWith([rows[1], rows[0], threeRows[2]]);
+    expect(onChangeExpandedRowIds).not.toHaveBeenCalled();
+  });
+
+  it("keeps Detail content outside Row, Cell, range, clipboard, and Row callback routing", () => {
+    const onChangeData = vi.fn();
+    const onChangeSelection = vi.fn();
+    const onClickCell = vi.fn();
+    const onClickRow = vi.fn();
+    const onContextMenuCell = vi.fn();
+    const onContextMenuRow = vi.fn();
+    const onDoubleClickCell = vi.fn();
+    const onDoubleClickRow = vi.fn();
+    const element = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={rows}
+        expandedRowIds={["a"]}
+        getRowId={(row) => row.id}
+        onChangeData={onChangeData}
+        onChangeSelection={onChangeSelection}
+        onClickCell={onClickCell}
+        onClickRow={onClickRow}
+        onContextMenuCell={onContextMenuCell}
+        onContextMenuRow={onContextMenuRow}
+        onDoubleClickCell={onDoubleClickCell}
+        onDoubleClickRow={onDoubleClickRow}
+        renderRowDetail={() => <button data-testid="detail-interaction">Detail action</button>}
+      />,
+    );
+    const detailAction = element.querySelector("[data-testid='detail-interaction']")!;
+    const ownerCell = element.querySelector("[data-testid='cell-b-age']")!;
+
+    act(() => {
+      detailAction.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      detailAction.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true }));
+      detailAction.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+      detailAction.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, button: 0 }));
+      ownerCell.dispatchEvent(new MouseEvent("mouseover", { bubbles: true, buttons: 1 }));
+      ownerCell.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, button: 0 }));
+    });
+    pressControlKey(detailAction, "c");
+    pressControlKey(detailAction, "v");
+
+    expect(onChangeSelection).not.toHaveBeenCalled();
+    expect(onChangeData).not.toHaveBeenCalled();
+    expect(onClickCell).not.toHaveBeenCalled();
+    expect(onClickRow).not.toHaveBeenCalled();
+    expect(onContextMenuCell).not.toHaveBeenCalled();
+    expect(onContextMenuRow).not.toHaveBeenCalled();
+    expect(onDoubleClickCell).not.toHaveBeenCalled();
+    expect(onDoubleClickRow).not.toHaveBeenCalled();
+    expect(element.querySelector("[data-range-selected='true']")).toBeNull();
+  });
+
+  it("never renders Row Detail disclosures on structural Rows", () => {
+    const restoreResizeObserver = installTestResizeObserver(800);
+
+    try {
+      const element = renderTableElement(
+        <div>
+          <CominsTable
+            columns={columns}
+            data={[]}
+            expandedRowIds={["a"]}
+            loading
+            renderRowDetail={() => <span>Detail</span>}
+            skeletonRowCount={2}
+          />
+          <CominsTable
+            columns={columns}
+            data={[]}
+            expandedRowIds={["a"]}
+            renderRowDetail={() => <span>Detail</span>}
+          />
+          <CominsTable
+            columns={columns}
+            data={rows}
+            expandedRowIds={["a"]}
+            getRowId={(row) => row.id}
+            hasMoreRows
+            infiniteScroll
+            loadingMore
+            renderRowDetail={() => <span>Detail</span>}
+            summary={{ columns: { age: "sum" } }}
+          />
+        </div>,
+      );
+      const structuralRows = element.querySelectorAll(
+        [
+          "[data-testid='loading-skeleton-row']",
+          ".comins-table__empty-state-row",
+          ".comins-table__infinite-loading-row",
+          ".comins-table-empty-filler",
+          ".comins-table__summary-row",
+        ].join(","),
+      );
+
+      expect(element.querySelectorAll("[data-testid='loading-skeleton-row']")).toHaveLength(2);
+      expect(element.querySelector(".comins-table__empty-state-row")).not.toBeNull();
+      expect(element.querySelector(".comins-table__infinite-loading-row")).not.toBeNull();
+      expect(element.querySelector(".comins-table-empty-filler")).not.toBeNull();
+      expect(element.querySelector(".comins-table__summary-row")).not.toBeNull();
+
+      for (const row of structuralRows) {
+        expect(row.querySelector(".comins-row-detail-expander")).toBeNull();
+      }
+    } finally {
+      restoreResizeObserver();
+    }
+  });
+
+  it("updates Detail colSpan from the effective visible Column layout", () => {
+    const ref = createRef<CominsTableRef<PersonRow>>();
+    const layoutColumns = [
+      { field: "name", label: "Name" },
+      { field: "age", label: "Age" },
+      { field: "profile.age", label: "Profile Age" },
+    ] as const;
+    const element = renderTableElement(
+      <CominsTable
+        columns={layoutColumns}
+        data={apiRows}
+        expandedRowIds={["a"]}
+        getRowId={(row) => row.id}
+        ref={ref}
+        renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+      />,
+    );
+    const getDetailCell = () => element.querySelector<HTMLTableCellElement>("[data-detail-for='a'] > td");
+
+    expect(getDetailCell()?.colSpan).toBe(3);
+
+    act(() => {
+      ref.current?.setColumnLayout({
+        columns: { age: { hidden: true } },
+        order: ["profile.age", "name", "age"],
+      });
+    });
+
+    expect(getDetailCell()?.colSpan).toBe(2);
+    expect([...element.querySelectorAll("thead th[data-comins-column-id]")].map((header) => header.textContent)).toEqual([
+      "Profile Age",
+      "Name",
+    ]);
+  });
+
+  it("strips untyped flat Detail props from the Tree runtime wrapper", () => {
+    const renderRowDetail = vi.fn(() => <span>Tree Detail</span>);
+    const getRowDetailHeight = vi.fn(() => 180);
+    const onChangeExpandedRowIds = vi.fn();
+    const UntypedCominsTable = CominsTable as React.ComponentType<Record<string, unknown>>;
+    const treeRows = [
+      {
+        children: [{ item: { age: 20, id: "child", name: "Child" } }],
+        item: { age: 40, id: "root", name: "Root" },
+      },
+    ];
+    const element = renderTableElement(
+      <UntypedCominsTable
+        columns={columns}
+        data={treeRows}
+        expandedRowIds={["root"]}
+        getRowDetailHeight={getRowDetailHeight}
+        getRowId={(row: PersonRow) => row.id}
+        onChangeExpandedRowIds={onChangeExpandedRowIds}
+        renderRowDetail={renderRowDetail}
+        tree
+      />,
+    );
+
+    expect(element.querySelector(".comins-row-detail-expander")).toBeNull();
+    expect(element.querySelector("[data-detail-for]")).toBeNull();
+    expect(renderRowDetail).not.toHaveBeenCalled();
+    expect(getRowDetailHeight).not.toHaveBeenCalled();
+    expect(onChangeExpandedRowIds).not.toHaveBeenCalled();
+  });
+
   it("renders controlled fixed details as a semantic sibling row", () => {
     const onChangeExpandedRowIds = vi.fn();
     const element = renderTableElement(
@@ -2178,6 +2549,38 @@ describe("comins-table keyboard interaction", () => {
     expect(onClickRow).not.toHaveBeenCalled();
   });
 
+  it("isolates Detail disclosure context menu and double-click events from owner callbacks", () => {
+    const onContextMenuCell = vi.fn();
+    const onContextMenuRow = vi.fn();
+    const onDoubleClickCell = vi.fn();
+    const onDoubleClickRow = vi.fn();
+    const element = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={rows}
+        expandedRowIds={[]}
+        getRowId={(row) => row.id}
+        onChangeExpandedRowIds={() => undefined}
+        onContextMenuCell={onContextMenuCell}
+        onContextMenuRow={onContextMenuRow}
+        onDoubleClickCell={onDoubleClickCell}
+        onDoubleClickRow={onDoubleClickRow}
+        renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+      />,
+    );
+    const disclosure = element.querySelector("[data-testid='row-detail-toggle-a']")!;
+
+    act(() => {
+      disclosure.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true }));
+      disclosure.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    });
+
+    expect(onContextMenuCell).not.toHaveBeenCalled();
+    expect(onContextMenuRow).not.toHaveBeenCalled();
+    expect(onDoubleClickCell).not.toHaveBeenCalled();
+    expect(onDoubleClickRow).not.toHaveBeenCalled();
+  });
+
   it("retains a fixed detail region when its renderer returns null", () => {
     const element = renderTableElement(
       <CominsTable
@@ -2269,6 +2672,38 @@ describe("comins-table keyboard interaction", () => {
 
     act(() => {
       root?.render(renderProps([]));
+    });
+
+    expect(document.activeElement).toBe(toggle);
+  });
+
+  it("returns focus when an interactive Detail action triggers its own controlled collapse", () => {
+    function ControlledDetail() {
+      const [expandedRowIds, setExpandedRowIds] = useState<string[]>(["a"]);
+
+      return (
+        <CominsTable
+          columns={columns}
+          data={rows}
+          expandedRowIds={expandedRowIds}
+          getRowId={(row) => row.id}
+          onChangeExpandedRowIds={setExpandedRowIds}
+          renderRowDetail={() => (
+            <button data-testid="self-collapse-detail" onClick={() => setExpandedRowIds([])}>
+              Collapse from Detail
+            </button>
+          )}
+        />
+      );
+    }
+
+    const element = renderTableElement(<ControlledDetail />);
+    const detailButton = element.querySelector<HTMLButtonElement>("[data-testid='self-collapse-detail']")!;
+    const toggle = element.querySelector<HTMLButtonElement>("[data-testid='row-detail-toggle-a']")!;
+
+    act(() => {
+      detailButton.focus();
+      detailButton.click();
     });
 
     expect(document.activeElement).toBe(toggle);

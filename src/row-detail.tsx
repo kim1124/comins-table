@@ -62,14 +62,23 @@ export function CominsRowDetailRow(props: {
     return () => onContentElementRef.current(null);
   }, [automatic]);
 
-  useLayoutEffect(
-    () => () => {
-      if (contentRef.current && contentRef.current.contains(document.activeElement)) {
-        getToggleElementRef.current()?.focus();
+  useLayoutEffect(() => {
+    const element = contentRef.current;
+
+    return () => {
+      if (element?.contains(document.activeElement)) {
+        const toggle = getToggleElementRef.current();
+        const restoreFocus = () => {
+          if (toggle?.isConnected) {
+            toggle.focus();
+          }
+        };
+
+        restoreFocus();
+        window.requestAnimationFrame(restoreFocus);
       }
-    },
-    [],
-  );
+    };
+  }, []);
 
   return (
     <tr className="comins-table__detail-row" data-detail-for={props.ownerId}>

@@ -459,6 +459,24 @@ export const rowSamples: DocsCodeSample[] = [
   },
 ];
 
+export const rowExpandSamples: DocsCodeSample[] = [
+  {
+    code: `const [expandedRowIds, setExpandedRowIds] = useState<readonly string[]>([]);
+
+<CominsTable
+  columns={columns}
+  data={rows}
+  expandedRowIds={expandedRowIds}
+  getRowDetailHeight={({ row }) => (row.id === "large" ? 480 : "auto")}
+  getRowId={(row) => row.id}
+  onChangeExpandedRowIds={setExpandedRowIds}
+  renderRowDetail={({ row }) => <Detail row={row.data} />}
+/>;`,
+    language: "tsx",
+    title: "Controlled Row Expand",
+  },
+];
+
 export const summaryRowSamples: DocsCodeSample[] = [
   {
     code: `<CominsTable

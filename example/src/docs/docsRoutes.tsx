@@ -17,6 +17,7 @@ import {
   loadingSamples,
   paginationSamples,
   refApiSamples,
+  rowExpandSamples,
   rowSamples,
   selectionClipboardSamples,
   sizeSamples,
@@ -218,6 +219,18 @@ export const docsPages: DocsPage[] = [
     codeSamples: rowSamples,
     featureId: "row",
     path: "/examples/row",
+  }),
+  featurePage({
+    body: paragraphs([
+      "The application owns expandedRowIds and writes onChangeExpandedRowIds back to the same controlled state.",
+      'Use a positive pixel height for bounded fixed Details or "auto" for mounted content measurement. The default and automatic estimate are 300px.',
+      "Sorting, pagination, loading, movement, selection, clipboard, and callbacks continue to address owner business Rows. Detail regions remain semantic sibling Rows.",
+      "Tree Grid, general owner auto-height, and nested managed Details remain unsupported.",
+    ]),
+    category: "Row / Context",
+    codeSamples: rowExpandSamples,
+    featureId: "row-expand",
+    path: "/examples/row-expand",
   }),
   featurePage({
     body: paragraphs([

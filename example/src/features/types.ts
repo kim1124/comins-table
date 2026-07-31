@@ -15,6 +15,7 @@ export type FeatureId =
   | "loading"
   | "pagination"
   | "row"
+  | "row-expand"
   | "ref-api"
   | "selection-clipboard"
   | "size"

@@ -3692,6 +3692,11 @@ function CominsTableInner<TData>(
                         onClickCell?.(createCellPayload(event, entry, column, columnIndex, rawValue));
                       }}
                       onContextMenu={(event) => {
+                        if ((event.target as Element).closest(".comins-row-detail-expander")) {
+                          event.stopPropagation();
+                          return;
+                        }
+
                         if (cellDisabled) {
                           event.preventDefault();
                           event.stopPropagation();
@@ -3715,6 +3720,11 @@ function CominsTableInner<TData>(
                         }
                       }}
                       onDoubleClick={(event) => {
+                        if ((event.target as Element).closest(".comins-row-detail-expander")) {
+                          event.stopPropagation();
+                          return;
+                        }
+
                         if (onDoubleClickCell) {
                           event.stopPropagation();
                         }

@@ -21,6 +21,7 @@ const userDocs = [
   "16-lazy-load.md",
   "17-tree-grid.md",
   "18-summary-row.md",
+  "19-row-expand.md",
 ];
 
 const implementedTerms = [
@@ -82,6 +83,11 @@ const implementedTerms = [
   "setSortModel",
   "summary",
   "tree",
+  "expandedRowIds",
+  "onChangeExpandedRowIds",
+  "getRowDetailHeight",
+  "estimatedRowDetailHeight",
+  "renderRowDetail",
 ];
 
 function readWorkspaceFile(path: string) {
@@ -96,7 +102,10 @@ describe("comins-table user documentation contract", () => {
   });
 
   it("documents all implemented public helpers and runtime props", () => {
-    const merged = userDocs.map((doc) => readWorkspaceFile(join("docs/user", doc))).join("\n");
+    const merged = userDocs
+      .filter((doc) => existsSync(join(process.cwd(), "docs/user", doc)))
+      .map((doc) => readWorkspaceFile(join("docs/user", doc)))
+      .join("\n");
 
     for (const term of implementedTerms) {
       expect(merged, `${term} should be documented`).toContain(term);
@@ -110,9 +119,11 @@ describe("comins-table user documentation contract", () => {
     expect(readme).toContain("docs/user/01-quick-start.md");
     expect(readme).toContain("/examples/summary-row");
     expect(readme).toContain("/examples/tree-grid");
+    expect(readme).toContain("/examples/row-expand");
     expect(readme).toContain("/examples/selection-clipboard");
     expect(readme).toContain("docs/user/17-tree-grid.md");
     expect(readme).toContain("docs/user/18-summary-row.md");
+    expect(readme).toContain("docs/user/19-row-expand.md");
     expect(readme).not.toContain("does not currently ship a browser example server");
   });
 
@@ -210,6 +221,49 @@ describe("comins-table user documentation contract", () => {
     expect(tree).toContain("cell.components");
     expect(tree).toContain("cell.renderer");
     expect(tree).toContain("10000");
+  });
+
+  it("documents and registers controlled Row Expand with matching public examples", () => {
+    const englishPath = "docs/user/19-row-expand.md";
+    const koreanPath = "docs/ko/19-row-expand.md";
+    const englishRowExpand = existsSync(join(process.cwd(), englishPath))
+      ? readWorkspaceFile(englishPath)
+      : "";
+    const koreanRowExpand = existsSync(join(process.cwd(), koreanPath))
+      ? readWorkspaceFile(koreanPath)
+      : "";
+    const playgroundPath = "example/src/features/RowExpandFeature.tsx";
+    const playground = existsSync(join(process.cwd(), playgroundPath))
+      ? readWorkspaceFile(playgroundPath)
+      : "";
+    const advanced = readWorkspaceFile("example/src/features/AdvancedFeature.tsx");
+    const registry = readWorkspaceFile("example/src/features/featureRegistry.tsx");
+    const featureTypes = readWorkspaceFile("example/src/features/types.ts");
+    const samples = readWorkspaceFile("example/src/docs/codeSamples.ts");
+    const routes = readWorkspaceFile("example/src/docs/docsRoutes.tsx");
+    const optionGuide = readWorkspaceFile("example/src/docs/dataTableOptionGuide.ts");
+
+    for (const document of [englishRowExpand, koreanRowExpand]) {
+      expect(document).toContain("expandedRowIds");
+      expect(document).toContain("onChangeExpandedRowIds");
+      expect(document).toContain("getRowDetailHeight");
+      expect(document).toContain("estimatedRowDetailHeight");
+      expect(document).toContain("renderRowDetail");
+      expect(document).toContain('"auto"');
+      expect(document).toContain("300");
+    }
+
+    expect(playground).toContain('data-testid="row-expand-example-fixed"');
+    expect(playground).toContain('data-testid="row-expand-example-auto"');
+    expect(advanced).not.toContain('"Flat Row Expand"');
+    expect(advanced).not.toContain('"master/detail"');
+    expect(registry).toContain('id: "row-expand"');
+    expect(featureTypes).toContain('| "row-expand"');
+    expect(samples).toContain("rowExpandSamples");
+    expect(routes).toContain('path: "/examples/row-expand"');
+    expect(routes).toContain('featureId: "row-expand"');
+    expect(optionGuide).toContain('name: "expandedRowIds"');
+    expect(optionGuide).toContain('name: "onChangeExpandedRowIds"');
   });
 
   it("documents column drag activation and Virtual List row selection", () => {

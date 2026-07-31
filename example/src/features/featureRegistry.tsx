@@ -13,6 +13,7 @@ import { LoadingStateFeature } from "./LoadingStateFeature";
 import { PaginationFeature } from "./PaginationFeature";
 import { RefApiFeature } from "./RefApiFeature";
 import { RowFeature } from "./RowFeature";
+import { RowExpandFeature } from "./RowExpandFeature";
 import { SelectionClipboardFeature } from "./SelectionClipboardFeature";
 import { SizeFeature } from "./SizeFeature";
 import { SummaryRowFeature } from "./SummaryRowFeature";
@@ -216,6 +217,30 @@ export const featureRegistry: FeatureDefinition[] = [
       { description: "Moves row position from outside the table.", example: "setMoveTargetRow(targetIdx, sourceIdx)", name: "setMoveTargetRow" },
     ],
     summary: "Row style, drag, disabled, and custom behavior example.",
+  },
+  {
+    Component: RowExpandFeature,
+    description: "Controlled fixed and automatic Row Detail examples.",
+    id: "row-expand",
+    label: "Row Expand",
+    options: [
+      {
+        description: "Controlled business Row IDs whose Detail regions are open.",
+        example: "expandedRowIds={expandedRowIds}",
+        name: "expandedRowIds",
+      },
+      {
+        description: "Returns a positive pixel height or auto for an owner Row.",
+        example: 'getRowDetailHeight={() => "auto"}',
+        name: "getRowDetailHeight",
+      },
+      {
+        description: "Renders the semantic Detail region for an owner Row.",
+        example: "renderRowDetail={({ row }) => <Detail row={row.data} />",
+        name: "renderRowDetail",
+      },
+    ],
+    summary: "Controlled Row Expand with fixed and measured automatic Detail height.",
   },
   {
     Component: SummaryRowFeature,
