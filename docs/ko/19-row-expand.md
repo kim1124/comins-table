@@ -57,13 +57,14 @@ const [expandedRowIds, setExpandedRowIds] = useState<readonly string[]>([]);
 owner가 filter, pagination, loading 또는 일시적 data 변경으로 보이지 않아도 ID는
 dormant 상태로 보존된다. 다음 callback 입력에도 포함되고 owner가 다시 나타나면
 다시 유효해진다. 현재 flat data에 owner가 존재하고 `isRowExpandable`이 `false`를
-반환하지 않을 때만 ID가 유효하다. 확장할 수 없는 Row는 disabled disclosure를
-표시하고 Detail을 mount하지 않는다.
+반환하지 않을 때만 ID가 유효하다. 확장할 수 없는 Row는 disclosure와 Detail을
+모두 렌더링하지 않는다.
 
 ## Detail Height
 
 `getRowDetailHeight`는 finite positive CSS pixel 또는 `"auto"`를 반환한다. 값이
 없거나 잘못된 숫자이면 기본 fixed 높이 `300px`를 사용한다.
+`estimatedRowDetailHeight`만 지정해도 이 fixed 기본값은 바뀌지 않는다.
 
 ```tsx
 <CominsTable
@@ -76,7 +77,8 @@ dormant 상태로 보존된다. 다음 callback 입력에도 포함되고 owner�
 `"auto"`는 mount된 Detail 측정을 활성화한다. 같은 width의 측정값이 없으면
 `estimatedRowDetailHeight`를 사용하며 기본값도 `300px`다. 측정값은 owner ID와
 width를 기준으로 cache한다. width가 달라지면 estimate로 돌아가고 shared observer가
-새 border-box height를 보고하면 갱신한다. Fixed Detail은 observe하지 않는다.
+새 border-box height를 보고하면 갱신한다. Fixed Detail은 observe하지 않으며
+`estimatedRowDetailHeight`도 사용하지 않는다.
 
 ## Semantic DOM And Focus
 
@@ -92,9 +94,12 @@ width를 기준으로 cache한다. width가 달라지면 estimate로 돌아가�
 ```
 
 owner disclosure는 `aria-expanded`를 제공한다. `aria-controls`는 controlled
-region이 mount된 동안에만 존재한다. region은 disclosure로 label되고, Detail의
-interactive content는 일반 tab 순서에 포함된다. focus가 Detail 내부에 있을 때
-controlled collapse로 unmount되면 owner disclosure로 focus가 돌아간다.
+region이 mount된 동안에만 존재한다. region은 disclosure로 label된다. accessible
+name은 정확히 `Expand <row-id> details` 또는 `Collapse <row-id> details`다.
+native Enter와 Space activation은 유지하지만 disclosure keydown은 owner Cell/Row의
+keyboard 및 clipboard 처리로 전달하지 않는다. Detail의 interactive content는
+일반 tab 순서에 포함된다. focus가 Detail 내부에 있을 때 controlled collapse로
+unmount되면 owner disclosure로 focus가 돌아간다.
 
 Detail cell은 Column hide, restore, reorder 이후의 effective visible Column
 개수만큼 span한다. 하나의 non-sticky full-width cell이며 body와 함께 horizontal

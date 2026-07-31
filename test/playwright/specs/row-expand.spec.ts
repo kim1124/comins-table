@@ -27,14 +27,17 @@ test("controls fixed Row Details with semantic disclosure state and focus restor
   const state = page.getByTestId("row-expand-fixed-state");
 
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(toggle).toHaveAccessibleName("Expand fixed-1 details");
   await expect(toggle).not.toHaveAttribute("aria-controls", /.+/u);
   await expect(state).toHaveText("[]");
 
-  await toggle.click();
-  const region = fixed.getByRole("region", { name: /details for fixed-1/iu });
+  await toggle.focus();
+  await toggle.press("Enter");
+  const region = fixed.getByRole("region", { exact: true, name: "Collapse fixed-1 details" });
   const controlsId = await toggle.getAttribute("aria-controls");
   expect(controlsId).not.toBeNull();
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(toggle).toHaveAccessibleName("Collapse fixed-1 details");
   await expect(region).toHaveAttribute("id", controlsId!);
   await expect(region).toHaveAttribute("aria-labelledby", await toggle.getAttribute("id"));
   await expect(fixed.locator("[data-detail-for='fixed-1'] > td")).toHaveAttribute("colspan", "5");
@@ -49,12 +52,16 @@ test("controls fixed Row Details with semantic disclosure state and focus restor
   await expect(toggle).not.toHaveAttribute("aria-controls", /.+/u);
   await expect(state).toHaveText("[]");
 
+  await toggle.press("Space");
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await toggle.press("Space");
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+
   const readOnly = page.getByTestId("row-expand-example-readonly");
   const readOnlyToggle = readOnly.getByTestId("row-detail-toggle-readonly-1");
-  await expect(readOnlyToggle).toBeDisabled();
-  await expect(readOnlyToggle).toHaveAttribute("aria-expanded", "true");
-  await expect(readOnlyToggle).toHaveAttribute("aria-controls", /.+/u);
-  await expect(readOnly.getByRole("region", { name: /details for readonly-1/iu })).toBeVisible();
+  await expect(readOnly.getByTestId("row-readonly-1")).toBeVisible();
+  await expect(readOnlyToggle).toHaveCount(0);
+  await expect(readOnly.locator("[data-detail-for='readonly-1']")).toHaveCount(0);
 
   expect(diagnostics).toEqual([]);
 });

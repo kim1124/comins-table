@@ -288,9 +288,9 @@ export function RowExpandFeature() {
       </FeatureSampleSection>
 
       <FeatureSampleSection
-        description="onChangeExpandedRowIds를 생략한 controlled disclosure는 현재 상태를 표시하지만 사용자 변경은 허용하지 않습니다."
+        description="isRowExpandable=false인 owner는 controlled ID가 있어도 disclosure와 Detail을 렌더링하지 않습니다."
         id="row-expand-readonly"
-        title="Controlled read-only disclosure"
+        title="Non-expandable read-only owner"
       >
         <CominsTable
           className="example-table"
@@ -300,6 +300,7 @@ export function RowExpandFeature() {
           expandedRowIds={["readonly-1"]}
           getRowDetailHeight={() => 160}
           getRowId={(row) => row.id}
+          isRowExpandable={() => false}
           renderRowDetail={({ row }) => <span>{`Read-only Detail for ${row.data.name}`}</span>}
           theme={{ density: "compact" }}
         />

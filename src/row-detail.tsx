@@ -25,6 +25,7 @@ export function CominsRowDetailToggle(props: {
         event.stopPropagation();
         props.onToggle();
       }}
+      onKeyDown={(event) => event.stopPropagation()}
       onMouseDown={(event) => event.stopPropagation()}
       onPointerDown={(event) => event.stopPropagation()}
       ref={props.onElement}

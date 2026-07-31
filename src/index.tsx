@@ -3425,13 +3425,17 @@ function CominsTableInner<TData>(
             const rowDetailParams: CominsRowDetailParams<TData> = { row: createEventRow(entry) };
             const rowDetailExpandable = rowDetailEnabled && (isRowExpandable?.(rowDetailParams) ?? true);
             const rowDetailExpanded = rowDetailExpandable && effectiveExpandedRowIdSet.has(entry.rowId);
+            const normalizedRowDetailHeight =
+              !rowWindow.mixed && rowDetailExpanded
+                ? normalizeCominsDetailHeight(getRowDetailHeight?.(rowDetailParams))
+                : undefined;
             const rowDetailHeight = rowWindow.mixed
               ? entry.detail?.mode === "fixed"
                 ? entry.detail.height
                 : entry.detail?.mode
-              : rowDetailEnabled
-                ? getRowDetailHeight?.(rowDetailParams) ?? estimatedRowDetailHeight
-                : undefined;
+              : normalizedRowDetailHeight?.mode === "fixed"
+                ? normalizedRowDetailHeight.height
+                : normalizedRowDetailHeight?.mode;
             const rowDetailFixedHeight =
               typeof rowDetailHeight === "number"
                 ? Number.isFinite(rowDetailHeight) && rowDetailHeight > 0
@@ -3761,13 +3765,13 @@ function CominsTableInner<TData>(
                       title={typeof tooltip === "string" ? tooltip : undefined}
                       tabIndex={cellDisabled ? -1 : 0}
                     >
-                      {columnIndex === 0 && rowDetailEnabled ? (
+                      {columnIndex === 0 && rowDetailExpandable ? (
                         <CominsRowDetailToggle
                           controlsId={rowDetailContentId}
-                          disabled={!rowDetailExpandable || !onChangeExpandedRowIds}
+                          disabled={!onChangeExpandedRowIds}
                           expanded={rowDetailExpanded}
                           id={rowDetailToggleId}
-                          label={`${rowDetailExpanded ? "Collapse" : "Expand"} details for ${String(entry.rowId)}`}
+                          label={`${rowDetailExpanded ? "Collapse" : "Expand"} ${String(entry.rowId)} details`}
                           onElement={(element) => {
                             if (element) {
                               rowDetailToggleElementsRef.current.set(entry.rowId, element);

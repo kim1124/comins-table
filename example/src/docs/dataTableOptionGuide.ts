@@ -22,7 +22,7 @@ export const dataTableOptionGuide = [
       { description: "Controlled owner business Row IDs whose semantic Detail regions are mounted.", name: "expandedRowIds" },
       { description: "Returns a positive fixed Detail height or \"auto\" for mounted measurement. Defaults to 300px.", name: "getRowDetailHeight" },
       { description: "Estimate used before an automatic Detail has a matching width measurement. Defaults to 300px.", name: "estimatedRowDetailHeight" },
-      { description: "Determines whether an owner Row exposes an enabled Row Detail disclosure.", name: "isRowExpandable" },
+      { description: "Determines whether an owner Row exposes a Row Detail disclosure and Detail.", name: "isRowExpandable" },
       { description: "Renders the semantic Detail region immediately after its owner business Row.", name: "renderRowDetail" },
     ],
     title: "Props",

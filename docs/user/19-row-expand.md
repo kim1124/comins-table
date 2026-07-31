@@ -58,13 +58,14 @@ IDs remain dormant when their owner is filtered out, paged out, not loaded, or
 temporarily unavailable. They are preserved in subsequent callback input and
 become effective again when the owner returns. An ID is effective only when the
 current flat data contains the owner and `isRowExpandable` does not return
-`false`. A non-expandable Row shows a disabled disclosure and mounts no Detail.
+`false`. A non-expandable Row renders neither a disclosure nor a Detail.
 
 ## Detail Height
 
 `getRowDetailHeight` returns either a finite positive CSS pixel height or
 `"auto"`. A missing or invalid numeric result uses the default `300px` fixed
-height.
+height. Setting `estimatedRowDetailHeight` alone does not change that fixed
+default.
 
 ```tsx
 <CominsTable
@@ -78,7 +79,7 @@ height.
 measurement exists, `estimatedRowDetailHeight` is used and also defaults to
 `300px`. Measurements are cached by owner ID and width. A width mismatch returns
 to the estimate until the shared observer reports the new border-box height.
-Fixed Details are not observed.
+Fixed Details are not observed and never use `estimatedRowDetailHeight`.
 
 ## Semantic DOM And Focus
 
@@ -95,9 +96,12 @@ Each effective Detail is a semantic sibling of its owner:
 
 The owner disclosure exposes `aria-expanded`. `aria-controls` is present only
 while the controlled region is mounted. The region is labelled by that
-disclosure, and interactive Detail content stays in the normal tab order. When
-a controlled collapse unmounts a Detail that contains focus, focus returns to
-the owner disclosure.
+disclosure. Its accessible name is exactly `Expand <row-id> details` or
+`Collapse <row-id> details`. Native Enter and Space activation is preserved,
+while disclosure keydown events do not enter owner Cell or Row keyboard and
+clipboard handling. Interactive Detail content stays in the normal tab order.
+When a controlled collapse unmounts a Detail that contains focus, focus returns
+to the owner disclosure.
 
 The Detail cell spans the effective visible Column count after Column hide,
 restore, and reorder. It is one non-sticky full-width cell and scrolls

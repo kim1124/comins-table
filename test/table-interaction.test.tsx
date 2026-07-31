@@ -2469,6 +2469,7 @@ describe("comins-table keyboard interaction", () => {
 
     expect(region?.getAttribute("aria-labelledby")).toBe(toggle?.id);
     expect(document.getElementById(region?.getAttribute("aria-labelledby") ?? "")).toBe(toggle);
+    expect(toggle?.getAttribute("aria-label")).toBe("Collapse a details");
     expect(
       element.querySelector("[data-testid='row-detail-content-a']")?.getAttribute("style"),
     ).toContain("height: 180px");
@@ -2514,13 +2515,9 @@ describe("comins-table keyboard interaction", () => {
     );
     const toggle = element.querySelector<HTMLButtonElement>("[data-testid='row-detail-toggle-a']");
 
-    expect(toggle?.disabled).toBe(true);
+    expect(toggle).toBeNull();
     expect(element.querySelector("[data-detail-for='a']")).toBeNull();
-
-    act(() => {
-      toggle?.click();
-    });
-
+    expect(element.querySelector("[data-testid='row-detail-content-a']")).toBeNull();
     expect(onChangeExpandedRowIds).not.toHaveBeenCalled();
   });
 
@@ -2579,6 +2576,77 @@ describe("comins-table keyboard interaction", () => {
     expect(onContextMenuRow).not.toHaveBeenCalled();
     expect(onDoubleClickCell).not.toHaveBeenCalled();
     expect(onDoubleClickRow).not.toHaveBeenCalled();
+  });
+
+  it("isolates Detail disclosure keyboard events from owner callbacks and Cell clipboard actions", () => {
+    const onChangeData = vi.fn();
+    const onKeyDownCell = vi.fn();
+    const onKeyDownRow = vi.fn();
+    const element = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={rows}
+        expandedRowIds={[]}
+        getRowId={(row) => row.id}
+        onChangeData={onChangeData}
+        onChangeExpandedRowIds={() => undefined}
+        onKeyDownCell={onKeyDownCell}
+        onKeyDownRow={onKeyDownRow}
+        renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+      />,
+    );
+    const sourceCell = element.querySelector("[data-testid='cell-b-name']")!;
+    const disclosure = element.querySelector("[data-testid='row-detail-toggle-a']")!;
+
+    pressControlKey(sourceCell, "c");
+    onKeyDownCell.mockClear();
+    onKeyDownRow.mockClear();
+
+    pressControlKey(disclosure, "v");
+    pressControlKey(disclosure, "c");
+    act(() => {
+      disclosure.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Enter" }));
+      disclosure.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: " " }));
+    });
+
+    expect(onKeyDownCell).not.toHaveBeenCalled();
+    expect(onKeyDownRow).not.toHaveBeenCalled();
+    expect(onChangeData).not.toHaveBeenCalled();
+  });
+
+  it("keeps estimatedRowDetailHeight from changing the non-virtual fixed default", () => {
+    const element = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={rows}
+        estimatedRowDetailHeight={180}
+        expandedRowIds={["a"]}
+        getRowId={(row) => row.id}
+        renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+      />,
+    );
+
+    expect(
+      element.querySelector<HTMLElement>("[data-testid='row-detail-content-a']")?.style.height,
+    ).toBe("300px");
+  });
+
+  it("keeps estimatedRowDetailHeight from changing the virtual fixed default", () => {
+    const element = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={rows}
+        estimatedRowDetailHeight={180}
+        expandedRowIds={["a"]}
+        getRowId={(row) => row.id}
+        renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+        virtualized
+      />,
+    );
+
+    expect(
+      element.querySelector<HTMLElement>("[data-testid='row-detail-content-a']")?.style.height,
+    ).toBe("300px");
   });
 
   it("retains a fixed detail region when its renderer returns null", () => {

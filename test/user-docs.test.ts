@@ -251,10 +251,13 @@ describe("comins-table user documentation contract", () => {
       expect(document).toContain("renderRowDetail");
       expect(document).toContain('"auto"');
       expect(document).toContain("300");
+      expect(document).toContain("Expand <row-id> details");
+      expect(document).toContain("Collapse <row-id> details");
     }
 
     expect(playground).toContain('data-testid="row-expand-example-fixed"');
     expect(playground).toContain('data-testid="row-expand-example-auto"');
+    expect(playground).toContain('isRowExpandable={() => false}');
     expect(advanced).not.toContain('"Flat Row Expand"');
     expect(advanced).not.toContain('"master/detail"');
     expect(registry).toContain('id: "row-expand"');
