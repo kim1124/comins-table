@@ -234,22 +234,25 @@ and keeps the disclosure owner available in the same rendered block.
 
 ### Fixed-height fast path
 
-When there are no effective expanded Detail Rows and no future non-data Slots,
-the component uses the current exact fixed-height calculation:
+When every effective virtual Slot has `height === rowHeight`, the component
+uses exact fixed-height arithmetic. This includes a future Row Grouping
+projection whose Group Slots also have exactly `rowHeight`:
 
 ```ts
-totalHeight = visibleRowCount * rowHeight;
+totalHeight = virtualSlotCount * rowHeight;
 startIndex = Math.floor(logicalScrollTop / rowHeight);
 ```
 
-No measurement observer, height index, Slot-size allocation, or variable-layout
-lookup runs on this path. Existing consumers that do not enable Row Expand
-retain their current runtime behavior.
+No measurement observer, height index, per-Slot height allocation, or
+variable-layout lookup runs on this path. A fixed-height projection may still
+own its normal lightweight Slot metadata. Existing consumers that do not
+enable Row Expand retain their current runtime behavior.
 
 ### Mixed-height path
 
-When at least one effective Detail Row is expanded, a private height index owns
-Slot sizes and supports:
+When at least one effective data Slot has an expanded Detail and therefore a
+height different from `rowHeight`, a private height index owns Slot sizes and
+supports:
 
 - total height lookup;
 - prefix-height lookup;
