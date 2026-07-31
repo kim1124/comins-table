@@ -85,6 +85,42 @@ function renderTableElement(element: React.ReactElement) {
   return container;
 }
 
+function installTestResizeObserver(height: number, width = 800) {
+  const original = globalThis.ResizeObserver;
+
+  class TestResizeObserver {
+    constructor(private readonly callback: ResizeObserverCallback) {}
+
+    disconnect() {}
+
+    observe(target: Element) {
+      this.callback(
+        [
+          {
+            contentRect: { height, width },
+            target,
+          } as ResizeObserverEntry,
+        ],
+        this as unknown as ResizeObserver,
+      );
+    }
+
+    unobserve() {}
+  }
+
+  Object.defineProperty(globalThis, "ResizeObserver", {
+    configurable: true,
+    value: TestResizeObserver,
+  });
+
+  return () => {
+    Object.defineProperty(globalThis, "ResizeObserver", {
+      configurable: true,
+      value: original,
+    });
+  };
+}
+
 function pressControlKey(element: Element, key: "c" | "v") {
   act(() => {
     element.dispatchEvent(
@@ -264,6 +300,182 @@ describe("comins-table keyboard interaction", () => {
       ).toBe("3600px");
     } finally {
       requestAnimationFrame.mockRestore();
+    }
+  });
+
+  it("captures the pre-collapse anchor before a browser-like bottom clamp", () => {
+    const detailRows = manyRows.slice(0, 100);
+    const renderProps = (expandedRowIds: readonly string[]) => (
+      <CominsTable
+        buffer-size={2}
+        columns={columns}
+        data={detailRows}
+        data-testid="bottom-clamp-detail-viewport"
+        expandedRowIds={expandedRowIds}
+        getRowDetailHeight={() => 300}
+        getRowId={(row) => row.id}
+        onChangeExpandedRowIds={() => undefined}
+        renderRowDetail={({ row }) => <span>{`Detail ${row.id}`}</span>}
+        rowHeight={36}
+        virtualized
+      />
+    );
+    const restoreResizeObserver = installTestResizeObserver(180);
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+
+    try {
+      const element = renderTableElement(renderProps(["row-90"]));
+      const viewport = element.querySelector<HTMLElement>("[data-testid='bottom-clamp-detail-viewport']")!;
+      const sizer = element.querySelector<HTMLElement>(".comins-table__body-virtual-sizer")!;
+      let assignedScrollTop = 3700;
+
+      Object.defineProperties(viewport, {
+        clientHeight: { configurable: true, value: 180 },
+        scrollHeight: {
+          configurable: true,
+          get: () => Number.parseFloat(sizer.style.height),
+        },
+        scrollTop: {
+          configurable: true,
+          get: () =>
+            Math.min(
+              assignedScrollTop,
+              Math.max(0, Number.parseFloat(sizer.style.height) - 180),
+            ),
+          set: (value: number) => {
+            assignedScrollTop = value;
+          },
+        },
+      });
+
+      act(() => {
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      act(() => {
+        root?.render(renderProps([]));
+      });
+
+      expect(viewport.scrollTop).toBe(3400);
+      expect(
+        element.querySelector<HTMLElement>(".comins-table__body-table")?.style.transform,
+      ).toBe("translate3d(0, 3312px, 0)");
+      expect(element.querySelector("[data-testid='row-row-94']")).not.toBeNull();
+    } finally {
+      requestAnimationFrame.mockRestore();
+      restoreResizeObserver();
+    }
+  });
+
+  it("uses the previous owner when a mixed-to-fixed anchor is removed", () => {
+    const detailRows = manyRows.slice(0, 100);
+    const withoutAnchor = detailRows.filter((row) => row.id !== "row-50");
+    const renderProps = (data: readonly PersonRow[], expandedRowIds: readonly string[]) => (
+      <CominsTable
+        buffer-size={2}
+        columns={columns}
+        data={data}
+        data-testid="removed-anchor-detail-viewport"
+        expandedRowIds={expandedRowIds}
+        getRowDetailHeight={() => 300}
+        getRowId={(row) => row.id}
+        onChangeExpandedRowIds={() => undefined}
+        renderRowDetail={({ row }) => <span>{`Detail ${row.id}`}</span>}
+        rowHeight={36}
+        virtualized
+      />
+    );
+    const restoreResizeObserver = installTestResizeObserver(180);
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+
+    try {
+      const element = renderTableElement(renderProps(detailRows, ["row-20"]));
+      const viewport = element.querySelector<HTMLElement>("[data-testid='removed-anchor-detail-viewport']")!;
+
+      Object.defineProperties(viewport, {
+        clientHeight: { configurable: true, value: 180 },
+        scrollHeight: { configurable: true, value: 3900 },
+        scrollTop: { configurable: true, value: 2112, writable: true },
+      });
+
+      act(() => {
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      act(() => {
+        root?.render(renderProps(withoutAnchor, []));
+      });
+
+      expect(viewport.scrollTop).toBe(1776);
+      expect(
+        element.querySelector<HTMLElement>(".comins-table__body-table")?.style.transform,
+      ).toBe("translate3d(0, 1692px, 0)");
+      expect(element.querySelector("[data-testid='row-row-49']")).not.toBeNull();
+    } finally {
+      requestAnimationFrame.mockRestore();
+      restoreResizeObserver();
+    }
+  });
+
+  it("uses the next owner when a mixed-to-fixed anchor and all previous owners are removed", () => {
+    const detailRows = manyRows.slice(0, 100);
+    const afterAnchor = detailRows.filter((_row, index) => index > 50);
+    const renderProps = (data: readonly PersonRow[], expandedRowIds: readonly string[]) => (
+      <CominsTable
+        buffer-size={2}
+        columns={columns}
+        data={data}
+        data-testid="next-anchor-detail-viewport"
+        expandedRowIds={expandedRowIds}
+        getRowDetailHeight={() => 300}
+        getRowId={(row) => row.id}
+        onChangeExpandedRowIds={() => undefined}
+        renderRowDetail={({ row }) => <span>{`Detail ${row.id}`}</span>}
+        rowHeight={36}
+        virtualized
+      />
+    );
+    const restoreResizeObserver = installTestResizeObserver(180);
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+
+    try {
+      const element = renderTableElement(renderProps(detailRows, ["row-20"]));
+      const viewport = element.querySelector<HTMLElement>("[data-testid='next-anchor-detail-viewport']")!;
+
+      Object.defineProperties(viewport, {
+        clientHeight: { configurable: true, value: 180 },
+        scrollHeight: { configurable: true, value: 3900 },
+        scrollTop: { configurable: true, value: 2112, writable: true },
+      });
+
+      act(() => {
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      act(() => {
+        root?.render(renderProps(afterAnchor, []));
+      });
+
+      expect(viewport.scrollTop).toBe(12);
+      expect(
+        element.querySelector<HTMLElement>(".comins-table__body-table")?.style.transform,
+      ).toBe("translate3d(0, 0px, 0)");
+      expect(element.querySelector("[data-testid='row-row-51']")).not.toBeNull();
+    } finally {
+      requestAnimationFrame.mockRestore();
+      restoreResizeObserver();
     }
   });
 

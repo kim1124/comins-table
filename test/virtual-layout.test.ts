@@ -13,6 +13,7 @@ import {
   normalizeCominsDetailHeight,
   reconcileCominsDetailMeasurements,
   resolveCominsAnchorLogicalScrollTop,
+  resolveCominsAnchorTarget,
   resolveCominsMeasuredDetailHeight,
 } from "../src/virtual-layout";
 
@@ -63,6 +64,25 @@ describe("virtual layout", () => {
     expect(range.startIndex).toBe(0);
     expect(range.endIndex).toBe(3);
     expect(Number.isFinite(range.renderOffset)).toBe(true);
+  });
+
+  it("maps exact mixed bounds and render offset from hand-derived slot heights", () => {
+    const range = getCominsMixedVirtualRange({
+      heightIndex: CominsHeightIndex.from([36, 336, 36, 36]),
+      overscan: 0,
+      physicalScrollTop: 100,
+      viewportHeight: 100,
+    });
+
+    expect(range).toEqual({
+      endIndex: 2,
+      logicalScrollTop: 100,
+      logicalStartOffset: 36,
+      physicalScrollHeight: 444,
+      renderOffset: 36,
+      scrollScale: 1,
+      startIndex: 1,
+    });
   });
 
   it("uses a width-matched automatic measurement and evicts removed row ids", () => {
@@ -139,6 +159,25 @@ describe("virtual layout", () => {
       }),
     ).toBe(0);
     expect(getCominsPhysicalScrollTop(750_000, 1_500_600, 600)).toBe(749_700);
+  });
+
+  it("resolves removed anchors through the real previous order before the next order", () => {
+    expect(
+      resolveCominsAnchorTarget({
+        anchor: { key: "data:c", offsetWithinSlot: 50, previousIndex: 2 },
+        getNextHeight: () => 36,
+        nextKeys: ["data:a", "data:b", "data:d"],
+        previousKeys: ["data:a", "data:b", "data:c", "data:d"],
+      }),
+    ).toEqual({ index: 1, offsetWithinSlot: 36 });
+    expect(
+      resolveCominsAnchorTarget({
+        anchor: { key: "data:c", offsetWithinSlot: 12, previousIndex: 2 },
+        getNextHeight: () => 36,
+        nextKeys: ["data:d"],
+        previousKeys: ["data:a", "data:b", "data:c", "data:d"],
+      }),
+    ).toEqual({ index: 0, offsetWithinSlot: 12 });
   });
 
   it("adds detail heights to data slots while group slots use their own height", () => {

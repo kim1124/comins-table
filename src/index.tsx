@@ -62,8 +62,9 @@ import {
   getCominsSlotHeight,
   normalizeCominsDetailEstimate,
   normalizeCominsDetailHeight,
-  resolveCominsAnchorLogicalScrollTop,
+  resolveCominsAnchorTarget,
   type CominsDataVirtualSlot,
+  type CominsScrollAnchor,
   type CominsVirtualSlot,
 } from "./virtual-layout";
 
@@ -340,7 +341,7 @@ type CominsMixedVirtualProjection<TData> = {
   slots: Array<CominsDataVirtualSlot<TData>>;
 };
 
-type CominsPreviousVirtualProjection = {
+type CominsVirtualProjection = {
   mixed: false;
   projectedDataIndexes: readonly number[];
   rowHeight: number;
@@ -350,6 +351,14 @@ type CominsPreviousVirtualProjection = {
   heightIndex: CominsHeightIndex;
   keys: readonly string[];
   mixed: true;
+};
+
+type CominsPendingVirtualAnchor = {
+  anchor: CominsScrollAnchor;
+  previousKeys: readonly string[];
+  previousLogicalScrollTop: number;
+  previousPhysicalScrollTop: number;
+  previousViewportHeight: number;
 };
 
 type CominsTreeRenderContext<TData> = {
@@ -387,6 +396,80 @@ function createVisibleRowEntries<TData>(
   }
 
   return entries;
+}
+
+function getCominsVirtualProjectionKeys(projection: CominsVirtualProjection) {
+  if (projection.mixed) {
+    return projection.keys;
+  }
+
+  return projection.projectedDataIndexes.flatMap((dataIndex) => {
+    const rowId = projection.rowIds[dataIndex];
+
+    return rowId === undefined ? [] : [getCominsDataSlotKey(rowId)];
+  });
+}
+
+function captureCominsVirtualAnchor(input: {
+  physicalScrollTop: number;
+  projection: CominsVirtualProjection;
+  viewportHeight: number;
+}): CominsPendingVirtualAnchor | undefined {
+  const previousKeys = getCominsVirtualProjectionKeys(input.projection);
+  const previousLogicalScrollTop = input.projection.mixed
+    ? getCominsMixedVirtualRange({
+        heightIndex: input.projection.heightIndex,
+        overscan: 0,
+        physicalScrollTop: input.physicalScrollTop,
+        viewportHeight: input.viewportHeight,
+      }).logicalScrollTop
+    : (() => {
+        const metrics = getCominsScrollScale(
+          input.projection.visibleRowCount * input.projection.rowHeight,
+          input.viewportHeight,
+        );
+
+        return Math.min(
+          metrics.logicalScrollableHeight,
+          Math.max(0, input.physicalScrollTop) * metrics.scrollScale,
+        );
+      })();
+  const anchor = input.projection.mixed
+    ? captureCominsScrollAnchor({
+        heightIndex: input.projection.heightIndex,
+        keys: previousKeys,
+        logicalScrollTop: previousLogicalScrollTop,
+      })
+    : (() => {
+        if (input.projection.visibleRowCount === 0) {
+          return undefined;
+        }
+
+        const previousIndex = Math.min(
+          input.projection.visibleRowCount - 1,
+          Math.floor(previousLogicalScrollTop / input.projection.rowHeight),
+        );
+        const key = previousKeys[previousIndex];
+
+        return key === undefined
+          ? undefined
+          : {
+              key,
+              offsetWithinSlot:
+                previousLogicalScrollTop - previousIndex * input.projection.rowHeight,
+              previousIndex,
+            };
+      })();
+
+  return anchor
+    ? {
+        anchor,
+        previousKeys,
+        previousLogicalScrollTop,
+        previousPhysicalScrollTop: input.physicalScrollTop,
+        previousViewportHeight: input.viewportHeight,
+      }
+    : undefined;
 }
 
 function toClassName(value: CominsClassValue) {
@@ -1196,7 +1279,7 @@ function CominsTableInner<TData>(
   const rangeDragMovedRef = useRef(false);
   const rowMoveStateRef = useRef<CominsRowMoveState | null>(null);
   const pendingScrollTopRef = useRef(0);
-  const previousVirtualProjectionRef = useRef<CominsPreviousVirtualProjection | null>(null);
+  const previousVirtualProjectionRef = useRef<CominsVirtualProjection | null>(null);
   const scrollCommitTimeoutRef = useRef<number | null>(null);
   const scrollFrameRef = useRef<number | null>(null);
   const suppressedSortClickRef = useRef<CominsSuppressedSortClick | null>(null);
@@ -1728,117 +1811,82 @@ function CominsTableInner<TData>(
     virtualized,
     visibleRowCount,
   ]);
+  const currentVirtualProjection = useMemo<CominsVirtualProjection | null>(
+    () =>
+      !virtualized
+        ? null
+        : mixedProjection
+          ? {
+              heightIndex: mixedProjection.heightIndex,
+              keys: mixedProjection.keys,
+              mixed: true,
+            }
+          : {
+              mixed: false,
+              projectedDataIndexes,
+              rowHeight: Math.max(1, rowHeight),
+              rowIds: state.rowIds,
+              visibleRowCount,
+            },
+    [
+      mixedProjection,
+      projectedDataIndexes,
+      rowHeight,
+      state.rowIds,
+      virtualized,
+      visibleRowCount,
+    ],
+  );
+  const previousVirtualProjection = previousVirtualProjectionRef.current;
+  const pendingVirtualAnchor =
+    currentVirtualProjection &&
+    previousVirtualProjection &&
+    currentVirtualProjection !== previousVirtualProjection &&
+    containerRef.current
+      ? captureCominsVirtualAnchor({
+          physicalScrollTop: containerRef.current.scrollTop,
+          projection: previousVirtualProjection,
+          viewportHeight:
+            containerRef.current.clientHeight || containerHeight || rowHeight * 12,
+        })
+      : undefined;
   useLayoutEffect(() => {
-    if (!virtualized) {
+    if (!currentVirtualProjection) {
       previousVirtualProjectionRef.current = null;
       return;
     }
 
-    const nextProjection: CominsPreviousVirtualProjection = mixedProjection
-      ? {
-          heightIndex: mixedProjection.heightIndex,
-          keys: mixedProjection.keys,
-          mixed: true,
-        }
-      : {
-          mixed: false,
-          projectedDataIndexes,
-          rowHeight: Math.max(1, rowHeight),
-          rowIds: state.rowIds,
-          visibleRowCount,
-        };
-    const previousProjection = previousVirtualProjectionRef.current;
-
-    previousVirtualProjectionRef.current = nextProjection;
-
-    if (
-      !previousProjection ||
-      (previousProjection.mixed &&
-        nextProjection.mixed &&
-        previousProjection.heightIndex === nextProjection.heightIndex) ||
-      (!previousProjection.mixed && !nextProjection.mixed)
-    ) {
-      return;
-    }
+    previousVirtualProjectionRef.current = currentVirtualProjection;
 
     const viewport = containerRef.current;
 
-    if (!viewport) {
+    if (!viewport || !pendingVirtualAnchor) {
       return;
     }
 
-    const viewportHeight = viewport.clientHeight || containerHeight || rowHeight * 12;
-    const physicalScrollTop = viewport.scrollTop;
-    const anchor = previousProjection.mixed
-      ? captureCominsScrollAnchor({
-          heightIndex: previousProjection.heightIndex,
-          keys: previousProjection.keys,
-          logicalScrollTop: getCominsMixedVirtualRange({
-            heightIndex: previousProjection.heightIndex,
-            overscan: 0,
-            physicalScrollTop,
-            viewportHeight,
-          }).logicalScrollTop,
-        })
-      : (() => {
-          if (previousProjection.visibleRowCount === 0) {
-            return undefined;
-          }
-
-          const metrics = getCominsScrollScale(
-            previousProjection.visibleRowCount * previousProjection.rowHeight,
-            viewportHeight,
-          );
-          const logicalScrollTop = Math.min(
-            metrics.logicalScrollableHeight,
-            Math.max(0, physicalScrollTop) * metrics.scrollScale,
-          );
-          const previousIndex = Math.min(
-            previousProjection.visibleRowCount - 1,
-            Math.floor(logicalScrollTop / previousProjection.rowHeight),
-          );
-          const dataIndex = previousProjection.projectedDataIndexes[previousIndex];
-          const rowId = dataIndex === undefined ? undefined : previousProjection.rowIds[dataIndex];
-
-          return rowId === undefined
-            ? undefined
-            : {
-                key: getCominsDataSlotKey(rowId),
-                offsetWithinSlot: logicalScrollTop - previousIndex * previousProjection.rowHeight,
-                previousIndex,
-              };
-        })();
-
-    if (!anchor) {
-      return;
-    }
-
-    const nextLogicalScrollTop = nextProjection.mixed
-      ? resolveCominsAnchorLogicalScrollTop({
-          anchor,
-          nextHeightIndex: nextProjection.heightIndex,
-          nextKeys: nextProjection.keys,
-          previousKeys: previousProjection.mixed ? previousProjection.keys : nextProjection.keys,
-        })
-      : (() => {
-          const nextVisibleIndex = nextProjection.projectedDataIndexes.findIndex((dataIndex) => {
-            const rowId = nextProjection.rowIds[dataIndex];
-
-            return rowId !== undefined && getCominsDataSlotKey(rowId) === anchor.key;
-          });
-
-          return nextVisibleIndex === -1
-            ? 0
-            : nextVisibleIndex * nextProjection.rowHeight +
-                Math.min(anchor.offsetWithinSlot, nextProjection.rowHeight);
-        })();
-    const nextLogicalTotalHeight = nextProjection.mixed
-      ? nextProjection.heightIndex.getTotalHeight()
-      : nextProjection.visibleRowCount * nextProjection.rowHeight;
+    const nextKeys = getCominsVirtualProjectionKeys(currentVirtualProjection);
+    const target = resolveCominsAnchorTarget({
+      anchor: pendingVirtualAnchor.anchor,
+      getNextHeight: (index) =>
+        currentVirtualProjection.mixed
+          ? currentVirtualProjection.heightIndex.getHeight(index)
+          : currentVirtualProjection.rowHeight,
+      nextKeys,
+      previousKeys: pendingVirtualAnchor.previousKeys,
+    });
+    const nextLogicalScrollTop = target
+      ? (currentVirtualProjection.mixed
+          ? currentVirtualProjection.heightIndex.getPrefixHeight(target.index)
+          : target.index * currentVirtualProjection.rowHeight) +
+        target.offsetWithinSlot
+      : 0;
+    const nextLogicalTotalHeight = currentVirtualProjection.mixed
+      ? currentVirtualProjection.heightIndex.getTotalHeight()
+      : currentVirtualProjection.visibleRowCount * currentVirtualProjection.rowHeight;
     const nextPhysicalScrollTop = getCominsPhysicalScrollTop(
       nextLogicalScrollTop,
       nextLogicalTotalHeight,
-      viewport.clientHeight,
+      viewport.clientHeight || pendingVirtualAnchor.previousViewportHeight,
     );
 
     if (scrollFrameRef.current !== null) {
@@ -1849,14 +1897,7 @@ function CominsTableInner<TData>(
     viewport.scrollTop = nextPhysicalScrollTop;
     pendingScrollTopRef.current = nextPhysicalScrollTop;
     setScrollTop(nextPhysicalScrollTop);
-  }, [
-    mixedProjection,
-    projectedDataIndexes,
-    rowHeight,
-    state.rowIds,
-    virtualized,
-    visibleRowCount,
-  ]);
+  }, [currentVirtualProjection, pendingVirtualAnchor]);
   const currentTheme = theme ?? state.theme;
   const densityClass =
     currentTheme.density === "compact"

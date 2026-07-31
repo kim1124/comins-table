@@ -321,6 +321,24 @@ export function resolveCominsAnchorLogicalScrollTop(input: {
   nextKeys: readonly string[];
   previousKeys: readonly string[];
 }) {
+  const target = resolveCominsAnchorTarget({
+    anchor: input.anchor,
+    getNextHeight: (index) => input.nextHeightIndex.getHeight(index),
+    nextKeys: input.nextKeys,
+    previousKeys: input.previousKeys,
+  });
+
+  return target
+    ? input.nextHeightIndex.getPrefixHeight(target.index) + target.offsetWithinSlot
+    : 0;
+}
+
+export function resolveCominsAnchorTarget(input: {
+  anchor: CominsScrollAnchor;
+  getNextHeight: (index: number) => number;
+  nextKeys: readonly string[];
+  previousKeys: readonly string[];
+}) {
   let nextIndex = input.nextKeys.indexOf(input.anchor.key);
 
   if (nextIndex === -1) {
@@ -350,14 +368,16 @@ export function resolveCominsAnchorLogicalScrollTop(input: {
   }
 
   if (nextIndex === -1) {
-    return 0;
+    return undefined;
   }
 
-  const offsetWithinSlot = Math.min(
-    Math.max(0, input.anchor.offsetWithinSlot),
-    input.nextHeightIndex.getHeight(nextIndex),
-  );
-  return input.nextHeightIndex.getPrefixHeight(nextIndex) + offsetWithinSlot;
+  return {
+    index: nextIndex,
+    offsetWithinSlot: Math.min(
+      Math.max(0, input.anchor.offsetWithinSlot),
+      Math.max(0, input.getNextHeight(nextIndex)),
+    ),
+  };
 }
 
 export function getCominsPhysicalScrollTop(
