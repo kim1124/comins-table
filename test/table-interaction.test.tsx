@@ -1492,4 +1492,81 @@ describe("comins-table keyboard interaction", () => {
     expect(content?.textContent).toBe("");
     expect(content?.style.height).toBe("96px");
   });
+
+  it("falls back to a 300px detail height for every invalid numeric result", () => {
+    const invalidRows: PersonRow[] = [
+      { age: 1, id: "zero", name: "Zero" },
+      { age: 2, id: "negative", name: "Negative" },
+      { age: 3, id: "nan", name: "NaN" },
+      { age: 4, id: "infinity", name: "Infinity" },
+    ];
+    const invalidHeights: Record<string, number> = {
+      infinity: Number.POSITIVE_INFINITY,
+      nan: Number.NaN,
+      negative: -24,
+      zero: 0,
+    };
+    const element = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={invalidRows}
+        expandedRowIds={["zero", "negative", "nan", "infinity"]}
+        getRowDetailHeight={({ row }) => invalidHeights[row.id]!}
+        getRowId={(row) => row.id}
+        renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+      />,
+    );
+
+    for (const row of invalidRows) {
+      expect(
+        element.querySelector<HTMLElement>(`[data-testid='row-detail-content-${row.id}']`)?.style.height,
+      ).toBe("300px");
+    }
+  });
+
+  it("does not invoke the detail-height callback when detail rendering is absent", () => {
+    const getRowDetailHeight = vi.fn(() => {
+      throw new Error("detail height must remain inert without a renderer");
+    });
+
+    renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={rows}
+        expandedRowIds={["a"]}
+        getRowDetailHeight={getRowDetailHeight}
+        getRowId={(row) => row.id}
+      />,
+    );
+
+    expect(getRowDetailHeight).not.toHaveBeenCalled();
+  });
+
+  it("returns focus to the disclosure after an initially expanded detail collapses", () => {
+    const renderDetail = () => <button data-testid="initial-detail-focus">Detail action</button>;
+    const renderProps = (expandedRowIds: string[]) => (
+      <CominsTable
+        columns={columns}
+        data={rows}
+        expandedRowIds={expandedRowIds}
+        getRowId={(row) => row.id}
+        onChangeExpandedRowIds={() => undefined}
+        renderRowDetail={renderDetail}
+      />
+    );
+    const element = renderTableElement(renderProps(["a"]));
+    const detailButton = element.querySelector<HTMLButtonElement>("[data-testid='initial-detail-focus']")!;
+    const toggle = element.querySelector<HTMLButtonElement>("[data-testid='row-detail-toggle-a']")!;
+
+    act(() => {
+      detailButton.focus();
+    });
+    expect(document.activeElement).toBe(detailButton);
+
+    act(() => {
+      root?.render(renderProps([]));
+    });
+
+    expect(document.activeElement).toBe(toggle);
+  });
 });

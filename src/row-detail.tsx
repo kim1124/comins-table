@@ -44,17 +44,20 @@ export function CominsRowDetailRow(props: {
   onContentElement: (element: HTMLDivElement | null) => void;
   ownerId: string;
   testId: string;
-  toggleElement: HTMLButtonElement | null;
+  getToggleElement: () => HTMLButtonElement | null;
 }) {
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const getToggleElementRef = useRef(props.getToggleElement);
+
+  getToggleElementRef.current = props.getToggleElement;
 
   useLayoutEffect(
     () => () => {
       if (contentRef.current && contentRef.current.contains(document.activeElement)) {
-        props.toggleElement?.focus();
+        getToggleElementRef.current()?.focus();
       }
     },
-    [props.toggleElement],
+    [],
   );
 
   return (

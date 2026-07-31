@@ -109,6 +109,7 @@ type CominsRowMoveState = {
 };
 
 const COMINS_MIN_COLUMN_WIDTH = 50;
+const COMINS_DEFAULT_ROW_DETAIL_HEIGHT = 300;
 
 export type CominsTableRowProps<TData> = {
   className?: CominsRowPropValue<TData, CominsClassValue>;
@@ -2818,10 +2819,14 @@ function CominsTableInner<TData>(
             const rowDetailParams: CominsRowDetailParams<TData> = { row: createEventRow(entry) };
             const rowDetailExpandable = rowDetailEnabled && (isRowExpandable?.(rowDetailParams) ?? true);
             const rowDetailExpanded = rowDetailExpandable && !virtualized && expandedRowIdSet.has(entry.rowId);
-            const rowDetailHeight = getRowDetailHeight?.(rowDetailParams) ?? estimatedRowDetailHeight;
+            const rowDetailHeight = rowDetailEnabled
+              ? getRowDetailHeight?.(rowDetailParams) ?? estimatedRowDetailHeight
+              : undefined;
             const rowDetailFixedHeight =
-              typeof rowDetailHeight === "number" && Number.isFinite(rowDetailHeight)
-                ? Math.max(0, rowDetailHeight)
+              typeof rowDetailHeight === "number"
+                ? Number.isFinite(rowDetailHeight) && rowDetailHeight > 0
+                  ? rowDetailHeight
+                  : COMINS_DEFAULT_ROW_DETAIL_HEIGHT
                 : undefined;
             const rowDetailIdToken = `${typeof entry.rowId}-${encodeURIComponent(String(entry.rowId))}`;
             const rowDetailId = `comins-row-detail-${encodeURIComponent(rowDetailIdPrefix)}-${rowDetailIdToken}`;
@@ -3190,7 +3195,7 @@ function CominsTableInner<TData>(
                   }}
                   ownerId={String(entry.rowId)}
                   testId={`row-detail-content-${String(entry.rowId)}`}
-                  toggleElement={rowDetailToggleElementsRef.current.get(entry.rowId) ?? null}
+                  getToggleElement={() => rowDetailToggleElementsRef.current.get(entry.rowId) ?? null}
                 >
                   {renderRowDetail?.(rowDetailParams)}
                 </CominsRowDetailRow>
