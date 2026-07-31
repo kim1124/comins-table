@@ -121,6 +121,91 @@ function installTestResizeObserver(height: number, width = 800) {
   };
 }
 
+function installControllableResizeObserver() {
+  const original = globalThis.ResizeObserver;
+  const observers: Array<{
+    callback: ResizeObserverCallback;
+    disconnectCount: number;
+    observed: Set<Element>;
+  }> = [];
+
+  class TestResizeObserver {
+    readonly record: (typeof observers)[number];
+
+    constructor(private readonly callback: ResizeObserverCallback) {
+      this.record = {
+        callback,
+        disconnectCount: 0,
+        observed: new Set<Element>(),
+      };
+      observers.push(this.record);
+    }
+
+    disconnect() {
+      this.record.disconnectCount += 1;
+      this.record.observed.clear();
+    }
+
+    observe(target: Element) {
+      this.record.observed.add(target);
+    }
+
+    unobserve(target: Element) {
+      this.record.observed.delete(target);
+    }
+  }
+
+  Object.defineProperty(globalThis, "ResizeObserver", {
+    configurable: true,
+    value: TestResizeObserver,
+  });
+
+  const emit = (element: Element, blockSize: number) => {
+    const observer = observers.find((candidate) => candidate.observed.has(element));
+
+    if (!observer) {
+      throw new Error("Expected the element to be observed");
+    }
+
+    const rect = element.getBoundingClientRect();
+    observer.callback(
+      [
+        {
+          borderBoxSize: [{ blockSize, inlineSize: rect.width }],
+          contentRect: { height: blockSize, width: rect.width },
+          target: element,
+        } as unknown as ResizeObserverEntry,
+      ],
+      {} as ResizeObserver,
+    );
+  };
+
+  return {
+    emit,
+    observers,
+    restore: () => {
+      Object.defineProperty(globalThis, "ResizeObserver", {
+        configurable: true,
+        value: original,
+      });
+    },
+  };
+}
+
+function setElementRect(element: Element, width: number, height: number) {
+  return vi.spyOn(element, "getBoundingClientRect").mockReturnValue({
+    bottom: height,
+    height,
+    left: 0,
+    right: width,
+    top: 0,
+    width,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  });
+}
+
 function pressControlKey(element: Element, key: "c" | "v") {
   act(() => {
     element.dispatchEvent(
@@ -476,6 +561,357 @@ describe("comins-table keyboard interaction", () => {
     } finally {
       requestAnimationFrame.mockRestore();
       restoreResizeObserver();
+    }
+  });
+
+  it("creates no observed Detail targets for fixed heights", () => {
+    const resize = installControllableResizeObserver();
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          columns={columns}
+          data={rows}
+          data-testid="fixed-measurement-viewport"
+          expandedRowIds={["a"]}
+          getRowDetailHeight={() => 300}
+          getRowId={(row) => row.id}
+          onChangeExpandedRowIds={() => undefined}
+          renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+          virtualized
+        />,
+      );
+      const viewport = element.querySelector("[data-testid='fixed-measurement-viewport']")!;
+      const detailObserver = resize.observers.find(
+        (observer) => !observer.observed.has(viewport),
+      );
+
+      expect(resize.observers).toHaveLength(2);
+      expect(detailObserver?.observed.size).toBe(0);
+    } finally {
+      resize.restore();
+    }
+  });
+
+  it("observes only mounted automatic Detail content blocks", () => {
+    const resize = installControllableResizeObserver();
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          buffer-size={2}
+          columns={columns}
+          data={manyRows}
+          data-testid="auto-measurement-viewport"
+          expandedRowIds={["row-0", "row-100"]}
+          getRowDetailHeight={() => "auto"}
+          getRowId={(row) => row.id}
+          onChangeExpandedRowIds={() => undefined}
+          renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+          virtualized
+        />,
+      );
+      const mounted = element.querySelector("[data-testid='row-detail-content-row-0']")!;
+      const unmounted = element.querySelector("[data-testid='row-detail-content-row-100']");
+      const detailObserver = resize.observers.find((observer) => observer.observed.has(mounted));
+
+      expect(unmounted).toBeNull();
+      expect([...detailObserver!.observed]).toEqual([mounted]);
+    } finally {
+      resize.restore();
+    }
+  });
+
+  it("replaces the automatic Detail estimate with a 420px observation", () => {
+    const resize = installControllableResizeObserver();
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          columns={columns}
+          data={rows}
+          data-testid="measured-detail-viewport"
+          estimatedRowDetailHeight={300}
+          expandedRowIds={["a"]}
+          getRowDetailHeight={() => "auto"}
+          getRowId={(row) => row.id}
+          onChangeExpandedRowIds={() => undefined}
+          renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+          rowHeight={36}
+          virtualized
+        />,
+      );
+      const viewport = element.querySelector("[data-testid='measured-detail-viewport']")!;
+      const content = element.querySelector("[data-testid='row-detail-content-a']")!;
+      const sizer = element.querySelector<HTMLElement>(".comins-table__body-virtual-sizer")!;
+
+      setElementRect(viewport, 800, 180);
+      setElementRect(content, 800, 300);
+
+      act(() => resize.emit(viewport, 180));
+      expect(sizer.style.height).toBe("372px");
+
+      act(() => resize.emit(content, 420));
+      expect(sizer.style.height).toBe("492px");
+    } finally {
+      resize.restore();
+    }
+  });
+
+  it("ignores automatic Detail measurement deltas smaller than 0.5px", () => {
+    const resize = installControllableResizeObserver();
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          columns={columns}
+          data={rows}
+          data-testid="detail-delta-viewport"
+          expandedRowIds={["a"]}
+          getRowDetailHeight={() => "auto"}
+          getRowId={(row) => row.id}
+          onChangeExpandedRowIds={() => undefined}
+          renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+          rowHeight={36}
+          virtualized
+        />,
+      );
+      const viewport = element.querySelector("[data-testid='detail-delta-viewport']")!;
+      const content = element.querySelector("[data-testid='row-detail-content-a']")!;
+      const sizer = element.querySelector<HTMLElement>(".comins-table__body-virtual-sizer")!;
+
+      setElementRect(viewport, 800, 180);
+      setElementRect(content, 800, 300);
+
+      act(() => resize.emit(viewport, 180));
+      act(() => resize.emit(content, 420));
+      act(() => resize.emit(content, 420.25));
+
+      expect(sizer.style.height).toBe("492px");
+    } finally {
+      resize.restore();
+    }
+  });
+
+  it("uses the estimate after Detail width changes until a matching observation arrives", () => {
+    const resize = installControllableResizeObserver();
+    const ref = createRef<CominsTableRef<PersonRow>>();
+    const fixedColumns = [
+      { field: "name", label: "Name", width: 400 },
+      { field: "age", label: "Age", width: 400 },
+    ] as const;
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          columns={fixedColumns}
+          data={rows}
+          data-testid="detail-width-viewport"
+          estimatedRowDetailHeight={300}
+          expandedRowIds={["a"]}
+          getRowDetailHeight={() => "auto"}
+          getRowId={(row) => row.id}
+          onChangeExpandedRowIds={() => undefined}
+          ref={ref}
+          renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+          rowHeight={36}
+          virtualized
+        />,
+      );
+      const viewport = element.querySelector("[data-testid='detail-width-viewport']")!;
+      const content = element.querySelector("[data-testid='row-detail-content-a']")!;
+      const sizer = element.querySelector<HTMLElement>(".comins-table__body-virtual-sizer")!;
+      let detailWidth = 800;
+
+      setElementRect(viewport, 500, 180);
+      vi.spyOn(content, "getBoundingClientRect").mockImplementation(() => ({
+        bottom: 300,
+        height: 300,
+        left: 0,
+        right: detailWidth,
+        top: 0,
+        width: detailWidth,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }));
+
+      act(() => resize.emit(viewport, 180));
+      act(() => resize.emit(content, 420));
+      expect(sizer.style.height).toBe("492px");
+
+      detailWidth = 500;
+      act(() => {
+        ref.current?.setColumnLayout({
+          columns: { age: { hidden: true }, name: { width: 400 } },
+        });
+      });
+      expect(sizer.style.height).toBe("372px");
+
+      act(() => resize.emit(content, 360));
+      expect(sizer.style.height).toBe("432px");
+    } finally {
+      resize.restore();
+    }
+  });
+
+  it("disconnects the Detail observer and releases observed elements on unmount", () => {
+    const resize = installControllableResizeObserver();
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          columns={columns}
+          data={rows}
+          data-testid="detail-cleanup-viewport"
+          expandedRowIds={["a"]}
+          getRowDetailHeight={() => "auto"}
+          getRowId={(row) => row.id}
+          onChangeExpandedRowIds={() => undefined}
+          renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+          virtualized
+        />,
+      );
+      const content = element.querySelector("[data-testid='row-detail-content-a']")!;
+      const detailObserver = resize.observers.find((observer) => observer.observed.has(content))!;
+
+      expect(detailObserver.observed.has(content)).toBe(true);
+
+      act(() => root?.unmount());
+      root = undefined;
+
+      expect(detailObserver.disconnectCount).toBe(1);
+      expect(detailObserver.observed.size).toBe(0);
+    } finally {
+      resize.restore();
+    }
+  });
+
+  it("measures automatic Detail content once after mount without ResizeObserver", () => {
+    const original = globalThis.ResizeObserver;
+    let detailMeasurements = 0;
+    const rect = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function () {
+      if (this.classList.contains("comins-table__detail-content")) {
+        detailMeasurements += 1;
+        return {
+          bottom: 420,
+          height: 420,
+          left: 0,
+          right: 800,
+          top: 0,
+          width: 800,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        };
+      }
+
+      return {
+        bottom: 0,
+        height: 0,
+        left: 0,
+        right: 0,
+        top: 0,
+        width: 0,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      };
+    });
+
+    Object.defineProperty(globalThis, "ResizeObserver", {
+      configurable: true,
+      value: undefined,
+    });
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          columns={[
+            { field: "name", label: "Name", width: 400 },
+            { field: "age", label: "Age", width: 400 },
+          ]}
+          data={rows}
+          expandedRowIds={["a"]}
+          getRowDetailHeight={() => "auto"}
+          getRowId={(row) => row.id}
+          onChangeExpandedRowIds={() => undefined}
+          renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+          rowHeight={36}
+          virtualized
+        />,
+      );
+
+      expect(detailMeasurements).toBe(1);
+      expect(
+        element.querySelector<HTMLElement>(".comins-table__body-virtual-sizer")?.style.height,
+      ).toBe("492px");
+    } finally {
+      rect.mockRestore();
+      Object.defineProperty(globalThis, "ResizeObserver", {
+        configurable: true,
+        value: original,
+      });
+    }
+  });
+
+  it("preserves the first visible slot while an earlier automatic Detail grows", () => {
+    const resize = installControllableResizeObserver();
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          buffer-size={30}
+          columns={columns}
+          data={manyRows.slice(0, 30)}
+          data-testid="detail-anchor-viewport"
+          expandedRowIds={["row-0"]}
+          getRowDetailHeight={() => "auto"}
+          getRowId={(row) => row.id}
+          onChangeExpandedRowIds={() => undefined}
+          renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+          rowHeight={36}
+          virtualized
+        />,
+      );
+      const viewport = element.querySelector<HTMLElement>("[data-testid='detail-anchor-viewport']")!;
+      const content = element.querySelector("[data-testid='row-detail-content-row-0']")!;
+      const sizer = element.querySelector<HTMLElement>(".comins-table__body-virtual-sizer")!;
+      let assignedScrollTop = 600;
+
+      setElementRect(viewport, 800, 180);
+      setElementRect(content, 800, 300);
+      Object.defineProperties(viewport, {
+        clientHeight: { configurable: true, value: 180 },
+        scrollHeight: {
+          configurable: true,
+          get: () => Number.parseFloat(sizer.style.height),
+        },
+        scrollTop: {
+          configurable: true,
+          get: () => assignedScrollTop,
+          set: (value: number) => {
+            assignedScrollTop = value;
+          },
+        },
+      });
+
+      act(() => resize.emit(viewport, 180));
+      act(() => {
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      act(() => resize.emit(content, 420));
+
+      expect(viewport.scrollTop).toBe(720);
+    } finally {
+      requestAnimationFrame.mockRestore();
+      resize.restore();
     }
   });
 

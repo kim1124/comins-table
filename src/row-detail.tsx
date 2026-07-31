@@ -48,8 +48,19 @@ export function CominsRowDetailRow(props: {
 }) {
   const contentRef = useRef<HTMLDivElement | null>(null);
   const getToggleElementRef = useRef(props.getToggleElement);
+  const onContentElementRef = useRef(props.onContentElement);
+  const automatic = props.fixedHeight === undefined;
 
   getToggleElementRef.current = props.getToggleElement;
+  onContentElementRef.current = props.onContentElement;
+
+  useLayoutEffect(() => {
+    const element = contentRef.current;
+
+    onContentElementRef.current(element);
+
+    return () => onContentElementRef.current(null);
+  }, [automatic]);
 
   useLayoutEffect(
     () => () => {
@@ -68,10 +79,7 @@ export function CominsRowDetailRow(props: {
           className="comins-table__detail-content"
           data-testid={props.testId}
           id={props.contentId}
-          ref={(element) => {
-            contentRef.current = element;
-            props.onContentElement(element);
-          }}
+          ref={contentRef}
           role="region"
           style={props.fixedHeight === undefined ? undefined : { height: props.fixedHeight }}
         >

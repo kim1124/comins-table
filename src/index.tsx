@@ -62,8 +62,11 @@ import {
   getCominsSlotHeight,
   normalizeCominsDetailEstimate,
   normalizeCominsDetailHeight,
+  reconcileCominsDetailMeasurements,
   resolveCominsAnchorTarget,
+  resolveCominsMeasuredDetailHeight,
   type CominsDataVirtualSlot,
+  type CominsDetailMeasurement,
   type CominsScrollAnchor,
   type CominsVirtualSlot,
 } from "./virtual-layout";
@@ -359,6 +362,11 @@ type CominsPendingVirtualAnchor = {
   previousLogicalScrollTop: number;
   previousPhysicalScrollTop: number;
   previousViewportHeight: number;
+};
+
+type CominsObservedDetail = {
+  element: HTMLDivElement;
+  rowId: CominsRowId;
 };
 
 type CominsTreeRenderContext<TData> = {
@@ -1262,6 +1270,15 @@ function CominsTableInner<TData>(
   const copiedCellRef = useRef<CominsCopiedCell | null>(null);
   const copiedRangeRef = useRef<CominsCopiedCellRange | null>(null);
   const copiedRowRef = useRef<CominsCopiedRow<TData> | null>(null);
+  const detailMeasurementsRef = useRef(
+    new Map<CominsRowId, CominsDetailMeasurement>(),
+  );
+  const detailElementsRef = useRef(
+    new Map<Element, CominsObservedDetail>(),
+  );
+  const detailObserverRef = useRef<ResizeObserver | null>(null);
+  const detailContentWidthRef = useRef(0);
+  const mixedProjectionRef = useRef<CominsMixedVirtualProjection<TData> | null>(null);
   const rowDetailContentElementsRef = useRef(new Map<CominsRowId, HTMLDivElement>());
   const rowDetailToggleElementsRef = useRef(new Map<CominsRowId, HTMLButtonElement>());
   const activePointerGestureCleanupRef = useRef<(() => void) | null>(null);
@@ -1280,11 +1297,13 @@ function CominsTableInner<TData>(
   const rowMoveStateRef = useRef<CominsRowMoveState | null>(null);
   const pendingScrollTopRef = useRef(0);
   const previousVirtualProjectionRef = useRef<CominsVirtualProjection | null>(null);
+  const virtualViewportHeightRef = useRef(Math.max(1, rowHeight) * 12);
   const scrollCommitTimeoutRef = useRef<number | null>(null);
   const scrollFrameRef = useRef<number | null>(null);
   const suppressedSortClickRef = useRef<CominsSuppressedSortClick | null>(null);
   const [containerHeight, setContainerHeight] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [detailLayoutVersion, setDetailLayoutVersion] = useState(0);
   const [movingColumnId, setMovingColumnId] = useState<string | null>(null);
   const [movingGroupId, setMovingGroupId] = useState<string | null>(null);
   const [columnMovePointer, setColumnMovePointer] = useState<{ x: number; y: number } | null>(null);
@@ -1295,6 +1314,7 @@ function CominsTableInner<TData>(
   const [resizingColumnId, setResizingColumnId] = useState<string | null>(null);
   const [rowMoveState, setRowMoveState] = useState<CominsRowMoveState | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
+  virtualViewportHeightRef.current = containerHeight || Math.max(1, rowHeight) * 12;
   const rowDetailIdPrefix = useId();
   const effectiveData = lazyLoad ? lazyRows : data;
   const [state, setState] = useState(() =>
@@ -1531,6 +1551,206 @@ function CominsTableInner<TData>(
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    reconcileCominsDetailMeasurements(
+      detailMeasurementsRef.current,
+      new Set(state.rowIds),
+    );
+  }, [state.rows]);
+
+  useEffect(() => {
+    if (typeof ResizeObserver === "undefined") {
+      return () => {
+        detailObserverRef.current = null;
+        detailElementsRef.current.clear();
+      };
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const updates: Array<{
+        height: number;
+        rowId: CominsRowId;
+        width: number;
+      }> = [];
+
+      for (const entry of entries) {
+        const observed = detailElementsRef.current.get(entry.target);
+
+        if (!observed) {
+          continue;
+        }
+
+        const borderBox = Array.isArray(entry.borderBoxSize)
+          ? entry.borderBoxSize[0]
+          : entry.borderBoxSize;
+        const height =
+          borderBox?.blockSize ??
+          (entry.target as HTMLElement).getBoundingClientRect().height;
+        const width = Math.round(
+          (entry.target as HTMLElement).getBoundingClientRect().width,
+        );
+
+        if (Number.isFinite(height) && height > 0) {
+          updates.push({ height, rowId: observed.rowId, width });
+        }
+      }
+
+      const accepted = updates.filter(({ height, rowId, width }) => {
+        const current = detailMeasurementsRef.current.get(rowId);
+
+        return (
+          !current ||
+          current.width !== width ||
+          Math.abs(current.height - height) >= 0.5
+        );
+      });
+
+      if (accepted.length === 0) {
+        return;
+      }
+
+      const projection = mixedProjectionRef.current;
+      const viewport = containerRef.current;
+      const viewportHeight =
+        viewport?.clientHeight || virtualViewportHeightRef.current;
+      const previousLogicalScrollTop =
+        projection && viewport
+          ? getCominsMixedVirtualRange({
+              heightIndex: projection.heightIndex,
+              overscan: 0,
+              physicalScrollTop: viewport.scrollTop,
+              viewportHeight,
+            }).logicalScrollTop
+          : 0;
+      const anchor =
+        projection && viewport
+          ? captureCominsScrollAnchor({
+              heightIndex: projection.heightIndex,
+              keys: projection.keys,
+              logicalScrollTop: previousLogicalScrollTop,
+            })
+          : undefined;
+      let updatedActiveIndex = false;
+
+      for (const update of accepted) {
+        detailMeasurementsRef.current.set(update.rowId, {
+          height: update.height,
+          width: update.width,
+        });
+
+        if (
+          !projection ||
+          update.width !== detailContentWidthRef.current
+        ) {
+          continue;
+        }
+
+        const slotIndex = projection.slots.findIndex(
+          (slot) =>
+            slot.rowId === update.rowId &&
+            slot.detail?.mode === "auto",
+        );
+        const slot = projection.slots[slotIndex];
+
+        if (slotIndex < 0 || !slot?.detail) {
+          continue;
+        }
+
+        const currentSlotHeight = projection.heightIndex.getHeight(slotIndex);
+        const nextSlotHeight =
+          currentSlotHeight - slot.detail.height + update.height;
+
+        projection.heightIndex.updateHeight(slotIndex, nextSlotHeight);
+        slot.detail = {
+          estimated: false,
+          height: update.height,
+          mode: "auto",
+        };
+        updatedActiveIndex = true;
+      }
+
+      if (projection && viewport && anchor && updatedActiveIndex) {
+        const target = resolveCominsAnchorTarget({
+          anchor,
+          getNextHeight: (index) => projection.heightIndex.getHeight(index),
+          nextKeys: projection.keys,
+          previousKeys: projection.keys,
+        });
+        const nextLogicalScrollTop = target
+          ? projection.heightIndex.getPrefixHeight(target.index) +
+            target.offsetWithinSlot
+          : 0;
+        const nextPhysicalScrollTop = getCominsPhysicalScrollTop(
+          nextLogicalScrollTop,
+          projection.heightIndex.getTotalHeight(),
+          viewportHeight,
+        );
+
+        if (scrollFrameRef.current !== null) {
+          window.cancelAnimationFrame(scrollFrameRef.current);
+          scrollFrameRef.current = null;
+        }
+
+        viewport.scrollTop = nextPhysicalScrollTop;
+        pendingScrollTopRef.current = nextPhysicalScrollTop;
+        previousVirtualProjectionRef.current = {
+          heightIndex: projection.heightIndex,
+          keys: projection.keys,
+          mixed: true,
+        };
+        setScrollTop(nextPhysicalScrollTop);
+      }
+
+      setDetailLayoutVersion((current) => current + 1);
+    });
+
+    detailObserverRef.current = observer;
+
+    for (const observed of detailElementsRef.current.values()) {
+      observer.observe(observed.element);
+    }
+
+    return () => {
+      observer.disconnect();
+      detailObserverRef.current = null;
+      detailElementsRef.current.clear();
+    };
+  }, []);
+
+  const registerDetailElement = (
+    rowId: CominsRowId,
+    mode: "auto" | "fixed",
+    element: HTMLDivElement | null,
+  ) => {
+    for (const [currentElement, observed] of detailElementsRef.current) {
+      if (observed.rowId === rowId && currentElement !== element) {
+        detailObserverRef.current?.unobserve(currentElement);
+        detailElementsRef.current.delete(currentElement);
+      }
+    }
+
+    if (!element || mode === "fixed") {
+      return;
+    }
+
+    detailElementsRef.current.set(element, { element, rowId });
+
+    if (detailObserverRef.current) {
+      detailObserverRef.current.observe(element);
+      return;
+    }
+
+    const rect = element.getBoundingClientRect();
+
+    if (Number.isFinite(rect.height) && rect.height > 0) {
+      detailMeasurementsRef.current.set(rowId, {
+        height: rect.height,
+        width: Math.round(rect.width),
+      });
+      setDetailLayoutVersion((current) => current + 1);
+    }
+  };
+
   const notifyChanges = (
     current: CominsTableState<TData>,
     next: CominsTableState<TData>,
@@ -1570,6 +1790,64 @@ function CominsTableInner<TData>(
   };
 
   const visibleColumns = useMemo(() => getCominsVisibleColumns(state), [state]);
+  const columnWidths = useMemo(() => {
+    const columnCount = visibleColumns.length;
+
+    if (columnCount === 0) {
+      return [];
+    }
+
+    const configuredWidths = visibleColumns.map((column) => state.columnState[column.id]?.width ?? column.width);
+
+    if (containerWidth <= 0) {
+      const fallbackWidth = `${100 / columnCount}%`;
+
+      return configuredWidths.map((width) => width ?? fallbackWidth);
+    }
+
+    let fixedTotal = 0;
+
+    for (const width of configuredWidths) {
+      fixedTotal += width ?? 0;
+    }
+
+    const flexibleColumns = visibleColumns.filter((_column, index) => configuredWidths[index] === undefined);
+    const flexibleWidth =
+      flexibleColumns.length > 0 ? Math.max(0, (containerWidth - fixedTotal) / flexibleColumns.length) : 0;
+
+    return visibleColumns.map((column, index) => {
+      const width = configuredWidths[index] ?? flexibleWidth;
+      const minWidth = getEffectiveColumnMinWidth(column);
+      const maxWidth = column.maxWidth ?? Number.POSITIVE_INFINITY;
+
+      return Math.min(maxWidth, Math.max(minWidth, width));
+    });
+  }, [containerWidth, state.columnState, visibleColumns]);
+  const columnWidthTotal = useMemo(() => {
+    let totalWidth = 0;
+
+    for (const width of columnWidths) {
+      if (typeof width !== "number") {
+        return undefined;
+      }
+
+      totalWidth += width;
+    }
+
+    return totalWidth;
+  }, [columnWidths]);
+  const tableWidth = useMemo(() => {
+    if (typeof columnWidthTotal !== "number") {
+      return undefined;
+    }
+
+    return Math.max(containerWidth, columnWidthTotal);
+  }, [columnWidthTotal, containerWidth]);
+  const detailContentWidth =
+    typeof tableWidth === "number" && Number.isFinite(tableWidth)
+      ? Math.round(tableWidth)
+      : 0;
+  detailContentWidthRef.current = detailContentWidth;
   const headerRows = useMemo(() => getCominsHeaderRows(state), [state]);
   const summaryValues = useMemo(
     () => (summary ? getCominsSummaryValues(treeContext?.summaryRows ?? state.rows, visibleColumns, summary) : null),
@@ -1678,8 +1956,12 @@ function CominsTableInner<TData>(
           detail =
             normalized.mode === "auto"
               ? {
-                  estimated: true,
-                  height: normalizeCominsDetailEstimate(estimatedRowDetailHeight),
+                  ...resolveCominsMeasuredDetailHeight(
+                    detailMeasurementsRef.current,
+                    rowId,
+                    detailContentWidth,
+                    normalizeCominsDetailEstimate(estimatedRowDetailHeight),
+                  ),
                   mode: "auto",
                 }
               : { estimated: false, height: normalized.height, mode: "fixed" };
@@ -1708,6 +1990,8 @@ function CominsTableInner<TData>(
     };
   }, [
     effectiveExpandedRowIdSet,
+    detailContentWidth,
+    detailLayoutVersion,
     estimatedRowDetailHeight,
     getRowDetailHeight,
     projectedDataIndexes,
@@ -1716,6 +2000,7 @@ function CominsTableInner<TData>(
     state.rows,
     virtualized,
   ]);
+  mixedProjectionRef.current = mixedProjection;
   const pageStartIndex = Math.max(0, state.pagination.pageIndex) * Math.max(1, state.pagination.pageSize);
   const rowWindow = useMemo<CominsVirtualWindow<TData>>(() => {
     if (virtualized) {
@@ -1906,59 +2191,6 @@ function CominsTableInner<TData>(
         ? "text-[13px]"
         : "text-[length:var(--comins-font-size-base,12px)]";
   const selectedRowIdSet = useMemo(() => new Set(state.selection.rowIds), [state.selection.rowIds]);
-  const columnWidths = useMemo(() => {
-    const columnCount = visibleColumns.length;
-
-    if (columnCount === 0) {
-      return [];
-    }
-
-    const configuredWidths = visibleColumns.map((column) => state.columnState[column.id]?.width ?? column.width);
-
-    if (containerWidth <= 0) {
-      const fallbackWidth = `${100 / columnCount}%`;
-
-      return configuredWidths.map((width) => width ?? fallbackWidth);
-    }
-
-    let fixedTotal = 0;
-
-    for (const width of configuredWidths) {
-      fixedTotal += width ?? 0;
-    }
-
-    const flexibleColumns = visibleColumns.filter((_column, index) => configuredWidths[index] === undefined);
-    const flexibleWidth =
-      flexibleColumns.length > 0 ? Math.max(0, (containerWidth - fixedTotal) / flexibleColumns.length) : 0;
-
-    return visibleColumns.map((column, index) => {
-      const width = configuredWidths[index] ?? flexibleWidth;
-      const minWidth = getEffectiveColumnMinWidth(column);
-      const maxWidth = column.maxWidth ?? Number.POSITIVE_INFINITY;
-
-      return Math.min(maxWidth, Math.max(minWidth, width));
-    });
-  }, [containerWidth, state.columnState, visibleColumns]);
-  const columnWidthTotal = useMemo(() => {
-    let totalWidth = 0;
-
-    for (const width of columnWidths) {
-      if (typeof width !== "number") {
-        return undefined;
-      }
-
-      totalWidth += width;
-    }
-
-    return totalWidth;
-  }, [columnWidths]);
-  const tableWidth = useMemo(() => {
-    if (typeof columnWidthTotal !== "number") {
-      return undefined;
-    }
-
-    return Math.max(containerWidth, columnWidthTotal);
-  }, [columnWidthTotal, containerWidth]);
   const hasHorizontalOverflow =
     typeof columnWidthTotal === "number" && containerWidth > 0 ? columnWidthTotal > containerWidth + 1 : false;
   const lazyHasMoreRows = lazyLoad && (lazyTotalRows === undefined || visibleRowCount < lazyTotalRows);
@@ -3206,6 +3438,8 @@ function CominsTableInner<TData>(
                   ? rowDetailHeight
                   : COMINS_DEFAULT_ROW_DETAIL_HEIGHT
                 : undefined;
+            const rowDetailMode =
+              rowDetailHeight === "auto" ? "auto" : "fixed";
             const rowDetailIdToken = `${typeof entry.rowId}-${encodeURIComponent(String(entry.rowId))}`;
             const rowDetailId = `comins-row-detail-${encodeURIComponent(rowDetailIdPrefix)}-${rowDetailIdToken}`;
             const rowDetailContentId = `${rowDetailId}-content`;
@@ -3565,6 +3799,8 @@ function CominsTableInner<TData>(
                   fixedHeight={rowDetailFixedHeight}
                   labelId={rowDetailToggleId}
                   onContentElement={(element) => {
+                    registerDetailElement(entry.rowId, rowDetailMode, element);
+
                     if (element) {
                       rowDetailContentElementsRef.current.set(entry.rowId, element);
                     } else {
