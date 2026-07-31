@@ -5,8 +5,8 @@ owner business Row. The application owns the expanded IDs and Detail content;
 Comins Table keeps sorting, pagination, loading, movement, selection, clipboard,
 and callbacks addressed to owner Rows only.
 
-Open `/examples/row-expand` after `npm run dev` for fixed, automatic, tall, and
-read-only controlled examples.
+Open `/examples/row-expand` after `npm run dev` for fixed, automatic, tall,
+read-only controlled, and non-expandable examples.
 
 ## Public Types
 
@@ -52,13 +52,17 @@ const [expandedRowIds, setExpandedRowIds] = useState<readonly string[]>([]);
 `expandedRowIds` defaults to an empty array. A disclosure calls
 `onChangeExpandedRowIds` with the next deduplicated owner ID array; the
 application writes it back to keep the UI controlled. If the callback is
-omitted, the disclosure reflects the supplied state but is disabled.
+omitted for an otherwise expandable Row, the read-only controlled disclosure
+reflects the supplied state but is disabled. Its effective Detail remains
+mounted when its ID is present.
 
 IDs remain dormant when their owner is filtered out, paged out, not loaded, or
 temporarily unavailable. They are preserved in subsequent callback input and
 become effective again when the owner returns. An ID is effective only when the
 current flat data contains the owner and `isRowExpandable` does not return
-`false`. A non-expandable Row renders neither a disclosure nor a Detail.
+`false`. This is a separate contract from read-only control: a non-expandable
+Row renders neither a disclosure nor a Detail, even when a change callback and
+controlled ID are present.
 
 ## Detail Height
 

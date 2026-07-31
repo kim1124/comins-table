@@ -34,7 +34,7 @@ export const dataTableOptionGuide = [
       { description: "Called after right-clicking a row and applying single-row selection.", name: "onContextMenuRow" },
       { description: "Synchronizes sort state with application state.", name: "onChangeSort" },
       { description: "Receives every complete ordered multi-column sort model change.", name: "onChangeSortModel" },
-      { description: "Receives the next controlled owner Row ID array after a disclosure is toggled.", name: "onChangeExpandedRowIds" },
+      { description: "Receives the next controlled owner Row ID array after a disclosure is toggled. Omit it for a disabled read-only disclosure.", name: "onChangeExpandedRowIds" },
       { description: "Called when an infiniteScroll body viewport reaches the bottom threshold.", name: "onLoadMore" },
       { description: "Receives offset, limit, reason, and AbortSignal, then returns a lazy row batch and total.", name: "onLazyLoad" },
     ],

@@ -60,8 +60,18 @@ test("controls fixed Row Details with semantic disclosure state and focus restor
   const readOnly = page.getByTestId("row-expand-example-readonly");
   const readOnlyToggle = readOnly.getByTestId("row-detail-toggle-readonly-1");
   await expect(readOnly.getByTestId("row-readonly-1")).toBeVisible();
-  await expect(readOnlyToggle).toHaveCount(0);
-  await expect(readOnly.locator("[data-detail-for='readonly-1']")).toHaveCount(0);
+  await expect(readOnlyToggle).toBeDisabled();
+  await expect(readOnlyToggle).toHaveAccessibleName("Collapse readonly-1 details");
+  await expect(readOnlyToggle).toHaveAttribute("aria-expanded", "true");
+  await expect(readOnlyToggle).toHaveAttribute("aria-controls", /.+/u);
+  await expect(
+    readOnly.getByRole("region", { exact: true, name: "Collapse readonly-1 details" }),
+  ).toBeVisible();
+
+  const nonExpandable = page.getByTestId("row-expand-example-non-expandable");
+  await expect(nonExpandable.getByTestId("row-non-expandable-1")).toBeVisible();
+  await expect(nonExpandable.getByTestId("row-detail-toggle-non-expandable-1")).toHaveCount(0);
+  await expect(nonExpandable.locator("[data-detail-for='non-expandable-1']")).toHaveCount(0);
 
   expect(diagnostics).toEqual([]);
 });

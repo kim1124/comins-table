@@ -6,7 +6,7 @@ Table의 sorting, pagination, loading, movement, selection, clipboard, callback�
 owner Row만 대상으로 유지된다.
 
 `npm run dev` 실행 후 `/examples/row-expand`에서 fixed, automatic, viewport보다
-큰 Detail, read-only controlled 예제를 확인할 수 있다.
+큰 Detail, read-only controlled, non-expandable 예제를 확인할 수 있다.
 
 ## Public Types
 
@@ -51,14 +51,16 @@ const [expandedRowIds, setExpandedRowIds] = useState<readonly string[]>([]);
 
 `expandedRowIds` 기본값은 빈 배열이다. disclosure를 조작하면
 `onChangeExpandedRowIds`가 중복을 제거한 다음 owner ID 배열을 전달하며,
-애플리케이션은 그 값을 다시 prop으로 전달한다. callback을 생략하면 disclosure는
-전달된 상태를 표시하지만 disabled 상태가 된다.
+애플리케이션은 그 값을 다시 prop으로 전달한다. 기본 expandable Row에서 callback을
+생략하면 read-only controlled disclosure는 전달된 상태를 표시하지만 disabled
+상태가 된다. ID가 유효하면 Detail은 mount 상태를 유지한다.
 
 owner가 filter, pagination, loading 또는 일시적 data 변경으로 보이지 않아도 ID는
 dormant 상태로 보존된다. 다음 callback 입력에도 포함되고 owner가 다시 나타나면
 다시 유효해진다. 현재 flat data에 owner가 존재하고 `isRowExpandable`이 `false`를
-반환하지 않을 때만 ID가 유효하다. 확장할 수 없는 Row는 disclosure와 Detail을
-모두 렌더링하지 않는다.
+반환하지 않을 때만 ID가 유효하다. 이는 read-only control과 별도 계약이다.
+non-expandable Row는 callback과 controlled ID가 있어도 disclosure와 Detail을 모두
+렌더링하지 않는다.
 
 ## Detail Height
 

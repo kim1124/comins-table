@@ -288,9 +288,9 @@ export function RowExpandFeature() {
       </FeatureSampleSection>
 
       <FeatureSampleSection
-        description="isRowExpandable=false인 owner는 controlled ID가 있어도 disclosure와 Detail을 렌더링하지 않습니다."
+        description="onChangeExpandedRowIds를 생략한 기본 expandable Row는 현재 상태와 Detail을 표시하지만 disclosure가 disabled됩니다."
         id="row-expand-readonly"
-        title="Non-expandable read-only owner"
+        title="Controlled read-only disclosure"
       >
         <CominsTable
           className="example-table"
@@ -300,8 +300,34 @@ export function RowExpandFeature() {
           expandedRowIds={["readonly-1"]}
           getRowDetailHeight={() => 160}
           getRowId={(row) => row.id}
-          isRowExpandable={() => false}
           renderRowDetail={({ row }) => <span>{`Read-only Detail for ${row.data.name}`}</span>}
+          theme={{ density: "compact" }}
+        />
+      </FeatureSampleSection>
+
+      <FeatureSampleSection
+        description="isRowExpandable=false인 owner는 callback과 controlled ID가 있어도 disclosure와 Detail을 렌더링하지 않습니다."
+        id="row-expand-non-expandable"
+        title="Non-expandable owner"
+      >
+        <CominsTable
+          className="example-table"
+          columns={autoColumns}
+          data={[
+            {
+              age: 41,
+              id: "non-expandable-1",
+              name: "Non-expandable owner",
+              role: "Auditor",
+              status: "Locked",
+            },
+          ]}
+          data-testid="row-expand-example-non-expandable"
+          expandedRowIds={["non-expandable-1"]}
+          getRowId={(row) => row.id}
+          isRowExpandable={() => false}
+          onChangeExpandedRowIds={() => undefined}
+          renderRowDetail={({ row }) => <span>{`Unavailable Detail for ${row.data.name}`}</span>}
           theme={{ density: "compact" }}
         />
       </FeatureSampleSection>
