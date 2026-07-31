@@ -1,5 +1,5 @@
 import type React from "react";
-import { Fragment, forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { Fragment, forwardRef, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from "react";
 
 import {
   applyCominsColumnLayout,
@@ -32,6 +32,7 @@ import {
 } from "./core";
 import { getCominsColumnMouseIntent } from "./column-pointer";
 import { renderCominsBuiltInComponent, type CominsBuiltInComponentInteraction } from "./component-renderer";
+import { CominsRowDetailRow, CominsRowDetailToggle } from "./row-detail";
 import { getCominsSummaryValues } from "./summary";
 import {
   flattenCominsTree,
@@ -148,6 +149,21 @@ export type CominsCellKeyboardEventPayload<TData, TValue = unknown> = CominsCell
   React.KeyboardEvent<HTMLTableCellElement>
 >;
 
+export type CominsRowDetailParams<TData> = {
+  row: CominsEventRow<TData>;
+};
+
+export type CominsRowDetailHeight = number | "auto";
+
+export type CominsRowDetailProps<TData> = {
+  estimatedRowDetailHeight?: number;
+  expandedRowIds?: readonly CominsRowId[];
+  getRowDetailHeight?: (params: CominsRowDetailParams<TData>) => CominsRowDetailHeight;
+  isRowExpandable?: (params: CominsRowDetailParams<TData>) => boolean;
+  onChangeExpandedRowIds?: (rowIds: CominsRowId[]) => void;
+  renderRowDetail?: (params: CominsRowDetailParams<TData>) => React.ReactNode;
+};
+
 export type CominsTableRef<TData = unknown> = {
   clearSort: () => void;
   expand: (nodeIds?: readonly CominsRowId[]) => void;
@@ -177,7 +193,7 @@ export type CominsLazyLoadResult<TData> = {
   total?: number;
 };
 
-export type CominsTableProps<TData> = {
+type CominsTableFlatProps<TData> = {
   "buffer-size"?: number;
   cellSelection?: boolean;
   className?: string;
@@ -226,6 +242,8 @@ export type CominsTableProps<TData> = {
   virtualized?: boolean;
 };
 
+export type CominsTableProps<TData> = CominsTableFlatProps<TData> & CominsRowDetailProps<TData>;
+
 export type CominsTreeTableProps<TData> = Omit<
   CominsTableProps<TData>,
   | "data"
@@ -243,6 +261,12 @@ export type CominsTreeTableProps<TData> = Omit<
   | "onLoadMore"
   | "pagination"
   | "rowProps"
+  | "estimatedRowDetailHeight"
+  | "expandedRowIds"
+  | "getRowDetailHeight"
+  | "isRowExpandable"
+  | "onChangeExpandedRowIds"
+  | "renderRowDetail"
   | "tree"
 > & {
   data: readonly CominsTreeNode<TData>[];
@@ -261,6 +285,12 @@ export type CominsTreeTableProps<TData> = Omit<
   onLoadMore?: never;
   pagination?: never;
   rowProps?: Omit<CominsTableRowProps<TData>, "draggable"> & { draggable?: never };
+  estimatedRowDetailHeight?: never;
+  expandedRowIds?: never;
+  getRowDetailHeight?: never;
+  isRowExpandable?: never;
+  onChangeExpandedRowIds?: never;
+  renderRowDetail?: never;
   tree: true;
 };
 
@@ -1045,6 +1075,9 @@ function CominsTableInner<TData>(
     data,
     "data-testid": dataTestId,
     emptyComponent,
+    estimatedRowDetailHeight,
+    expandedRowIds,
+    getRowDetailHeight,
     getRowId,
     hasMoreRows = false,
     infiniteScroll = false,
@@ -1066,6 +1099,7 @@ function CominsTableInner<TData>(
     onClickRow,
     onContextMenuCell,
     onContextMenuRow,
+    onChangeExpandedRowIds,
     onDoubleClickCell,
     onDoubleClickRow,
     onKeyDownCell,
@@ -1076,6 +1110,8 @@ function CominsTableInner<TData>(
     persistHeaderWhenEmpty = true,
     rowHeight = 36,
     rowProps,
+    isRowExpandable,
+    renderRowDetail,
     showHeader = true,
     skeletonRowCount,
     style,
@@ -1092,6 +1128,8 @@ function CominsTableInner<TData>(
   const copiedCellRef = useRef<CominsCopiedCell | null>(null);
   const copiedRangeRef = useRef<CominsCopiedCellRange | null>(null);
   const copiedRowRef = useRef<CominsCopiedRow<TData> | null>(null);
+  const rowDetailContentElementsRef = useRef(new Map<CominsRowId, HTMLDivElement>());
+  const rowDetailToggleElementsRef = useRef(new Map<CominsRowId, HTMLButtonElement>());
   const activePointerGestureCleanupRef = useRef<(() => void) | null>(null);
   const columnPointerInteractionRef = useRef<CominsColumnPointerInteraction | null>(null);
   const lastCellAnchorRef = useRef<CominsCellAddress | null>(null);
@@ -1122,6 +1160,7 @@ function CominsTableInner<TData>(
   const [resizingColumnId, setResizingColumnId] = useState<string | null>(null);
   const [rowMoveState, setRowMoveState] = useState<CominsRowMoveState | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
+  const rowDetailIdPrefix = useId();
   const effectiveData = lazyLoad ? lazyRows : data;
   const [state, setState] = useState(() =>
     createCominsTableState({
@@ -1139,6 +1178,34 @@ function CominsTableInner<TData>(
   const virtualBufferSize = Math.max(0, Math.floor(Number.isFinite(bufferSize) ? Number(bufferSize) : 10));
   const resolvedLazyLoadBatchSize = Math.max(1, Math.floor(lazyLoadBatchSize));
   const resolvedLazyLoadThreshold = Math.max(0, Math.floor(lazyLoadThreshold ?? infiniteScrollThreshold));
+  const rowDetailEnabled = typeof renderRowDetail === "function" && !treeContext;
+  const normalizedExpandedRowIds = useMemo(() => {
+    const seen = new Set<CominsRowId>();
+
+    return (expandedRowIds ?? []).filter((rowId) => {
+      if (seen.has(rowId)) {
+        return false;
+      }
+
+      seen.add(rowId);
+      return true;
+    });
+  }, [expandedRowIds]);
+  const expandedRowIdSet = useMemo(
+    () => new Set(normalizedExpandedRowIds),
+    [normalizedExpandedRowIds],
+  );
+  const toggleRowDetail = (rowId: CominsRowId, expandable: boolean) => {
+    if (!rowDetailEnabled || !expandable || !onChangeExpandedRowIds) {
+      return;
+    }
+
+    onChangeExpandedRowIds(
+      expandedRowIdSet.has(rowId)
+        ? normalizedExpandedRowIds.filter((current) => current !== rowId)
+        : [...normalizedExpandedRowIds, rowId],
+    );
+  };
   const clearActivePointerGesture = () => {
     const cleanup = activePointerGestureCleanupRef.current;
 
@@ -2748,6 +2815,18 @@ function CominsTableInner<TData>(
             const isViewportEndRow = emptyFillerHeight === 0 && entryIndex === rowWindow.entries.length - 1;
             const rowCustomBackground = getRowCustomBackground(rowRuntimeProps.style);
             const rowRenderKey = virtualized ? `virtual-row-slot-${entryIndex}` : String(entry.rowId);
+            const rowDetailParams: CominsRowDetailParams<TData> = { row: createEventRow(entry) };
+            const rowDetailExpandable = rowDetailEnabled && (isRowExpandable?.(rowDetailParams) ?? true);
+            const rowDetailExpanded = rowDetailExpandable && !virtualized && expandedRowIdSet.has(entry.rowId);
+            const rowDetailHeight = getRowDetailHeight?.(rowDetailParams) ?? estimatedRowDetailHeight;
+            const rowDetailFixedHeight =
+              typeof rowDetailHeight === "number" && Number.isFinite(rowDetailHeight)
+                ? Math.max(0, rowDetailHeight)
+                : undefined;
+            const rowDetailIdToken = `${typeof entry.rowId}-${encodeURIComponent(String(entry.rowId))}`;
+            const rowDetailId = `comins-row-detail-${encodeURIComponent(rowDetailIdPrefix)}-${rowDetailIdToken}`;
+            const rowDetailContentId = `${rowDetailId}-content`;
+            const rowDetailToggleId = `${rowDetailId}-toggle`;
 
             return (
               <Fragment key={rowRenderKey}>
@@ -3055,6 +3134,24 @@ function CominsTableInner<TData>(
                       title={typeof tooltip === "string" ? tooltip : undefined}
                       tabIndex={cellDisabled ? -1 : 0}
                     >
+                      {columnIndex === 0 && rowDetailEnabled ? (
+                        <CominsRowDetailToggle
+                          controlsId={rowDetailContentId}
+                          disabled={!rowDetailExpandable || !onChangeExpandedRowIds || virtualized}
+                          expanded={rowDetailExpanded}
+                          id={rowDetailToggleId}
+                          label={`${rowDetailExpanded ? "Collapse" : "Expand"} details for ${String(entry.rowId)}`}
+                          onElement={(element) => {
+                            if (element) {
+                              rowDetailToggleElementsRef.current.set(entry.rowId, element);
+                            } else {
+                              rowDetailToggleElementsRef.current.delete(entry.rowId);
+                            }
+                          }}
+                          onToggle={() => toggleRowDetail(entry.rowId, rowDetailExpandable && !virtualized)}
+                          testId={`row-detail-toggle-${String(entry.rowId)}`}
+                        />
+                      ) : null}
                       {columnIndex === 0 && rowRuntimeProps.draggable ? (
                         <span
                           aria-hidden="true"
@@ -3078,6 +3175,26 @@ function CominsTableInner<TData>(
                   );
                 })}
               </tr>
+              {rowDetailExpanded ? (
+                <CominsRowDetailRow
+                  colSpan={visibleColumns.length}
+                  contentId={rowDetailContentId}
+                  fixedHeight={rowDetailFixedHeight}
+                  labelId={rowDetailToggleId}
+                  onContentElement={(element) => {
+                    if (element) {
+                      rowDetailContentElementsRef.current.set(entry.rowId, element);
+                    } else {
+                      rowDetailContentElementsRef.current.delete(entry.rowId);
+                    }
+                  }}
+                  ownerId={String(entry.rowId)}
+                  testId={`row-detail-content-${String(entry.rowId)}`}
+                  toggleElement={rowDetailToggleElementsRef.current.get(entry.rowId) ?? null}
+                >
+                  {renderRowDetail?.(rowDetailParams)}
+                </CominsRowDetailRow>
+              ) : null}
               </Fragment>
             );
           })}
@@ -3166,6 +3283,9 @@ function CominsTreeTableInner<TData>(
   {
     data,
     defaultExpandAll = true,
+    estimatedRowDetailHeight: _estimatedRowDetailHeight,
+    expandedRowIds: _expandedRowIds,
+    getRowDetailHeight: _getRowDetailHeight,
     getRowId,
     hasMoreRows: _hasMoreRows,
     infiniteScroll: _infiniteScroll,
@@ -3176,11 +3296,14 @@ function CominsTreeTableInner<TData>(
     lazyLoadThreshold: _lazyLoadThreshold,
     loadingMore: _loadingMore,
     onChangeData,
+    onChangeExpandedRowIds: _onChangeExpandedRowIds,
     onChangeSort,
     onChangeSortModel,
     onLazyLoad: _onLazyLoad,
     onLoadMore: _onLoadMore,
     rowProps,
+    isRowExpandable: _isRowExpandable,
+    renderRowDetail: _renderRowDetail,
     tree: _tree,
     ...props
   }: CominsTreeTableProps<TData>,

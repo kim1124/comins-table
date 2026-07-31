@@ -113,6 +113,25 @@ describe("comins-table public API", () => {
     ).toBeTruthy();
   });
 
+  it("accepts controlled flat Row Detail props", () => {
+    const columns = [{ field: "name", label: "Name" }];
+    const data = [{ id: "a", name: "Alpha" }];
+
+    expect(
+      <CominsTable
+        columns={columns}
+        data={data}
+        estimatedRowDetailHeight={180}
+        expandedRowIds={["a"]}
+        getRowDetailHeight={({ row }) => (row.id === "a" ? "auto" : 240)}
+        getRowId={(row) => row.id}
+        isRowExpandable={({ row }) => row.data.name.length > 0}
+        onChangeExpandedRowIds={() => undefined}
+        renderRowDetail={({ row }) => <div>{row.data.name}</div>}
+      />,
+    ).toBeTruthy();
+  });
+
   it("accepts append-mode lazy load props", () => {
     const columns = [{ field: "name", label: "Name" }];
     const data = [{ id: "a", name: "Alpha" }];

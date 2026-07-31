@@ -1367,4 +1367,129 @@ describe("comins-table keyboard interaction", () => {
     expect(onClickRow).toHaveBeenCalledWith(expect.objectContaining({ row: expect.objectContaining({ id: "b" }) }));
     expect(rowB.getAttribute("data-selected-row")).toBe("true");
   });
+
+  it("renders controlled fixed details as a semantic sibling row", () => {
+    const onChangeExpandedRowIds = vi.fn();
+    const element = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={rows}
+        expandedRowIds={["a", "missing", "a"]}
+        getRowDetailHeight={() => 180}
+        getRowId={(row) => row.id}
+        onChangeExpandedRowIds={onChangeExpandedRowIds}
+        renderRowDetail={({ row }) => <button>{`Detail ${row.id}`}</button>}
+      />,
+    );
+
+    const owner = element.querySelector("[data-testid='row-a']");
+    const detail = element.querySelector("[data-detail-for='a']");
+
+    expect(owner?.nextElementSibling).toBe(detail);
+    expect(detail?.tagName).toBe("TR");
+    expect(detail?.querySelector<HTMLTableCellElement>("td")?.colSpan).toBe(2);
+    expect(detail?.querySelector("[role='region']")).not.toBeNull();
+    const toggle = element.querySelector<HTMLButtonElement>("[data-testid='row-detail-toggle-a']");
+    const region = detail?.querySelector<HTMLElement>("[role='region']");
+
+    expect(region?.getAttribute("aria-labelledby")).toBe(toggle?.id);
+    expect(document.getElementById(region?.getAttribute("aria-labelledby") ?? "")).toBe(toggle);
+    expect(
+      element.querySelector("[data-testid='row-detail-content-a']")?.getAttribute("style"),
+    ).toContain("height: 180px");
+    expect(element.querySelector("[data-detail-for='missing']")).toBeNull();
+
+    act(() => {
+      element
+        .querySelector<HTMLButtonElement>("[data-testid='row-detail-toggle-a']")
+        ?.click();
+    });
+
+    expect(onChangeExpandedRowIds).toHaveBeenLastCalledWith(["missing"]);
+  });
+
+  it("keeps a controlled disclosure read-only without its change callback", () => {
+    const element = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={rows}
+        expandedRowIds={["a"]}
+        getRowId={(row) => row.id}
+        renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+      />,
+    );
+
+    expect(
+      element.querySelector<HTMLButtonElement>("[data-testid='row-detail-toggle-a']")?.disabled,
+    ).toBe(true);
+  });
+
+  it("does not render or toggle details for non-expandable rows", () => {
+    const onChangeExpandedRowIds = vi.fn();
+    const element = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={rows}
+        expandedRowIds={["a"]}
+        getRowId={(row) => row.id}
+        isRowExpandable={() => false}
+        onChangeExpandedRowIds={onChangeExpandedRowIds}
+        renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+      />,
+    );
+    const toggle = element.querySelector<HTMLButtonElement>("[data-testid='row-detail-toggle-a']");
+
+    expect(toggle?.disabled).toBe(true);
+    expect(element.querySelector("[data-detail-for='a']")).toBeNull();
+
+    act(() => {
+      toggle?.click();
+    });
+
+    expect(onChangeExpandedRowIds).not.toHaveBeenCalled();
+  });
+
+  it("isolates detail disclosure clicks from row selection callbacks", () => {
+    const onChangeExpandedRowIds = vi.fn();
+    const onClickRow = vi.fn();
+    const element = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={rows}
+        expandedRowIds={[]}
+        getRowId={(row) => row.id}
+        onChangeExpandedRowIds={onChangeExpandedRowIds}
+        onClickRow={onClickRow}
+        renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+      />,
+    );
+
+    act(() => {
+      element
+        .querySelector<HTMLButtonElement>("[data-testid='row-detail-toggle-a']")
+        ?.click();
+    });
+
+    expect(onChangeExpandedRowIds).toHaveBeenLastCalledWith(["a"]);
+    expect(onClickRow).not.toHaveBeenCalled();
+  });
+
+  it("retains a fixed detail region when its renderer returns null", () => {
+    const element = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={rows}
+        expandedRowIds={["a"]}
+        getRowDetailHeight={() => 96}
+        getRowId={(row) => row.id}
+        onChangeExpandedRowIds={() => undefined}
+        renderRowDetail={() => null}
+      />,
+    );
+    const content = element.querySelector<HTMLElement>("[data-testid='row-detail-content-a']");
+
+    expect(content).not.toBeNull();
+    expect(content?.textContent).toBe("");
+    expect(content?.style.height).toBe("96px");
+  });
 });

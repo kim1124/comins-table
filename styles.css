@@ -11,6 +11,9 @@
   --comins-table-cell-height: 36px;
   --comins-table-cell-padding-x: 12px;
   --comins-table-cell-padding-y: 8px;
+  --comins-table-detail-background: var(--comins-table-surface);
+  --comins-table-detail-border: var(--comins-table-row-border);
+  --comins-table-detail-padding: 12px;
   --comins-table-drop-marker: #064e3b;
   --comins-table-focus: rgba(16, 185, 129, 0.28);
   --comins-table-foreground: #111827;
@@ -279,6 +282,27 @@
   min-width: 0;
 }
 
+.comins-row-detail-expander {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--comins-table-accent-strong);
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 18px;
+  font: inherit;
+  height: 18px;
+  justify-content: center;
+  margin-right: 4px;
+  padding: 0;
+  width: 18px;
+}
+
+.comins-row-detail-expander:focus-visible {
+  box-shadow: 0 0 0 3px var(--comins-table-focus);
+  outline: none;
+}
+
 .comins-table__body-viewport {
   box-sizing: border-box;
   flex: 1 1 auto;
@@ -452,6 +476,22 @@
   border-right: 1px solid var(--comins-table-cell-border);
   color: var(--comins-table-cell-color);
   overflow: hidden;
+}
+
+.comins-table__detail-cell {
+  border: 0;
+  height: auto;
+  overflow: visible;
+  padding: 0;
+}
+
+.comins-table__detail-content {
+  background: var(--comins-table-detail-background);
+  border-bottom: 1px solid var(--comins-table-detail-border);
+  border-right: 1px solid var(--comins-table-detail-border);
+  box-sizing: border-box;
+  overflow: auto;
+  padding: var(--comins-table-detail-padding);
 }
 
 .comins-table__th {
