@@ -382,7 +382,7 @@ it("falls back to the nearest surviving slot when an anchor disappears", () => {
       nextKeys,
       previousKeys,
     }),
-  ).toBe(36);
+  ).toBe(12);
 });
 ```
 
@@ -737,6 +737,7 @@ export function CominsRowDetailToggle(props: {
   controlsId?: string;
   disabled: boolean;
   expanded: boolean;
+  id: string;
   label: string;
   onToggle: () => void;
   testId: string;
@@ -749,6 +750,7 @@ export function CominsRowDetailToggle(props: {
       className="comins-row-detail-expander"
       data-testid={props.testId}
       disabled={props.disabled}
+      id={props.id}
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -821,7 +823,11 @@ export function CominsRowDetailRow(props: {
 }
 ```
 
-Generate DOM-safe IDs from `useId()` plus a typed, percent-encoded Row ID token. Keep button element refs by Row ID so collapse cleanup can restore focus.
+Generate DOM-safe IDs from `useId()` plus a typed, percent-encoded Row ID token.
+Pass the disclosure ID through `CominsRowDetailToggle.id` and the same value
+through `CominsRowDetailRow.labelId` so the Detail region's
+`aria-labelledby` resolves to a mounted element. Keep button element refs by
+Row ID so collapse cleanup can restore focus.
 
 In the first visible owner Cell, render `CominsRowDetailToggle` before the existing row drag handle. After the owner `<tr>`, render `CominsRowDetailRow` only for effective expanded owners.
 
@@ -1160,7 +1166,14 @@ const detailObserverRef = useRef<ResizeObserver | null>(null);
 const [detailLayoutVersion, setDetailLayoutVersion] = useState(0);
 ```
 
-Create the observer once in an effect. Batch entries:
+Create the observer once in an effect. Immediately after assigning it to
+`detailObserverRef.current`, iterate the existing `detailElementsRef.current`
+values and observe each mounted element. This covers auto Detail refs that
+performed their initial fallback measurement before the effect created the
+observer. On cleanup, disconnect the observer, clear the observer ref, and
+release element mappings.
+
+Batch entries:
 
 ```ts
 const updates: Array<{
