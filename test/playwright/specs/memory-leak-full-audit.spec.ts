@@ -11,6 +11,7 @@ type DevtoolsAuditSnapshot = {
   jsHeapUsedSize: number;
   liveElementCount: number;
   nodes: number;
+  observedDetailTargets: number;
   renderedRows: number;
   step: string;
   timestamp: string;
@@ -49,6 +50,9 @@ async function readDevtoolsAuditSnapshot(page: Page, step: string): Promise<Devt
   const values = new Map(metrics.metrics.map((metric) => [metric.name, metric.value]));
   const domMetrics = await page.evaluate(() => ({
     liveElementCount: document.querySelectorAll("*").length,
+    observedDetailTargets:
+      (window as typeof window & { __cominsObservedDetailTargets?: number })
+        .__cominsObservedDetailTargets ?? 0,
     renderedRows: document.querySelectorAll(".comins-table__body-table tbody tr[data-comins-row-data-index]").length,
     timestamp: new Date().toISOString(),
   }));
@@ -59,6 +63,7 @@ async function readDevtoolsAuditSnapshot(page: Page, step: string): Promise<Devt
     jsHeapUsedSize: values.get("JSHeapUsedSize") ?? 0,
     liveElementCount: domMetrics.liveElementCount,
     nodes,
+    observedDetailTargets: domMetrics.observedDetailTargets,
     renderedRows: domMetrics.renderedRows,
     step,
     timestamp: domMetrics.timestamp,
@@ -120,6 +125,9 @@ function assertRecoveredWithinTenPercent(
   );
   expect(afterBasic.jsHeapUsedSize, failureContext).toBeLessThanOrEqual(Math.ceil(baseline.jsHeapUsedSize * 1.1));
   expect(afterBasic.documents, failureContext).toBe(baseline.documents);
+  expect(afterBasic.observedDetailTargets, failureContext).toBe(
+    baseline.observedDetailTargets,
+  );
 }
 
 async function writeAuditArtifact(
@@ -141,6 +149,7 @@ async function writeAuditArtifact(
       jsEventListeners: Math.ceil(baseline.jsEventListeners * 1.1),
       jsHeapUsedSize: Math.ceil(baseline.jsHeapUsedSize * 1.1),
       nodes: Math.ceil(baseline.nodes * 1.1),
+      observedDetailTargets: baseline.observedDetailTargets,
     },
   };
 
@@ -153,8 +162,9 @@ async function runMemoryScenario(
   testInfo: TestInfo,
   scenario: string,
   exercise: (page: Page) => Promise<void>,
+  timeout = 90_000,
 ) {
-  test.setTimeout(90_000);
+  test.setTimeout(timeout);
   const diagnostics = collectBrowserDiagnostics(page);
 
   await openBasicPage(page);
@@ -232,6 +242,122 @@ test("full audit keeps 100000 row virtual scroll counters within 10 percent @per
       )
       .toBeLessThan(100);
   });
+});
+
+test("full audit releases Row Expand Detail observers and counters within 10 percent @perf", async ({
+  page,
+}, testInfo) => {
+  await page.addInitScript(() => {
+    const NativeResizeObserver = window.ResizeObserver;
+    const observedDetailTargets = new Set<Element>();
+    const updateCount = () => {
+      (
+        window as typeof window & {
+          __cominsObservedDetailTargets?: number;
+        }
+      ).__cominsObservedDetailTargets = observedDetailTargets.size;
+    };
+
+    window.ResizeObserver = class extends NativeResizeObserver {
+      readonly detailTargets = new Set<Element>();
+
+      override disconnect() {
+        for (const target of this.detailTargets) {
+          observedDetailTargets.delete(target);
+        }
+        this.detailTargets.clear();
+        updateCount();
+        super.disconnect();
+      }
+
+      override observe(target: Element, options?: ResizeObserverOptions) {
+        if (target.classList.contains("comins-table__detail-content")) {
+          this.detailTargets.add(target);
+          observedDetailTargets.add(target);
+          updateCount();
+        }
+        super.observe(target, options);
+      }
+
+      override unobserve(target: Element) {
+        this.detailTargets.delete(target);
+        observedDetailTargets.delete(target);
+        updateCount();
+        super.unobserve(target);
+      }
+    };
+    updateCount();
+  });
+
+  await runMemoryScenario(page, testInfo, "row-expand-detail-lifecycle", async (currentPage) => {
+    await openFeature(currentPage, "Row Expand", "row-expand");
+
+    for (let cycle = 0; cycle < 10; cycle += 1) {
+      if (cycle > 0) {
+        await currentPage.reload();
+        await expect(currentPage.getByTestId("feature-content")).toHaveAttribute(
+          "data-feature",
+          "row-expand",
+        );
+      }
+
+      const fixed = currentPage.getByTestId("row-expand-example-fixed");
+      const automaticCard = currentPage.locator(
+        "[data-feature-option='row-expand-auto']",
+      );
+      const automatic = currentPage.getByTestId("row-expand-example-auto");
+
+      await fixed.getByTestId("row-detail-toggle-fixed-1").click();
+      await expect(fixed.locator("[data-detail-for='fixed-1']")).toBeVisible();
+
+      await automatic.scrollIntoViewIfNeeded();
+      await automatic.getByTestId("row-detail-toggle-auto-1").click();
+      await expect(
+        automatic.locator("[data-detail-for='auto-1']"),
+      ).toBeVisible();
+      await automatic.getByTestId("auto-detail-grow-auto-1").click();
+      await expect(
+        automatic.getByTestId("auto-detail-grown-content"),
+      ).toBeVisible();
+
+      const detail = automatic.getByTestId("row-detail-content-auto-1");
+      const detailWidthBefore = (await detail.boundingBox())!.width;
+      const resize = automaticCard.getByTestId("resize-name");
+      const resizeBox = await resize.boundingBox();
+
+      expect(resizeBox).not.toBeNull();
+      await currentPage.mouse.move(
+        resizeBox!.x + resizeBox!.width / 2,
+        resizeBox!.y + resizeBox!.height / 2,
+      );
+      await currentPage.mouse.down();
+      await currentPage.mouse.move(
+        resizeBox!.x + resizeBox!.width / 2 + 40,
+        resizeBox!.y + resizeBox!.height / 2,
+      );
+      await currentPage.mouse.up();
+      await expect
+        .poll(async () => (await detail.boundingBox())?.width ?? 0)
+        .toBeGreaterThan(detailWidthBefore + 20);
+
+      await automatic.getByTestId("row-detail-toggle-auto-1").click();
+      await fixed.getByTestId("row-detail-toggle-fixed-1").click();
+      await expect(automatic.locator("[data-detail-for]")).toHaveCount(0);
+      await expect(fixed.locator("[data-detail-for]")).toHaveCount(0);
+      await expect
+        .poll(() =>
+          currentPage.evaluate(
+            () =>
+              (
+                window as typeof window & {
+                  __cominsObservedDetailTargets?: number;
+                }
+              ).__cominsObservedDetailTargets ?? 0,
+          ),
+        )
+        .toBe(0);
+    }
+  }, 120_000);
 });
 
 test("full audit keeps component column counters within 10 percent @perf", async ({ page }, testInfo) => {

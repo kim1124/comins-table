@@ -364,6 +364,17 @@ type CominsPendingVirtualAnchor = {
   previousViewportHeight: number;
 };
 
+type CominsPendingDetailAnchor = CominsPendingVirtualAnchor & {
+  revision: number;
+};
+
+type CominsLogicalAnchorTransaction = {
+  actualPhysical: number;
+  requestedPhysical: number;
+  revision: number;
+  targetLogical: number;
+};
+
 type CominsObservedDetail = {
   element: HTMLDivElement;
   rowId: CominsRowId;
@@ -419,29 +430,32 @@ function getCominsVirtualProjectionKeys(projection: CominsVirtualProjection) {
 }
 
 function captureCominsVirtualAnchor(input: {
+  logicalScrollTop?: number;
   physicalScrollTop: number;
   projection: CominsVirtualProjection;
   viewportHeight: number;
 }): CominsPendingVirtualAnchor | undefined {
   const previousKeys = getCominsVirtualProjectionKeys(input.projection);
-  const previousLogicalScrollTop = input.projection.mixed
-    ? getCominsMixedVirtualRange({
-        heightIndex: input.projection.heightIndex,
-        overscan: 0,
-        physicalScrollTop: input.physicalScrollTop,
-        viewportHeight: input.viewportHeight,
-      }).logicalScrollTop
-    : (() => {
-        const metrics = getCominsScrollScale(
-          input.projection.visibleRowCount * input.projection.rowHeight,
-          input.viewportHeight,
-        );
+  const previousLogicalScrollTop =
+    input.logicalScrollTop ??
+    (input.projection.mixed
+      ? getCominsMixedVirtualRange({
+          heightIndex: input.projection.heightIndex,
+          overscan: 0,
+          physicalScrollTop: input.physicalScrollTop,
+          viewportHeight: input.viewportHeight,
+        }).logicalScrollTop
+      : (() => {
+          const metrics = getCominsScrollScale(
+            input.projection.visibleRowCount * input.projection.rowHeight,
+            input.viewportHeight,
+          );
 
-        return Math.min(
-          metrics.logicalScrollableHeight,
-          Math.max(0, input.physicalScrollTop) * metrics.scrollScale,
-        );
-      })();
+          return Math.min(
+            metrics.logicalScrollableHeight,
+            Math.max(0, input.physicalScrollTop) * metrics.scrollScale,
+          );
+        })());
   const anchor = input.projection.mixed
     ? captureCominsScrollAnchor({
         heightIndex: input.projection.heightIndex,
@@ -1295,6 +1309,9 @@ function CominsTableInner<TData>(
   const rangeDragLastAddressRef = useRef<CominsCellAddress | null>(null);
   const rangeDragMovedRef = useRef(false);
   const rowMoveStateRef = useRef<CominsRowMoveState | null>(null);
+  const anchorRevisionRef = useRef(0);
+  const logicalAnchorTransactionRef = useRef<CominsLogicalAnchorTransaction | null>(null);
+  const pendingDetailAnchorRef = useRef<CominsPendingDetailAnchor | null>(null);
   const pendingScrollTopRef = useRef(0);
   const previousVirtualProjectionRef = useRef<CominsVirtualProjection | null>(null);
   const virtualViewportHeightRef = useRef(Math.max(1, rowHeight) * 12);
@@ -1311,6 +1328,8 @@ function CominsTableInner<TData>(
   const [lazyLoadingReason, setLazyLoadingReason] = useState<CominsLazyLoadReason | null>(null);
   const [lazyRows, setLazyRows] = useState<readonly TData[]>(data);
   const [lazyTotalRows, setLazyTotalRows] = useState<number | undefined>(undefined);
+  const [logicalAnchorTransaction, setLogicalAnchorTransaction] =
+    useState<CominsLogicalAnchorTransaction | null>(null);
   const [resizingColumnId, setResizingColumnId] = useState<string | null>(null);
   const [rowMoveState, setRowMoveState] = useState<CominsRowMoveState | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -1613,21 +1632,24 @@ function CominsTableInner<TData>(
       const viewport = containerRef.current;
       const viewportHeight =
         viewport?.clientHeight || virtualViewportHeightRef.current;
-      const previousLogicalScrollTop =
+      const pendingAnchor =
         projection && viewport
-          ? getCominsMixedVirtualRange({
-              heightIndex: projection.heightIndex,
-              overscan: 0,
+          ? captureCominsVirtualAnchor({
+              logicalScrollTop:
+                logicalAnchorTransactionRef.current &&
+                Math.abs(
+                  viewport.scrollTop -
+                    logicalAnchorTransactionRef.current.actualPhysical,
+                ) <= 0.5
+                  ? logicalAnchorTransactionRef.current.targetLogical
+                  : undefined,
               physicalScrollTop: viewport.scrollTop,
+              projection: {
+                heightIndex: projection.heightIndex,
+                keys: projection.keys,
+                mixed: true,
+              },
               viewportHeight,
-            }).logicalScrollTop
-          : 0;
-      const anchor =
-        projection && viewport
-          ? captureCominsScrollAnchor({
-              heightIndex: projection.heightIndex,
-              keys: projection.keys,
-              logicalScrollTop: previousLogicalScrollTop,
             })
           : undefined;
       let updatedActiveIndex = false;
@@ -1656,49 +1678,17 @@ function CominsTableInner<TData>(
           continue;
         }
 
-        const currentSlotHeight = projection.heightIndex.getHeight(slotIndex);
-        const nextSlotHeight =
-          currentSlotHeight - slot.detail.height + update.height;
-
-        projection.heightIndex.updateHeight(slotIndex, nextSlotHeight);
-        slot.detail = {
-          estimated: false,
-          height: update.height,
-          mode: "auto",
-        };
         updatedActiveIndex = true;
       }
 
-      if (projection && viewport && anchor && updatedActiveIndex) {
-        const target = resolveCominsAnchorTarget({
-          anchor,
-          getNextHeight: (index) => projection.heightIndex.getHeight(index),
-          nextKeys: projection.keys,
-          previousKeys: projection.keys,
-        });
-        const nextLogicalScrollTop = target
-          ? projection.heightIndex.getPrefixHeight(target.index) +
-            target.offsetWithinSlot
-          : 0;
-        const nextPhysicalScrollTop = getCominsPhysicalScrollTop(
-          nextLogicalScrollTop,
-          projection.heightIndex.getTotalHeight(),
-          viewportHeight,
-        );
+      if (pendingAnchor && updatedActiveIndex) {
+        const revision = anchorRevisionRef.current + 1;
 
-        if (scrollFrameRef.current !== null) {
-          window.cancelAnimationFrame(scrollFrameRef.current);
-          scrollFrameRef.current = null;
-        }
-
-        viewport.scrollTop = nextPhysicalScrollTop;
-        pendingScrollTopRef.current = nextPhysicalScrollTop;
-        previousVirtualProjectionRef.current = {
-          heightIndex: projection.heightIndex,
-          keys: projection.keys,
-          mixed: true,
+        anchorRevisionRef.current = revision;
+        pendingDetailAnchorRef.current = {
+          ...pendingAnchor,
+          revision,
         };
-        setScrollTop(nextPhysicalScrollTop);
       }
 
       setDetailLayoutVersion((current) => current + 1);
@@ -2008,16 +1998,28 @@ function CominsTableInner<TData>(
       const viewportHeight = containerHeight || rowHeight * 12;
 
       if (mixedProjection) {
+        const activeAnchorTransaction =
+          logicalAnchorTransaction &&
+          Math.abs(
+            scrollTop - logicalAnchorTransaction.actualPhysical,
+          ) <= 0.5
+            ? logicalAnchorTransaction
+            : null;
         const range = getCominsMixedVirtualRange({
           heightIndex: mixedProjection.heightIndex,
           overscan: virtualBufferSize,
-          physicalScrollTop: scrollTop,
+          physicalScrollTop:
+            activeAnchorTransaction?.requestedPhysical ?? scrollTop,
           viewportHeight,
         });
 
         return {
           mixed: true,
-          renderOffset: range.renderOffset,
+          renderOffset: activeAnchorTransaction
+            ? activeAnchorTransaction.actualPhysical -
+              (activeAnchorTransaction.targetLogical -
+                range.logicalStartOffset)
+            : range.renderOffset,
           scrollHeight: range.physicalScrollHeight,
           slots: mixedProjection.slots.slice(range.startIndex, range.endIndex),
         };
@@ -2084,6 +2086,7 @@ function CominsTableInner<TData>(
     };
   }, [
     containerHeight,
+    logicalAnchorTransaction,
     mixedProjection,
     pageStartIndex,
     rowHeight,
@@ -2123,21 +2126,36 @@ function CominsTableInner<TData>(
     ],
   );
   const previousVirtualProjection = previousVirtualProjectionRef.current;
+  const pendingDetailAnchor = pendingDetailAnchorRef.current;
   const pendingVirtualAnchor =
+    !pendingDetailAnchor &&
     currentVirtualProjection &&
     previousVirtualProjection &&
     currentVirtualProjection !== previousVirtualProjection &&
     containerRef.current
       ? captureCominsVirtualAnchor({
+          logicalScrollTop:
+            logicalAnchorTransaction &&
+            Math.abs(
+              containerRef.current.scrollTop -
+                logicalAnchorTransaction.actualPhysical,
+            ) <= 0.5
+              ? logicalAnchorTransaction.targetLogical
+              : undefined,
           physicalScrollTop: containerRef.current.scrollTop,
           projection: previousVirtualProjection,
           viewportHeight:
             containerRef.current.clientHeight || containerHeight || rowHeight * 12,
         })
       : undefined;
+  const pendingAnchorTransaction =
+    pendingDetailAnchor ?? pendingVirtualAnchor;
   useLayoutEffect(() => {
     if (!currentVirtualProjection) {
       previousVirtualProjectionRef.current = null;
+      pendingDetailAnchorRef.current = null;
+      logicalAnchorTransactionRef.current = null;
+      setLogicalAnchorTransaction(null);
       return;
     }
 
@@ -2145,19 +2163,19 @@ function CominsTableInner<TData>(
 
     const viewport = containerRef.current;
 
-    if (!viewport || !pendingVirtualAnchor) {
+    if (!viewport || !pendingAnchorTransaction) {
       return;
     }
 
     const nextKeys = getCominsVirtualProjectionKeys(currentVirtualProjection);
     const target = resolveCominsAnchorTarget({
-      anchor: pendingVirtualAnchor.anchor,
+      anchor: pendingAnchorTransaction.anchor,
       getNextHeight: (index) =>
         currentVirtualProjection.mixed
           ? currentVirtualProjection.heightIndex.getHeight(index)
           : currentVirtualProjection.rowHeight,
       nextKeys,
-      previousKeys: pendingVirtualAnchor.previousKeys,
+      previousKeys: pendingAnchorTransaction.previousKeys,
     });
     const nextLogicalScrollTop = target
       ? (currentVirtualProjection.mixed
@@ -2171,7 +2189,7 @@ function CominsTableInner<TData>(
     const nextPhysicalScrollTop = getCominsPhysicalScrollTop(
       nextLogicalScrollTop,
       nextLogicalTotalHeight,
-      viewport.clientHeight || pendingVirtualAnchor.previousViewportHeight,
+      viewport.clientHeight || pendingAnchorTransaction.previousViewportHeight,
     );
 
     if (scrollFrameRef.current !== null) {
@@ -2180,9 +2198,29 @@ function CominsTableInner<TData>(
     }
 
     viewport.scrollTop = nextPhysicalScrollTop;
-    pendingScrollTopRef.current = nextPhysicalScrollTop;
-    setScrollTop(nextPhysicalScrollTop);
-  }, [currentVirtualProjection, pendingVirtualAnchor]);
+    const actualPhysicalScrollTop = viewport.scrollTop;
+    const revision =
+      pendingDetailAnchor?.revision ??
+      anchorRevisionRef.current + 1;
+    const nextAnchorTransaction = currentVirtualProjection.mixed
+      ? {
+          actualPhysical: actualPhysicalScrollTop,
+          requestedPhysical: nextPhysicalScrollTop,
+          revision,
+          targetLogical: nextLogicalScrollTop,
+        }
+      : null;
+
+    anchorRevisionRef.current = Math.max(
+      anchorRevisionRef.current,
+      revision,
+    );
+    pendingDetailAnchorRef.current = null;
+    logicalAnchorTransactionRef.current = nextAnchorTransaction;
+    pendingScrollTopRef.current = actualPhysicalScrollTop;
+    setLogicalAnchorTransaction(nextAnchorTransaction);
+    setScrollTop(actualPhysicalScrollTop);
+  }, [currentVirtualProjection, pendingAnchorTransaction]);
   const currentTheme = theme ?? state.theme;
   const densityClass =
     currentTheme.density === "compact"
@@ -3279,8 +3317,20 @@ function CominsTableInner<TData>(
   };
   const handleBodyScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const bodyViewport = event.currentTarget;
+    const activeAnchorTransaction =
+      logicalAnchorTransactionRef.current;
 
     pendingScrollTopRef.current = bodyViewport.scrollTop;
+    if (
+      activeAnchorTransaction &&
+      Math.abs(
+        bodyViewport.scrollTop -
+          activeAnchorTransaction.actualPhysical,
+      ) > 0.5
+    ) {
+      logicalAnchorTransactionRef.current = null;
+      setLogicalAnchorTransaction(null);
+    }
     requestInfiniteLoadIfNeeded(bodyViewport);
 
     if (scrollCommitTimeoutRef.current !== null) {

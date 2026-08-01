@@ -1,6 +1,11 @@
 import { useMemo, useState } from "react";
 
-import { CominsTable, type CominsTableColumn, type CominsVirtualListItem } from "../../../src";
+import {
+  CominsTable,
+  type CominsRowId,
+  type CominsTableColumn,
+  type CominsVirtualListItem,
+} from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { createVirtualRows, type PersonRow } from "../fixtures/people";
 
@@ -24,10 +29,20 @@ export function BodyFeature() {
   const [rows] = useState<PersonRow[]>(() => createVirtualRows(100_000));
   const [componentOverrides, setComponentOverrides] = useState<Record<number, ComponentLargeOverride>>({});
   const [componentEvent, setComponentEvent] = useState("컴포넌트 대용량 이벤트 대기");
-  const useHeavyRenderer = useMemo(
-    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("fixture") === "heavy-renderer",
+  const fixture = useMemo(
+    () =>
+      typeof window === "undefined"
+        ? ""
+        : new URLSearchParams(window.location.search).get("fixture") ?? "",
     [],
   );
+  const detailEnabled = fixture === "row-detail-fixed" || fixture === "row-detail-auto";
+  const automaticDetail = fixture === "row-detail-auto";
+  const [expandedRowIds, setExpandedRowIds] = useState<CominsRowId[]>(
+    detailEnabled ? [50_000] : [],
+  );
+  const [detailGrowth, setDetailGrowth] = useState(0);
+  const useHeavyRenderer = fixture === "heavy-renderer";
   const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(
     () => {
       const createCell = (columnNumber: number): CominsTableColumn<PersonRow>["cell"] =>
@@ -301,9 +316,50 @@ export function BodyFeature() {
           columns={columns}
           data={rows}
           data-testid="data-table-viewport"
+          estimatedRowDetailHeight={detailEnabled ? 180 : undefined}
+          expandedRowIds={detailEnabled ? expandedRowIds : undefined}
+          getRowDetailHeight={detailEnabled ? () => (automaticDetail ? "auto" : 360) : undefined}
           getRowId={(_row, index) => index}
           multiSort
+          onChangeExpandedRowIds={detailEnabled ? setExpandedRowIds : undefined}
           pagination={{ pageIndex: 0, pageSize: rows.length }}
+          renderRowDetail={
+            detailEnabled
+              ? ({ row }) => (
+                  <div
+                    data-testid={`row-detail-perf-${automaticDetail ? "auto" : "fixed"}`}
+                    style={{
+                      display: "grid",
+                      gap: 12,
+                      maxHeight: 640,
+                      overflow: "auto",
+                    }}
+                  >
+                    <strong>{`Performance Detail for owner ${String(row.id)}`}</strong>
+                    <span>Bounded content verifies mixed-height virtualization without expanding owner Rows.</span>
+                    {automaticDetail ? (
+                      <button
+                        data-testid="row-detail-perf-grow"
+                        disabled={detailGrowth >= 4}
+                        onClick={() => setDetailGrowth((current) => Math.min(4, current + 1))}
+                        type="button"
+                      >
+                        Grow measured Detail
+                      </button>
+                    ) : null}
+                    {Array.from({ length: detailGrowth }, (_value, index) => (
+                      <p
+                        data-testid="row-detail-perf-grown-block"
+                        key={index}
+                        style={{ margin: 0, minHeight: 96 }}
+                      >
+                        {`Bounded measured content block ${index + 1} of 4.`}
+                      </p>
+                    ))}
+                  </div>
+                )
+              : undefined
+          }
           theme={{ density: "compact" }}
           virtualized
         />

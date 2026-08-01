@@ -915,6 +915,433 @@ describe("comins-table keyboard interaction", () => {
     }
   });
 
+  it("applies the latest automatic Detail height from repeated observer batches", () => {
+    const resize = installControllableResizeObserver();
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          buffer-size={30}
+          columns={columns}
+          data={manyRows.slice(0, 30)}
+          data-testid="detail-batch-viewport"
+          expandedRowIds={["row-0"]}
+          getRowDetailHeight={() => "auto"}
+          getRowId={(row) => row.id}
+          onChangeExpandedRowIds={() => undefined}
+          renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+          rowHeight={36}
+          virtualized
+        />,
+      );
+      const viewport = element.querySelector<HTMLElement>(
+        "[data-testid='detail-batch-viewport']",
+      )!;
+      const content = element.querySelector(
+        "[data-testid='row-detail-content-row-0']",
+      )!;
+      const sizer = element.querySelector<HTMLElement>(
+        ".comins-table__body-virtual-sizer",
+      )!;
+      let assignedScrollTop = 600;
+
+      setElementRect(viewport, 800, 180);
+      setElementRect(content, 800, 300);
+      Object.defineProperties(viewport, {
+        clientHeight: { configurable: true, value: 180 },
+        scrollHeight: {
+          configurable: true,
+          get: () => Number.parseFloat(sizer.style.height),
+        },
+        scrollTop: {
+          configurable: true,
+          get: () => assignedScrollTop,
+          set: (value: number) => {
+            assignedScrollTop = value;
+          },
+        },
+      });
+
+      act(() => resize.emit(viewport, 180));
+      act(() => {
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      act(() => {
+        resize.emit(content, 360);
+        resize.emit(content, 420);
+      });
+
+      expect(viewport.scrollTop).toBe(720);
+      expect(sizer.style.height).toBe("1500px");
+    } finally {
+      requestAnimationFrame.mockRestore();
+      resize.restore();
+    }
+  });
+
+  it("re-anchors a width-invalidated automatic Detail after matching remeasurement", () => {
+    const resize = installControllableResizeObserver();
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+    const ref = createRef<CominsTableRef<PersonRow>>();
+    const fixedColumns = [
+      { field: "name", label: "Name", width: 400 },
+      { field: "age", label: "Age", width: 400 },
+    ] as const;
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          buffer-size={30}
+          columns={fixedColumns}
+          data={manyRows.slice(0, 30)}
+          data-testid="detail-width-anchor-viewport"
+          expandedRowIds={["row-0"]}
+          getRowDetailHeight={() => "auto"}
+          getRowId={(row) => row.id}
+          onChangeExpandedRowIds={() => undefined}
+          ref={ref}
+          renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+          rowHeight={36}
+          virtualized
+        />,
+      );
+      const viewport = element.querySelector<HTMLElement>(
+        "[data-testid='detail-width-anchor-viewport']",
+      )!;
+      const content = element.querySelector(
+        "[data-testid='row-detail-content-row-0']",
+      )!;
+      const sizer = element.querySelector<HTMLElement>(
+        ".comins-table__body-virtual-sizer",
+      )!;
+      let assignedScrollTop = 600;
+      let detailWidth = 800;
+
+      setElementRect(viewport, 500, 180);
+      vi.spyOn(content, "getBoundingClientRect").mockImplementation(() => ({
+        bottom: 300,
+        height: 300,
+        left: 0,
+        right: detailWidth,
+        top: 0,
+        width: detailWidth,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }));
+      Object.defineProperties(viewport, {
+        clientHeight: { configurable: true, value: 180 },
+        scrollHeight: {
+          configurable: true,
+          get: () => Number.parseFloat(sizer.style.height),
+        },
+        scrollTop: {
+          configurable: true,
+          get: () => assignedScrollTop,
+          set: (value: number) => {
+            assignedScrollTop = value;
+          },
+        },
+      });
+
+      act(() => resize.emit(viewport, 180));
+      act(() => {
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      act(() => resize.emit(content, 420));
+      expect(viewport.scrollTop).toBe(720);
+
+      detailWidth = 500;
+      act(() => {
+        ref.current?.setColumnLayout({
+          columns: { age: { hidden: true }, name: { width: 400 } },
+        });
+      });
+      expect(viewport.scrollTop).toBe(600);
+
+      act(() => resize.emit(content, 360));
+      expect(viewport.scrollTop).toBe(660);
+    } finally {
+      requestAnimationFrame.mockRestore();
+      resize.restore();
+    }
+  });
+
+  it("lets a user scroll replace the active automatic Detail anchor transaction", () => {
+    const resize = installControllableResizeObserver();
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          buffer-size={30}
+          columns={columns}
+          data={manyRows}
+          data-testid="detail-user-scroll-viewport"
+          expandedRowIds={["row-0"]}
+          getRowDetailHeight={() => "auto"}
+          getRowId={(row) => row.id}
+          onChangeExpandedRowIds={() => undefined}
+          renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+          rowHeight={36}
+          virtualized
+        />,
+      );
+      const viewport = element.querySelector<HTMLElement>(
+        "[data-testid='detail-user-scroll-viewport']",
+      )!;
+      const content = element.querySelector(
+        "[data-testid='row-detail-content-row-0']",
+      )!;
+      const sizer = element.querySelector<HTMLElement>(
+        ".comins-table__body-virtual-sizer",
+      )!;
+      let assignedScrollTop = 600;
+
+      setElementRect(viewport, 800, 180);
+      setElementRect(content, 800, 300);
+      Object.defineProperties(viewport, {
+        clientHeight: { configurable: true, value: 180 },
+        scrollHeight: {
+          configurable: true,
+          get: () => Number.parseFloat(sizer.style.height),
+        },
+        scrollTop: {
+          configurable: true,
+          get: () => assignedScrollTop,
+          set: (value: number) => {
+            assignedScrollTop = value;
+          },
+        },
+      });
+
+      act(() => resize.emit(viewport, 180));
+      act(() => {
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      act(() => resize.emit(content, 420));
+      expect(viewport.scrollTop).toBe(720);
+
+      assignedScrollTop = 1_500;
+      act(() => {
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      act(() => resize.emit(content, 480));
+
+      expect(viewport.scrollTop).toBe(1_560);
+      expect(
+        element.querySelector("[data-testid='row-row-45']"),
+      ).not.toBeNull();
+    } finally {
+      requestAnimationFrame.mockRestore();
+      resize.restore();
+    }
+  });
+
+  it("clamps an automatic Detail shrink at the mixed viewport bottom", () => {
+    const resize = installControllableResizeObserver();
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          buffer-size={10}
+          columns={columns}
+          data={manyRows.slice(0, 100)}
+          data-testid="detail-bottom-clamp-viewport"
+          expandedRowIds={["row-90"]}
+          getRowDetailHeight={() => "auto"}
+          getRowId={(row) => row.id}
+          onChangeExpandedRowIds={() => undefined}
+          renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+          rowHeight={36}
+          virtualized
+        />,
+      );
+      const viewport = element.querySelector<HTMLElement>(
+        "[data-testid='detail-bottom-clamp-viewport']",
+      )!;
+      const sizer = element.querySelector<HTMLElement>(
+        ".comins-table__body-virtual-sizer",
+      )!;
+      let assignedScrollTop = 3_720;
+
+      setElementRect(viewport, 800, 180);
+      Object.defineProperties(viewport, {
+        clientHeight: { configurable: true, value: 180 },
+        scrollHeight: {
+          configurable: true,
+          get: () => Number.parseFloat(sizer.style.height),
+        },
+        scrollTop: {
+          configurable: true,
+          get: () =>
+            Math.min(
+              assignedScrollTop,
+              Math.max(
+                0,
+                Number.parseFloat(sizer.style.height) - 180,
+              ),
+            ),
+          set: (value: number) => {
+            assignedScrollTop = value;
+          },
+        },
+      });
+
+      act(() => resize.emit(viewport, 180));
+      act(() => {
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+
+      const content = element.querySelector(
+        "[data-testid='row-detail-content-row-90']",
+      )!;
+      setElementRect(content, 800, 300);
+
+      act(() => resize.emit(content, 420));
+      expect(viewport.scrollTop).toBe(3_840);
+
+      act(() => resize.emit(content, 100));
+      expect(viewport.scrollTop).toBe(3_520);
+      expect(viewport.scrollTop).toBe(
+        viewport.scrollHeight - viewport.clientHeight,
+      );
+      expect(element.querySelector("[data-testid='row-row-99']")).not.toBeNull();
+    } finally {
+      requestAnimationFrame.mockRestore();
+      resize.restore();
+    }
+  });
+
+  it("preserves a compressed mixed-row anchor when browser scrollTop assignments are integer-quantized", () => {
+    const resize = installControllableResizeObserver();
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+    const compressedRows: PersonRow[] = Array.from(
+      { length: 100_000 },
+      (_value, index) => ({
+        age: index,
+        id: `compressed-row-${index}`,
+        name: `Compressed Row ${index}`,
+      }),
+    );
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          buffer-size={30}
+          columns={columns}
+          data={compressedRows}
+          data-testid="compressed-detail-anchor-viewport"
+          expandedRowIds={["compressed-row-49995"]}
+          getRowDetailHeight={() => "auto"}
+          getRowId={(row) => row.id}
+          onChangeExpandedRowIds={() => undefined}
+          renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+          rowHeight={36}
+          virtualized
+        />,
+      );
+      const viewport = element.querySelector<HTMLElement>(
+        "[data-testid='compressed-detail-anchor-viewport']",
+      )!;
+      const sizer = element.querySelector<HTMLElement>(
+        ".comins-table__body-virtual-sizer",
+      )!;
+      let assignedScrollTop = 749_950;
+
+      setElementRect(viewport, 800, 463);
+      Object.defineProperties(viewport, {
+        clientHeight: { configurable: true, value: 463 },
+        scrollHeight: {
+          configurable: true,
+          get: () => Number.parseFloat(sizer.style.height),
+        },
+        scrollTop: {
+          configurable: true,
+          get: () => assignedScrollTop,
+          set: (value: number) => {
+            assignedScrollTop = Math.round(value);
+          },
+        },
+      });
+
+      act(() => resize.emit(viewport, 463));
+      act(() => {
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+
+      const content = element.querySelector(
+        "[data-testid='row-detail-content-compressed-row-49995']",
+      )!;
+      setElementRect(content, 800, 103);
+
+      const getAnchorViewportOffset = (detailHeight: number) => {
+        const table = element.querySelector<HTMLElement>(
+          ".comins-table__body-table",
+        )!;
+        const firstOwner = element.querySelector<HTMLElement>(
+          "tr[data-comins-row-data-index]",
+        )!;
+        const firstIndex = Number(
+          firstOwner.dataset.cominsRowDataIndex,
+        );
+        const transformMatch = table.style.transform.match(
+          /translate3d\(0, ([\d.-]+)px, 0\)/,
+        );
+        const renderOffset = Number(transformMatch?.[1] ?? 0);
+        const detailBeforeAnchor =
+          firstIndex <= 49_995 && 49_995 < 50_000
+            ? detailHeight
+            : 0;
+
+        return (
+          renderOffset +
+          (50_000 - firstIndex) * 36 +
+          detailBeforeAnchor -
+          viewport.scrollTop
+        );
+      };
+
+      act(() => resize.emit(content, 103));
+      const before = getAnchorViewportOffset(103);
+
+      act(() => resize.emit(content, 211));
+      const after = getAnchorViewportOffset(211);
+
+      expect(Math.abs(after - before)).toBeLessThanOrEqual(1);
+    } finally {
+      requestAnimationFrame.mockRestore();
+      resize.restore();
+    }
+  });
+
   it("calls onLoadMore once when infinite scroll reaches the bottom threshold", () => {
     const onLoadMore = vi.fn();
     const element = renderTableElement(

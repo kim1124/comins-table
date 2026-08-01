@@ -270,9 +270,55 @@ test("playground keeps rendered row count bounded across virtual scroll position
   const bottom = await readRows();
   const failureContext = JSON.stringify({ bottom, middle, top }, null, 2);
 
+  console.info(`[virtualization-fixed-path] ${JSON.stringify({ bottom, middle, top })}`);
   expect(top.renderedRows, failureContext).toBeLessThanOrEqual(45);
   expect(middle.renderedRows, failureContext).toBeLessThanOrEqual(45);
   expect(bottom.renderedRows, failureContext).toBeLessThanOrEqual(45);
+  expect(diagnostics).toEqual([]);
+});
+
+test("playground keeps one fixed Row Detail bounded without measuring it @perf", async ({ page }, testInfo) => {
+  test.setTimeout(30_000);
+  const diagnostics = collectBrowserDiagnostics(page);
+
+  await page.addInitScript(() => {
+    const NativeResizeObserver = window.ResizeObserver;
+
+    window.ResizeObserver = class extends NativeResizeObserver {
+      override observe(target: Element, options?: ResizeObserverOptions) {
+        target.setAttribute("data-resize-observed", "true");
+        super.observe(target, options);
+      }
+    };
+  });
+  await page.goto("/performance/virtualization?fixture=row-detail-fixed");
+
+  const viewport = page.getByTestId("data-table-viewport");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
+  await viewport.evaluate((element) => {
+    element.scrollTop = Math.floor(element.scrollHeight / 2);
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+
+  const detail = page.getByTestId("row-detail-content-50000");
+  await expect(detail).toBeVisible();
+  await expect(detail).toHaveCSS("height", "360px");
+  await expect(detail).not.toHaveAttribute("data-resize-observed", "true");
+
+  const metrics = await viewport.evaluate((element) => ({
+    detailRows: element.querySelectorAll("[data-detail-for]").length,
+    ownerRows: element.querySelectorAll("tr[data-comins-row-data-index]").length,
+    scrollHeight: element.scrollHeight,
+  }));
+
+  await testInfo.attach("row-detail-fixed-metrics", {
+    body: JSON.stringify(metrics, null, 2),
+    contentType: "application/json",
+  });
+  console.info(`[row-detail-fixed] ${JSON.stringify(metrics)}`);
+  expect(metrics.detailRows).toBe(1);
+  expect(metrics.ownerRows).toBeLessThan(90);
+  expect(metrics.scrollHeight).toBeLessThan(2_000_000);
   expect(diagnostics).toEqual([]);
 });
 

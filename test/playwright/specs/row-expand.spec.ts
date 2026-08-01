@@ -210,3 +210,87 @@ test("preserves dormant controlled Row Detail ids across sorting and pagination"
 
   expect(diagnostics).toEqual([]);
 });
+
+test("keeps automatic Row Detail growth anchored and repeated toggles bounded @perf", async ({ page }, testInfo) => {
+  test.setTimeout(45_000);
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/performance/virtualization?fixture=row-detail-auto");
+
+  const viewport = page.getByTestId("data-table-viewport");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
+  await viewport.scrollIntoViewIfNeeded();
+  const scrollToFixtureRow = () =>
+    viewport.evaluate((element) => {
+      element.scrollTop = Math.floor(element.scrollHeight / 2);
+      element.dispatchEvent(new Event("scroll", { bubbles: true }));
+    });
+  await scrollToFixtureRow();
+
+  const owner = page.getByTestId("row-50000");
+  const detail = page.getByTestId("row-detail-content-50000");
+  const toggle = page.getByTestId("row-detail-toggle-50000");
+  await expect(detail).toBeVisible();
+
+  await viewport.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
+  const growButton = page.getByTestId("row-detail-perf-grow");
+  await growButton.scrollIntoViewIfNeeded();
+  await expect(growButton).toBeInViewport();
+  const ownerTopBefore = (await owner.boundingBox())!.y - (await viewport.boundingBox())!.y;
+  const positionBefore = await viewport.evaluate((element) => ({
+    detailHeight: element.querySelector<HTMLElement>("[data-testid='row-detail-content-50000']")?.getBoundingClientRect().height,
+    inlineTransform: (element.querySelector(".comins-table__body-table") as HTMLElement).style.transform,
+    scrollTop: element.scrollTop,
+    transform: getComputedStyle(element.querySelector(".comins-table__body-table")!).transform,
+  }));
+  const detailHeightBefore = (await detail.boundingBox())!.height;
+  await growButton.evaluate((element) => (element as HTMLButtonElement).click());
+  await expect(page.getByTestId("row-detail-perf-grown-block")).toHaveCount(1);
+  await expect.poll(async () => (await detail.boundingBox())?.height ?? 0).toBeGreaterThan(detailHeightBefore + 40);
+  await viewport.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
+  const ownerTopAfter = (await owner.boundingBox())!.y - (await viewport.boundingBox())!.y;
+  const positionAfter = await viewport.evaluate((element) => ({
+    detailHeight: element.querySelector<HTMLElement>("[data-testid='row-detail-content-50000']")?.getBoundingClientRect().height,
+    inlineTransform: (element.querySelector(".comins-table__body-table") as HTMLElement).style.transform,
+    scrollTop: element.scrollTop,
+    transform: getComputedStyle(element.querySelector(".comins-table__body-table")!).transform,
+  }));
+  const anchorDelta = Math.abs(ownerTopAfter - ownerTopBefore);
+
+  for (let cycle = 0; cycle < 10; cycle += 1) {
+    await toggle.click();
+    await expect(viewport.locator("[data-detail-for]")).toHaveCount(0);
+    await scrollToFixtureRow();
+    await expect(toggle).toBeVisible();
+    await toggle.click();
+    await expect(viewport.locator("[data-detail-for]")).toHaveCount(1);
+  }
+
+  const metrics = await viewport.evaluate((element, measuredAnchorDelta) => ({
+    anchorDelta: measuredAnchorDelta,
+    detailRows: element.querySelectorAll("[data-detail-for]").length,
+    ownerRows: element.querySelectorAll("tr[data-comins-row-data-index]").length,
+    scrollHeight: element.scrollHeight,
+  }), anchorDelta);
+  const metricsWithPositions = { ...metrics, ownerTopAfter, ownerTopBefore, positionAfter, positionBefore };
+
+  await testInfo.attach("row-detail-auto-metrics", {
+    body: JSON.stringify(metricsWithPositions, null, 2),
+    contentType: "application/json",
+  });
+  console.info(`[row-detail-auto] ${JSON.stringify(metricsWithPositions)}`);
+  expect(metrics.anchorDelta).toBeLessThanOrEqual(1);
+  expect(metrics.detailRows).toBe(1);
+  expect(metrics.ownerRows).toBeLessThan(90);
+  expect(metrics.scrollHeight).toBeLessThan(2_000_000);
+  expect(diagnostics).toEqual([]);
+});
