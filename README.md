@@ -97,7 +97,7 @@ export function UsersTable() {
 
 Comins Table is a CSR-focused controlled component for application-owned data. The application owns the `data` array.
 
-Only `onChangeData` requires application write-back. It emits the next flat Row array or Tree Grid node array after table-owned mutations; pass that array back through `data` to retain the change.
+For table-owned data mutations, `onChangeData` emits the next flat Row array or Tree Grid node array; pass that array back through `data` to retain the mutation. Other controlled models use their matching callback and value prop rather than `onChangeData`.
 
 Selection, column layout, and sort are internal view state. `onChangeSelection`, `onChangeColumnLayout`, `onChangeSort`, and `onChangeSortModel` observe those changes so an application can coordinate or persist them externally; the table updates the corresponding view state even when a callback is omitted.
 
@@ -160,7 +160,7 @@ const [expandedRowIds, setExpandedRowIds] = useState<readonly string[]>([]);
 />;
 ```
 
-Row Expand is controlled by stable owner business Row IDs. Fixed Details default to `300px`; `"auto"` measures mounted content from a `300px` estimate. Details render as semantic owner-following Rows, stay outside selection and clipboard addressing, and preserve dormant IDs across sorting and pagination.
+Row Expand is controlled by stable owner business Row IDs. An interactive disclosure requires the application to feed the next value from `onChangeExpandedRowIds` back into `expandedRowIds`; when that callback is omitted, the disclosure is disabled and read-only. Fixed Details default to `300px`; `"auto"` measures mounted content from a `300px` estimate. Details render as semantic owner-following Rows, stay outside selection and clipboard addressing, and preserve dormant IDs across sorting and pagination.
 
 Tree Grid Row Details, general automatic height for owner data Rows, and nested Details managed by Comins Table remain unsupported.
 

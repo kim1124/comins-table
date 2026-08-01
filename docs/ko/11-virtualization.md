@@ -27,10 +27,6 @@ const data: Row[] = Array.from({ length: 100000 }, (_value, index) => ({
 
 `rowHeight`는 virtualized range, scroll height, render offset 계산의 기준값이다. Theme CSS에서 `tr` 또는 `td` 높이를 override할 수는 있지만, virtualized table에서는 visual height만 CSS로 바꾸면 scroll 위치와 실제 row 높이가 어긋날 수 있다. 행 높이를 바꾸는 경우 `rowHeight` prop과 `--comins-table-row-height`, `--comins-table-cell-height` 값을 같은 숫자로 맞춘다.
 
-Data Rows and collapsed Detail owners keep the arithmetic fixed-height path.
-The private height index is activated only when an effective expanded Detail
-makes a data Slot taller than rowHeight.
-
 즉, effective expanded Detail이 없는 일반 Data Row는 기존 산술 fixed-height
 경로를 유지하며, Detail이 owner Slot 높이를 실제로 늘릴 때만 private height
 index를 사용한다.

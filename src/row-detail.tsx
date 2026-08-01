@@ -68,8 +68,9 @@ export function CominsRowDetailRow(props: {
 
     return () => {
       if (element?.contains(document.activeElement)) {
-        const toggle = getToggleElementRef.current();
         const restoreFocus = () => {
+          const toggle = getToggleElementRef.current();
+
           if (toggle?.isConnected) {
             toggle.focus();
           }

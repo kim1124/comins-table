@@ -1294,7 +1294,6 @@ function CominsTableInner<TData>(
   const detailObserverRef = useRef<ResizeObserver | null>(null);
   const detailContentWidthRef = useRef(0);
   const mixedProjectionRef = useRef<CominsMixedVirtualProjection<TData> | null>(null);
-  const rowDetailContentElementsRef = useRef(new Map<CominsRowId, HTMLDivElement>());
   const rowDetailToggleElementsRef = useRef(new Map<CominsRowId, HTMLButtonElement>());
   const activePointerGestureCleanupRef = useRef<(() => void) | null>(null);
   const columnPointerInteractionRef = useRef<CominsColumnPointerInteraction | null>(null);
@@ -1578,12 +1577,9 @@ function CominsTableInner<TData>(
     );
   }, [state.rows]);
 
-  useEffect(() => {
+  const createDetailObserver = () => {
     if (typeof ResizeObserver === "undefined") {
-      return () => {
-        detailObserverRef.current = null;
-        detailElementsRef.current.clear();
-      };
+      return null;
     }
 
     const observer = new ResizeObserver((entries) => {
@@ -1702,12 +1698,23 @@ function CominsTableInner<TData>(
       observer.observe(observed.element);
     }
 
+    return observer;
+  };
+
+  useEffect(() => {
     return () => {
-      observer.disconnect();
+      detailObserverRef.current?.disconnect();
       detailObserverRef.current = null;
       detailElementsRef.current.clear();
     };
   }, []);
+
+  const disconnectDetailObserverIfIdle = () => {
+    if (detailElementsRef.current.size === 0) {
+      detailObserverRef.current?.disconnect();
+      detailObserverRef.current = null;
+    }
+  };
 
   const registerDetailElement = (
     rowId: CominsRowId,
@@ -1722,13 +1729,19 @@ function CominsTableInner<TData>(
     }
 
     if (!element || mode === "fixed") {
+      disconnectDetailObserverIfIdle();
       return;
     }
 
     detailElementsRef.current.set(element, { element, rowId });
 
-    if (detailObserverRef.current) {
-      detailObserverRef.current.observe(element);
+    const currentObserver = detailObserverRef.current;
+    const observer = currentObserver ?? createDetailObserver();
+
+    if (observer) {
+      if (currentObserver) {
+        observer.observe(element);
+      }
       return;
     }
 
@@ -1892,19 +1905,35 @@ function CominsTableInner<TData>(
     [sortedRowIndexes, state.rows],
   );
   const visibleRowCount = projectedDataIndexes.length;
+  const pageSize = Math.max(1, state.pagination.pageSize);
+  const pageStartIndex = Math.max(0, state.pagination.pageIndex) * pageSize;
   const effectiveExpandedRowIdSet = useMemo(() => {
     if (!rowDetailEnabled) {
       return new Set<CominsRowId>();
     }
 
     const next = new Set<CominsRowId>();
+    const startIndex = virtualized ? 0 : pageStartIndex;
+    const endIndex = virtualized
+      ? projectedDataIndexes.length
+      : Math.min(projectedDataIndexes.length, pageStartIndex + pageSize);
 
-    projectedDataIndexes.forEach((dataIndex, visibleIndex) => {
+    for (let visibleIndex = startIndex; visibleIndex < endIndex; visibleIndex += 1) {
+      const dataIndex = projectedDataIndexes[visibleIndex];
+
+      if (dataIndex === undefined) {
+        continue;
+      }
+
       const row = state.rows[dataIndex];
       const rowId = state.rowIds[dataIndex];
 
-      if (row === undefined || rowId === undefined || !expandedRowIdSet.has(rowId)) {
-        return;
+      if (
+        row === undefined ||
+        rowId === undefined ||
+        !expandedRowIdSet.has(rowId)
+      ) {
+        continue;
       }
 
       const entry = { dataIndex, row, rowId, visibleIndex };
@@ -1913,16 +1942,19 @@ function CominsTableInner<TData>(
       if (isRowExpandable?.(params) !== false) {
         next.add(rowId);
       }
-    });
+    }
 
     return next;
   }, [
     expandedRowIdSet,
     isRowExpandable,
+    pageSize,
+    pageStartIndex,
     projectedDataIndexes,
     rowDetailEnabled,
     state.rowIds,
     state.rows,
+    virtualized,
   ]);
   const mixedProjection = useMemo<CominsMixedVirtualProjection<TData> | null>(() => {
     if (!virtualized || effectiveExpandedRowIdSet.size === 0) {
@@ -1993,7 +2025,6 @@ function CominsTableInner<TData>(
     virtualized,
   ]);
   mixedProjectionRef.current = mixedProjection;
-  const pageStartIndex = Math.max(0, state.pagination.pageIndex) * Math.max(1, state.pagination.pageSize);
   const rowWindow = useMemo<CominsVirtualWindow<TData>>(() => {
     if (virtualized) {
       const safeRowHeight = Math.max(1, rowHeight);
@@ -2071,30 +2102,61 @@ function CominsTableInner<TData>(
       state.rows,
       state.rowIds,
       pageStartIndex,
-      pageStartIndex + Math.max(1, state.pagination.pageSize),
+      pageStartIndex + pageSize,
     );
 
     return {
       mixed: false,
       renderOffset: 0,
       scrollHeight: 0,
-      slots: entries.map((entry) =>
-        createCominsDataVirtualSlot({
+      slots: entries.map((entry) => {
+        let detail: CominsDataVirtualSlot<TData>["detail"] | null = null;
+
+        if (effectiveExpandedRowIdSet.has(entry.rowId)) {
+          const params = { row: createEventRow(entry) };
+          const normalized = normalizeCominsDetailHeight(
+            getRowDetailHeight?.(params),
+          );
+
+          detail =
+            normalized.mode === "auto"
+              ? {
+                  ...resolveCominsMeasuredDetailHeight(
+                    detailMeasurementsRef.current,
+                    entry.rowId,
+                    detailContentWidth,
+                    normalizeCominsDetailEstimate(estimatedRowDetailHeight),
+                  ),
+                  mode: "auto",
+                }
+              : {
+                  estimated: false,
+                  height: normalized.height,
+                  mode: "fixed",
+                };
+        }
+
+        return createCominsDataVirtualSlot({
           ...entry,
-          detail: null,
+          detail,
           rowHeight,
-        }),
-      ),
+        });
+      }),
     };
   }, [
     containerHeight,
+    detailContentWidth,
+    detailLayoutVersion,
+    effectiveExpandedRowIdSet,
+    estimatedRowDetailHeight,
+    getRowDetailHeight,
     logicalAnchorTransaction,
     mixedProjection,
     pageStartIndex,
     rowHeight,
     scrollTop,
+    pageSize,
     sortedRowIndexes,
-    state.pagination.pageSize,
     state.rowIds,
     state.rows,
     virtualBufferSize,
@@ -2291,7 +2353,11 @@ function CominsTableInner<TData>(
   const stateRowCount =
     (shouldRenderSkeleton ? resolvedSkeletonRowCount : shouldRenderEmpty ? 1 : 0) +
     (shouldRenderInfiniteLoadingRow ? 1 : 0);
-  const renderedRowsHeight = (rowWindow.slots.length + stateRowCount) * rowHeight;
+  const renderedRowsHeight =
+    rowWindow.slots.reduce(
+      (height, slot) => height + getCominsSlotHeight(slot, rowHeight),
+      0,
+    ) + stateRowCount * rowHeight;
   const emptyFillerHeight = virtualized ? 0 : Math.max(0, containerHeight - renderedRowsHeight);
   const renderedHeaderVisible = state.showHeader && (persistHeaderWhenEmpty || !isEmpty || resolvedLoading);
 
@@ -3532,17 +3598,11 @@ function CominsTableInner<TData>(
             const rowDetailParams: CominsRowDetailParams<TData> = { row: createEventRow(entry) };
             const rowDetailExpandable = rowDetailEnabled && (isRowExpandable?.(rowDetailParams) ?? true);
             const rowDetailExpanded = rowDetailExpandable && effectiveExpandedRowIdSet.has(entry.rowId);
-            const normalizedRowDetailHeight =
-              !rowWindow.mixed && rowDetailExpanded
-                ? normalizeCominsDetailHeight(getRowDetailHeight?.(rowDetailParams))
-                : undefined;
-            const rowDetailHeight = rowWindow.mixed
+            const rowDetailHeight = rowDetailExpanded
               ? entry.detail?.mode === "fixed"
                 ? entry.detail.height
                 : entry.detail?.mode
-              : normalizedRowDetailHeight?.mode === "fixed"
-                ? normalizedRowDetailHeight.height
-                : normalizedRowDetailHeight?.mode;
+              : undefined;
             const rowDetailFixedHeight =
               typeof rowDetailHeight === "number"
                 ? Number.isFinite(rowDetailHeight) && rowDetailHeight > 0
@@ -3919,15 +3979,9 @@ function CominsTableInner<TData>(
                   contentId={rowDetailContentId}
                   fixedHeight={rowDetailFixedHeight}
                   labelId={rowDetailToggleId}
-                  onContentElement={(element) => {
-                    registerDetailElement(entry.rowId, rowDetailMode, element);
-
-                    if (element) {
-                      rowDetailContentElementsRef.current.set(entry.rowId, element);
-                    } else {
-                      rowDetailContentElementsRef.current.delete(entry.rowId);
-                    }
-                  }}
+                  onContentElement={(element) =>
+                    registerDetailElement(entry.rowId, rowDetailMode, element)
+                  }
                   ownerId={String(entry.rowId)}
                   testId={`row-detail-content-${String(entry.rowId)}`}
                   getToggleElement={() => rowDetailToggleElementsRef.current.get(entry.rowId) ?? null}

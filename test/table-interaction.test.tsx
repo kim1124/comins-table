@@ -564,7 +564,29 @@ describe("comins-table keyboard interaction", () => {
     }
   });
 
-  it("creates no observed Detail targets for fixed heights", () => {
+  it("creates no Detail measurement observer when Row Detail is disabled", () => {
+    const resize = installControllableResizeObserver();
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          columns={columns}
+          data={rows}
+          data-testid="no-detail-measurement-viewport"
+          getRowId={(row) => row.id}
+          virtualized
+        />,
+      );
+      const viewport = element.querySelector("[data-testid='no-detail-measurement-viewport']")!;
+
+      expect(resize.observers).toHaveLength(1);
+      expect([...resize.observers[0]!.observed]).toEqual([viewport]);
+    } finally {
+      resize.restore();
+    }
+  });
+
+  it("creates no Detail measurement observer for fixed heights", () => {
     const resize = installControllableResizeObserver();
 
     try {
@@ -582,41 +604,77 @@ describe("comins-table keyboard interaction", () => {
         />,
       );
       const viewport = element.querySelector("[data-testid='fixed-measurement-viewport']")!;
-      const detailObserver = resize.observers.find(
-        (observer) => !observer.observed.has(viewport),
-      );
 
-      expect(resize.observers).toHaveLength(2);
-      expect(detailObserver?.observed.size).toBe(0);
+      expect(resize.observers).toHaveLength(1);
+      expect([...resize.observers[0]!.observed]).toEqual([viewport]);
     } finally {
       resize.restore();
     }
   });
 
-  it("observes only mounted automatic Detail content blocks", () => {
+  it("uses one shared Detail observer for mounted automatic content blocks", () => {
     const resize = installControllableResizeObserver();
 
     try {
       const element = renderTableElement(
         <CominsTable
-          buffer-size={2}
           columns={columns}
-          data={manyRows}
+          data={rows}
           data-testid="auto-measurement-viewport"
-          expandedRowIds={["row-0", "row-100"]}
+          expandedRowIds={["a", "b", "missing"]}
           getRowDetailHeight={() => "auto"}
           getRowId={(row) => row.id}
           onChangeExpandedRowIds={() => undefined}
           renderRowDetail={({ row }) => <span>{row.data.name}</span>}
-          virtualized
         />,
       );
-      const mounted = element.querySelector("[data-testid='row-detail-content-row-0']")!;
-      const unmounted = element.querySelector("[data-testid='row-detail-content-row-100']");
-      const detailObserver = resize.observers.find((observer) => observer.observed.has(mounted));
+      const first = element.querySelector("[data-testid='row-detail-content-a']")!;
+      const second = element.querySelector("[data-testid='row-detail-content-b']")!;
+      const missing = element.querySelector("[data-testid='row-detail-content-missing']");
+      const detailObserver = resize.observers.find((observer) => observer.observed.has(first));
 
-      expect(unmounted).toBeNull();
-      expect([...detailObserver!.observed]).toEqual([mounted]);
+      expect(resize.observers).toHaveLength(2);
+      expect(missing).toBeNull();
+      expect([...detailObserver!.observed]).toEqual([first, second]);
+    } finally {
+      resize.restore();
+    }
+  });
+
+  it("disconnects an idle Detail observer and creates one again for a later automatic Detail", () => {
+    const resize = installControllableResizeObserver();
+    const renderProps = (expandedRowIds: readonly string[]) => (
+      <CominsTable
+        columns={columns}
+        data={rows}
+        data-testid="detail-reregister-viewport"
+        expandedRowIds={expandedRowIds}
+        getRowDetailHeight={() => "auto"}
+        getRowId={(row) => row.id}
+        onChangeExpandedRowIds={() => undefined}
+        renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+      />
+    );
+
+    try {
+      const element = renderTableElement(renderProps(["a"]));
+      const first = element.querySelector("[data-testid='row-detail-content-a']")!;
+      const firstDetailObserver = resize.observers.find((observer) => observer.observed.has(first))!;
+
+      act(() => root?.render(renderProps([])));
+
+      expect(firstDetailObserver.disconnectCount).toBe(1);
+      expect(firstDetailObserver.observed.size).toBe(0);
+
+      act(() => root?.render(renderProps(["b"])));
+
+      const second = element.querySelector("[data-testid='row-detail-content-b']")!;
+      const secondDetailObserver = resize.observers.find(
+        (observer) => observer !== firstDetailObserver && observer.observed.has(second),
+      );
+
+      expect(secondDetailObserver).toBeDefined();
+      expect(resize.observers).toHaveLength(3);
     } finally {
       resize.restore();
     }
@@ -2716,6 +2774,38 @@ describe("comins-table keyboard interaction", () => {
     expect(element.querySelector("[data-detail-for='c']")).toBeNull();
   });
 
+  it("does not evaluate Row Detail callbacks for expanded ids outside the nonvirtual page", () => {
+    const isRowExpandable = vi.fn(() => true);
+    const getRowDetailHeight = vi.fn(() => 180 as const);
+    const renderRowDetail = vi.fn(({ row }: { row: { id: string } }) => (
+      <span>{`Detail ${row.id}`}</span>
+    ));
+    const element = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={threeRows}
+        expandedRowIds={["a", "b", "c", "missing"]}
+        getRowDetailHeight={getRowDetailHeight}
+        getRowId={(row) => row.id}
+        isRowExpandable={isRowExpandable}
+        pagination={{ pageIndex: 1, pageSize: 1 }}
+        renderRowDetail={renderRowDetail}
+      />,
+    );
+
+    expect(element.querySelector("[data-detail-for='b']")).not.toBeNull();
+    expect(
+      new Set(isRowExpandable.mock.calls.map(([params]) => params.row.id)),
+    ).toEqual(new Set(["b"]));
+    expect(
+      new Set(getRowDetailHeight.mock.calls.map(([params]) => params.row.id)),
+    ).toEqual(new Set(["b"]));
+    expect(getRowDetailHeight).toHaveBeenCalledTimes(1);
+    expect(
+      new Set(renderRowDetail.mock.calls.map(([params]) => params.row.id)),
+    ).toEqual(new Set(["b"]));
+  });
+
   it("uses owner business Row counts for lazy and infinite loading when Details are mounted", async () => {
     let resolveInitial: ((result: { rows: PersonRow[]; total: number }) => void) | undefined;
     const onLazyLoad = vi
@@ -2957,6 +3047,70 @@ describe("comins-table keyboard interaction", () => {
       }
     } finally {
       restoreResizeObserver();
+    }
+  });
+
+  it("subtracts fixed Detail height from the nonvirtual viewport-end filler", () => {
+    const resize = installControllableResizeObserver();
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          columns={columns}
+          data={[rows[0]!]}
+          data-testid="fixed-detail-filler-viewport"
+          expandedRowIds={["a"]}
+          getRowDetailHeight={() => 240}
+          getRowId={(row) => row.id}
+          renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+        />,
+      );
+      const viewport = element.querySelector<HTMLElement>(
+        "[data-testid='fixed-detail-filler-viewport']",
+      )!;
+
+      act(() => resize.emit(viewport, 300));
+
+      expect(
+        element.querySelector<HTMLElement>("[data-testid='table-empty-filler']")?.style.height,
+      ).toBe("24px");
+    } finally {
+      resize.restore();
+    }
+  });
+
+  it("subtracts measured automatic Detail height from the nonvirtual viewport-end filler", () => {
+    const resize = installControllableResizeObserver();
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          columns={columns}
+          data={[rows[0]!]}
+          data-testid="auto-detail-filler-viewport"
+          expandedRowIds={["a"]}
+          getRowDetailHeight={() => "auto"}
+          getRowId={(row) => row.id}
+          renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+        />,
+      );
+      const viewport = element.querySelector<HTMLElement>(
+        "[data-testid='auto-detail-filler-viewport']",
+      )!;
+      const detail = element.querySelector<HTMLElement>(
+        "[data-testid='row-detail-content-a']",
+      )!;
+
+      act(() => {
+        resize.emit(viewport, 240);
+        resize.emit(detail, 180);
+      });
+
+      expect(
+        element.querySelector<HTMLElement>("[data-testid='table-empty-filler']")?.style.height,
+      ).toBe("24px");
+    } finally {
+      resize.restore();
     }
   });
 
@@ -3358,5 +3512,70 @@ describe("comins-table keyboard interaction", () => {
     });
 
     expect(document.activeElement).toBe(toggle);
+  });
+
+  it("restores focus to the remounted disclosure after the last virtual Detail collapses", () => {
+    const animationFrames: FrameRequestCallback[] = [];
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        animationFrames.push(callback);
+        return animationFrames.length;
+      });
+
+    function ControlledVirtualDetail() {
+      const [expandedRowIds, setExpandedRowIds] = useState<string[]>(["row-0"]);
+
+      return (
+        <CominsTable
+          columns={columns}
+          data={manyRows.slice(0, 20)}
+          expandedRowIds={expandedRowIds}
+          getRowDetailHeight={() => 240}
+          getRowId={(row) => row.id}
+          onChangeExpandedRowIds={setExpandedRowIds}
+          renderRowDetail={() => (
+            <button data-testid="last-virtual-detail-collapse" onClick={() => setExpandedRowIds([])}>
+              Collapse last Detail
+            </button>
+          )}
+          virtualized
+        />
+      );
+    }
+
+    try {
+      const element = renderTableElement(<ControlledVirtualDetail />);
+      const originalToggle = element.querySelector<HTMLButtonElement>(
+        "[data-testid='row-detail-toggle-row-0']",
+      )!;
+      const detailButton = element.querySelector<HTMLButtonElement>(
+        "[data-testid='last-virtual-detail-collapse']",
+      )!;
+
+      act(() => {
+        detailButton.focus();
+        detailButton.click();
+      });
+
+      const remountedToggle = element.querySelector<HTMLButtonElement>(
+        "[data-testid='row-detail-toggle-row-0']",
+      )!;
+
+      expect(remountedToggle).not.toBe(originalToggle);
+      expect(remountedToggle.getAttribute("aria-expanded")).toBe("false");
+      expect(remountedToggle.hasAttribute("aria-controls")).toBe(false);
+      expect(element.querySelector("[data-detail-for='row-0']")).toBeNull();
+
+      act(() => {
+        for (const callback of animationFrames.splice(0)) {
+          callback(0);
+        }
+      });
+
+      expect(document.activeElement).toBe(remountedToggle);
+    } finally {
+      requestAnimationFrame.mockRestore();
+    }
   });
 });

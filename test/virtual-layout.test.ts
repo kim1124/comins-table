@@ -203,26 +203,28 @@ describe("virtual layout", () => {
     ).toBe(42);
   });
 
-  it("keeps collapsed data slots at rowHeight and adds fixed detail height", () => {
+  it("keeps numeric and string Row ids as distinct Slot layout identities", () => {
     const collapsed = createCominsDataVirtualSlot({
       dataIndex: 0,
       detail: null,
-      row: { id: "a" },
+      row: { id: 1 },
       rowHeight: 36,
-      rowId: "a",
+      rowId: 1,
       visibleIndex: 0,
     });
     const expanded = createCominsDataVirtualSlot({
       dataIndex: 1,
       detail: { estimated: false, height: 300, mode: "fixed" },
-      row: { id: "b" },
+      row: { id: "1" },
       rowHeight: 36,
-      rowId: "b",
+      rowId: "1",
       visibleIndex: 1,
     });
 
     expect(getCominsSlotHeight(collapsed, 36)).toBe(36);
     expect(getCominsSlotHeight(expanded, 36)).toBe(336);
+    expect(collapsed.key).toBe("data:number:1");
+    expect(expanded.key).toBe("data:string:1");
     expect(collapsed.key).not.toBe(expanded.key);
   });
 });
