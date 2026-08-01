@@ -1154,6 +1154,162 @@ describe("comins-table keyboard interaction", () => {
     }
   });
 
+  it("keeps a same-batch user scroll when an automatic Detail measurement is pending", () => {
+    const resize = installControllableResizeObserver();
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          buffer-size={30}
+          columns={columns}
+          data={manyRows}
+          data-testid="detail-pending-user-scroll-viewport"
+          expandedRowIds={["row-0"]}
+          getRowDetailHeight={() => "auto"}
+          getRowId={(row) => row.id}
+          onChangeExpandedRowIds={() => undefined}
+          renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+          rowHeight={36}
+          virtualized
+        />,
+      );
+      const viewport = element.querySelector<HTMLElement>(
+        "[data-testid='detail-pending-user-scroll-viewport']",
+      )!;
+      const content = element.querySelector(
+        "[data-testid='row-detail-content-row-0']",
+      )!;
+      const sizer = element.querySelector<HTMLElement>(
+        ".comins-table__body-virtual-sizer",
+      )!;
+      let assignedScrollTop = 600;
+
+      setElementRect(viewport, 800, 180);
+      setElementRect(content, 800, 300);
+      Object.defineProperties(viewport, {
+        clientHeight: { configurable: true, value: 180 },
+        scrollHeight: {
+          configurable: true,
+          get: () => Number.parseFloat(sizer.style.height),
+        },
+        scrollTop: {
+          configurable: true,
+          get: () => assignedScrollTop,
+          set: (value: number) => {
+            assignedScrollTop = value;
+          },
+        },
+      });
+
+      act(() => resize.emit(viewport, 180));
+      act(() => {
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      act(() => resize.emit(content, 420));
+      expect(viewport.scrollTop).toBe(720);
+
+      act(() => {
+        resize.emit(content, 480);
+        assignedScrollTop = 1_500;
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+
+      expect(viewport.scrollTop).toBe(1_500);
+      expect(element.querySelector("[data-testid='row-row-60']")).not.toBeNull();
+    } finally {
+      requestAnimationFrame.mockRestore();
+      resize.restore();
+    }
+  });
+
+  it("keeps a user scroll when a newer Detail revision arrives during correction", () => {
+    const resize = installControllableResizeObserver();
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+    let interruptNextCorrection = false;
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          buffer-size={30}
+          columns={columns}
+          data={manyRows}
+          data-testid="detail-newer-revision-viewport"
+          expandedRowIds={["row-0"]}
+          getRowDetailHeight={() => "auto"}
+          getRowId={(row) => row.id}
+          onChangeExpandedRowIds={() => undefined}
+          renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+          rowHeight={36}
+          virtualized
+        />,
+      );
+      const viewport = element.querySelector<HTMLElement>(
+        "[data-testid='detail-newer-revision-viewport']",
+      )!;
+      const content = element.querySelector(
+        "[data-testid='row-detail-content-row-0']",
+      )!;
+      const sizer = element.querySelector<HTMLElement>(
+        ".comins-table__body-virtual-sizer",
+      )!;
+      let assignedScrollTop = 600;
+
+      setElementRect(viewport, 800, 180);
+      setElementRect(content, 800, 300);
+      Object.defineProperties(viewport, {
+        clientHeight: { configurable: true, value: 180 },
+        scrollHeight: {
+          configurable: true,
+          get: () => Number.parseFloat(sizer.style.height),
+        },
+        scrollTop: {
+          configurable: true,
+          get: () => assignedScrollTop,
+          set: (value: number) => {
+            if (interruptNextCorrection) {
+              interruptNextCorrection = false;
+              resize.emit(content, 540);
+              assignedScrollTop = 1_500;
+              viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+              return;
+            }
+
+            assignedScrollTop = value;
+          },
+        },
+      });
+
+      act(() => resize.emit(viewport, 180));
+      act(() => {
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      act(() => resize.emit(content, 420));
+      expect(viewport.scrollTop).toBe(720);
+
+      interruptNextCorrection = true;
+      act(() => resize.emit(content, 480));
+
+      expect(viewport.scrollTop).toBe(1_500);
+
+      act(() => resize.emit(content, 600));
+      expect(viewport.scrollTop).toBe(1_560);
+    } finally {
+      requestAnimationFrame.mockRestore();
+      resize.restore();
+    }
+  });
+
   it("clamps an automatic Detail shrink at the mixed viewport bottom", () => {
     const resize = installControllableResizeObserver();
     const requestAnimationFrame = vi

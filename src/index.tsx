@@ -366,6 +366,7 @@ type CominsPendingVirtualAnchor = {
 
 type CominsPendingDetailAnchor = CominsPendingVirtualAnchor & {
   revision: number;
+  status: "cancelled" | "pending";
 };
 
 type CominsLogicalAnchorTransaction = {
@@ -1688,6 +1689,7 @@ function CominsTableInner<TData>(
         pendingDetailAnchorRef.current = {
           ...pendingAnchor,
           revision,
+          status: "pending",
         };
       }
 
@@ -2149,7 +2151,9 @@ function CominsTableInner<TData>(
         })
       : undefined;
   const pendingAnchorTransaction =
-    pendingDetailAnchor ?? pendingVirtualAnchor;
+    pendingDetailAnchor?.status === "pending"
+      ? pendingDetailAnchor
+      : pendingVirtualAnchor;
   useLayoutEffect(() => {
     if (!currentVirtualProjection) {
       previousVirtualProjectionRef.current = null;
@@ -2160,6 +2164,19 @@ function CominsTableInner<TData>(
     }
 
     previousVirtualProjectionRef.current = currentVirtualProjection;
+
+    if (pendingDetailAnchor?.status === "cancelled") {
+      const currentPendingDetailAnchor = pendingDetailAnchorRef.current;
+
+      if (
+        currentPendingDetailAnchor?.revision ===
+          pendingDetailAnchor.revision &&
+        currentPendingDetailAnchor.status === "cancelled"
+      ) {
+        pendingDetailAnchorRef.current = null;
+      }
+      return;
+    }
 
     const viewport = containerRef.current;
 
@@ -2192,12 +2209,37 @@ function CominsTableInner<TData>(
       viewport.clientHeight || pendingAnchorTransaction.previousViewportHeight,
     );
 
+    if (pendingDetailAnchor) {
+      const currentPendingDetailAnchor = pendingDetailAnchorRef.current;
+
+      if (
+        currentPendingDetailAnchor?.revision !==
+          pendingDetailAnchor.revision ||
+        currentPendingDetailAnchor.status !== "pending"
+      ) {
+        return;
+      }
+    }
+
     if (scrollFrameRef.current !== null) {
       window.cancelAnimationFrame(scrollFrameRef.current);
       scrollFrameRef.current = null;
     }
 
     viewport.scrollTop = nextPhysicalScrollTop;
+
+    if (pendingDetailAnchor) {
+      const currentPendingDetailAnchor = pendingDetailAnchorRef.current;
+
+      if (
+        currentPendingDetailAnchor?.revision !==
+          pendingDetailAnchor.revision ||
+        currentPendingDetailAnchor.status !== "pending"
+      ) {
+        return;
+      }
+    }
+
     const actualPhysicalScrollTop = viewport.scrollTop;
     const revision =
       pendingDetailAnchor?.revision ??
@@ -2215,7 +2257,9 @@ function CominsTableInner<TData>(
       anchorRevisionRef.current,
       revision,
     );
-    pendingDetailAnchorRef.current = null;
+    if (pendingDetailAnchor) {
+      pendingDetailAnchorRef.current = null;
+    }
     logicalAnchorTransactionRef.current = nextAnchorTransaction;
     pendingScrollTopRef.current = actualPhysicalScrollTop;
     setLogicalAnchorTransaction(nextAnchorTransaction);
@@ -3319,8 +3363,21 @@ function CominsTableInner<TData>(
     const bodyViewport = event.currentTarget;
     const activeAnchorTransaction =
       logicalAnchorTransactionRef.current;
+    const pendingDetailAnchor = pendingDetailAnchorRef.current;
 
     pendingScrollTopRef.current = bodyViewport.scrollTop;
+    if (
+      pendingDetailAnchor?.status === "pending" &&
+      Math.abs(
+        bodyViewport.scrollTop -
+          pendingDetailAnchor.previousPhysicalScrollTop,
+      ) > 0.5
+    ) {
+      pendingDetailAnchorRef.current = {
+        ...pendingDetailAnchor,
+        status: "cancelled",
+      };
+    }
     if (
       activeAnchorTransaction &&
       Math.abs(
