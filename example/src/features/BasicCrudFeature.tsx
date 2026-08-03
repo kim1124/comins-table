@@ -7,17 +7,12 @@ import { createBaseColumns } from "../fixtures/columns";
 import { createExampleRows, type PersonRow } from "../fixtures/people";
 
 export function BasicCrudFeature() {
-  const [rows, setRows] = useState<PersonRow[]>(() => createExampleRows(100));
-  const [ownersOnly, setOwnersOnly] = useState(false);
+  const [rows, setRows] = useState<PersonRow[]>(() => createExampleRows(30));
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const [selectedRowJson, setSelectedRowJson] = useState("");
   const [error, setError] = useState("");
   const [nextRowIndex, setNextRowIndex] = useState(1);
-  const visibleRows = useMemo(
-    () => (ownersOnly ? rows.filter((row) => row.role === "Owner") : rows),
-    [ownersOnly, rows],
-  );
   const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(
     () => [
       ...createBaseColumns(),
@@ -100,7 +95,7 @@ export function BasicCrudFeature() {
   return (
     <section className="feature-panel feature-panel--crud">
       <FeatureSampleSection
-        description="data, onChangeSelection, onClickRow를 사용해 추가, 수정, 삭제, 초기화, 필터링을 한 화면에서 검증합니다."
+        description="data, onChangeSelection, onClickRow를 사용해 추가, 수정, 삭제, 초기화를 한 화면에서 검증합니다."
         id="basic-crud"
         title="CRUD 동작"
       >
@@ -118,8 +113,7 @@ export function BasicCrudFeature() {
               </ActionButton>
               <ActionButton
                 onClick={() => {
-                  setRows(createExampleRows(100));
-                  setOwnersOnly(false);
+                  setRows(createExampleRows(30));
                   setActiveRowId(null);
                   setSelectedRowIds([]);
                   setSelectedRowJson("");
@@ -128,14 +122,6 @@ export function BasicCrudFeature() {
                 }}
               >
                 초기화
-              </ActionButton>
-              <ActionButton
-                onClick={() => {
-                  setOwnersOnly((current) => !current);
-                }}
-                tone="filter"
-              >
-                필터링
               </ActionButton>
             </>
           }
@@ -160,7 +146,7 @@ export function BasicCrudFeature() {
             <CominsTable
               className="example-table"
               columns={columns}
-              data={visibleRows}
+              data={rows}
               data-testid="data-table-viewport"
               getRowId={(row) => row.id}
               onChangeSelection={syncSelection}
@@ -168,7 +154,7 @@ export function BasicCrudFeature() {
               onClickRow={({ row }) => {
                 selectActiveRow(row.data, String(row.id));
               }}
-              pagination={{ pageIndex: 0, pageSize: visibleRows.length }}
+              pagination={{ pageIndex: 0, pageSize: rows.length }}
               theme={{ density: "compact" }}
             />
           </div>

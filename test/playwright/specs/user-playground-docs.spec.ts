@@ -91,7 +91,7 @@ test("user playground uses charts-style docs shell and shadcn-style action butto
   expect(diagnostics).toEqual([]);
 });
 
-test("basic crud page demonstrates row updates and filter summary without pagination controls", async ({ page }) => {
+test("basic crud page demonstrates row updates and reset without pagination controls", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
   await page.goto("/examples/crud");
@@ -111,8 +111,10 @@ test("basic crud page demonstrates row updates and filter summary without pagina
   await page.getByRole("button", { exact: true, name: "삭제" }).click();
   await expect(page.getByTestId("row-b")).toHaveCount(0);
 
-  await page.getByRole("button", { exact: true, name: "필터링" }).click();
-  await expect(page.getByTestId("row-row-3")).toHaveCount(0);
+  await expect(page.getByRole("button", { exact: true, name: "필터링" })).toHaveCount(0);
+  await page.getByRole("button", { exact: true, name: "초기화" }).click();
+  await expect(page.getByTestId("row-b")).toBeVisible();
+  await expect(page.locator("tbody tr[data-comins-row-data-index]")).toHaveCount(30);
 
   await expect(page.getByRole("button", { exact: true, name: "다음" })).toHaveCount(0);
   await expect(page.getByTestId("crud-pagination")).toHaveCount(0);

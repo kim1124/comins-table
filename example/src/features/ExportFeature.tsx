@@ -4,7 +4,7 @@ import { exportCominsRowsToCsv, exportCominsRowsToJson, CominsTable, type Comins
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Button } from "../components/ui/button";
 import { createBaseColumns } from "../fixtures/columns";
-import { cloneBaseRows, type PersonRow } from "../fixtures/people";
+import { createExampleRows, type PersonRow } from "../fixtures/people";
 
 type ExportMode = "csv" | "json";
 
@@ -16,7 +16,7 @@ const exportColumns: Array<CominsExportColumn<PersonRow>> = [
 
 export function ExportFeature() {
   const [mode, setMode] = useState<ExportMode>("csv");
-  const rows = useMemo(() => cloneBaseRows(), []);
+  const rows = useMemo(() => createExampleRows(30), []);
   const tableColumns = useMemo(() => createBaseColumns(), []);
   const output = useMemo(() => {
     const options = { columns: exportColumns, rows };
@@ -48,7 +48,7 @@ export function ExportFeature() {
           data={rows}
           data-testid="export-viewport"
           getRowId={(row) => row.id}
-          pagination={{ pageIndex: 0, pageSize: 5 }}
+          pagination={{ pageIndex: 0, pageSize: 30 }}
           theme={{ density: "compact" }}
         />
         <pre className="state-output" data-testid="export-output">

@@ -18,7 +18,7 @@ function collectBrowserDiagnostics(page: Page) {
 
 const featurePages = [
   ["/docs/getting-started", "comins-table 기본 예제입니다."],
-  ["/examples/crud", "추가, 수정, 삭제, 초기화, 필터링"],
+  ["/examples/crud", "추가, 수정, 삭제, 초기화"],
   ["/examples/size", "300px 고정 높이와 부모 컨테이너 500px"],
   ["/examples/theme", "CSS 변수와 theme class"],
   ["/examples/header", "6px 이상 드래그하면 placeholder"],

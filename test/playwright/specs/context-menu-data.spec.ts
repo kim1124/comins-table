@@ -21,6 +21,7 @@ test("row and cell context examples show selected data objects", async ({ page }
   await page.goto("/");
 
   await page.goto("/examples/context-menu");
+  await expect(page.locator("tbody tr[data-comins-row-data-index]")).toHaveCount(30);
   await page.getByTestId("row-a").click({ button: "right" });
   await expect(page.getByRole("menuitem", { exact: true, name: "조회" })).toBeVisible();
   await expect(page.getByTestId("context-data-preview")).toContainText('"id": "a"');

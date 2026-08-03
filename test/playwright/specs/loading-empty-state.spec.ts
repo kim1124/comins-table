@@ -7,6 +7,7 @@ test("loading example shows skeleton, overlay, and empty states without hiding t
 
   await page.getByRole("button", { exact: true, name: "초기 로딩" }).click();
   await expect(page.getByTestId("loading-skeleton-row")).toHaveCount(5);
+  await expect(page.getByTestId("loading-state-viewport").locator("tbody tr[data-comins-row-data-index]")).toHaveCount(0);
   await expect(
     page.getByTestId("loading-skeleton-row").first().locator(".comins-table__skeleton-block").first(),
   ).toHaveCSS("animation-name", "comins-table-skeleton-shimmer");
@@ -14,6 +15,7 @@ test("loading example shows skeleton, overlay, and empty states without hiding t
 
   await page.getByRole("button", { exact: true, name: "재조회 로딩" }).click();
   await expect(page.getByTestId("row-a")).toBeVisible();
+  await expect(page.getByTestId("loading-state-viewport").locator("tbody tr[data-comins-row-data-index]")).toHaveCount(30);
   await expect(page.getByTestId("data-table-loading-overlay")).toBeVisible();
   await expect(page.getByTestId("data-table-loading-spinner")).toBeVisible();
   await expect(page.getByTestId("data-table-loading-spinner")).toHaveCSS(
@@ -23,11 +25,13 @@ test("loading example shows skeleton, overlay, and empty states without hiding t
   await expect(page.getByRole("columnheader", { exact: true, name: "Column1" })).toBeVisible();
 
   await page.getByRole("button", { exact: true, name: "빈 데이터" }).click();
+  await expect(page.getByTestId("loading-state-viewport").locator("tbody tr[data-comins-row-data-index]")).toHaveCount(0);
   await expect(page.getByTestId("data-table-empty-state")).toContainText("표시할 데이터가 없습니다.");
   await expect(page.getByRole("columnheader", { exact: true, name: "Column1" })).toBeVisible();
 
   await page.getByRole("button", { exact: true, name: "데이터 표시" }).click();
   await expect(page.getByTestId("row-a")).toBeVisible();
+  await expect(page.getByTestId("loading-state-viewport").locator("tbody tr[data-comins-row-data-index]")).toHaveCount(30);
   await expect(page.getByTestId("data-table-empty-state")).toHaveCount(0);
   await expect(page.getByTestId("data-table-loading-overlay")).toHaveCount(0);
   await expect(page.getByRole("columnheader", { exact: true, name: "Column1" })).toBeVisible();

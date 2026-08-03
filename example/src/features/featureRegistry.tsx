@@ -29,7 +29,7 @@ export const featureRegistry: FeatureDefinition[] = [
     label: "Basic",
     options: [
       { description: "Column definitions rendered by the table.", example: "[{ label: 'Name', field: 'name' }]", name: "columns" },
-      { description: "Row array rendered by the table.", example: "createExampleRows(100)", name: "data" },
+      { description: "Deterministic 30-row array rendered by the table.", example: "createExampleRows(30)", name: "data" },
       { description: "Stable row id resolver.", example: "(row) => row.id", name: "getRowId" },
       { description: "Data change callback connected to external useState.", example: "onChangeData={setRows}", name: "onChangeData" },
       { description: "Table density and base styling.", example: "{ density: 'compact' }", name: "theme" },
@@ -38,15 +38,15 @@ export const featureRegistry: FeatureDefinition[] = [
   },
   {
     Component: BasicCrudFeature,
-    description: "Example page for add, update, delete, and query actions around the selected row.",
+    description: "Example page for add, update, delete, and reset actions around the selected row.",
     id: "basic-crud",
     label: "CRUD",
     options: [
-      { description: "Source array for row add, update, and delete actions.", example: "useState(createExampleRows(100))", name: "data" },
+      { description: "Deterministic 30-row source for add, update, and delete actions.", example: "useState(createExampleRows(30))", name: "data" },
       { description: "Selection state change callback.", example: "onChangeSelection={syncSelection}", name: "onChangeSelection" },
       { description: "Marks the clicked row as the update target.", example: "onClickRow={({ row }) => ...}", name: "onClickRow" },
     ],
-    summary: "Add, update, delete, reset, and query example around the selected row.",
+    summary: "Add, update, delete, and reset example around the selected row.",
   },
   {
     Component: SizeFeature,
@@ -82,7 +82,7 @@ export const featureRegistry: FeatureDefinition[] = [
       { description: "Fallback rendered when there is no data.", example: "emptyComponent={<Empty />}", name: "emptyComponent" },
       { description: "Overlay rendered over existing rows.", example: "loadingComponent={<Spinner />}", name: "loadingComponent" },
     ],
-    summary: "Initial skeleton, refetch overlay, empty state, and header persistence example.",
+    summary: "Initial zero-data skeleton, 30-row refetch overlay, empty state, and ready data example.",
   },
   {
     Component: HeaderFeature,
@@ -110,6 +110,7 @@ export const featureRegistry: FeatureDefinition[] = [
       { description: "Keeps child width ratios when resizing the parent header.", example: "resize group header", name: "group resize" },
       { description: "Moves child columns together when dragging the parent header.", example: "drag group header", name: "group reorder" },
       { description: "Removes child columns from the columns prop.", example: "columns.filter(...)", name: "child visibility" },
+      { description: "Hides parent groups independently while preserving the selected child columns.", example: "group visibility checkbox", name: "parent visibility" },
     ],
     summary: "Two-level header groups, parent movement, parent resize, and child column visibility example.",
   },

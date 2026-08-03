@@ -1347,6 +1347,24 @@ body {
   gap: 8px;
 }
 
+.feature-checkbox-control {
+  align-items: center;
+  color: #334155;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 6px;
+  min-height: 34px;
+}
+
+.feature-checkbox-control > input {
+  accent-color: #0f766e;
+  height: 16px;
+  margin: 0;
+  width: 16px;
+}
+
 .feature-control-label {
   color: #64748b;
   font-size: 11px;

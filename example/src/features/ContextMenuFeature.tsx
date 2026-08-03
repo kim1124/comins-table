@@ -47,7 +47,7 @@ function getContextMenuPosition(event: React.MouseEvent) {
 export function ContextMenuFeature() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
   const [selectedMenuLabel, setSelectedMenuLabel] = useState("");
-  const [rows, setRows] = useState(() => createExampleRows(100));
+  const [rows, setRows] = useState(() => createExampleRows(30));
   const selectedRowIdsRef = useRef<CominsSelectionState["rowIds"]>([]);
   const tableRef = useRef<CominsTableRef<PersonRow>>(null);
   const columns = useMemo(() => createGuardedColumns(), []);

@@ -22,6 +22,9 @@ test("row clicks expose controlled single, toggle, and range selection state", a
   await page.goto("/examples/selection-clipboard");
 
   await expect(page.locator("h1", { hasText: "Selection & Clipboard" })).toBeVisible();
+  await expect(
+    page.getByTestId("selection-clipboard-viewport").locator("tbody tr[data-comins-row-data-index]"),
+  ).toHaveCount(30);
   await page.getByTestId("row-b").click();
   await expect(page.getByTestId("row-b")).toHaveAttribute("data-selected-row", "true");
   await expect(page.getByTestId("selection-state")).toContainText('"b"');

@@ -280,9 +280,10 @@ test("CRUD page removes noisy query output and keeps pagination controls out of 
   await expect(page.getByTestId("pagination-state")).toHaveCount(0);
   await expect(page.getByTestId("selected-row-state")).toHaveCount(0);
   await expect(page.getByTestId("feature-control-label")).toHaveCount(0);
-  for (const label of ["추가", "수정", "삭제", "초기화", "필터링"]) {
+  for (const label of ["추가", "수정", "삭제", "초기화"]) {
     await expect(page.getByRole("button", { exact: true, name: label })).toBeVisible();
   }
+  await expect(page.getByRole("button", { exact: true, name: "필터링" })).toHaveCount(0);
   await expect(page.getByTestId("crud-pagination")).toHaveCount(0);
   await expect(page.locator(".comins-table__header-table th")).toHaveCount(6);
 
@@ -350,7 +351,7 @@ test("general samples render thirty rows per page", async ({ page }) => {
 
   await page.goto("/examples/crud");
   await expect(page.getByTestId("data-table-viewport")).toBeVisible();
-  await expect(page.locator(".comins-table__body-table tbody tr[data-comins-row-data-index]")).toHaveCount(100);
+  await expect(page.locator(".comins-table__body-table tbody tr[data-comins-row-data-index]")).toHaveCount(30);
 
   await page.goto("/examples/row");
   await expect(
@@ -376,8 +377,8 @@ test("general samples render thirty rows per page", async ({ page }) => {
   await page.goto("/examples/column-groups");
   for (const testId of ["header-example-groups", "column-group-dynamic-columns"]) {
     await expect(
-      page.getByTestId(testId).locator(".comins-table__body-table tbody tr[data-comins-row-data-index]").first(),
-    ).toBeVisible();
+      page.getByTestId(testId).locator(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
+    ).toHaveCount(30);
   }
 
   await page.goto("/examples/component");
@@ -434,7 +435,7 @@ test("header page keeps only requested actions and state outputs", async ({ page
   await expect(page.getByTestId("header-component-event")).toHaveCount(0);
 
   await page.goto("/examples/column-groups");
-  await expect(page.getByTestId("header-example-groups").getByRole("button", { exact: true, name: "Header 그룹 1 표시" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("header-example-groups").getByRole("checkbox", { exact: true, name: "Header 그룹 1 표시" })).toBeChecked();
   await expect(page.getByTestId("header-example-groups").getByRole("button", { exact: true, name: "초기화" })).toBeVisible();
   await expect(page.getByTestId("column-group-dynamic-columns")).toBeVisible();
   expect(diagnostics).toEqual([]);
@@ -643,7 +644,7 @@ test("example controls stay in one horizontal row with overflow scrolling", asyn
   const crudControlRow = page.getByTestId("feature-control-row");
   const actionButtons = crudControlRow.locator(".feature-action-button");
   await expect(crudControlRow).toBeVisible();
-  await expect(actionButtons).toHaveCount(5);
+  await expect(actionButtons).toHaveCount(4);
   await expect(actionButtons.locator("svg")).toHaveCount(0);
   await expect(crudControlRow.locator(".feature-action-button__icon")).toHaveCount(0);
   const rowMetrics = await crudControlRow.evaluate((element) => {
@@ -662,7 +663,7 @@ test("example controls stay in one horizontal row with overflow scrolling", asyn
   expect(rowMetrics.wrapped).toBe(false);
   expect(["auto", "scroll"]).toContain(rowMetrics.overflowX);
   await expect(page.getByRole("button", { exact: true, name: "삭제" })).toHaveAttribute("data-action-tone", "danger");
-  await expect(page.getByRole("button", { exact: true, name: "필터링" })).toHaveAttribute("data-action-tone", "filter");
+  await expect(page.getByRole("button", { exact: true, name: "필터링" })).toHaveCount(0);
 
   expect(diagnostics).toEqual([]);
 });

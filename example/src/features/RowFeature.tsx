@@ -38,10 +38,10 @@ export function RowFeature() {
     detail: "행을 클릭, 더블클릭, 우클릭하거나 키보드로 조작하면 마지막 이벤트가 표시됩니다.",
     title: "행 이벤트 대기",
   });
-  const [basicRows, setBasicRows] = useState(() => createExampleRows(100));
-  const [disabledRows] = useState(() => createExampleRows(100));
-  const [stylingRows] = useState(() => createExampleRows(100));
-  const [eventRows] = useState(() => createExampleRows(100));
+  const [basicRows, setBasicRows] = useState(() => createExampleRows(30));
+  const [disabledRows] = useState(() => createExampleRows(30));
+  const [stylingRows] = useState(() => createExampleRows(30));
+  const [eventRows] = useState(() => createExampleRows(30));
   const reportEvent = (title: string, detail: string) => setEventLog({ detail, title });
 
   return (

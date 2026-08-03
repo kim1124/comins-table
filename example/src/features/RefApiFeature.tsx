@@ -11,7 +11,7 @@ import {
 import { FeatureControls } from "../components/FeatureControls";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Button } from "../components/ui/button";
-import { cloneBaseRows, type PersonRow } from "../fixtures/people";
+import { createExampleRows, type PersonRow } from "../fixtures/people";
 
 const changedLayout: CominsColumnLayout = {
   columns: {
@@ -32,7 +32,7 @@ function createEmptySelection(): CominsSelectionState {
 
 export function RefApiFeature() {
   const tableRef = useRef<CominsTableRef<PersonRow>>(null);
-  const [rows, setRows] = useState(cloneBaseRows);
+  const [rows, setRows] = useState(() => createExampleRows(30));
   const [selection, setSelection] = useState<CominsSelectionState>(createEmptySelection);
   const [sortModel, setSortModel] = useState<CominsSortModel>([]);
   const [savedLayout, setSavedLayout] = useState<CominsColumnLayout | null>(null);

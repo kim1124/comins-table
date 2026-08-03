@@ -4,7 +4,7 @@ import { CominsTable, type CominsTableColumn, type CominsLazyLoadRequest } from 
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Button } from "../components/ui/button";
 import { createBaseColumns } from "../fixtures/columns";
-import { cloneBaseRows, createRows, type PersonRow } from "../fixtures/people";
+import { createExampleRows, createRows, type PersonRow } from "../fixtures/people";
 
 type LoadingMode = "empty" | "initial" | "ready" | "refetch";
 type RemoteMode = "empty" | "idle" | "load";
@@ -14,8 +14,8 @@ export function LoadingStateFeature() {
   const [remoteMode, setRemoteMode] = useState<RemoteMode>("idle");
   const [remoteKey, setRemoteKey] = useState(0);
   const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(() => createBaseColumns(), []);
-  const rows = useMemo(() => cloneBaseRows(), []);
-  const remoteRows = useMemo(() => createRows(12), []);
+  const rows = useMemo(() => createExampleRows(30), []);
+  const remoteRows = useMemo(() => createRows(30), []);
   const tableRows = mode === "empty" || mode === "initial" ? [] : rows;
   const isLoading = mode === "initial" || mode === "refetch";
   const loadRemoteRows = (request: CominsLazyLoadRequest) =>
@@ -71,7 +71,7 @@ export function LoadingStateFeature() {
           getRowId={(row) => row.id}
           loading={isLoading}
           loadingComponent={<span>데이터를 갱신하는 중입니다.</span>}
-          pagination={{ pageIndex: 0, pageSize: 5 }}
+          pagination={{ pageIndex: 0, pageSize: 30 }}
           persistHeaderWhenEmpty
           skeletonRowCount={5}
           theme={{ density: "compact" }}

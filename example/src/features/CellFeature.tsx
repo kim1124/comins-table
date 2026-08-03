@@ -16,7 +16,7 @@ export function CellFeature() {
     detail: "셀을 클릭, 더블클릭, 우클릭하거나 키보드로 조작하면 마지막 이벤트가 표시됩니다.",
     title: "셀 이벤트 대기",
   });
-  const [rows, setRows] = useState(() => createExampleRows(100));
+  const [rows, setRows] = useState(() => createExampleRows(30));
   const columns: Array<CominsTableColumn<PersonRow>> = [
     {
       cell: {

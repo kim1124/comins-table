@@ -68,7 +68,7 @@ export function HeaderFeature() {
   const layoutTableRef = useRef<CominsTableRef<PersonRow>>(null);
   const multiSortTableRef = useRef<CominsTableRef<PersonRow>>(null);
   const pendingLayoutRef = useRef<CominsColumnLayout | null>(null);
-  const [rows] = useState(() => createExampleRows(100));
+  const [rows] = useState(() => createExampleRows(30));
   const columns = useMemo(() => createBaseColumns(), []);
   const visibilityBaseColumns = useMemo(() => createHeaderGroupColumns(), []);
   const layoutBaseColumns = useMemo(() => createHeaderGroupColumns(), []);

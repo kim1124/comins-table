@@ -6,7 +6,7 @@ import { createBaseColumns } from "../fixtures/columns";
 import { createExampleRows } from "../fixtures/people";
 
 export function BasicFeature() {
-  const [rows, setRows] = useState(() => createExampleRows(100));
+  const [rows, setRows] = useState(() => createExampleRows(30));
 
   return (
     <section className="feature-panel">

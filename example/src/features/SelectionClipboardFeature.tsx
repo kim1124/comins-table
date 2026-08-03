@@ -7,7 +7,7 @@ import {
 } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Button } from "../components/ui/button";
-import { cloneBaseRows, type PersonRow } from "../fixtures/people";
+import { createExampleRows, type PersonRow } from "../fixtures/people";
 
 function createEmptySelection(): CominsSelectionState {
   return {
@@ -18,7 +18,7 @@ function createEmptySelection(): CominsSelectionState {
 }
 
 export function SelectionClipboardFeature() {
-  const [rows, setRows] = useState(cloneBaseRows);
+  const [rows, setRows] = useState(() => createExampleRows(30));
   const [selection, setSelection] = useState<CominsSelectionState>(createEmptySelection);
   const [sampleVersion, setSampleVersion] = useState(0);
   const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(
@@ -41,7 +41,7 @@ export function SelectionClipboardFeature() {
     [],
   );
   const resetSample = () => {
-    setRows(cloneBaseRows());
+    setRows(createExampleRows(30));
     setSelection(createEmptySelection());
     setSampleVersion((current) => current + 1);
   };

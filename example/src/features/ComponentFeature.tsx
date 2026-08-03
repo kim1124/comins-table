@@ -116,7 +116,7 @@ function getVirtualListItems() {
 }
 
 function createComponentRows(componentId: ComponentExampleId): ComponentRow[] {
-  return createExampleRows(100).map((row) => ({
+  return createExampleRows(30).map((row) => ({
     ...row,
     id: `${componentId}-${row.id}`,
     virtualListItems: componentId.startsWith("virtual-list") ? getVirtualListItems() : undefined,

@@ -12,17 +12,49 @@ import {
 } from "../fixtures/headerColumns";
 import { createExampleRows, type PersonRow } from "../fixtures/people";
 
+const columnGroupIdByColumnId = new Map(
+  headerColumnGroups.flatMap((group) => group.children.map((columnId) => [columnId, group.id] as const)),
+);
+
 export function ColumnGroupFeature() {
   const groupTableRef = useRef<CominsTableRef<PersonRow>>(null);
-  const [rows] = useState(() => createExampleRows(100));
+  const [rows] = useState(() => createExampleRows(30));
   const groupColumns = useMemo(() => createHeaderGroupColumns(), []);
   const [groupLayout, setGroupLayout] = useState<CominsColumnLayout>(() => cloneGroupLayout());
   const [dynamicColumnIds, setDynamicColumnIds] = useState(() => dynamicColumnOptions.map((option) => option.value));
+  const [dynamicVisibleGroupIds, setDynamicVisibleGroupIds] = useState(() =>
+    headerColumnGroups.map((group) => group.id),
+  );
   const dynamicColumns = useMemo(
-    () => groupColumns.filter((column) => dynamicColumnIds.includes(String(column.id ?? column.field))),
-    [dynamicColumnIds, groupColumns],
+    () =>
+      groupColumns.filter((column) => {
+        const columnId = String(column.id ?? column.field);
+        const groupId = columnGroupIdByColumnId.get(columnId);
+
+        return dynamicColumnIds.includes(columnId) && (!groupId || dynamicVisibleGroupIds.includes(groupId));
+      }),
+    [dynamicColumnIds, dynamicVisibleGroupIds, groupColumns],
   );
   const profileGroupVisible = groupLayout.groups?.profile?.hidden !== true;
+  const statusGroupVisible = groupLayout.groups?.status?.hidden !== true;
+
+  const setGroupVisible = (groupId: string, visible: boolean) => {
+    const nextLayout = {
+      ...groupLayout,
+      groups: {
+        ...groupLayout.groups,
+        [groupId]: { ...groupLayout.groups?.[groupId], hidden: !visible },
+      },
+    };
+    setGroupLayout(nextLayout);
+    groupTableRef.current?.setColumnLayout(nextLayout);
+  };
+
+  const setDynamicGroupVisible = (groupId: string, visible: boolean) => {
+    setDynamicVisibleGroupIds((current) =>
+      visible ? [...new Set([...current, groupId])] : current.filter((currentId) => currentId !== groupId),
+    );
+  };
 
   const resetGroupLayout = () => {
     const nextLayout = cloneGroupLayout();
@@ -40,25 +72,30 @@ export function ColumnGroupFeature() {
             title="Header 그룹 기본"
           >
             <FeatureControls
-              actions={
+              options={
                 <>
-                  <ActionButton
-                    aria-pressed={profileGroupVisible}
-                    onClick={() => {
-                      const nextLayout = {
-                        ...groupLayout,
-                        groups: { ...groupLayout.groups, profile: { hidden: profileGroupVisible } },
-                      };
-                      setGroupLayout(nextLayout);
-                      groupTableRef.current?.setColumnLayout(nextLayout);
-                    }}
-                  >
-                    Header 그룹 1 표시
-                  </ActionButton>
-                  <ActionButton onClick={resetGroupLayout}>
-                    초기화
-                  </ActionButton>
+                  <label className="feature-checkbox-control">
+                    <input
+                      checked={profileGroupVisible}
+                      onChange={(event) => setGroupVisible("profile", event.target.checked)}
+                      type="checkbox"
+                    />
+                    <span>Header 그룹 1 표시</span>
+                  </label>
+                  <label className="feature-checkbox-control">
+                    <input
+                      checked={statusGroupVisible}
+                      onChange={(event) => setGroupVisible("status", event.target.checked)}
+                      type="checkbox"
+                    />
+                    <span>Header 그룹 2 표시</span>
+                  </label>
                 </>
+              }
+              actions={
+                <ActionButton onClick={resetGroupLayout}>
+                  초기화
+                </ActionButton>
               }
             />
             <CominsTable
@@ -84,13 +121,25 @@ export function ColumnGroupFeature() {
           >
             <FeatureControls
               options={
-                <MultiSelect
-                  data-testid="column-group-column-select"
-                  label="컬럼 선택"
-                  onChange={setDynamicColumnIds}
-                  options={dynamicColumnOptions}
-                  values={dynamicColumnIds}
-                />
+                <>
+                  <MultiSelect
+                    data-testid="column-group-column-select"
+                    label="컬럼 선택"
+                    onChange={setDynamicColumnIds}
+                    options={dynamicColumnOptions}
+                    values={dynamicColumnIds}
+                  />
+                  {headerColumnGroups.map((group) => (
+                    <label className="feature-checkbox-control" key={group.id}>
+                      <input
+                        checked={dynamicVisibleGroupIds.includes(group.id)}
+                        onChange={(event) => setDynamicGroupVisible(group.id, event.target.checked)}
+                        type="checkbox"
+                      />
+                      <span>{group.label} 표시</span>
+                    </label>
+                  ))}
+                </>
               }
             />
             <section className="header-dynamic-grid" data-testid="dynamic-group-table">
