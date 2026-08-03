@@ -18,7 +18,9 @@ const virtualTreeData = createTenThousandNodeTree();
 export function TreeGridFeature() {
   const [basicData, setBasicData] = useState(createThirtyNodeTree);
   const [controlData, setControlData] = useState(createThirtyNodeTree);
+  const [styleData, setStyleData] = useState(createThirtyNodeTree);
   const [componentData, setComponentData] = useState(createThirtyNodeTree);
+  const [rendererData, setRendererData] = useState(createThirtyNodeTree);
   const controlRef = useRef<CominsTableRef<PersonRow>>(null);
   const componentColumns: Array<CominsTableColumn<PersonRow>> = [
     { field: "name", label: "Node", minWidth: 180 },
@@ -138,10 +140,10 @@ export function TreeGridFeature() {
         <CominsTable
           className="example-table tree-style-table"
           columns={treeColumns}
-          data={createThirtyNodeTree()}
+          data={styleData}
           data-testid="tree-style-viewport"
-          defaultExpandAll={false}
           getRowId={(row) => row.id}
+          onChangeData={setStyleData}
           rowProps={{
             className: (row) => (row.role === "Owner" ? "tree-row-root" : undefined),
             style: (row) => (row.active ? { fontWeight: 800 } : undefined),
@@ -160,7 +162,6 @@ export function TreeGridFeature() {
           columns={componentColumns}
           data={componentData}
           data-testid="tree-components-viewport"
-          defaultExpandAll={false}
           getRowId={(row) => row.id}
           onChangeData={setComponentData}
           tree
@@ -175,10 +176,10 @@ export function TreeGridFeature() {
         <CominsTable
           className="example-table"
           columns={rendererColumns}
-          data={createThirtyNodeTree()}
+          data={rendererData}
           data-testid="tree-renderer-viewport"
-          defaultExpandAll={false}
           getRowId={(row) => row.id}
+          onChangeData={setRendererData}
           tree
         />
       </FeatureSampleSection>

@@ -255,36 +255,38 @@ export function RowExpandFeature() {
         <pre className="state-output" data-testid="row-expand-tall-state">
           {JSON.stringify(tallExpandedRowIds, null, 2)}
         </pre>
-        <CominsTable
-          buffer-size={3}
-          className="example-table"
-          columns={autoColumns}
-          data={tallRows}
-          data-testid="row-expand-example-tall"
-          expandedRowIds={tallExpandedRowIds}
-          getRowDetailHeight={() => 960}
-          getRowId={(row) => row.id}
-          onChangeExpandedRowIds={setTallExpandedRowIds}
-          pagination={{ pageIndex: 0, pageSize: tallRows.length }}
-          renderRowDetail={({ row }) => (
-            <div
-              data-testid={`tall-detail-${row.id}`}
-              style={{ alignContent: "start", display: "grid", gap: 12, height: "100%" }}
-            >
-              <strong>{`Viewport-tall Detail for ${row.data.name}`}</strong>
-              <button data-testid="tall-detail-secondary-action" type="button">
-                Tall Detail secondary action
-              </button>
-              <div aria-hidden="true" style={{ minHeight: 700 }} />
-              <button data-testid="tall-detail-last-action" type="button">
-                Tall Detail final action
-              </button>
-            </div>
-          )}
-          rowHeight={36}
-          theme={{ density: "compact" }}
-          virtualized
-        />
+        <div className="row-expand-tall-frame" data-testid="row-expand-tall-frame">
+          <CominsTable
+            buffer-size={3}
+            className="example-table"
+            columns={autoColumns}
+            data={tallRows}
+            data-testid="row-expand-example-tall"
+            expandedRowIds={tallExpandedRowIds}
+            getRowDetailHeight={() => 960}
+            getRowId={(row) => row.id}
+            onChangeExpandedRowIds={setTallExpandedRowIds}
+            pagination={{ pageIndex: 0, pageSize: tallRows.length }}
+            renderRowDetail={({ row }) => (
+              <div
+                data-testid={`tall-detail-${row.id}`}
+                style={{ alignContent: "start", display: "grid", gap: 12, height: "100%" }}
+              >
+                <strong>{`Viewport-tall Detail for ${row.data.name}`}</strong>
+                <button data-testid="tall-detail-secondary-action" type="button">
+                  Tall Detail secondary action
+                </button>
+                <div aria-hidden="true" style={{ minHeight: 700 }} />
+                <button data-testid="tall-detail-last-action" type="button">
+                  Tall Detail final action
+                </button>
+              </div>
+            )}
+            rowHeight={36}
+            theme={{ density: "compact" }}
+            virtualized
+          />
+        </div>
       </FeatureSampleSection>
 
       <FeatureSampleSection

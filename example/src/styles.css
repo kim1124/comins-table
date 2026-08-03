@@ -1454,6 +1454,18 @@ body {
   overflow-y: visible;
 }
 
+.row-expand-tall-frame {
+  height: 480px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.row-expand-tall-frame > .example-table.comins-table {
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+}
+
 .feature-panel--header {
   flex: 0 0 auto;
   height: auto;

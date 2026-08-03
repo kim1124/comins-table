@@ -128,7 +128,13 @@ test("keeps a viewport-tall Detail in continuous outer scroll and one non-sticky
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/examples/row-expand");
 
+  const frame = page.getByTestId("row-expand-tall-frame");
+  const tallTable = frame.locator(":scope > .comins-table");
   const tall = page.getByTestId("row-expand-example-tall");
+  await expect(frame).toHaveCSS("height", "480px");
+  await expect(tallTable).toHaveCSS("height", "480px");
+  expect((await tall.boundingBox())?.height ?? 0).toBeLessThan(480);
+  expect((await tall.boundingBox())?.height ?? 0).toBeGreaterThan(400);
   await tall.scrollIntoViewIfNeeded();
   await tall.getByTestId("row-detail-toggle-tall-owner").click();
   const detailRow = tall.locator("[data-detail-for='tall-owner']");
@@ -139,6 +145,12 @@ test("keeps a viewport-tall Detail in continuous outer scroll and one non-sticky
   await expect(detailCell).toHaveAttribute("colspan", "3");
   await expect(detailCell).toHaveCSS("position", "static");
   await expect(tall.getByTestId("row-detail-content-tall-owner")).toHaveCSS("height", "960px");
+
+  await tall.evaluate((element) => {
+    element.scrollTop = 960;
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+  await expect(tall.getByTestId("row-tall-3")).toBeVisible();
 
   const scrollSamples = await tall.evaluate(async (element) => {
     const viewport = element;

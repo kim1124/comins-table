@@ -8,7 +8,27 @@ test("Tree Grid route demonstrates 30-node defaults, array ref controls, styles,
 
   const basic = page.getByTestId("tree-grid-basic-viewport");
   await expect(page.getByTestId("tree-basic-node-count")).toHaveText("30 nodes");
-  await expect(basic.locator("tr[data-comins-row-data-index]")).toHaveCount(30);
+  for (const testId of [
+    "tree-grid-basic-viewport",
+    "tree-style-viewport",
+    "tree-components-viewport",
+    "tree-renderer-viewport",
+  ]) {
+    const viewport = page.getByTestId(testId);
+    const expander = viewport.getByTestId("tree-expander-department-1");
+    await expect(viewport.locator("tr[data-comins-row-data-index]")).toHaveCount(30);
+    await expect(expander).toHaveAttribute("aria-expanded", "true");
+    await expect(expander).toHaveCSS("height", "24px");
+    await expect(expander).toHaveCSS("width", "24px");
+    await expect(expander).toHaveCSS("font-size", "14px");
+    await expander.click();
+    await expect(viewport.locator("tr[data-comins-row-data-index]")).toHaveCount(21);
+    await expect(expander).toHaveAttribute("aria-expanded", "false");
+    await expander.click();
+    await expect(viewport.locator("tr[data-comins-row-data-index]")).toHaveCount(30);
+  }
+  await expect(basic.locator(".comins-tree-expander-spacer").first()).toHaveCSS("height", "24px");
+  await expect(basic.locator(".comins-tree-expander-spacer").first()).toHaveCSS("width", "24px");
 
   const controls = page.getByTestId("tree-grid-controls");
   const controlViewport = page.getByTestId("tree-grid-controls-viewport");

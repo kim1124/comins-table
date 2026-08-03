@@ -258,9 +258,9 @@
 
 .comins-tree-expander,
 .comins-tree-expander-spacer {
-  flex: 0 0 18px;
-  height: 18px;
-  width: 18px;
+  flex: 0 0 24px;
+  height: 24px;
+  width: 24px;
 }
 
 .comins-tree-expander {
@@ -270,7 +270,9 @@
   color: var(--comins-table-accent-strong);
   cursor: pointer;
   display: inline-flex;
-  font: inherit;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1;
   justify-content: center;
   padding: 0;
 }
