@@ -72,25 +72,29 @@ test("header boundary resize is isolated from immediate column move and animated
 
     return {
       before: {
+        borderBottomStyle: before.borderBottomStyle,
+        borderBottomWidth: before.borderBottomWidth,
         borderLeftStyle: before.borderLeftStyle,
         borderLeftWidth: before.borderLeftWidth,
-        borderTopStyle: before.borderTopStyle,
+        borderRightStyle: before.borderRightStyle,
+        borderRightWidth: before.borderRightWidth,
         borderTopWidth: before.borderTopWidth,
         content: before.content,
       },
       after: {
-        backgroundColor: after.backgroundColor,
         content: after.content,
       },
     };
   });
   expect(pseudoStyles.before.content).not.toBe("none");
-  expect(pseudoStyles.before.borderTopStyle).toBe("solid");
-  expect(pseudoStyles.before.borderTopWidth).toBe("2px");
+  expect(pseudoStyles.before.borderBottomStyle).toBe("solid");
+  expect(pseudoStyles.before.borderBottomWidth).toBe("6px");
   expect(pseudoStyles.before.borderLeftStyle).toBe("solid");
-  expect(pseudoStyles.before.borderLeftWidth).toBe("2px");
-  expect(pseudoStyles.after.content).not.toBe("none");
-  expect(pseudoStyles.after.backgroundColor).not.toMatch(/^(?:rgba\(0, 0, 0, 0\)|transparent)$/u);
+  expect(pseudoStyles.before.borderLeftWidth).toBe("4px");
+  expect(pseudoStyles.before.borderRightStyle).toBe("solid");
+  expect(pseudoStyles.before.borderRightWidth).toBe("4px");
+  expect(pseudoStyles.before.borderTopWidth).toBe("0px");
+  expect(pseudoStyles.after.content).toBe("none");
   await expect(page.getByTestId("header-proof-sort")).toHaveCount(0);
 
   await ageHeader.click();

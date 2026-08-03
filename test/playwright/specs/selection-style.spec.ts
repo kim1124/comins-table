@@ -65,6 +65,10 @@ test("row selection is mint styled, multi-selectable, sort-stable, and grid bord
   await page.mouse.down();
   await page.getByTestId("cell-b-age").hover();
   await page.mouse.up();
+  await expect(page.getByTestId("row-a")).toHaveAttribute("data-selected-row", "true");
+  await expect(page.getByTestId("row-b")).not.toHaveAttribute("data-selected-row", "true");
+  await expect(page.getByTestId("cell-a-name")).toHaveCSS("background-color", "rgb(209, 250, 229)");
+  await expect(page.getByTestId("cell-a-name")).toHaveCSS("box-shadow", /rgb\(16, 185, 129\)/);
   await expect(page.getByTestId("cell-b-age")).toHaveAttribute("data-range-selected", "true");
   await expect(page.getByTestId("cell-b-age")).toHaveCSS("background-color", "rgb(241, 252, 248)");
 
@@ -83,5 +87,27 @@ test("same-column cell drag selects a range without reordering rows", async ({ p
   await expect(page.getByTestId("cell-a-name")).toHaveAttribute("data-range-selected", "true");
   await expect(page.getByTestId("cell-b-name")).toHaveAttribute("data-range-selected", "true");
   await expect(page.locator(".comins-table__body-table tbody tr").first().locator("td").first()).toHaveText("Data 1");
+  expect(diagnostics).toEqual([]);
+});
+
+test("selected range cells preserve an application-owned row background", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/examples/row");
+
+  const stylingExample = page.getByTestId("row-example-styling");
+  const sourceCell = stylingExample.getByTestId("cell-a-name");
+  const targetCell = stylingExample.getByTestId("cell-b-age");
+
+  await expect(sourceCell).toHaveCSS("background-color", "rgb(47, 15, 95)");
+  await sourceCell.click();
+  await sourceCell.hover();
+  await page.mouse.down();
+  await targetCell.hover();
+  await page.mouse.up();
+
+  await expect(stylingExample.getByTestId("row-a")).toHaveAttribute("data-selected-row", "true");
+  await expect(sourceCell).toHaveAttribute("data-range-selected", "true");
+  await expect(sourceCell).toHaveCSS("background-color", "rgb(47, 15, 95)");
+  await expect(sourceCell).toHaveCSS("box-shadow", /rgb\(16, 185, 129\)/);
   expect(diagnostics).toEqual([]);
 });

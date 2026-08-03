@@ -55,6 +55,10 @@ test("CRUD example adds every click, updates active row JSON, and deletes select
   await page.getByTestId("row-c").click({ modifiers: ["Shift"] });
 
   await page.getByTestId("header-age").click();
+  for (const rowId of ["a", "b", "c"]) {
+    await expect(page.getByTestId(`row-${rowId}`)).toHaveAttribute("data-selected-row", "true");
+    await expect(page.getByTestId(`row-${rowId}`)).toHaveCSS("background-color", "rgb(209, 250, 229)");
+  }
   await page.getByRole("button", { exact: true, name: "삭제" }).click();
 
   await expect(page.getByTestId("row-a")).toHaveCount(0);
