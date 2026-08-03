@@ -2187,8 +2187,14 @@ body {
   width: 100%;
 }
 
-.ui-context-menu [role="menuitem"]:hover {
+.ui-context-menu [role="menuitem"]:hover:not(:disabled) {
   background: #f1f5f9;
+}
+
+.ui-context-menu [role="menuitem"]:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .ui-context-menu__label {

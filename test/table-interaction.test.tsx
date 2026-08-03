@@ -2158,6 +2158,55 @@ describe("comins-table keyboard interaction", () => {
     expect(onContextMenuRow).toHaveBeenCalledTimes(1);
   });
 
+  it("preserves an existing row selection for row and cell context menus", () => {
+    const onChangeSelection = vi.fn();
+    const element = renderTable({
+      data: threeRows,
+      onChangeSelection,
+      onContextMenuCell: vi.fn(),
+      onContextMenuRow: vi.fn(),
+    });
+    const rowA = element.querySelector("[data-testid='row-a']")!;
+    const rowB = element.querySelector("[data-testid='row-b']")!;
+    const rowC = element.querySelector("[data-testid='row-c']")!;
+    const cellB = element.querySelector("[data-testid='cell-b-name']")!;
+    const cellC = element.querySelector("[data-testid='cell-c-name']")!;
+
+    act(() => {
+      rowA.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      rowB.dispatchEvent(new MouseEvent("click", { bubbles: true, ctrlKey: true }));
+      rowB.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true }));
+    });
+
+    expect(onChangeSelection).toHaveBeenLastCalledWith(expect.objectContaining({ rowIds: ["a", "b"] }));
+    expect(rowA.getAttribute("data-selected-row")).toBe("true");
+    expect(rowB.getAttribute("data-selected-row")).toBe("true");
+
+    act(() => {
+      rowC.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true }));
+    });
+
+    expect(onChangeSelection).toHaveBeenLastCalledWith(expect.objectContaining({ rowIds: ["c"] }));
+
+    act(() => {
+      rowA.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      rowB.dispatchEvent(new MouseEvent("click", { bubbles: true, ctrlKey: true }));
+      cellB.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true }));
+    });
+
+    expect(onChangeSelection).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cell: { columnId: "name", rowId: "b" }, rowIds: ["a", "b"] }),
+    );
+
+    act(() => {
+      cellC.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true }));
+    });
+
+    expect(onChangeSelection).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cell: { columnId: "name", rowId: "c" }, rowIds: ["c"] }),
+    );
+  });
+
   it("formats cell values with the column format function", () => {
     container = document.createElement("div");
     document.body.append(container);

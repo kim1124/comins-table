@@ -29,7 +29,7 @@ npm run dev
 - `/examples/row`: drag handle reorder, `rowProps.draggable`, row disabled, row custom formatting, row event Alert, row keyboard copy/paste
 - `/examples/summary-row`: 기본 집계, visible-column `colSpan`, 집계 결과 `format`, Row/Cell class 및 style
 - `/examples/tree-grid`: 30개 기본 node, 배열 기반 ref expand/fold, `defaultExpandAll`, Component/Renderer Cell, 10000개 node virtualization
-- `/examples/context-menu`: callback 기반 row/cell context menu, 우클릭 단일 row selection, payload preview
+- `/examples/context-menu`: callback 기반 row/cell context menu, 선택된 Row 우클릭 시 selection 유지, 선택 0/1/N action matrix, payload preview
 - `/examples/export`: `exportCominsRowsToCsv`, `exportCominsRowsToJson` helper 출력 예제
 - `/api/props`: 현재 구현된 props, events, ref/core 항목
 - `/api/ref`: 현재 구현된 ref method와 core helper 경계

@@ -168,6 +168,10 @@ function getCominsColumnDropStatus(
   return orderChanged ? "valid" : "neutral";
 }
 
+function selectRowForContextMenu<TData>(state: CominsTableState<TData>, rowId: CominsRowId) {
+  return state.selection.rowIds.includes(rowId) ? state : selectRow(state, rowId);
+}
+
 export type CominsTableRowProps<TData> = {
   className?: CominsRowPropValue<TData, CominsClassValue>;
   disabled?: CominsRowPropValue<TData, boolean | undefined>;
@@ -3767,7 +3771,7 @@ function CominsTableInner<TData>(
                     return;
                   }
 
-                  commitState((current) => selectRow(current, entry.rowId));
+                  commitState((current) => selectRowForContextMenu(current, entry.rowId));
                   lastRowAnchorRef.current = entry.rowId;
                   onContextMenuRow?.(createRowPayload(event, entry));
                 }}
@@ -3979,7 +3983,7 @@ function CominsTableInner<TData>(
                         }
 
                         commitState((current) => {
-                          const nextRows = selectRow(current, entry.rowId);
+                          const nextRows = selectRowForContextMenu(current, entry.rowId);
 
                           return cellSelection ? selectCell(nextRows, address) : nextRows;
                         });

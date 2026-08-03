@@ -65,10 +65,12 @@ tableRef.current?.setMoveTargetRow(2, 0);
 - `Shift` click은 마지막 active row부터 클릭한 row까지 visible range를 선택한다.
 - Sort 이후에도 selection은 row id 기준으로 유지된다.
 - `data` 배열이 교체되면 selection은 초기화된다.
+- 이미 선택된 row를 우클릭하면 현재 단일/다중 selection을 유지한다.
+- 선택되지 않은 row를 우클릭하면 해당 row를 단독 선택한다. Cell context menu도 같은 Row 정책을 적용한 뒤 Cell focus를 갱신한다.
 - 선택 row에는 `data-selected-row="true"`와 `comins-row-selected` class가 적용된다.
 - 기본 playground 스타일은 선택 row의 `tr`에 COMINS mint 배경색을 적용하고, `td` 배경은 투명하게 둔다.
 - Row styling playground는 `rowProps.className`과 `rowProps.style.background`를 함께 사용해 기본 테마와 확실히 다른 배경, 글자색, font, border를 보여준다.
-- Context menu 예제는 선택한 row data object를 보여준다.
+- Context menu 예제는 선택한 row/cell data object와 선택 0/1/N에 따른 조회·추가·수정·삭제 활성화 상태를 보여준다.
 - Row drag handle은 Row 이동 전용 gesture이며, 같은 column의 cell drag는 range selection으로만 처리한다.
 
 Playground 검증 기준:
