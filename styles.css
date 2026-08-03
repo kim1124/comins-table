@@ -14,6 +14,7 @@
   --comins-table-detail-background: var(--comins-table-surface);
   --comins-table-detail-border: var(--comins-table-row-border);
   --comins-table-detail-padding: 12px;
+  --comins-table-drop-invalid: #dc2626;
   --comins-table-drop-marker: #064e3b;
   --comins-table-focus: rgba(16, 185, 129, 0.28);
   --comins-table-foreground: #111827;
@@ -540,7 +541,7 @@
 }
 
 .comins-table__th[data-column-placeholder="true"] {
-  background: color-mix(in srgb, var(--comins-table-surface-muted) 82%, transparent);
+  background: color-mix(in srgb, var(--comins-table-header-background) 82%, #000000);
   outline: 1px dashed var(--comins-table-drop-marker);
   outline-offset: -2px;
 }
@@ -663,12 +664,22 @@
   display: block;
 }
 
-.comins-table__th[data-column-drop-target="true"] {
+.comins-table__th[data-column-drop-target="true"][data-column-drop-valid="true"] {
   background: var(--comins-table-accent-strong);
 }
 
 .comins-table__th[data-column-placeholder="true"][data-column-drop-target="true"] {
-  background: color-mix(in srgb, var(--comins-table-surface-muted) 82%, transparent);
+  background: color-mix(in srgb, var(--comins-table-header-background) 82%, #000000);
+}
+
+.comins-table__th[data-column-drop-valid="false"] {
+  cursor: not-allowed;
+  outline: 2px solid var(--comins-table-drop-invalid);
+  outline-offset: -2px;
+}
+
+.comins-table__th[data-column-drop-valid="false"] .comins-column-drop-marker {
+  background: var(--comins-table-drop-invalid);
 }
 
 .comins-column-move-ghost {

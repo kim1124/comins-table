@@ -119,13 +119,25 @@ type CominsColumnPointerInteraction = {
   startY: number;
   timer: number | null;
 };
+type CominsColumnDropStatus = "invalid" | "neutral" | "valid";
+type CominsColumnMoveHeader = {
+  depth: 0 | 1;
+  id: string;
+  kind: "column" | "group";
+  parentGroupId?: string;
+};
+type CominsColumnMoveTarget = CominsColumnMoveHeader & {
+  status: CominsColumnDropStatus;
+};
 type CominsColumnPointerOptions = {
   activate: (x: number, y: number) => void;
-  commitTarget: (targetId: string) => void;
+  commitTarget: (target: CominsColumnMoveHeader) => void;
   event: React.PointerEvent<HTMLTableCellElement>;
   id: string;
   kind: "column" | "group";
+  resolveTarget: (target: CominsColumnMoveHeader) => CominsColumnDropStatus;
   sortColumnId?: string;
+  source: CominsColumnMoveHeader;
 };
 type CominsSuppressedSortClick = {
   cleanup: () => void;
@@ -139,6 +151,22 @@ type CominsRowMoveState = {
 
 const COMINS_MIN_COLUMN_WIDTH = 50;
 const COMINS_DEFAULT_ROW_DETAIL_HEIGHT = 300;
+
+function getCominsColumnDropStatus(
+  source: CominsColumnMoveHeader,
+  target: CominsColumnMoveHeader,
+  orderChanged: boolean,
+): CominsColumnDropStatus {
+  if (source.id === target.id && source.kind === target.kind) {
+    return "neutral";
+  }
+
+  if (source.depth !== target.depth || source.parentGroupId !== target.parentGroupId) {
+    return "invalid";
+  }
+
+  return orderChanged ? "valid" : "neutral";
+}
 
 export type CominsTableRowProps<TData> = {
   className?: CominsRowPropValue<TData, CominsClassValue>;
@@ -1324,7 +1352,7 @@ function CominsTableInner<TData>(
   const [movingColumnId, setMovingColumnId] = useState<string | null>(null);
   const [movingGroupId, setMovingGroupId] = useState<string | null>(null);
   const [columnMovePointer, setColumnMovePointer] = useState<{ x: number; y: number } | null>(null);
-  const [columnMoveTargetId, setColumnMoveTargetId] = useState<string | null>(null);
+  const [columnMoveTarget, setColumnMoveTarget] = useState<CominsColumnMoveTarget | null>(null);
   const [lazyLoadingReason, setLazyLoadingReason] = useState<CominsLazyLoadReason | null>(null);
   const [lazyRows, setLazyRows] = useState<readonly TData[]>(data);
   const [lazyTotalRows, setLazyTotalRows] = useState<number | undefined>(undefined);
@@ -2484,7 +2512,7 @@ function CominsTableInner<TData>(
     );
   };
 
-  const getColumnMoveTargetId = (clientX: number, clientY: number) => {
+  const getColumnMoveTarget = (clientX: number, clientY: number): CominsColumnMoveHeader | null => {
     const targetHeader = document
       .elementFromPoint(clientX, clientY)
       ?.closest<HTMLElement>("[data-comins-column-id], [data-comins-column-group-id]");
@@ -2493,14 +2521,36 @@ function CominsTableInner<TData>(
       return null;
     }
 
+    const depth = Number(targetHeader.dataset.cominsColumnDepth);
+
+    if (depth !== 0 && depth !== 1) {
+      return null;
+    }
+
     if (targetHeader.dataset.cominsColumnId) {
-      return targetHeader.dataset.cominsColumnId;
+      return {
+        depth,
+        id: targetHeader.dataset.cominsColumnId,
+        kind: "column",
+        parentGroupId: targetHeader.dataset.cominsColumnParentGroupId,
+      };
     }
 
     const groupId = targetHeader.dataset.cominsColumnGroupId;
-    const targetGroup = groupId ? stateRef.current.columnGroups.find((group) => group.id === groupId) : undefined;
 
-    return targetGroup?.children.find((childId) => visibleColumns.some((column) => column.id === childId)) ?? null;
+    return groupId ? { depth, id: groupId, kind: "group" } : null;
+  };
+  const getColumnMoveTargetIndex = (target: CominsColumnMoveHeader) => {
+    const targetColumnId =
+      target.kind === "column"
+        ? target.id
+        : stateRef.current.columnGroups
+            .find((group) => group.id === target.id)
+            ?.children.find((childId) => visibleColumns.some((column) => column.id === childId));
+
+    return targetColumnId
+      ? visibleColumns.findIndex((visibleColumn) => visibleColumn.id === targetColumnId)
+      : -1;
   };
 
   useImperativeHandle(
@@ -2577,7 +2627,7 @@ function CominsTableInner<TData>(
     setMovingColumnId(null);
     setMovingGroupId(null);
     setColumnMovePointer(null);
-    setColumnMoveTargetId(null);
+    setColumnMoveTarget(null);
   };
 
   useEffect(
@@ -2611,6 +2661,7 @@ function CominsTableInner<TData>(
       current.cancelSort = true;
       suppressPendingSort();
       options.activate(x, y);
+      setColumnMoveTarget({ ...options.source, status: "neutral" });
     };
     const handlePointerMove = (moveEvent: PointerEvent) => {
       const current = columnPointerInteractionRef.current;
@@ -2650,17 +2701,18 @@ function CominsTableInner<TData>(
       if (current.active) {
         moveEvent.preventDefault();
         setColumnMovePointer({ x: moveEvent.clientX, y: moveEvent.clientY });
-        setColumnMoveTargetId(getColumnMoveTargetId(moveEvent.clientX, moveEvent.clientY));
+        const target = getColumnMoveTarget(moveEvent.clientX, moveEvent.clientY);
+        setColumnMoveTarget(target ? { ...target, status: options.resolveTarget(target) } : null);
       }
     };
     const handlePointerUp = (upEvent: PointerEvent) => {
       const current = columnPointerInteractionRef.current;
 
       if (current === interaction && current.active) {
-        const targetId = getColumnMoveTargetId(upEvent.clientX, upEvent.clientY);
+        const target = getColumnMoveTarget(upEvent.clientX, upEvent.clientY);
 
-        if (targetId) {
-          options.commitTarget(targetId);
+        if (target && options.resolveTarget(target) === "valid") {
+          options.commitTarget(target);
         }
       }
 
@@ -2731,21 +2783,23 @@ function CominsTableInner<TData>(
 
   const beginHeaderPointerInteraction = (
     event: React.PointerEvent<HTMLTableCellElement>,
-    column: CominsTableRuntimeColumn<TData>,
+    cell: Extract<CominsHeaderCell<TData>, { kind: "column" }>,
   ) => {
+    const column = cell.column;
+    const source: CominsColumnMoveHeader = {
+      depth: cell.groupId ? 1 : 0,
+      id: column.id,
+      kind: "column",
+      parentGroupId: cell.groupId,
+    };
     beginColumnPointerInteraction({
       activate: (x, y) => {
         setColumnMovePointer({ x, y });
-        setColumnMoveTargetId(column.id);
         setMovingGroupId(null);
         setMovingColumnId(column.id);
       },
-      commitTarget: (targetId) => {
-        if (targetId === column.id) {
-          return;
-        }
-
-        const targetIndex = visibleColumns.findIndex((visibleColumn) => visibleColumn.id === targetId);
+      commitTarget: (target) => {
+        const targetIndex = getColumnMoveTargetIndex(target);
 
         if (targetIndex >= 0) {
           const current = stateRef.current;
@@ -2762,7 +2816,24 @@ function CominsTableInner<TData>(
       event,
       id: column.id,
       kind: "column",
+      resolveTarget: (target) => {
+        const targetIndex = getColumnMoveTargetIndex(target);
+
+        if (targetIndex < 0) {
+          return "invalid";
+        }
+
+        const current = stateRef.current;
+        const next = moveCominsColumn(current, column.id, targetIndex);
+
+        return getCominsColumnDropStatus(
+          source,
+          target,
+          next.columnOrder.some((columnId, index) => columnId !== current.columnOrder[index]),
+        );
+      },
       sortColumnId: column.id,
+      source,
     });
   };
 
@@ -2770,19 +2841,15 @@ function CominsTableInner<TData>(
     event: React.PointerEvent<HTMLTableCellElement>,
     group: CominsTableRuntimeColumnGroup,
   ) => {
+    const source: CominsColumnMoveHeader = { depth: 0, id: group.id, kind: "group" };
     beginColumnPointerInteraction({
       activate: (x, y) => {
         setColumnMovePointer({ x, y });
-        setColumnMoveTargetId(group.children[0] ?? null);
         setMovingColumnId(null);
         setMovingGroupId(group.id);
       },
-      commitTarget: (targetId) => {
-        if (group.children.includes(targetId)) {
-          return;
-        }
-
-        const targetIndex = visibleColumns.findIndex((visibleColumn) => visibleColumn.id === targetId);
+      commitTarget: (target) => {
+        const targetIndex = getColumnMoveTargetIndex(target);
 
         if (targetIndex >= 0) {
           const current = stateRef.current;
@@ -2799,6 +2866,23 @@ function CominsTableInner<TData>(
       event,
       id: group.id,
       kind: "group",
+      resolveTarget: (target) => {
+        const targetIndex = getColumnMoveTargetIndex(target);
+
+        if (targetIndex < 0) {
+          return "invalid";
+        }
+
+        const current = stateRef.current;
+        const next = moveCominsColumnGroup(current, group.id, targetIndex);
+
+        return getCominsColumnDropStatus(
+          source,
+          target,
+          next.columnOrder.some((columnId, index) => columnId !== current.columnOrder[index]),
+        );
+      },
+      source,
     });
   };
 
@@ -3076,6 +3160,7 @@ function CominsTableInner<TData>(
 
   const renderHeaderCell = (cell: CominsHeaderCell<TData>, fallbackIndex: number) => {
     if (cell.kind === "group") {
+      const isDropTarget = columnMoveTarget?.kind === "group" && columnMoveTarget.id === cell.groupId;
       return (
         <th
           className={[
@@ -3085,8 +3170,17 @@ function CominsTableInner<TData>(
             .filter(Boolean)
             .join(" ")}
           colSpan={cell.colSpan}
+          data-column-drop-target={isDropTarget ? "true" : undefined}
+          data-column-drop-valid={
+            isDropTarget && columnMoveTarget.status !== "neutral"
+              ? columnMoveTarget.status === "valid"
+                ? "true"
+                : "false"
+              : undefined
+          }
           data-column-moving={movingGroupId === cell.groupId ? "true" : undefined}
           data-column-placeholder={movingGroupId === cell.groupId ? "true" : undefined}
+          data-comins-column-depth="0"
           data-comins-column-group-id={cell.groupId}
           data-testid={`header-group-${cell.groupId}`}
           key={`group-${cell.groupId}`}
@@ -3206,17 +3300,27 @@ function CominsTableInner<TData>(
       ? renderCominsComponentSlots(column.header?.components, headerPayload, "right")
       : [];
     const hasHeaderComponents = headerLeftSlots.length > 0 || headerRightSlots.length > 0;
+    const isDropTarget = columnMoveTarget?.kind === "column" && columnMoveTarget.id === column.id;
 
     return (
       <th
         {...headerProps}
         className={headerClassName}
         colSpan={cell.colSpan}
-        data-column-drop-target={columnMoveTargetId === column.id ? "true" : undefined}
+        data-column-drop-target={isDropTarget ? "true" : undefined}
+        data-column-drop-valid={
+          isDropTarget && columnMoveTarget.status !== "neutral"
+            ? columnMoveTarget.status === "valid"
+              ? "true"
+              : "false"
+            : undefined
+        }
         data-column-moving={movingColumnId === column.id ? "true" : undefined}
         data-column-placeholder={isColumnPlaceholder ? "true" : undefined}
+        data-comins-column-depth={cell.groupId ? "1" : "0"}
         data-comins-column-id={column.id}
         data-comins-column-index={safeIndex}
+        data-comins-column-parent-group-id={cell.groupId}
         data-sort-count={sortRule ? state.sortModel.length : undefined}
         data-sort-direction={sortRule?.rule.direction}
         data-sort-priority={sortRule?.priority}
@@ -3249,7 +3353,7 @@ function CominsTableInner<TData>(
             activateHeaderSort(column, event.shiftKey);
           }
         }}
-        onPointerDown={(event) => beginHeaderPointerInteraction(event, column)}
+        onPointerDown={(event) => beginHeaderPointerInteraction(event, cell)}
         rowSpan={cell.rowSpan}
         scope="col"
         style={{ width: columnState?.width ?? column.width, ...headerProps.style }}

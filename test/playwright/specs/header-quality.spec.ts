@@ -264,13 +264,42 @@ test("source placeholder background stays muted while its drop marker remains vi
   const ageHeader = basicExample.getByTestId("header-age");
   await ageHeader.scrollIntoViewIfNeeded();
   const ageBox = await ageHeader.boundingBox();
+  const headerBackground = await ageHeader.evaluate((element) => getComputedStyle(element).backgroundColor);
   expect(ageBox).not.toBeNull();
   await page.mouse.move(ageBox!.x + ageBox!.width / 2, ageBox!.y + ageBox!.height / 2);
   await page.mouse.down();
   await page.mouse.move(ageBox!.x + ageBox!.width / 2 + 8, ageBox!.y + ageBox!.height / 2);
   await expect(ageHeader).toHaveAttribute("data-column-drop-target", "true");
   await expect(ageHeader.locator(".comins-column-drop-marker")).toBeVisible();
-  await expect(ageHeader).not.toHaveCSS("background-color", "rgb(4, 120, 87)");
+  await expect(ageHeader).toHaveCSS("outline-style", "dashed");
+  const placeholderMetrics = await ageHeader.evaluate(
+    (element, beforeBackground) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      const context = canvas.getContext("2d", { willReadFrequently: true })!;
+      const readColor = (color: string) => {
+        context.clearRect(0, 0, 1, 1);
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, 1, 1);
+        context.fillStyle = color;
+        context.fillRect(0, 0, 1, 1);
+        return [...context.getImageData(0, 0, 1, 1).data.slice(0, 3)];
+      };
+      const currentBackground = getComputedStyle(element).backgroundColor;
+
+      return {
+        before: readColor(beforeBackground),
+        current: readColor(currentBackground),
+        width: element.getBoundingClientRect().width,
+      };
+    },
+    headerBackground,
+  );
+  expect(placeholderMetrics.current.reduce((sum, channel) => sum + channel, 0)).toBeLessThan(
+    placeholderMetrics.before.reduce((sum, channel) => sum + channel, 0),
+  );
+  expect(Math.abs(placeholderMetrics.width - ageBox!.width)).toBeLessThanOrEqual(0.5);
   await page.mouse.up();
 
   await page.goto("/examples/column-groups");
@@ -284,8 +313,8 @@ test("source placeholder background stays muted while its drop marker remains vi
   await page.mouse.move(profileBox!.x + profileBox!.width / 2, profileBox!.y + profileBox!.height / 2);
   await page.mouse.down();
   await page.mouse.move(profileBox!.x + profileBox!.width / 2 + 8, profileBox!.y + profileBox!.height / 2);
-  await expect(nameHeader).toHaveAttribute("data-column-drop-target", "true");
-  await expect(nameHeader.locator(".comins-column-drop-marker")).toBeVisible();
+  await expect(profileHeader).toHaveAttribute("data-column-drop-target", "true");
+  await expect(profileHeader.locator(".comins-column-drop-marker")).toBeVisible();
   const groupBackgrounds = await Promise.all(
     [profileHeader, nameHeader, ageGroupHeader].map((header) =>
       header.evaluate((element) => getComputedStyle(element).backgroundColor),
@@ -295,6 +324,54 @@ test("source placeholder background stays muted while its drop marker remains vi
   expect(groupBackgrounds[0]).not.toBe("rgb(4, 120, 87)");
   await page.mouse.up();
 
+  expect(diagnostics).toEqual([]);
+});
+
+test("column move marks same-depth targets valid and cross-depth targets invalid", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/examples/column-groups");
+
+  const example = page.getByTestId("header-example-groups");
+  const groupHeader = example.getByTestId("header-group-profile");
+  const statusHeader = example.getByTestId("header-group-status");
+  const childHeader = example.getByTestId("header-age");
+  const headers = example.locator(".comins-table__header-table thead th[data-comins-column-id]");
+  await groupHeader.scrollIntoViewIfNeeded();
+  const orderBefore = await headers.evaluateAll((elements) =>
+    elements.map((element) => element.getAttribute("data-comins-column-id")),
+  );
+
+  const beginGroupMove = async () => {
+    const sourceBox = await groupHeader.boundingBox();
+    expect(sourceBox).not.toBeNull();
+    await page.mouse.move(sourceBox!.x + sourceBox!.width / 2, sourceBox!.y + sourceBox!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(sourceBox!.x + sourceBox!.width / 2 + 8, sourceBox!.y + sourceBox!.height / 2);
+    await expect(groupHeader).toHaveAttribute("data-column-placeholder", "true");
+  };
+
+  await beginGroupMove();
+  const statusBox = await statusHeader.boundingBox();
+  expect(statusBox).not.toBeNull();
+  await page.mouse.move(statusBox!.x + statusBox!.width / 2, statusBox!.y + statusBox!.height / 2);
+  await expect(statusHeader).toHaveAttribute("data-column-drop-target", "true");
+  await expect(statusHeader).toHaveAttribute("data-column-drop-valid", "true");
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+
+  await beginGroupMove();
+  const childBox = await childHeader.boundingBox();
+  expect(childBox).not.toBeNull();
+  await page.mouse.move(childBox!.x + childBox!.width / 2, childBox!.y + childBox!.height / 2);
+  await expect(childHeader).toHaveAttribute("data-column-drop-target", "true");
+  await expect(childHeader).toHaveAttribute("data-column-drop-valid", "false");
+  await expect(childHeader).toHaveCSS("cursor", "not-allowed");
+  await expect(childHeader.locator(".comins-column-drop-marker")).toHaveCSS("background-color", "rgb(220, 38, 38)");
+  await page.mouse.up();
+
+  await expect.poll(() =>
+    headers.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-comins-column-id"))),
+  ).toEqual(orderBefore);
   expect(diagnostics).toEqual([]);
 });
 

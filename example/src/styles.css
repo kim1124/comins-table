@@ -1258,26 +1258,6 @@ body {
   opacity: 1;
 }
 
-.comins-column-drop-marker {
-  background: #064e3b;
-  border-radius: 999px;
-  bottom: 4px;
-  display: none;
-  left: -1px;
-  position: absolute;
-  top: 4px;
-  width: 2px;
-  z-index: 5;
-}
-
-.comins-table__th[data-column-drop-target="true"] .comins-column-drop-marker {
-  display: block;
-}
-
-.comins-table__th[data-column-drop-target="true"] {
-  background: #059669;
-}
-
 .comins-column-move-ghost {
   background: #064e3b;
   border: 1px solid rgba(255, 255, 255, 0.58);

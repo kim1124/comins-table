@@ -277,6 +277,21 @@ describe("comins-table basic core", () => {
 
     state = moveCominsColumnGroup(state, "profile", 5);
     expect(state.columnOrder).toEqual(["active", "locked", "profile.score", "name", "age"]);
+
+    expect(moveCominsColumn(state, "age", 0).columnOrder).toEqual([
+      "active",
+      "locked",
+      "profile.score",
+      "name",
+      "age",
+    ]);
+    expect(moveCominsColumn(state, "active", 4).columnOrder).toEqual([
+      "active",
+      "locked",
+      "profile.score",
+      "name",
+      "age",
+    ]);
   });
 
   it("supports pagination and virtual row windows for 100000 rows", () => {
