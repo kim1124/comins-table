@@ -52,7 +52,8 @@ The live [`/api/ref`](http://127.0.0.1:4002/api/ref) example applies `setSortMod
 
 - A left-button mouse interaction activates column reorder at a 6-pixel horizontal drag threshold. Horizontal movement must be greater than vertical movement.
 - Pointer Up below the threshold preserves the normal click and sort behavior. Vertical intent cancels both the pending reorder and sort.
-- After activation, the source header becomes a source placeholder while a ghost and target marker show the pending move.
+- After activation, the source Header becomes a darker dashed source placeholder while a ghost and target marker show the pending move.
+- A valid same-depth target uses the accent marker. A different-depth or cross-parent target uses a red invalid marker with a `not-allowed` cursor and cannot commit.
 - A move commits only on Pointer Up over a valid target. Pointer cancellation, `Escape`, or window blur cancels it without changing the layout.
 - For non-mouse pointer input, one-second long-press compatibility is retained.
 - Parent groups use the same interaction and move all child columns as one block.
@@ -71,3 +72,5 @@ Two-level headers use `columnGroups`.
 ```
 
 Parent groups resize their child columns proportionally and move as a block. Nested groups are not part of the first public release.
+
+In the Playground, parent Group visibility uses independent Checkboxes while child Column visibility uses the MultiSelect. Turning a parent off hides all of its children without deleting the child selection; turning it on restores the previously selected children.

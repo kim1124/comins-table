@@ -344,4 +344,43 @@ describe("comins-table user documentation contract", () => {
     expect(koreanCell).toContain("`searchable: true`인 경우 정확히 하나의 Row가 선택되었을 때만 검색 input을 표시");
     expect(koreanCell).not.toContain("Row/Cell selection 상태에 의존하지 않는다");
   });
+
+  it("keeps Korean and English guidance aligned with the current Playground interaction contract", () => {
+    const englishHeader = readWorkspaceFile("docs/user/06-header.md");
+    const koreanHeader = readWorkspaceFile("docs/ko/06-header.md");
+    const englishRow = readWorkspaceFile("docs/user/07-row.md");
+    const koreanRow = readWorkspaceFile("docs/ko/07-row.md");
+    const englishCell = readWorkspaceFile("docs/user/08-cell.md");
+    const koreanCell = readWorkspaceFile("docs/ko/08-cell.md");
+    const englishPlayground = readWorkspaceFile("docs/user/12-playground.md");
+    const koreanPlayground = readWorkspaceFile("docs/ko/12-playground.md");
+    const englishTree = readWorkspaceFile("docs/user/17-tree-grid.md");
+    const koreanTree = readWorkspaceFile("docs/ko/17-tree-grid.md");
+
+    expect(englishHeader).toContain("darker dashed source placeholder");
+    expect(englishHeader).toContain("red invalid marker");
+    expect(koreanHeader).toContain("더 어두운 점선 source placeholder");
+    expect(koreanHeader).toContain("붉은색 invalid marker");
+    expect(koreanHeader).not.toContain("단일 toggle control");
+
+    for (const row of [englishRow, koreanRow]) {
+      expect(row).toContain("0/1/N");
+      expect(row).toContain("View");
+      expect(row).toContain("Create");
+      expect(row).toContain("Update");
+      expect(row).toContain("Delete");
+    }
+
+    expect(englishCell).toContain("Row selection background remains visible");
+    expect(koreanCell).toContain("Row selection 배경을 유지");
+
+    for (const playground of [englishPlayground, koreanPlayground]) {
+      expect(playground).toContain("30 Row");
+      expect(playground).toContain("480px");
+      expect(playground).toContain("0 Row");
+    }
+    expect(koreanPlayground).not.toContain("선택 행 삭제, 필터링");
+    expect(englishTree).not.toContain("A future Row Expand feature");
+    expect(koreanTree).not.toContain("향후 Row Expand는");
+  });
 });

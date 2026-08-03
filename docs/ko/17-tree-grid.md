@@ -68,6 +68,6 @@ Playground는 정확히 `10000`개 node로 구성된 고정 row-height virtualiz
 
 Tree Grid V1은 현재의 고정 `rowHeight` virtualized layout을 사용한다. hierarchy-aware datasource 또는 이동 계약이 필요하므로 pagination, lazy loading, infinite scrolling, row drag, row 단위 copy/paste는 의도적으로 지원하지 않는다. Cell과 range clipboard 동작은 visible `item` row 범위에서 계속 사용할 수 있다.
 
-Tree expand는 Flat Row Expand와 다른 기능이다. 향후 Row Expand는 하나의 flat source row 아래에 detail 영역을 출력하되, flat 정렬, pagination, lazy loading, infinite scrolling, row 이동을 그대로 유지해야 한다. 따라서 variable-height layout은 별도로 설계한다. 향후 Row Grouping도 flat row 값을 기준으로 그룹을 파생하고 별도의 group expansion state를 사용한다.
+Tree expand는 Flat Row Expand와 다른 기능이다. 현재 제공하는 Row Expand는 하나의 flat source Row 아래에 Detail 영역을 출력하고 별도의 variable-height layout으로 flat 정렬, pagination, lazy loading, infinite scrolling, Row 이동을 유지한다. 향후 Row Grouping은 flat Row 값을 기준으로 그룹을 파생하고 별도의 group expansion state를 사용한다.
 
 `npm run dev` 실행 후 `/examples/tree-grid`에서 동작 예제를 확인할 수 있다.

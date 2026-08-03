@@ -167,7 +167,8 @@ Phase 2 Header components는 `button`, `input`, `checkbox`, `radio`, `select`, `
 - TH body 영역은 column move 후보 영역이며 cursor는 `grab`이다.
 - 마우스 왼쪽 버튼을 누른 상태에서 수평 이동이 수직 이동보다 크고 6픽셀에 도달하면 column move mode가 즉시 활성화되며 cursor는 `grabbing`이다.
 - 6픽셀 미만에서 Pointer Up하면 일반 click과 sort 동작을 유지한다. 수직 이동 의도가 확인되면 대기 중인 column move와 sort를 모두 취소한다.
-- Column move mode에서는 원본 Header를 source placeholder로 표시하고, 이동 중인 header ghost와 drop marker를 함께 표시한다.
+- Column move mode에서는 원본 Header를 현재 Header 배경보다 더 어두운 점선 source placeholder로 표시하고, 이동 중인 header ghost와 drop marker를 함께 표시한다.
+- 같은 depth와 parent의 유효한 target은 accent marker로 표시한다. depth가 다르거나 parent 경계를 위반한 target은 붉은색 invalid marker와 `not-allowed` cursor를 표시하고 이동을 반영하지 않는다.
 - 유효한 target 위에서 Pointer Up한 경우에만 이동을 반영한다. Pointer cancel, `Escape`, window blur는 layout 변경 없이 취소한다.
 - non-mouse pointer 입력은 1초 long-press 호환 동작을 유지한다.
 - Parent group도 동일한 동작을 사용하며 child columns를 하나의 block으로 이동한다.
@@ -186,8 +187,8 @@ Playground 검증 기준:
 - `헤더` 예제는 resize와 move를 같은 pointer 흐름에서 검증한다.
 - Header 숨김/표시 예제는 전체 Header area toggle과 컬럼별 Checkbox Select Box를 함께 제공한다. Select Box에서 선택 해제된 column id는 `columns` prop에서 제외되어 해당 컬럼 전체가 숨겨진다.
 - Header 설정 저장/불러오기 예제는 column layout과 Select Box의 표시 column id를 함께 저장한다. 불러오기 시 column order/width와 숨김/표시 상태가 같이 복원된다.
-- 2 Depth group 표시/숨김은 단일 toggle control로 검증한다.
-- 컬럼 동적 표시 예제는 Checkbox 목록형 Select Box에서 선택된 column id만 `columns` prop에 전달하며, 1Depth와 2Depth 모두 같은 동작을 확인한다.
+- 2 Depth group 표시/숨김은 parent Group별 Checkbox로 검증한다. Parent를 끄면 child 전체가 숨겨지고 다시 켜면 끄기 전 child 선택이 복원된다.
+- 컬럼 동적 표시 예제는 child Column MultiSelect와 parent Group Checkbox를 조합한다. 최종 표시 Column은 선택된 child와 활성 parent의 교집합이며 1Depth와 2Depth 모두 같은 동작을 확인한다.
 - Header sort 접근성은 mouse click, keyboard `Enter`/`Space`, `aria-sort`, sort indicator 상태를 함께 검증한다.
 - Multi-column Sort 예제는 2 Depth child Column의 `Shift` click/keyboard 조작, priority badge, 전체 Sort Model JSON을 함께 검증한다.
 - Resize는 width 변경, 최초 drag jump 없음, column move 미발생을 함께 확인한다.

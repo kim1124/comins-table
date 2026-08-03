@@ -73,6 +73,16 @@ tableRef.current?.setMoveTargetRow(2, 0);
 - Context menu 예제는 선택한 row/cell data object와 선택 0/1/N에 따른 조회·추가·수정·삭제 활성화 상태를 보여준다.
 - Row drag handle은 Row 이동 전용 gesture이며, 같은 column의 cell drag는 range selection으로만 처리한다.
 
+## Playground Context Menu 0/1/N matrix
+
+| 선택 Row 수 | 조회 (View) | 추가 (Create) | 수정 (Update) | 삭제 (Delete) |
+| ---: | :---: | :---: | :---: | :---: |
+| 0 | 활성 | 활성 | 비활성 | 비활성 |
+| 1 | 활성 | 활성 | 활성 | 활성 |
+| N | 활성 | 활성 | 비활성 | 활성 |
+
+메뉴 항목을 선택하면 Playground Alert에 기능 이름을 표시하며 실제 application data는 변경하지 않는다.
+
 Playground 검증 기준:
 
 - `Tr Row 예제`는 row click, double click, context menu, keyboard event가 각각 어떤 callback을 발생시키는지 inline Alert로 보여준다.

@@ -83,6 +83,6 @@ The Playground includes a fixed-row-height virtualized tree with exactly `10000`
 
 Tree Grid V1 supports the current fixed `rowHeight` virtualized layout. Pagination, lazy loading, infinite scrolling, row drag, and row-level copy/paste are intentionally unavailable because they require a hierarchy-aware data-source or move contract. Cell and range clipboard operations remain scoped to visible `item` rows.
 
-Tree expansion is not flat Row Expand. A future Row Expand feature will render a detail region below one flat source row while retaining flat sorting, pagination, lazy loading, infinite scrolling, and row movement. Its variable-height layout must be designed separately. A future Row Grouping feature will likewise derive groups from flat row values and keep separate group expansion state.
+Tree expansion is not flat Row Expand. The shipped Row Expand feature renders a Detail region below one flat source Row while retaining flat sorting, pagination, lazy loading, infinite scrolling, and row movement through its separate variable-height layout. A future Row Grouping feature will likewise derive groups from flat row values and keep separate group expansion state.
 
 Run the runnable example with `npm run dev`, then open `/examples/tree-grid`.

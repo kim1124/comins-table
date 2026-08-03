@@ -20,6 +20,10 @@ Use `onClickCell` for click payloads and `onContextMenuCell` for context menu wo
 
 Clipboard guards are configured through column `props.copyable`, `props.pasteable`, and disabled state callbacks.
 
+## Selection composition
+
+Extending a Cell range does not clear the owning Row selection. Row selection background remains visible on selected Rows while range Cells add their inset range outline, so both states are represented at the same time. Application-owned custom Row backgrounds keep their existing precedence.
+
 ## Virtual List row selection
 
 - A plain Item click selects only its owning Row. `Ctrl`/`Cmd` toggles that Row, and `Shift` selects the visible Row range from the previous selection anchor.
