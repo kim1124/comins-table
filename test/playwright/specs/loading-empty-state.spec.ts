@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("loading example shows skeleton, overlay, and empty states without hiding the header", async ({ page }) => {
   await page.goto("/examples/loading");
 
-  await expect(page.locator("h1", { hasText: "Loading / Empty State" })).toBeVisible();
+  await expect(page.locator("h1", { hasText: "Loading / Empty 상태" })).toBeVisible();
 
   await page.getByRole("button", { exact: true, name: "초기 로딩" }).click();
   await expect(page.getByTestId("loading-skeleton-row")).toHaveCount(5);

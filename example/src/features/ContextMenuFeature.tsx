@@ -8,6 +8,8 @@ import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { ContextMenu, type ContextMenuItem } from "../components/ui/context-menu";
 import { createGuardedColumns } from "../fixtures/columns";
 import { createExampleRows, type PersonRow } from "../fixtures/people";
+import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
+import type { LocalizedText } from "../i18n/types";
 
 type ContextData =
   | {
@@ -30,11 +32,11 @@ type ContextMenuState = {
 
 type ContextAction = "create" | "delete" | "read" | "update";
 
-const contextActions: Array<{ action: ContextAction; label: string }> = [
-  { action: "read", label: "조회" },
-  { action: "create", label: "추가" },
-  { action: "update", label: "수정" },
-  { action: "delete", label: "삭제" },
+const contextActions: Array<{ action: ContextAction; label: LocalizedText }> = [
+  { action: "read", label: defineLocalizedText("조회", "View") },
+  { action: "create", label: defineLocalizedText("추가", "Create") },
+  { action: "update", label: defineLocalizedText("수정", "Update") },
+  { action: "delete", label: defineLocalizedText("삭제", "Delete") },
 ];
 
 function getContextMenuPosition(event: React.MouseEvent) {
@@ -45,8 +47,9 @@ function getContextMenuPosition(event: React.MouseEvent) {
 }
 
 export function ContextMenuFeature() {
+  const { locale, text } = usePlaygroundLocale();
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
-  const [selectedMenuLabel, setSelectedMenuLabel] = useState("");
+  const [selectedAction, setSelectedAction] = useState<ContextAction | null>(null);
   const [rows, setRows] = useState(() => createExampleRows(30));
   const selectedRowIdsRef = useRef<CominsSelectionState["rowIds"]>([]);
   const tableRef = useRef<CominsTableRef<PersonRow>>(null);
@@ -63,10 +66,13 @@ export function ContextMenuFeature() {
           : action === "delete"
             ? contextMenu.selectionCount === 0
             : false,
-      label,
-      onSelect: () => setSelectedMenuLabel(label),
+      label: text(label),
+      onSelect: () => setSelectedAction(action),
     }));
-  }, [contextMenu]);
+  }, [contextMenu, locale, text]);
+  const selectedMenuLabel = selectedAction
+    ? text(contextActions.find(({ action }) => action === selectedAction)!.label)
+    : "";
   const syncSelection = (selection: CominsSelectionState) => {
     selectedRowIdsRef.current = selection.rowIds;
   };
@@ -74,9 +80,12 @@ export function ContextMenuFeature() {
   return (
     <section className="feature-panel" onClick={() => setContextMenu(null)}>
       <FeatureSampleSection
-        description="우클릭한 Row가 기존 선택에 포함되면 selection을 유지하고, 선택 개수에 따른 조회·추가·수정·삭제 활성화와 row/cell payload를 확인합니다."
+        description={text(defineLocalizedText(
+          "우클릭한 Row가 기존 선택에 포함되면 selection을 유지하고, 선택 개수에 따른 조회·추가·수정·삭제 활성화와 row/cell payload를 확인합니다.",
+          "Right-click a selected row to preserve selection and inspect action availability and row/cell payloads.",
+        ))}
         id="context-menu"
-        title="Context Menu 예제"
+        title={text(defineLocalizedText("Context Menu 예제", "Context Menu example"))}
       >
         <FeatureControls
           actions={
@@ -93,7 +102,7 @@ export function ContextMenuFeature() {
                   });
                 }}
               >
-                메뉴 열기
+                {text(defineLocalizedText("메뉴 열기", "Open menu"))}
               </ActionButton>
               <ActionButton
                 onClick={() => {
@@ -101,15 +110,17 @@ export function ContextMenuFeature() {
                   setContextMenu(null);
                 }}
               >
-                선택 해제
+                {text(defineLocalizedText("선택 해제", "Clear selection"))}
               </ActionButton>
             </>
           }
         />
         {selectedMenuLabel ? (
           <Alert data-testid="context-menu-alert">
-            <AlertTitle>메뉴 선택</AlertTitle>
-            <AlertDescription>{selectedMenuLabel} 기능을 선택했습니다.</AlertDescription>
+            <AlertTitle>{text(defineLocalizedText("메뉴 선택", "Menu selection"))}</AlertTitle>
+            <AlertDescription>
+              {locale === "ko" ? `${selectedMenuLabel} 기능을 선택했습니다.` : `${selectedMenuLabel} selected.`}
+            </AlertDescription>
           </Alert>
         ) : null}
         <div className="context-workspace">
@@ -117,7 +128,10 @@ export function ContextMenuFeature() {
             <pre className="state-output" data-testid="context-data-preview">
               {contextMenu?.data
                 ? JSON.stringify(contextMenu.data, null, 2)
-                : "우클릭한 행 또는 셀 데이터가 여기에 표시됩니다."}
+                : text(defineLocalizedText(
+                    "우클릭한 행 또는 셀 데이터가 여기에 표시됩니다.",
+                    "Right-clicked row or cell data appears here.",
+                  ))}
             </pre>
           </div>
           <div className="context-table-pane">
@@ -162,7 +176,7 @@ export function ContextMenuFeature() {
         </div>
         {contextMenu ? (
           <ContextMenu
-            aria-label="데이터 테이블 컨텍스트 메뉴"
+            aria-label={text(defineLocalizedText("데이터 테이블 컨텍스트 메뉴", "Data table context menu"))}
             items={contextMenuItems}
             style={{ left: contextMenu.x, top: contextMenu.y }}
           />

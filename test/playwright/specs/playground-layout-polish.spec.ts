@@ -1,5 +1,7 @@
 import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
 
+import { initializePlaygroundLocale } from "../helpers/playground-locale";
+
 function collectBrowserDiagnostics(page: Page) {
   const diagnostics: Array<{ text: string; type: ReturnType<ConsoleMessage["type"]> | "pageerror" }> = [];
 
@@ -306,7 +308,7 @@ test("pagination page owns the table paging example above virtualization", async
 
   await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "pagination");
   await expect(page.getByTestId("pagination-control")).toContainText("1 / 4");
-  await expect(page.getByTestId("pagination-state")).toContainText("Page 1");
+  await expect(page.getByTestId("pagination-state")).toContainText("페이지 1");
   await expect(page.getByRole("button", { exact: true, name: "첫 페이지" })).toBeDisabled();
   await expect(page.getByRole("button", { exact: true, name: "이전 페이지" })).toBeDisabled();
   const nextPage = page.getByRole("button", { exact: true, name: "다음 페이지" });
@@ -319,23 +321,23 @@ test("pagination page owns the table paging example above virtualization", async
   await expect(page.getByTestId("row-a")).toHaveCount(0);
   await expect(page.getByTestId("row-row-30")).toBeVisible();
   await expect(page.getByTestId("pagination-control")).toContainText("2 / 4");
-  await expect(page.getByTestId("pagination-state")).toContainText("Page 2");
+  await expect(page.getByTestId("pagination-state")).toContainText("페이지 2");
   await page.getByRole("button", { exact: true, name: "마지막 페이지" }).click();
   await expect(page.getByTestId("row-row-90")).toBeVisible();
   await expect(
     page.getByTestId("pagination-viewport").locator("tbody tr[data-comins-row-data-index]"),
   ).toHaveCount(10);
   await expect(page.getByTestId("pagination-control")).toContainText("4 / 4");
-  await expect(page.getByTestId("pagination-state")).toContainText("Page 4");
+  await expect(page.getByTestId("pagination-state")).toContainText("페이지 4");
   await page.getByRole("button", { exact: true, name: "첫 페이지" }).click();
   await expect(page.getByTestId("pagination-control")).toContainText("1 / 4");
-  await expect(page.getByTestId("pagination-state")).toContainText("Page 1");
+  await expect(page.getByTestId("pagination-state")).toContainText("페이지 1");
 
   const performanceLinks = await page
-    .locator(".docs-sidebar__group", { hasText: "Body / Performance" })
+    .locator(".docs-sidebar__group", { hasText: "Body / 성능" })
     .getByRole("link")
     .allTextContents();
-  expect(performanceLinks).toEqual(["Pagination", "Infinite Scroll", "Lazy Load", "Virtualization"]);
+  expect(performanceLinks).toEqual(["페이지네이션", "Infinite Scroll", "Lazy Load", "가상화"]);
   expect(diagnostics).toEqual([]);
 });
 
@@ -417,7 +419,7 @@ test("header page keeps only requested actions and state outputs", async ({ page
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "Header 기본 기능" })).toBeVisible();
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "Header 숨김 / 표시" })).toBeVisible();
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "컬럼 설정 저장 / 불러오기" })).toBeVisible();
-  await expect(page.getByTestId("feature-option-heading").filter({ hasText: "Multi-column Sort" })).toBeVisible();
+  await expect(page.getByTestId("feature-option-heading").filter({ hasText: "다중 컬럼 정렬" })).toBeVisible();
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "컬럼 동적 표시" })).toHaveCount(0);
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "2중 헤더 예제" })).toHaveCount(0);
   await expect(page.getByTestId("header-example-basic").getByRole("button", { exact: true, name: "초기화" })).toBeVisible();
@@ -670,6 +672,7 @@ test("example controls stay in one horizontal row with overflow scrolling", asyn
 
 test("docs sidebar keeps feature-specific route identities", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
+  await initializePlaygroundLocale(page, "en");
   await page.goto("/");
 
   await expect(page.getByRole("navigation", { name: "Docs navigation" })).toBeVisible();
@@ -709,7 +712,7 @@ test("table size menu demonstrates manual and parent sizing only", async ({ page
   await page.goto("/examples/size");
 
   await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "size");
-  await expect(page.getByTestId("feature-option-heading").filter({ hasText: "테이블 사이즈" })).toBeVisible();
+  await expect(page.getByTestId("feature-option-heading").filter({ hasText: "테이블 크기" })).toBeVisible();
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "브라우저 100%" })).toHaveCount(0);
   await expect(page.getByText("브라우저 100%")).toHaveCount(0);
   await expect(page.getByTestId("size-case-manual")).toBeVisible();

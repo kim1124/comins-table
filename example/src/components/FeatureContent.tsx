@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 
 import { findFeature } from "../features/featureRegistry";
 import type { FeatureId } from "../features/types";
+import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
 let mountCounter = 0;
 
 export function FeatureContent({ featureId }: { featureId: FeatureId }) {
-  const feature = findFeature(featureId);
+  const { locale, text } = usePlaygroundLocale();
+  const feature = findFeature(featureId, locale);
   const [mountId] = useState(() => {
     mountCounter += 1;
     return `${feature.id}-${mountCounter}`;
@@ -33,7 +35,7 @@ export function FeatureContent({ featureId }: { featureId: FeatureId }) {
 
   return (
     <section
-      aria-label="Data table example"
+      aria-label={text(defineLocalizedText("Data Table 예제", "Data table example"))}
       className="example-content"
       data-feature={feature.id}
       data-feature-label={feature.label}

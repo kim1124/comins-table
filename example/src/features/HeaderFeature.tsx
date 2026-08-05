@@ -12,6 +12,7 @@ import { MultiSelect } from "../components/ui/multi-select";
 import { createBaseColumns } from "../fixtures/columns";
 import { cloneDefaultLayout, cloneGroupLayout, createHeaderGroupColumns, dynamicColumnOptions } from "../fixtures/headerColumns";
 import { createExampleRows, type PersonRow } from "../fixtures/people";
+import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
 const allHeaderColumnIds = dynamicColumnOptions.map((option) => option.value);
 
@@ -28,14 +29,6 @@ const multiSortRows: PersonRow[] = [
   { age: 42, id: "multi-5", name: "Charlie", role: "Editor" },
   { age: 20, id: "multi-6", name: "Echo", role: "Viewer" },
 ];
-
-const multiSortColumns = [
-  { field: "role", label: "Role", minWidth: 120, sort: true },
-  { field: "age", label: "Age", minWidth: 100, sort: true },
-  { field: "name", label: "Name", minWidth: 140, sort: true },
-];
-
-const multiSortColumnGroups = [{ children: ["role", "age"], id: "work", label: "Work profile" }];
 
 function normalizeHeaderColumnIds(columnIds: unknown, fallbackColumnIds: string[]) {
   if (!Array.isArray(columnIds)) {
@@ -64,12 +57,29 @@ function parseHeaderLayoutSnapshot(value: string): HeaderLayoutSnapshot {
 }
 
 export function HeaderFeature() {
+  const { text } = usePlaygroundLocale();
   const basicTableRef = useRef<CominsTableRef<PersonRow>>(null);
   const layoutTableRef = useRef<CominsTableRef<PersonRow>>(null);
   const multiSortTableRef = useRef<CominsTableRef<PersonRow>>(null);
   const pendingLayoutRef = useRef<CominsColumnLayout | null>(null);
   const [rows] = useState(() => createExampleRows(30));
   const columns = useMemo(() => createBaseColumns(), []);
+  const multiSortColumns = useMemo(
+    () => [
+      { field: "role", label: text(defineLocalizedText("역할", "Role")), minWidth: 120, sort: true },
+      { field: "age", label: text(defineLocalizedText("나이", "Age")), minWidth: 100, sort: true },
+      { field: "name", label: text(defineLocalizedText("이름", "Name")), minWidth: 140, sort: true },
+    ],
+    [text],
+  );
+  const multiSortColumnGroups = useMemo(
+    () => [{
+      children: ["role", "age"],
+      id: "work",
+      label: text(defineLocalizedText("업무 프로필", "Work profile")),
+    }],
+    [text],
+  );
   const visibilityBaseColumns = useMemo(() => createHeaderGroupColumns(), []);
   const layoutBaseColumns = useMemo(() => createHeaderGroupColumns(), []);
   const [, setBasicLayout] = useState<CominsColumnLayout>(() => cloneDefaultLayout());
@@ -117,14 +127,17 @@ export function HeaderFeature() {
       <div className="header-example-showcase">
         <section data-testid="header-example-basic">
           <FeatureSampleSection
-            description="헤더를 수평으로 6px 이상 드래그하면 placeholder, ghost, drop marker가 즉시 표시됩니다."
+            description={text(defineLocalizedText(
+              "헤더를 수평으로 6px 이상 드래그하면 placeholder, ghost, drop marker가 즉시 표시됩니다.",
+              "Drag a header horizontally by at least 6px to show the placeholder, ghost, and drop marker immediately.",
+            ))}
             id="header-basic"
-            title="Header 기본 기능"
+            title={text(defineLocalizedText("Header 기본 기능", "Header basics"))}
           >
             <FeatureControls
               actions={
                 <ActionButton onClick={resetBasicLayout}>
-                  초기화
+                  {text(defineLocalizedText("초기화", "Reset"))}
                 </ActionButton>
               }
             />
@@ -144,15 +157,18 @@ export function HeaderFeature() {
 
         <section data-testid="header-example-visibility">
           <FeatureSampleSection
-            description="Header 전체를 표시하거나 숨기는 showHeader 동작을 확인합니다."
+            description={text(defineLocalizedText(
+              "Header 전체를 표시하거나 숨기는 showHeader 동작을 확인합니다.",
+              "Use showHeader to show or hide the entire header.",
+            ))}
             id="header-visibility"
-            title="Header 숨김 / 표시"
+            title={text(defineLocalizedText("Header 숨김 / 표시", "Show / hide Header"))}
           >
             <FeatureControls
               options={
                 <MultiSelect
                   data-testid="header-visibility-column-select"
-                  label="컬럼 선택"
+                  label={text(defineLocalizedText("컬럼 선택", "Select columns"))}
                   onChange={setVisibilityColumnIds}
                   options={dynamicColumnOptions}
                   values={visibilityColumnIds}
@@ -163,7 +179,7 @@ export function HeaderFeature() {
                   aria-pressed={visibilityShowHeader}
                   onClick={() => setVisibilityShowHeader((current) => !current)}
                 >
-                  Header 표시
+                  {text(defineLocalizedText("Header 표시", "Show Header"))}
                 </ActionButton>
               }
             />
@@ -182,15 +198,18 @@ export function HeaderFeature() {
 
         <section data-testid="header-example-layout">
           <FeatureSampleSection
-            description="컬럼 이동과 리사이즈 결과를 저장하고 다시 불러오는 layout persistence를 확인합니다."
+            description={text(defineLocalizedText(
+              "컬럼 이동과 리사이즈 결과를 저장하고 다시 불러오는 layout persistence를 확인합니다.",
+              "Save and restore the results of moving and resizing columns.",
+            ))}
             id="header-layout"
-            title="컬럼 설정 저장 / 불러오기"
+            title={text(defineLocalizedText("컬럼 설정 저장 / 불러오기", "Save / restore column settings"))}
           >
             <FeatureControls
               options={
                 <MultiSelect
                   data-testid="header-layout-column-select"
-                  label="컬럼 선택"
+                  label={text(defineLocalizedText("컬럼 선택", "Select columns"))}
                   onChange={setLayoutColumnIds}
                   options={dynamicColumnOptions}
                   values={layoutColumnIds}
@@ -212,7 +231,7 @@ export function HeaderFeature() {
                       )
                     }
                   >
-                    저장
+                    {text(defineLocalizedText("저장", "Save"))}
                   </ActionButton>
                   <ActionButton
                     onClick={() => {
@@ -225,16 +244,16 @@ export function HeaderFeature() {
                       }
                     }}
                   >
-                    불러오기
+                    {text(defineLocalizedText("불러오기", "Restore"))}
                   </ActionButton>
                   <ActionButton onClick={resetSavedLayout}>
-                    초기화
+                    {text(defineLocalizedText("초기화", "Reset"))}
                   </ActionButton>
                 </>
               }
             />
             <pre className="state-output" data-testid="saved-layout-json">
-              {savedLayout || "저장된 레이아웃 없음"}
+              {savedLayout || text(defineLocalizedText("저장된 레이아웃 없음", "No saved layout"))}
             </pre>
             <CominsTable
               className="example-table header-example-table"
@@ -252,19 +271,24 @@ export function HeaderFeature() {
 
         <section data-testid="header-example-multi-sort">
           <FeatureSampleSection
-            description="일반 클릭은 단일 정렬을 유지하고 Shift+클릭 또는 Shift+Enter/Space는 하위 Column 정렬 조건을 우선순위 순서로 추가합니다."
+            description={text(defineLocalizedText(
+              "일반 클릭은 단일 정렬을 유지하고 Shift+클릭 또는 Shift+Enter/Space는 하위 Column 정렬 조건을 우선순위 순서로 추가합니다.",
+              "A regular click keeps a single sort. Shift+click or Shift+Enter/Space adds subordinate column sorts in priority order.",
+            ))}
             id="header-multi-sort"
-            title="Multi-column Sort"
+            title={text(defineLocalizedText("다중 컬럼 정렬", "Multi-column Sort"))}
           >
             <FeatureControls
               actions={
                 <ActionButton onClick={() => multiSortTableRef.current?.clearSort()}>
-                  Sort 초기화
+                  {text(defineLocalizedText("Sort 초기화", "Reset sort"))}
                 </ActionButton>
               }
             />
             <pre className="state-output" data-testid="multi-sort-model-json">
-              {sortModel.length > 0 ? JSON.stringify(sortModel, null, 2) : "활성화된 정렬 조건 없음"}
+              {sortModel.length > 0
+                ? JSON.stringify(sortModel, null, 2)
+                : text(defineLocalizedText("활성화된 정렬 조건 없음", "No active sort"))}
             </pre>
             <CominsTable
               className="example-table header-example-table"

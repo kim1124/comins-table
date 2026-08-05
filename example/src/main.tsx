@@ -2,14 +2,17 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 
 import { DocsShell } from "./components/docs/DocsShell";
+import { PlaygroundLocaleProvider } from "./i18n/playground-locale";
 import "./styles.css";
 import "../../styles.css";
 
 function App() {
   return (
-    <BrowserRouter>
-      <DocsShell />
-    </BrowserRouter>
+    <PlaygroundLocaleProvider>
+      <BrowserRouter>
+        <DocsShell />
+      </BrowserRouter>
+    </PlaygroundLocaleProvider>
   );
 }
 

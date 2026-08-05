@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
 
+import { initializePlaygroundLocale } from "../helpers/playground-locale";
+
+test.beforeEach(async ({ page }) => {
+  await initializePlaygroundLocale(page, "en");
+});
+
 test("Tree Grid route demonstrates 30-node defaults, array ref controls, styles, and component cells", async ({ page }) => {
   await page.goto("/examples/tree-grid");
 

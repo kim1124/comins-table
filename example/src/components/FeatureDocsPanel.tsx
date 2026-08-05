@@ -1,4 +1,5 @@
 import type { FeatureDefinition } from "../features/types";
+import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 import { ScrollArea } from "./ui/scroll-area";
 
 const docsByFeature: Record<string, Array<{ href: string; label: string }>> = {
@@ -14,24 +15,25 @@ const docsByFeature: Record<string, Array<{ href: string; label: string }>> = {
 };
 
 export function FeatureDocsPanel({ feature }: { feature: FeatureDefinition }) {
+  const { text } = usePlaygroundLocale();
   const docs = docsByFeature[feature.id] ?? [
     { href: "./README.md", label: "README" },
     { href: "./docs/user/12-playground.md", label: "Playground" },
   ];
 
   return (
-    <aside aria-label="Data table docs" className="docs-aside">
+    <aside aria-label={text(defineLocalizedText("Data Table 문서", "Data table docs"))} className="docs-aside">
       <div className="docs-heading">
-        <p className="example-kicker">Docs</p>
+        <p className="example-kicker">{text(defineLocalizedText("문서", "Docs"))}</p>
         <h2>{feature.label}</h2>
       </div>
       <ScrollArea className="docs-scroll">
         <section className="docs-section">
-          <h3>Feature Summary</h3>
+          <h3>{text(defineLocalizedText("기능 요약", "Feature Summary"))}</h3>
           <p>{feature.summary}</p>
         </section>
         <section className="docs-section">
-          <h3>Related Docs</h3>
+          <h3>{text(defineLocalizedText("관련 문서", "Related Docs"))}</h3>
           <ul>
             {docs.map((doc) => (
               <li key={doc.href}>

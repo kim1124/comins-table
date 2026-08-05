@@ -1,5 +1,11 @@
 import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
 
+import { initializePlaygroundLocale } from "../helpers/playground-locale";
+
+test.beforeEach(async ({ page }) => {
+  await initializePlaygroundLocale(page, "en");
+});
+
 function collectBrowserDiagnostics(page: Page) {
   const diagnostics: Array<{ text: string; type: ReturnType<ConsoleMessage["type"]> | "pageerror" }> = [];
 

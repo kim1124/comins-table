@@ -12,6 +12,14 @@ npm run dev
 기본 실행 URL은 `http://127.0.0.1:4002`다.
 `/`는 `/docs/getting-started`로 이동한다.
 
+## 언어 전환
+
+Playground의 기본 locale은 한국어(`"ko"`)이며 영어(`"en"`)를 함께 지원한다. 검색 input 바로 왼쪽의 `한 / EN` segmented toggle로 언어를 전환한다. Sidebar, article 문구, code sample title, feature metadata, control, Alert, loading 및 empty 안내가 함께 전환되며 URL path와 현재 feature mount는 바뀌지 않는다.
+
+선택한 locale은 `localStorage`의 `comins-table-playground-locale` key에 저장되며 reload와 동일 origin의 route 이동 후 복원된다. 저장값이 없거나 접근할 수 없거나 유효하지 않으면 `"ko"`를 사용한다. 현재 locale은 `<html lang>`에도 동기화한다.
+
+Route에는 locale prefix를 추가하지 않는다. API 및 prop 이름, code sample source, JSON key, `data-testid`, fixture identifier는 두 언어에서 동일하게 유지한다.
+
 ## Route 구성
 
 - `/docs/getting-started`: 설치, CSS import, 첫 번째 DataTable 예제
@@ -40,7 +48,7 @@ npm run dev
 
 왼쪽 메뉴는 구현된 기능만 노출한다.
 `/examples/basic`, `/examples/body`는 기존 링크 호환을 위해 route만 유지하고 왼쪽 메뉴에는 노출하지 않는다.
-검색, version switcher, MDX pipeline, 미구현 roadmap 전용 페이지는 현재 playground 범위에 포함하지 않는다.
+검색은 현재 locale의 문서 metadata와 route path를 대상으로 한다. Version switcher, MDX pipeline, 미구현 roadmap 전용 페이지는 현재 playground 범위에 포함하지 않는다.
 
 ## 예제 데이터와 상태 정책
 

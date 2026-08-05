@@ -11,15 +11,24 @@ import {
   headerColumnGroups,
 } from "../fixtures/headerColumns";
 import { createExampleRows, type PersonRow } from "../fixtures/people";
+import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
 const columnGroupIdByColumnId = new Map(
   headerColumnGroups.flatMap((group) => group.children.map((columnId) => [columnId, group.id] as const)),
 );
 
 export function ColumnGroupFeature() {
+  const { locale, text } = usePlaygroundLocale();
   const groupTableRef = useRef<CominsTableRef<PersonRow>>(null);
   const [rows] = useState(() => createExampleRows(30));
   const groupColumns = useMemo(() => createHeaderGroupColumns(), []);
+  const localizedHeaderColumnGroups = useMemo(
+    () => headerColumnGroups.map((group, index) => ({
+      ...group,
+      label: text(defineLocalizedText(`Header 그룹 ${index + 1}`, `Header Group ${index + 1}`)),
+    })),
+    [text],
+  );
   const [groupLayout, setGroupLayout] = useState<CominsColumnLayout>(() => cloneGroupLayout());
   const [dynamicColumnIds, setDynamicColumnIds] = useState(() => dynamicColumnOptions.map((option) => option.value));
   const [dynamicVisibleGroupIds, setDynamicVisibleGroupIds] = useState(() =>
@@ -67,9 +76,12 @@ export function ColumnGroupFeature() {
       <div className="header-example-showcase">
         <section data-testid="header-example-groups">
           <FeatureSampleSection
-            description="2Depth Header의 parent 이동, parent 리사이즈, Header 그룹 표시/숨김을 확인합니다."
+            description={text(defineLocalizedText(
+              "2Depth Header의 parent 이동, parent 리사이즈, Header 그룹 표시/숨김을 확인합니다.",
+              "Move and resize parent headers and show or hide Header groups in a two-level Header.",
+            ))}
             id="header-groups"
-            title="Header 그룹 기본"
+            title={text(defineLocalizedText("Header 그룹 기본", "Header group basics"))}
           >
             <FeatureControls
               options={
@@ -80,7 +92,7 @@ export function ColumnGroupFeature() {
                       onChange={(event) => setGroupVisible("profile", event.target.checked)}
                       type="checkbox"
                     />
-                    <span>Header 그룹 1 표시</span>
+                    <span>{text(defineLocalizedText("Header 그룹 1 표시", "Show Header group 1"))}</span>
                   </label>
                   <label className="feature-checkbox-control">
                     <input
@@ -88,19 +100,19 @@ export function ColumnGroupFeature() {
                       onChange={(event) => setGroupVisible("status", event.target.checked)}
                       type="checkbox"
                     />
-                    <span>Header 그룹 2 표시</span>
+                    <span>{text(defineLocalizedText("Header 그룹 2 표시", "Show Header group 2"))}</span>
                   </label>
                 </>
               }
               actions={
                 <ActionButton onClick={resetGroupLayout}>
-                  초기화
+                  {text(defineLocalizedText("초기화", "Reset"))}
                 </ActionButton>
               }
             />
             <CominsTable
               className="example-table header-example-table"
-              columnGroups={headerColumnGroups}
+              columnGroups={localizedHeaderColumnGroups}
               columns={groupColumns}
               data={rows}
               data-testid="header-groups-viewport"
@@ -115,28 +127,31 @@ export function ColumnGroupFeature() {
 
         <section data-testid="column-group-dynamic-columns">
           <FeatureSampleSection
-            description="SelectBox에서 선택한 자식 column id만 columns prop에 전달해 columnGroups normalize 결과를 확인합니다."
+            description={text(defineLocalizedText(
+              "SelectBox에서 선택한 자식 column id만 columns prop에 전달해 columnGroups normalize 결과를 확인합니다.",
+              "Pass only child column IDs selected in the SelectBox to columns and inspect the normalized columnGroups result.",
+            ))}
             id="column-group-dynamic-columns"
-            title="Header 그룹 동적 표시"
+            title={text(defineLocalizedText("Header 그룹 동적 표시", "Dynamic Header groups"))}
           >
             <FeatureControls
               options={
                 <>
                   <MultiSelect
                     data-testid="column-group-column-select"
-                    label="컬럼 선택"
+                    label={text(defineLocalizedText("컬럼 선택", "Select columns"))}
                     onChange={setDynamicColumnIds}
                     options={dynamicColumnOptions}
                     values={dynamicColumnIds}
                   />
-                  {headerColumnGroups.map((group) => (
+                  {localizedHeaderColumnGroups.map((group) => (
                     <label className="feature-checkbox-control" key={group.id}>
                       <input
                         checked={dynamicVisibleGroupIds.includes(group.id)}
                         onChange={(event) => setDynamicGroupVisible(group.id, event.target.checked)}
                         type="checkbox"
                       />
-                      <span>{group.label} 표시</span>
+                      <span>{locale === "ko" ? `${group.label} 표시` : `Show ${group.label}`}</span>
                     </label>
                   ))}
                 </>
@@ -145,7 +160,7 @@ export function ColumnGroupFeature() {
             <section className="header-dynamic-grid" data-testid="dynamic-group-table">
               <CominsTable
                 className="example-table header-example-table"
-                columnGroups={headerColumnGroups}
+                columnGroups={localizedHeaderColumnGroups}
                 columns={dynamicColumns}
                 data={rows}
                 data-testid="dynamic-group-viewport"

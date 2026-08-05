@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router";
 
-import { docsPages } from "../../docs/docsRoutes";
+import { createDocsNavGroups, createDocsPages } from "../../docs/docsRoutes";
+import { usePlaygroundLocale } from "../../i18n/playground-locale";
 import { ReadmeDemoPage } from "../../readme/ReadmeDemoPage";
 import { DocsArticle } from "./DocsArticle";
 import { DocsSidebar } from "./DocsSidebar";
@@ -9,6 +11,9 @@ import { RouteLifecycleBoundary } from "./RouteLifecycleBoundary";
 
 export function DocsShell() {
   const location = useLocation();
+  const { locale } = usePlaygroundLocale();
+  const docsPages = useMemo(() => createDocsPages(locale), [locale]);
+  const docsNavGroups = useMemo(() => createDocsNavGroups(docsPages), [docsPages]);
 
   if (location.pathname === "/readme-demo") {
     return <ReadmeDemoPage />;
@@ -16,9 +21,9 @@ export function DocsShell() {
 
   return (
     <div className="docs-shell">
-      <DocsTopNav />
+      <DocsTopNav pages={docsPages} />
       <div className="docs-shell__body">
-        <DocsSidebar />
+        <DocsSidebar groups={docsNavGroups} />
         <main className="docs-shell__content">
           <Routes key={location.pathname} location={location}>
             <Route element={<Navigate replace to="/docs/getting-started" />} path="/" />

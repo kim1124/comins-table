@@ -21,7 +21,7 @@ test("row clicks expose controlled single, toggle, and range selection state", a
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/examples/selection-clipboard");
 
-  await expect(page.locator("h1", { hasText: "Selection & Clipboard" })).toBeVisible();
+  await expect(page.locator("h1", { hasText: "선택과 Clipboard" })).toBeVisible();
   await expect(
     page.getByTestId("selection-clipboard-viewport").locator("tbody tr[data-comins-row-data-index]"),
   ).toHaveCount(30);

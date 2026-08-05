@@ -1,3 +1,5 @@
+import type { PlaygroundLocale } from "../i18n/types";
+
 export const dataTableOptionGuide = [
   {
     items: [
@@ -66,3 +68,25 @@ export const dataTableOptionGuide = [
     title: "Roadmap",
   },
 ];
+
+const koreanGuideTitles: Record<string, string> = {
+  Events: "이벤트",
+  Props: "Props",
+  "Ref / Core": "Ref / Core",
+  Roadmap: "로드맵",
+};
+
+export function getDataTableOptionGuide(locale: PlaygroundLocale) {
+  if (locale === "en") {
+    return dataTableOptionGuide;
+  }
+
+  return dataTableOptionGuide.map((group) => ({
+    ...group,
+    items: group.items.map((item) => ({
+      ...item,
+      description: `${item.name}의 현재 지원 동작과 application-owned 계약을 설명합니다.`,
+    })),
+    title: koreanGuideTitles[group.title] ?? group.title,
+  }));
+}

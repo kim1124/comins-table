@@ -4,6 +4,7 @@ import { CominsTable, type CominsTableColumn } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Button } from "../components/ui/button";
 import type { PersonRow } from "../fixtures/people";
+import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
 type DummyUser = {
   age: number;
@@ -47,6 +48,7 @@ function buildInfiniteScrollUrl(offset: number, limit: number) {
 }
 
 export function InfiniteScrollFeature() {
+  const { locale, text } = usePlaygroundLocale();
   const [rows, setRows] = useState<PersonRow[]>([]);
   const [total, setTotal] = useState(0);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -180,20 +182,23 @@ export function InfiniteScrollFeature() {
   return (
     <section className="feature-panel">
       <FeatureSampleSection
-        description="소비자가 rows와 요청 상태를 소유하고, viewport 하단 근접 시 onLoadMore를 받아 원격 batch를 append합니다."
+        description={text(defineLocalizedText(
+          "소비자가 rows와 요청 상태를 소유하고, viewport 하단 근접 시 onLoadMore를 받아 원격 batch를 append합니다.",
+          "The consumer owns rows and request state and appends a remote batch through onLoadMore near the bottom of the viewport.",
+        ))}
         id="infinite-scroll"
-        title="Infinite Scroll"
+        title={text(defineLocalizedText("무한 스크롤", "Infinite Scroll"))}
       >
         <div className="table-toolbar">
           <Button
-            aria-label="새로고침"
+            aria-label={text(defineLocalizedText("새로고침", "Refresh"))}
             onClick={() => setRefreshVersion((current) => current + 1)}
             variant="outline"
           >
-            새로고침
+            {text(defineLocalizedText("새로고침", "Refresh"))}
           </Button>
           <span className="table-toolbar__state" data-testid="infinite-load-count">
-            Loaded {rows.length} / {total}
+            {locale === "ko" ? `불러옴 ${rows.length} / ${total}` : `Loaded ${rows.length} / ${total}`}
           </span>
         </div>
         <CominsTable

@@ -1,5 +1,7 @@
 import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
 
+import { initializePlaygroundLocale } from "../helpers/playground-locale";
+
 function collectBrowserDiagnostics(page: Page) {
   const diagnostics: Array<{ text: string; type: ReturnType<ConsoleMessage["type"]> | "pageerror" }> = [];
 
@@ -37,6 +39,7 @@ const featurePages = [
 
 test("feature pages render docs in the main content area", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
+  await initializePlaygroundLocale(page, "ko");
   await page.goto("/");
 
   for (const [route, descriptionText] of featurePages) {
@@ -51,6 +54,7 @@ test("feature pages render docs in the main content area", async ({ page }) => {
 
 test("virtualization page explains the 100000-row performance contract", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
+  await initializePlaygroundLocale(page, "en");
   await page.goto("/performance/virtualization");
 
   const main = page.locator("main");
@@ -66,6 +70,7 @@ test("virtualization page explains the 100000-row performance contract", async (
 
 test("ref api page documents ref type and visible-index semantics", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
+  await initializePlaygroundLocale(page, "en");
   await page.goto("/api/ref");
 
   const main = page.locator("main");

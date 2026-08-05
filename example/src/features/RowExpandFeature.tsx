@@ -9,6 +9,7 @@ import {
 import { FeatureControls } from "../components/FeatureControls";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Button } from "../components/ui/button";
+import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
 type RowExpandExampleRow = {
   age: number;
@@ -46,20 +47,6 @@ const tallRows: RowExpandExampleRow[] = Array.from({ length: 30 }, (_value, inde
   status: index % 3 === 0 ? "Review" : "Active",
 }));
 
-const fixedColumns: Array<CominsTableColumn<RowExpandExampleRow>> = [
-  { field: "name", label: "Name", minWidth: 180, sort: true, width: 260 },
-  { field: "age", label: "Age", minWidth: 140, sort: true, width: 220 },
-  { field: "role", label: "Role", minWidth: 180, sort: true, width: 240 },
-  { field: "status", label: "Status", minWidth: 180, sort: true, width: 240 },
-  { field: "id", label: "Stable ID", minWidth: 220, width: 280 },
-];
-
-const autoColumns: Array<CominsTableColumn<RowExpandExampleRow>> = [
-  { field: "name", label: "Name", minWidth: 180, sort: true, width: 220 },
-  { field: "role", label: "Role", minWidth: 180, width: 220 },
-  { field: "status", label: "Status", minWidth: 180, width: 220 },
-];
-
 const reorderedFixedLayout: CominsColumnLayout = {
   columns: {
     age: { hidden: true },
@@ -68,6 +55,25 @@ const reorderedFixedLayout: CominsColumnLayout = {
 };
 
 export function RowExpandFeature() {
+  const { locale, text } = usePlaygroundLocale();
+  const fixedColumns = useMemo<Array<CominsTableColumn<RowExpandExampleRow>>>(
+    () => [
+      { field: "name", label: text(defineLocalizedText("이름", "Name")), minWidth: 180, sort: true, width: 260 },
+      { field: "age", label: text(defineLocalizedText("나이", "Age")), minWidth: 140, sort: true, width: 220 },
+      { field: "role", label: text(defineLocalizedText("역할", "Role")), minWidth: 180, sort: true, width: 240 },
+      { field: "status", label: text(defineLocalizedText("상태", "Status")), minWidth: 180, sort: true, width: 240 },
+      { field: "id", label: text(defineLocalizedText("안정적인 ID", "Stable ID")), minWidth: 220, width: 280 },
+    ],
+    [text],
+  );
+  const autoColumns = useMemo<Array<CominsTableColumn<RowExpandExampleRow>>>(
+    () => [
+      { field: "name", label: text(defineLocalizedText("이름", "Name")), minWidth: 180, sort: true, width: 220 },
+      { field: "role", label: text(defineLocalizedText("역할", "Role")), minWidth: 180, width: 220 },
+      { field: "status", label: text(defineLocalizedText("상태", "Status")), minWidth: 180, width: 220 },
+    ],
+    [text],
+  );
   const fixedTableRef = useRef<CominsTableRef<RowExpandExampleRow>>(null);
   const [fixedExpandedRowIds, setFixedExpandedRowIds] = useState<readonly string[]>([]);
   const [autoExpandedRowIds, setAutoExpandedRowIds] = useState<readonly string[]>([]);
@@ -79,49 +85,52 @@ export function RowExpandFeature() {
       columns: {},
       order: fixedColumns.map((column) => String(column.id ?? column.field)),
     }),
-    [],
+    [fixedColumns],
   );
 
   return (
     <section className="feature-panel feature-panel--components">
       <FeatureSampleSection
-        description="expandedRowIds를 application state로 소유하며 모든 Detail에 정확한 240px fixed height를 적용합니다."
+        description={text(defineLocalizedText(
+          "expandedRowIds를 application state로 소유하며 모든 Detail에 정확한 240px fixed height를 적용합니다.",
+          "The application owns expandedRowIds and applies an exact 240px fixed height to every Detail.",
+        ))}
         id="row-expand-fixed"
-        title="Controlled fixed Detail height"
+        title={text(defineLocalizedText("제어형 고정 Detail 높이", "Controlled fixed Detail height"))}
       >
         <FeatureControls
           actions={
             <>
               <Button
-                aria-label="Previous Row Expand page"
+                aria-label={text(defineLocalizedText("이전 Row Expand 페이지", "Previous Row Expand page"))}
                 disabled={fixedPageIndex === 0}
                 onClick={() => setFixedPageIndex(0)}
                 variant="outline"
               >
-                Previous page
+                {text(defineLocalizedText("이전 페이지", "Previous page"))}
               </Button>
               <Button
-                aria-label="Next Row Expand page"
+                aria-label={text(defineLocalizedText("다음 Row Expand 페이지", "Next Row Expand page"))}
                 disabled={fixedPageIndex === 1}
                 onClick={() => setFixedPageIndex(1)}
                 variant="outline"
               >
-                Next page
+                {text(defineLocalizedText("다음 페이지", "Next page"))}
               </Button>
               <Button
                 onClick={() => fixedTableRef.current?.setColumnLayout(reorderedFixedLayout)}
                 variant="outline"
               >
-                Move Status first and hide Age
+                {text(defineLocalizedText("Status를 앞으로 이동하고 Age 숨기기", "Move Status first and hide Age"))}
               </Button>
               <Button
                 onClick={() => fixedTableRef.current?.setColumnLayout(originalFixedLayout)}
                 variant="outline"
               >
-                Restore Columns
+                {text(defineLocalizedText("컬럼 복원", "Restore Columns"))}
               </Button>
               <Button onClick={() => setFixedExpandedRowIds([])} variant="outline">
-                Collapse all fixed Details
+                {text(defineLocalizedText("고정 Detail 모두 접기", "Collapse all fixed Details"))}
               </Button>
             </>
           }
@@ -152,8 +161,10 @@ export function RowExpandFeature() {
                 overflow: "hidden",
               }}
             >
-              <strong>{`Fixed Detail for ${row.data.name}`}</strong>
-              <span>{`Stable owner id: ${row.id}`}</span>
+              <strong>
+                {locale === "ko" ? `${row.data.name}의 고정 Detail` : `Fixed Detail for ${row.data.name}`}
+              </strong>
+              <span>{locale === "ko" ? `안정적인 owner id: ${row.id}` : `Stable owner id: ${row.id}`}</span>
               <button
                 data-testid={`fixed-detail-action-${row.id}`}
                 onClick={() =>
@@ -161,7 +172,7 @@ export function RowExpandFeature() {
                 }
                 type="button"
               >
-                Collapse this fixed Detail
+                {text(defineLocalizedText("이 고정 Detail 접기", "Collapse this fixed Detail"))}
               </button>
             </div>
           )}
@@ -171,9 +182,12 @@ export function RowExpandFeature() {
       </FeatureSampleSection>
 
       <FeatureSampleSection
-        description='getRowDetailHeight={() => "auto"}는 mounted Detail을 측정합니다. 버튼은 비동기로 내용을 늘려 같은 owner Slot의 측정 높이를 갱신합니다.'
+        description={text(defineLocalizedText(
+          'getRowDetailHeight={() => "auto"}는 mounted Detail을 측정합니다. 버튼은 비동기로 내용을 늘려 같은 owner Slot의 측정 높이를 갱신합니다.',
+          'getRowDetailHeight={() => "auto"} measures mounted Details. The button grows content asynchronously and updates the same owner Slot height.',
+        ))}
         id="row-expand-auto"
-        title="Measured automatic Detail height"
+        title={text(defineLocalizedText("측정형 자동 Detail 높이", "Measured automatic Detail height"))}
       >
         <pre className="state-output" data-testid="row-expand-auto-state">
           {JSON.stringify(autoExpandedRowIds, null, 2)}
@@ -192,10 +206,14 @@ export function RowExpandFeature() {
           pagination={{ pageIndex: 0, pageSize: autoRows.length }}
           renderRowDetail={({ row }) => (
             <div data-testid={`auto-detail-${row.id}`} style={{ display: "grid", gap: 10 }}>
-              <strong>{`Automatic Detail for ${row.data.name}`}</strong>
+              <strong>
+                {locale === "ko" ? `${row.data.name}의 자동 Detail` : `Automatic Detail for ${row.data.name}`}
+              </strong>
               <p>
-                Automatic Detail height follows the measured border box and is remeasured when its width or content
-                changes.
+                {text(defineLocalizedText(
+                  "자동 Detail 높이는 측정된 border box를 따르며 너비나 내용이 변경되면 다시 측정됩니다.",
+                  "Automatic Detail height follows the measured border box and is remeasured when its width or content changes.",
+                ))}
               </p>
               <button
                 data-testid={`auto-detail-grow-${row.id}`}
@@ -205,15 +223,15 @@ export function RowExpandFeature() {
                 }}
                 type="button"
               >
-                Grow automatic Detail
+                {text(defineLocalizedText("자동 Detail 늘리기", "Grow automatic Detail"))}
               </button>
               {autoDetailGrown ? (
                 <div data-testid="auto-detail-grown-content">
-                  <p>Asynchronous content was added after the Detail mounted.</p>
-                  <p>The shared observer updates only the mounted automatic Detail block.</p>
-                  <p>Owner Rows keep their controlled IDs while measurement updates the private Slot height.</p>
-                  <p>Column width changes invalidate a stale-width cached measurement before the next observation.</p>
-                  <p>Selection, clipboard, sorting, and pagination continue to address owner business Rows only.</p>
+                  <p>{text(defineLocalizedText("Detail이 mount된 뒤 비동기 내용이 추가되었습니다.", "Asynchronous content was added after the Detail mounted."))}</p>
+                  <p>{text(defineLocalizedText("공유 observer는 mount된 자동 Detail block만 갱신합니다.", "The shared observer updates only the mounted automatic Detail block."))}</p>
+                  <p>{text(defineLocalizedText("측정이 private Slot 높이를 갱신하는 동안 owner Row는 controlled ID를 유지합니다.", "Owner Rows keep their controlled IDs while measurement updates the private Slot height."))}</p>
+                  <p>{text(defineLocalizedText("컬럼 너비 변경은 다음 관찰 전에 이전 너비의 캐시 측정을 무효화합니다.", "Column width changes invalidate a stale-width cached measurement before the next observation."))}</p>
+                  <p>{text(defineLocalizedText("선택, 클립보드, 정렬, 페이지네이션은 계속 owner business Row만 대상으로 합니다.", "Selection, clipboard, sorting, and pagination continue to address owner business Rows only."))}</p>
                   <div
                     data-testid="auto-detail-width-sensitive-grid"
                     style={{
@@ -233,7 +251,9 @@ export function RowExpandFeature() {
                           padding: 8,
                         }}
                       >
-                        {`Width-sensitive measured block ${index + 1}`}
+                        {locale === "ko"
+                          ? `너비 반응형 측정 block ${index + 1}`
+                          : `Width-sensitive measured block ${index + 1}`}
                       </span>
                     ))}
                   </div>
@@ -248,9 +268,12 @@ export function RowExpandFeature() {
       </FeatureSampleSection>
 
       <FeatureSampleSection
-        description="960px fixed Detail은 virtual owner Slot의 일부로 유지되며, inner control을 포함한 상태로 outer table viewport가 전체 높이를 연속해서 scroll합니다."
+        description={text(defineLocalizedText(
+          "960px fixed Detail은 virtual owner Slot의 일부로 유지되며, inner control을 포함한 상태로 outer table viewport가 전체 높이를 연속해서 scroll합니다.",
+          "The 960px fixed Detail remains part of the virtual owner Slot while the outer table viewport scrolls continuously through its full height and inner controls.",
+        ))}
         id="row-expand-tall"
-        title="Detail taller than the viewport"
+        title={text(defineLocalizedText("Viewport보다 큰 Detail", "Detail taller than the viewport"))}
       >
         <pre className="state-output" data-testid="row-expand-tall-state">
           {JSON.stringify(tallExpandedRowIds, null, 2)}
@@ -272,13 +295,15 @@ export function RowExpandFeature() {
                 data-testid={`tall-detail-${row.id}`}
                 style={{ alignContent: "start", display: "grid", gap: 12, height: "100%" }}
               >
-                <strong>{`Viewport-tall Detail for ${row.data.name}`}</strong>
+                <strong>
+                  {locale === "ko" ? `${row.data.name}의 viewport보다 큰 Detail` : `Viewport-tall Detail for ${row.data.name}`}
+                </strong>
                 <button data-testid="tall-detail-secondary-action" type="button">
-                  Tall Detail secondary action
+                  {text(defineLocalizedText("큰 Detail 보조 동작", "Tall Detail secondary action"))}
                 </button>
                 <div aria-hidden="true" style={{ minHeight: 700 }} />
                 <button data-testid="tall-detail-last-action" type="button">
-                  Tall Detail final action
+                  {text(defineLocalizedText("큰 Detail 마지막 동작", "Tall Detail final action"))}
                 </button>
               </div>
             )}
@@ -290,9 +315,12 @@ export function RowExpandFeature() {
       </FeatureSampleSection>
 
       <FeatureSampleSection
-        description="onChangeExpandedRowIds를 생략한 기본 expandable Row는 현재 상태와 Detail을 표시하지만 disclosure가 disabled됩니다."
+        description={text(defineLocalizedText(
+          "onChangeExpandedRowIds를 생략한 기본 expandable Row는 현재 상태와 Detail을 표시하지만 disclosure가 disabled됩니다.",
+          "An expandable Row without onChangeExpandedRowIds shows its current state and Detail with a disabled disclosure.",
+        ))}
         id="row-expand-readonly"
-        title="Controlled read-only disclosure"
+        title={text(defineLocalizedText("제어형 읽기 전용 disclosure", "Controlled read-only disclosure"))}
       >
         <CominsTable
           className="example-table"
@@ -302,15 +330,20 @@ export function RowExpandFeature() {
           expandedRowIds={["readonly-1"]}
           getRowDetailHeight={() => 160}
           getRowId={(row) => row.id}
-          renderRowDetail={({ row }) => <span>{`Read-only Detail for ${row.data.name}`}</span>}
+          renderRowDetail={({ row }) => (
+            <span>{locale === "ko" ? `${row.data.name}의 읽기 전용 Detail` : `Read-only Detail for ${row.data.name}`}</span>
+          )}
           theme={{ density: "compact" }}
         />
       </FeatureSampleSection>
 
       <FeatureSampleSection
-        description="isRowExpandable=false인 owner는 callback과 controlled ID가 있어도 disclosure와 Detail을 렌더링하지 않습니다."
+        description={text(defineLocalizedText(
+          "isRowExpandable=false인 owner는 callback과 controlled ID가 있어도 disclosure와 Detail을 렌더링하지 않습니다.",
+          "An owner with isRowExpandable=false renders neither a disclosure nor a Detail even when a callback and controlled ID exist.",
+        ))}
         id="row-expand-non-expandable"
-        title="Non-expandable owner"
+        title={text(defineLocalizedText("펼칠 수 없는 owner", "Non-expandable owner"))}
       >
         <CominsTable
           className="example-table"
@@ -329,7 +362,9 @@ export function RowExpandFeature() {
           getRowId={(row) => row.id}
           isRowExpandable={() => false}
           onChangeExpandedRowIds={() => undefined}
-          renderRowDetail={({ row }) => <span>{`Unavailable Detail for ${row.data.name}`}</span>}
+          renderRowDetail={({ row }) => (
+            <span>{locale === "ko" ? `${row.data.name}에서 사용할 수 없는 Detail` : `Unavailable Detail for ${row.data.name}`}</span>
+          )}
           theme={{ density: "compact" }}
         />
       </FeatureSampleSection>

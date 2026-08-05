@@ -1,4 +1,48 @@
 import type { DocsCodeSample } from "./types";
+import type { PlaygroundLocale } from "../i18n/types";
+import { defineLocalizedText, resolveLocalizedText } from "../i18n/playground-locale";
+
+const codeSampleTitles = {
+  "100000-row component virtualization": defineLocalizedText("100000행 컴포넌트 가상화", "100000-row component virtualization"),
+  "100000-row virtualization": defineLocalizedText("100000행 가상화", "100000-row virtualization"),
+  "Basic table": defineLocalizedText("기본 테이블", "Basic table"),
+  "Built-in components": defineLocalizedText("내장 컴포넌트", "Built-in components"),
+  "CSV / JSON helper": defineLocalizedText("CSV / JSON 헬퍼", "CSV / JSON helper"),
+  "Cell renderer": defineLocalizedText("Cell 렌더러", "Cell renderer"),
+  "Context menu payload": defineLocalizedText("Context Menu payload", "Context menu payload"),
+  "Controlled CRUD state": defineLocalizedText("Controlled CRUD 상태", "Controlled CRUD state"),
+  "Controlled Flat Table ref usage": defineLocalizedText("Controlled Flat Table ref 사용", "Controlled Flat Table ref usage"),
+  "Controlled Row Expand": defineLocalizedText("Controlled Row Expand", "Controlled Row Expand"),
+  "Controlled Tree Grid": defineLocalizedText("Controlled Tree Grid", "Controlled Tree Grid"),
+  "Controlled remote infinite scroll": defineLocalizedText("Controlled 원격 Infinite Scroll", "Controlled remote infinite scroll"),
+  "Controlled selection and clipboard": defineLocalizedText("Controlled 선택과 Clipboard", "Controlled selection and clipboard"),
+  "Core props": defineLocalizedText("Core props", "Core props"),
+  "CSS override": defineLocalizedText("CSS 재정의", "CSS override"),
+  "DummyJSON Lazy Load": defineLocalizedText("DummyJSON Lazy Load", "DummyJSON Lazy Load"),
+  "External pagination state": defineLocalizedText("외부 Pagination 상태", "External pagination state"),
+  "Header move and persistence": defineLocalizedText("Header 이동과 저장", "Header move and persistence"),
+  "Height container": defineLocalizedText("높이 컨테이너", "Height container"),
+  "Install": defineLocalizedText("설치", "Install"),
+  "Loading / Empty State": defineLocalizedText("Loading / Empty 상태", "Loading / Empty State"),
+  "Ref type": defineLocalizedText("Ref 타입", "Ref type"),
+  "Row props": defineLocalizedText("Row props", "Row props"),
+  "Shift-assisted multi-column sort": defineLocalizedText("Shift 다중 Column 정렬", "Shift-assisted multi-column sort"),
+  "Summary Row configuration": defineLocalizedText("Summary Row 설정", "Summary Row configuration"),
+  "Theme class": defineLocalizedText("Theme class", "Theme class"),
+  "Tree expansion ref": defineLocalizedText("Tree 펼침 ref", "Tree expansion ref"),
+  "Two-level header": defineLocalizedText("2단계 Header", "Two-level header"),
+} as const;
+
+export function localizeDocsCodeSamples(samples: DocsCodeSample[], locale: PlaygroundLocale): DocsCodeSample[] {
+  return samples.map((sample) => {
+    const localizedTitle = codeSampleTitles[sample.title as keyof typeof codeSampleTitles];
+    if (!localizedTitle) {
+      throw new Error(`playground-localization: missing code sample title for ${sample.title}`);
+    }
+
+    return { ...sample, title: resolveLocalizedText(localizedTitle, locale) };
+  });
+}
 
 export const installSamples: DocsCodeSample[] = [
   {

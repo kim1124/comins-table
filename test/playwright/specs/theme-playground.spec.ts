@@ -20,7 +20,7 @@ test("theme page switches shipped CSS themes without reloading or changing virtu
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/examples/theme");
 
-  await expect(page.locator(".docs-article__header").getByRole("heading", { name: "Theme" })).toBeVisible();
+  await expect(page.locator(".docs-article__header").getByRole("heading", { name: "테마" })).toBeVisible();
   await expect(page.locator(".theme-example__note")).toContainText("rowHeight prop");
   await expect(page.getByTestId("theme-option")).toHaveCount(0);
 

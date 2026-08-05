@@ -44,7 +44,7 @@ test("lazy load example uses mocked remote rows for initial, refresh, and append
 
   await expect(page.locator("h1", { hasText: "Lazy Load" })).toBeVisible();
   await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "lazy-load");
-  await expect(page.getByTestId("lazy-load-state")).toContainText("Loaded 30 / 90");
+  await expect(page.getByTestId("lazy-load-state")).toContainText("불러옴 30 / 90");
   await expect(page.getByTestId("row-dummy-1")).toBeVisible();
   await expect(page.getByRole("button", { exact: true, name: "빈 결과" })).toHaveCount(0);
 
@@ -53,13 +53,13 @@ test("lazy load example uses mocked remote rows for initial, refresh, and append
     element.dispatchEvent(new Event("scroll", { bubbles: true }));
   });
   await expect(page.getByTestId("data-table-infinite-loading-row")).toBeVisible();
-  await expect(page.getByTestId("lazy-load-state")).toContainText("Loaded 60 / 90");
+  await expect(page.getByTestId("lazy-load-state")).toContainText("불러옴 60 / 90");
   await expect(page.getByTestId("data-table-infinite-loading-row")).toHaveCount(0);
   await page.getByTestId("lazy-load-viewport").evaluate((element) => {
     element.scrollTop = element.scrollHeight;
     element.dispatchEvent(new Event("scroll", { bubbles: true }));
   });
-  await expect(page.getByTestId("lazy-load-state")).toContainText("Loaded 90 / 90");
+  await expect(page.getByTestId("lazy-load-state")).toContainText("불러옴 90 / 90");
   await expect(page.getByTestId("data-table-infinite-loading-row")).toHaveCount(0);
 
   await page.getByRole("button", { exact: true, name: "새로고침" }).click();
@@ -77,7 +77,7 @@ test("lazy load example uses mocked remote rows for initial, refresh, and append
   expect(viewportBox).not.toBeNull();
   expect(overlayBox!.y).toBeGreaterThanOrEqual(viewportBox!.y);
   expect(overlayBox!.y + overlayBox!.height).toBeLessThanOrEqual(viewportBox!.y + viewportBox!.height + 1);
-  await expect(page.getByTestId("lazy-load-state")).toContainText("Loaded 30 / 90");
+  await expect(page.getByTestId("lazy-load-state")).toContainText("불러옴 30 / 90");
   expect(requestCount).toBeGreaterThanOrEqual(4);
   expect(requestSkips).toContain(0);
   expect(requestSkips.at(-1)).toBe(0);

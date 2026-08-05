@@ -4,6 +4,7 @@ import { CominsTable, type CominsTableColumn, type CominsLazyLoadRequest } from 
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Button } from "../components/ui/button";
 import type { PersonRow } from "../fixtures/people";
+import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
 type DummyUser = {
   age: number;
@@ -47,6 +48,7 @@ function buildLazyLoadUrl(request: CominsLazyLoadRequest) {
 }
 
 export function LazyLoadFeature() {
+  const { locale, text } = usePlaygroundLocale();
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [status, setStatus] = useState({ loaded: 0, total: 0 });
   const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(
@@ -80,16 +82,19 @@ export function LazyLoadFeature() {
   return (
     <section className="feature-panel">
       <FeatureSampleSection
-        description="Lazy Load는 onLazyLoad가 offset, limit, AbortSignal을 받아 외부 datasource에서 Row를 가져오는 append-mode public API입니다."
+        description={text(defineLocalizedText(
+          "Lazy Load는 onLazyLoad가 offset, limit, AbortSignal을 받아 외부 datasource에서 Row를 가져오는 append-mode public API입니다.",
+          "Lazy Load is an append-mode public API whose onLazyLoad callback receives offset, limit, and AbortSignal to fetch Rows from an external datasource.",
+        ))}
         id="lazy-load"
-        title="Lazy Load"
+        title={text(defineLocalizedText("지연 로딩", "Lazy Load"))}
       >
         <div className="table-toolbar">
-          <Button aria-label="새로고침" onClick={refreshRows} variant="outline">
-            새로고침
+          <Button aria-label={text(defineLocalizedText("새로고침", "Refresh"))} onClick={refreshRows} variant="outline">
+            {text(defineLocalizedText("새로고침", "Refresh"))}
           </Button>
           <span className="table-toolbar__state" data-testid="lazy-load-state">
-            Loaded {status.loaded} / {status.total}
+            {locale === "ko" ? `불러옴 ${status.loaded} / ${status.total}` : `Loaded ${status.loaded} / ${status.total}`}
           </span>
         </div>
         <CominsTable
@@ -97,12 +102,15 @@ export function LazyLoadFeature() {
           columns={columns}
           data={[]}
           data-testid="lazy-load-viewport"
-          emptyComponent={<span>표시할 데이터가 없습니다.</span>}
+          emptyComponent={<span>{text(defineLocalizedText("표시할 데이터가 없습니다.", "No data to display."))}</span>}
           getRowId={(row) => row.id}
           lazyLoad
           lazyLoadBatchSize={BATCH_SIZE}
           lazyLoadThreshold={140}
-          loadingComponent={<span>원격 데이터를 다시 불러오는 중입니다.</span>}
+          loadingComponent={<span>{text(defineLocalizedText(
+            "원격 데이터를 다시 불러오는 중입니다.",
+            "Reloading remote data.",
+          ))}</span>}
           onLazyLoad={loadRows}
           pagination={{ pageIndex: 0, pageSize: BATCH_SIZE * 3 }}
           persistHeaderWhenEmpty

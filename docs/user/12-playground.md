@@ -8,6 +8,14 @@ npm run dev
 
 The playground starts at `/docs/getting-started`.
 
+## Language switching
+
+The Playground defaults to Korean (`"ko"`) and supports Korean and English (`"en"`). Use the `한 / EN` segmented toggle immediately to the left of the search input. Switching the language updates the Sidebar, article copy, code sample titles, feature metadata, controls, Alerts, and loading or empty messages without changing the URL path or remounting the current feature.
+
+The selected locale is stored in `localStorage` under `comins-table-playground-locale` and restored on reload and same-origin route navigation. Missing, inaccessible, or invalid storage values use `"ko"`. The active locale is synchronized to `<html lang>`.
+
+Routes do not use locale prefixes. API and prop names, code sample source, JSON keys, `data-testid` values, and fixture identifiers remain unchanged in both languages.
+
 Implemented routes include:
 
 - `/examples/crud`

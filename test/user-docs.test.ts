@@ -345,6 +345,22 @@ describe("comins-table user documentation contract", () => {
     expect(koreanCell).not.toContain("Row/Cell selection 상태에 의존하지 않는다");
   });
 
+  it("documents the Playground locale persistence and route-neutral toggle contract", () => {
+    const playgroundDocs = [
+      readWorkspaceFile("docs/user/12-playground.md"),
+      readWorkspaceFile("docs/ko/12-playground.md"),
+    ];
+
+    for (const document of playgroundDocs) {
+      expect(document).toContain('"ko"');
+      expect(document).toContain('"en"');
+      expect(document).toContain("comins-table-playground-locale");
+      expect(document).toContain("localStorage");
+      expect(document).toContain("<html lang>");
+      expect(document).not.toMatch(/\/(?:ko|en)\//u);
+    }
+  });
+
   it("keeps Korean and English guidance aligned with the current Playground interaction contract", () => {
     const englishHeader = readWorkspaceFile("docs/user/06-header.md");
     const koreanHeader = readWorkspaceFile("docs/ko/06-header.md");

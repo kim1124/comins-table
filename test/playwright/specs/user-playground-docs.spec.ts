@@ -1,5 +1,9 @@
 import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
 
+import { initializePlaygroundLocale } from "../helpers/playground-locale";
+
+test.beforeEach(async ({ page }) => initializePlaygroundLocale(page, "en"));
+
 function collectBrowserDiagnostics(page: Page) {
   const diagnostics: Array<{ text: string; type: ReturnType<ConsoleMessage["type"]> | "pageerror" }> = [];
 
@@ -100,19 +104,19 @@ test("basic crud page demonstrates row updates and reset without pagination cont
   await expect(page.getByTestId("pagination-state")).toHaveCount(0);
   await expect(page.getByTestId("selected-row-state")).toHaveCount(0);
 
-  await page.getByRole("button", { exact: true, name: "추가" }).click();
+  await page.getByRole("button", { exact: true, name: "Add" }).click();
   await expect(page.getByTestId("row-new-1")).toBeVisible();
 
   await page.getByTestId("row-b").click();
-  await page.getByLabel("선택 행 JSON").fill('{"id":"b","name":"Data 2","age":43,"role":"Editor","active":true}');
-  await page.getByRole("button", { exact: true, name: "수정" }).click();
+  await page.getByLabel("Selected row JSON").fill('{"id":"b","name":"Data 2","age":43,"role":"Editor","active":true}');
+  await page.getByRole("button", { exact: true, name: "Update" }).click();
   await expect(page.getByTestId("cell-b-name")).toContainText("Data 2");
 
-  await page.getByRole("button", { exact: true, name: "삭제" }).click();
+  await page.getByRole("button", { exact: true, name: "Delete" }).click();
   await expect(page.getByTestId("row-b")).toHaveCount(0);
 
   await expect(page.getByRole("button", { exact: true, name: "필터링" })).toHaveCount(0);
-  await page.getByRole("button", { exact: true, name: "초기화" }).click();
+  await page.getByRole("button", { exact: true, name: "Reset" }).click();
   await expect(page.getByTestId("row-b")).toBeVisible();
   await expect(page.locator("tbody tr[data-comins-row-data-index]")).toHaveCount(30);
 

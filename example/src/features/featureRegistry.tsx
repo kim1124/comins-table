@@ -19,9 +19,16 @@ import { SizeFeature } from "./SizeFeature";
 import { SummaryRowFeature } from "./SummaryRowFeature";
 import { ThemeFeature } from "./ThemeFeature";
 import { TreeGridFeature } from "./TreeGridFeature";
-import type { FeatureDefinition, FeatureId } from "./types";
+import {
+  defineFeatureDefinitionSource,
+  resolveFeatureDefinition,
+  type FeatureDefinition,
+  type FeatureDefinitionSource,
+  type FeatureId,
+} from "./types";
+import type { PlaygroundLocale } from "../i18n/types";
 
-export const featureRegistry: FeatureDefinition[] = [
+const englishFeatureRegistry: FeatureDefinition[] = [
   {
     Component: BasicFeature,
     description: "Basic Comins Table example page.",
@@ -310,6 +317,35 @@ export const featureRegistry: FeatureDefinition[] = [
   },
 ];
 
-export function findFeature(id: FeatureId) {
-  return featureRegistry.find((feature) => feature.id === id) ?? featureRegistry[0]!;
+const koreanFeatureLabels: Record<FeatureId, string> = {
+  basic: "기본",
+  "basic-crud": "CRUD",
+  body: "가상화",
+  cell: "셀",
+  "column-groups": "헤더 그룹",
+  component: "컴포넌트",
+  "context-menu": "Context Menu",
+  export: "내보내기 헬퍼",
+  header: "헤더 기본",
+  "infinite-scroll": "Infinite Scroll",
+  "lazy-load": "Lazy Load",
+  loading: "Loading / Empty 상태",
+  pagination: "페이지네이션",
+  row: "행",
+  "row-expand": "Row Expand",
+  "ref-api": "Ref API",
+  "selection-clipboard": "선택과 Clipboard",
+  size: "크기",
+  "summary-row": "Summary Row",
+  "tree-grid": "Tree Grid",
+  theme: "테마",
+};
+
+export const featureRegistry: FeatureDefinitionSource[] = englishFeatureRegistry.map((feature) =>
+  defineFeatureDefinitionSource(feature, koreanFeatureLabels[feature.id]),
+);
+
+export function findFeature(id: FeatureId, locale: PlaygroundLocale = "en") {
+  const feature = featureRegistry.find((item) => item.id === id) ?? featureRegistry[0]!;
+  return resolveFeatureDefinition(feature, locale);
 }

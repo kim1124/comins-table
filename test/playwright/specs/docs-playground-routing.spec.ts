@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 
+import { initializePlaygroundLocale } from "../helpers/playground-locale";
+
 test.describe("docs playground routing", () => {
+  test.beforeEach(async ({ page }) => initializePlaygroundLocale(page, "en"));
+
   test("loads the getting started route directly", async ({ page }) => {
     await page.goto("/docs/getting-started");
 
