@@ -94,6 +94,18 @@ function readWorkspaceFile(path: string) {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
+function extractOptionGuideOption(optionGuide: string, name: string) {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+
+  return (
+    optionGuide.match(new RegExp(`\\{[^{}]*\\bname:\\s*"${escapedName}"[^{}]*\\}`, "u"))?.[0] ?? ""
+  );
+}
+
+function extractOptionGuideDescription(option: string) {
+  return option.match(/\bdescription:\s*"((?:\\.|[^"\\])*)"/u)?.[1] ?? "";
+}
+
 describe("comins-table user documentation contract", () => {
   it("has user docs for every currently implemented core area", () => {
     for (const doc of userDocs) {
@@ -287,12 +299,16 @@ describe("comins-table user documentation contract", () => {
 
   it("keeps the option guide Row Expand height guidance aligned with measured automatic Details", () => {
     const optionGuide = readWorkspaceFile("example/src/docs/dataTableOptionGuide.ts");
+    const getRowDetailHeightOption = extractOptionGuideOption(optionGuide, "getRowDetailHeight");
+    const estimatedRowDetailHeightOption = extractOptionGuideOption(optionGuide, "estimatedRowDetailHeight");
 
     expect(optionGuide).not.toMatch(/\b300px\b/u);
-    expect(optionGuide).toContain(
+    expect(getRowDetailHeightOption).toContain('name: "getRowDetailHeight"');
+    expect(extractOptionGuideDescription(getRowDetailHeightOption)).toBe(
       'Returns a finite positive fixed Detail height. Missing, invalid, and \\"auto\\" values use measured automatic height without inline height.',
     );
-    expect(optionGuide).toContain(
+    expect(estimatedRowDetailHeightOption).toContain('name: "estimatedRowDetailHeight"');
+    expect(extractOptionGuideDescription(estimatedRowDetailHeightOption)).toBe(
       "Estimate for an automatic Detail before matching-width measurement: a valid finite positive value wins; otherwise the resolved rowHeight is used.",
     );
   });
