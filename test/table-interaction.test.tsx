@@ -3320,6 +3320,34 @@ describe("comins-table keyboard interaction", () => {
     expect(onChangeExpandedRowIds).not.toHaveBeenCalled();
   });
 
+  it("keeps the disclosure slot before Row drag for expandable and non-expandable rows", () => {
+    const element = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={rows}
+        expandedRowIds={[]}
+        getRowId={(row) => row.id}
+        isRowExpandable={({ row }) => row.id === "a"}
+        onChangeExpandedRowIds={() => undefined}
+        renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+        rowProps={{ draggable: true }}
+      />,
+    );
+    const firstCell = element.querySelector("[data-testid='cell-a-name']")!;
+    const leading = firstCell.querySelector(".comins-row-leading-controls")!;
+    const secondCell = element.querySelector("[data-testid='cell-b-name']")!;
+
+    expect(leading).not.toBeNull();
+    expect([...leading.children].map((child) => child.getAttribute("data-comins-row-leading-control"))).toEqual([
+      "disclosure",
+      "drag",
+    ]);
+    expect(firstCell.querySelector(".comins-row-detail-expander-spacer")).toBeNull();
+    expect(secondCell.querySelector("[data-testid='row-detail-toggle-b']")).toBeNull();
+    expect(secondCell.querySelector(".comins-row-detail-expander-spacer")).not.toBeNull();
+    expect(secondCell.querySelector("[data-comins-row-leading-control='drag']")).not.toBeNull();
+  });
+
   it("isolates detail disclosure clicks from row selection callbacks", () => {
     const onChangeExpandedRowIds = vi.fn();
     const onClickRow = vi.fn();

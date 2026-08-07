@@ -30,7 +30,21 @@ test("controls fixed Row Details with semantic disclosure state and focus restor
 
   const fixed = page.getByTestId("row-expand-example-fixed");
   const toggle = fixed.getByTestId("row-detail-toggle-fixed-1");
+  const drag = fixed.getByTestId("row-drag-handle-fixed-1");
   const state = page.getByTestId("row-expand-fixed-state");
+
+  const toggleBox = await toggle.boundingBox();
+  const dragBox = await drag.boundingBox();
+
+  expect(toggleBox?.width).toBe(24);
+  expect(toggleBox?.height).toBe(24);
+  expect(dragBox?.width).toBe(24);
+  expect(dragBox?.height).toBe(24);
+  expect(toggleBox!.x).toBeLessThan(dragBox!.x);
+  await expect(toggle.locator("svg")).toHaveCSS("width", "15px");
+  await expect(toggle.locator("svg")).toHaveCSS("height", "15px");
+  expect(await drag.evaluate((element) => getComputedStyle(element, "::before").width)).toBe("15px");
+  expect(await drag.evaluate((element) => getComputedStyle(element, "::before").height)).toBe("15px");
 
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await expect(toggle).toHaveAccessibleName("Expand fixed-1 details");

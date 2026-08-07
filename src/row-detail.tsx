@@ -19,6 +19,7 @@ export function CominsRowDetailToggle(props: {
       aria-expanded={props.expanded}
       aria-label={props.label}
       className="comins-row-detail-expander"
+      data-comins-row-leading-control="disclosure"
       data-testid={props.testId}
       disabled={props.disabled}
       icon={props.expanded ? "disclosureExpanded" : "disclosureCollapsed"}

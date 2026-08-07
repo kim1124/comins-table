@@ -1318,27 +1318,9 @@ body {
   text-overflow: ellipsis;
 }
 
-.comins-table__td--with-row-handle {
-  padding-left: 30px;
-  position: relative;
-}
-
-.comins-row-drag-handle {
+.comins-row-drag-handle::before {
   background:
     radial-gradient(circle, #047857 1px, transparent 1.5px) 0 0 / 4px 4px;
-  cursor: grab;
-  display: block;
-  height: 14px;
-  left: 10px;
-  opacity: 0.55;
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 10px;
-}
-
-.comins-row-drag-handle:active {
-  cursor: grabbing;
 }
 
 .comins-row-move-placeholder td {

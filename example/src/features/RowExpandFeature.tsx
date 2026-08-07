@@ -177,6 +177,7 @@ export function RowExpandFeature() {
             </div>
           )}
           rowHeight={36}
+          rowProps={{ draggable: true }}
           theme={{ density: "compact" }}
         />
       </FeatureSampleSection>

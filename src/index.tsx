@@ -3896,7 +3896,6 @@ function CominsTableInner<TData>(
                       aria-disabled={cellDisabled ? "true" : undefined}
                       className={[
                         "comins-table__td px-3 py-2",
-                        columnIndex === 0 ? "comins-table__td--with-row-handle" : undefined,
                         isCellInRange ? "comins-cell-range-selected" : undefined,
                         cellClassName,
                       ]
@@ -4037,41 +4036,54 @@ function CominsTableInner<TData>(
                       title={typeof tooltip === "string" ? tooltip : undefined}
                       tabIndex={cellDisabled ? -1 : 0}
                     >
-                      {columnIndex === 0 && rowDetailExpandable ? (
-                        <CominsRowDetailToggle
-                          controlsId={rowDetailContentId}
-                          disabled={!onChangeExpandedRowIds}
-                          expanded={rowDetailExpanded}
-                          id={rowDetailToggleId}
-                          label={`${rowDetailExpanded ? "Collapse" : "Expand"} ${String(entry.rowId)} details`}
-                          onElement={(element) => {
-                            if (element) {
-                              rowDetailToggleElementsRef.current.set(entry.rowId, element);
-                            } else {
-                              rowDetailToggleElementsRef.current.delete(entry.rowId);
-                            }
-                          }}
-                          onToggle={() => toggleRowDetail(entry.rowId, rowDetailExpandable)}
-                          testId={`row-detail-toggle-${String(entry.rowId)}`}
-                        />
-                      ) : null}
-                      {columnIndex === 0 && rowRuntimeProps.draggable ? (
-                        <span
-                          aria-hidden="true"
-                          className="comins-row-drag-handle"
-                          data-testid={`row-drag-handle-${String(entry.rowId)}`}
-                          draggable={false}
-                          onClick={(event) => event.stopPropagation()}
-                          onMouseDown={(event) => event.stopPropagation()}
-                          onPointerDown={(event) =>
-                            beginRowHandlePointerDrag(
-                              event,
-                              entry,
-                              rowRuntimeProps.disabled,
-                              rowRuntimeProps.draggable,
+                      {columnIndex === 0 && (rowDetailEnabled || rowRuntimeProps.draggable) ? (
+                        <span className="comins-row-leading-controls">
+                          {rowDetailEnabled ? (
+                            rowDetailExpandable ? (
+                              <CominsRowDetailToggle
+                                controlsId={rowDetailContentId}
+                                disabled={!onChangeExpandedRowIds}
+                                expanded={rowDetailExpanded}
+                                id={rowDetailToggleId}
+                                label={`${rowDetailExpanded ? "Collapse" : "Expand"} ${String(entry.rowId)} details`}
+                                onElement={(element) => {
+                                  if (element) {
+                                    rowDetailToggleElementsRef.current.set(entry.rowId, element);
+                                  } else {
+                                    rowDetailToggleElementsRef.current.delete(entry.rowId);
+                                  }
+                                }}
+                                onToggle={() => toggleRowDetail(entry.rowId, rowDetailExpandable)}
+                                testId={`row-detail-toggle-${String(entry.rowId)}`}
+                              />
+                            ) : (
+                              <span
+                                aria-hidden="true"
+                                className="comins-row-detail-expander-spacer"
+                                data-comins-row-leading-control="disclosure"
+                              />
                             )
-                          }
-                        />
+                          ) : null}
+                          {rowRuntimeProps.draggable ? (
+                            <span
+                              aria-hidden="true"
+                              className="comins-row-drag-handle"
+                              data-comins-row-leading-control="drag"
+                              data-testid={`row-drag-handle-${String(entry.rowId)}`}
+                              draggable={false}
+                              onClick={(event) => event.stopPropagation()}
+                              onMouseDown={(event) => event.stopPropagation()}
+                              onPointerDown={(event) =>
+                                beginRowHandlePointerDrag(
+                                  event,
+                                  entry,
+                                  rowRuntimeProps.disabled,
+                                  rowRuntimeProps.draggable,
+                                )
+                              }
+                            />
+                          ) : null}
+                        </span>
                       ) : null}
                       {renderedCellContent}
                     </td>
