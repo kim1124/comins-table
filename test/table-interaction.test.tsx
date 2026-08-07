@@ -2089,15 +2089,14 @@ describe("comins-table keyboard interaction", () => {
     }
 
     const placeholderLabel = ageHeader.querySelector<HTMLElement>(".comins-column-placeholder-label");
-    const accessibleName = ageHeader.querySelector<HTMLElement>(".comins-column-placeholder-accessible-name");
     const headerContent = ageHeader.querySelector<HTMLElement>(".comins-table__header-content")!;
 
     expect(ageHeader.getAttribute("data-column-placeholder")).toBe("true");
     expect(ageHeader.getAttribute("tabindex")).toBeNull();
+    expect(ageHeader.getAttribute("aria-label")).toBe("Age");
+    expect(ageHeader.getAttribute("aria-labelledby")).toBeNull();
     expect(headerContent.hasAttribute("inert")).toBe(true);
     expect(headerContent.getAttribute("aria-hidden")).toBe("true");
-    expect(accessibleName?.textContent).toBe("Age");
-    expect(accessibleName?.getAttribute("aria-hidden")).toBeNull();
     expect(placeholderLabel?.textContent).toBe("Age");
     expect(placeholderLabel?.getAttribute("aria-hidden")).toBe("true");
     expect(placeholderLabel?.querySelector("button, input")).toBeNull();
@@ -2121,9 +2120,9 @@ describe("comins-table keyboard interaction", () => {
 
     expect(ageHeader.getAttribute("data-column-placeholder")).toBeNull();
     expect(ageHeader.getAttribute("tabindex")).toBe("0");
+    expect(ageHeader.getAttribute("aria-label")).toBeNull();
     expect(headerContent.hasAttribute("inert")).toBe(false);
     expect(headerContent.getAttribute("aria-hidden")).toBeNull();
-    expect(ageHeader.querySelector(".comins-column-placeholder-accessible-name")).toBeNull();
 
     act(() => {
       customInput.focus();
@@ -2135,6 +2134,286 @@ describe("comins-table keyboard interaction", () => {
     expect(document.activeElement).toBe(customInput);
     expect(onFocus).toHaveBeenCalledOnce();
     expect(onAction).toHaveBeenCalledTimes(3);
+  });
+
+  it("uses side-effect-free plain text for rich column and group placeholders with stable id fallback", () => {
+    const onLabelAction = vi.fn();
+    const IgnoredColumnLabel = vi.fn(() => <button type="button">Ignored column component</button>);
+    const IgnoredGroupLabel = vi.fn(() => <button type="button">Ignored group component</button>);
+    const element = renderTableElement(
+      <CominsTable
+        columnGroups={[
+          {
+            children: ["name", "age"],
+            id: "profile",
+            label: [
+              "Profile ",
+              <span key="text">Group</span>,
+              " ",
+              <button key="button" onClick={onLabelAction} type="button">
+                action
+              </button>,
+              <input key="input" aria-label="Profile label input" onInput={onLabelAction} />,
+              <IgnoredGroupLabel key="custom" />,
+            ],
+          },
+        ]}
+        columns={[
+          { field: "name", label: <IgnoredColumnLabel /> },
+          {
+            field: "age",
+            label: [
+              "Age ",
+              <strong key="text">Years</strong>,
+              " ",
+              <button key="button" onClick={onLabelAction} type="button">
+                action
+              </button>,
+              <input key="input" aria-label="Age label input" onInput={onLabelAction} />,
+            ],
+          },
+        ]}
+        data={rows}
+        getRowId={(row) => row.id}
+      />,
+    );
+    const groupHeader = element.querySelector<HTMLElement>("[data-testid='header-group-profile']")!;
+    const nameHeader = element.querySelector<HTMLElement>("[data-testid='header-name']")!;
+    const ageHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    IgnoredColumnLabel.mockClear();
+    IgnoredGroupLabel.mockClear();
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => groupHeader),
+    });
+
+    try {
+      act(() => {
+        groupHeader.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointermove", { bubbles: true, button: 0, clientX: 18, clientY: 10 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    expect(groupHeader.getAttribute("aria-label")).toBe("Profile Group action");
+    expect(nameHeader.getAttribute("aria-label")).toBe("name");
+    expect(ageHeader.getAttribute("aria-label")).toBe("Age Years action");
+    expect(groupHeader.querySelector(".comins-column-placeholder-label")?.textContent).toBe("Profile Group action");
+    expect(nameHeader.querySelector(".comins-column-placeholder-label")?.textContent).toBe("name");
+    expect(ageHeader.querySelector(".comins-column-placeholder-label")?.textContent).toBe("Age Years action");
+    expect(element.querySelector("[data-testid='column-move-ghost']")?.textContent).toContain("Profile Group action");
+
+    for (const header of [groupHeader, nameHeader, ageHeader]) {
+      expect(header.querySelector(".comins-table__header-label button, .comins-table__header-label input")).toBeNull();
+      expect(header.querySelector(".comins-column-placeholder-label button, .comins-column-placeholder-label input")).toBeNull();
+    }
+    expect(element.querySelector("[data-testid='column-move-ghost'] button, [data-testid='column-move-ghost'] input")).toBeNull();
+    expect(IgnoredColumnLabel).not.toHaveBeenCalled();
+    expect(IgnoredGroupLabel).not.toHaveBeenCalled();
+    expect(onLabelAction).not.toHaveBeenCalled();
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }));
+    });
+
+    const restoredAction = groupHeader.querySelector<HTMLButtonElement>(".comins-table__header-label button")!;
+    act(() => restoredAction.click());
+    expect(onLabelAction).toHaveBeenCalledOnce();
+  });
+
+  it("normalizes author Header naming during a move and restores it after cancellation", () => {
+    const element = renderTableElement(
+      <>
+        <span id="author-age-label">Author referenced age</span>
+        <CominsTable
+          columns={[
+            { field: "name", label: "Name" },
+            {
+              field: "age",
+              header: { props: { "aria-label": "Author age", "aria-labelledby": "author-age-label" } },
+              label: ["Age ", <strong key="plain">Plain</strong>],
+              sort: true,
+            },
+          ]}
+          data={rows}
+          getRowId={(row) => row.id}
+        />
+      </>,
+    );
+    const ageHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    expect(ageHeader.getAttribute("aria-label")).toBe("Author age");
+    expect(ageHeader.getAttribute("aria-labelledby")).toBe("author-age-label");
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => ageHeader),
+    });
+
+    try {
+      act(() => {
+        ageHeader.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointermove", { bubbles: true, button: 0, clientX: 18, clientY: 10 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    expect(ageHeader.getAttribute("aria-label")).toBe("Age Plain");
+    expect(ageHeader.getAttribute("aria-labelledby")).toBeNull();
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }));
+    });
+
+    expect(ageHeader.getAttribute("aria-label")).toBe("Author age");
+    expect(ageHeader.getAttribute("aria-labelledby")).toBe("author-age-label");
+  });
+
+  it("blocks built-in Header input and change actions while a group moves and restores them after pointer cancel", () => {
+    const onSelectInput = vi.fn();
+    const onCheckboxInput = vi.fn();
+    const onRadioInput = vi.fn();
+    const onSelectChange = vi.fn();
+    const onCheckboxChange = vi.fn();
+    const onRadioChange = vi.fn();
+    const element = renderTableElement(
+      <CominsTable
+        columnGroups={[{ children: ["select", "checkbox", "radio"], id: "controls", label: "Controls" }]}
+        columns={[
+          {
+            field: "name",
+            header: {
+              components: [
+                {
+                  onValueChange: onSelectChange,
+                  options: [
+                    { label: "Owner", value: "Owner" },
+                    { label: "Editor", value: "Editor" },
+                  ],
+                  props: { "aria-label": "Header select", onInput: onSelectInput, value: "Owner" },
+                  type: "select",
+                },
+              ],
+            },
+            id: "select",
+            label: "Select",
+          },
+          {
+            field: "age",
+            header: {
+              components: [
+                {
+                  onCheckedChange: onCheckboxChange,
+                  props: { "aria-label": "Header checkbox", checked: false, onInput: onCheckboxInput },
+                  type: "checkbox",
+                },
+              ],
+            },
+            id: "checkbox",
+            label: "Checkbox",
+          },
+          {
+            field: "name",
+            header: {
+              components: [
+                {
+                  onValueChange: onRadioChange,
+                  options: [
+                    { label: "Owner", value: "Owner" },
+                    { label: "Editor", value: "Editor" },
+                  ],
+                  props: { "aria-label": "Header radio", onInput: onRadioInput, value: "Owner" },
+                  type: "radio",
+                },
+              ],
+            },
+            id: "radio",
+            label: "Radio",
+          },
+        ]}
+        data={rows}
+        getRowId={(row) => row.id}
+      />,
+    );
+    const groupHeader = element.querySelector<HTMLElement>("[data-testid='header-group-controls']")!;
+    const select = element.querySelector<HTMLSelectElement>("[aria-label='Header select']")!;
+    const checkbox = element.querySelector<HTMLInputElement>("[aria-label='Header checkbox']")!;
+    const radio = element.querySelector<HTMLInputElement>("[aria-label='Header radio'] input[value='Editor']")!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => groupHeader),
+    });
+
+    try {
+      act(() => {
+        groupHeader.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointermove", { bubbles: true, button: 0, clientX: 18, clientY: 10 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    act(() => {
+      select.value = "Editor";
+      select.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertReplacementText" }));
+      select.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+      checkbox.checked = true;
+      checkbox.dispatchEvent(new InputEvent("input", { bubbles: true }));
+      checkbox.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+      radio.checked = true;
+      radio.dispatchEvent(new InputEvent("input", { bubbles: true }));
+      radio.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+    });
+
+    expect(onSelectInput).not.toHaveBeenCalled();
+    expect(onCheckboxInput).not.toHaveBeenCalled();
+    expect(onRadioInput).not.toHaveBeenCalled();
+    expect(onSelectChange).not.toHaveBeenCalled();
+    expect(onCheckboxChange).not.toHaveBeenCalled();
+    expect(onRadioChange).not.toHaveBeenCalled();
+
+    act(() => {
+      window.dispatchEvent(createMousePointerEvent("pointercancel", { bubbles: true, pointerType: "mouse" }));
+    });
+
+    expect(groupHeader.getAttribute("data-column-placeholder")).toBeNull();
+    act(() => {
+      select.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertReplacementText" }));
+      select.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+      checkbox.dispatchEvent(new InputEvent("input", { bubbles: true }));
+      radio.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    });
+    expect(onSelectInput).toHaveBeenCalledOnce();
+    expect(onCheckboxInput).toHaveBeenCalledOnce();
+    expect(onRadioInput).toHaveBeenCalledOnce();
+    expect(onSelectChange).toHaveBeenCalledOnce();
   });
 
   it("refreshes moved Header content after its column is hidden then restored", () => {
@@ -2372,7 +2651,8 @@ describe("comins-table keyboard interaction", () => {
     const removedRendererHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
 
     expect(removedRendererHeader.querySelector("strong")).toBeNull();
-    expect(removedRendererHeader.querySelector(".comins-table__header-label")?.textContent).toBe("Age");
+    expect(removedRendererHeader.querySelector(".comins-table__header-label")?.textContent).toBe("");
+    expect(removedRendererHeader.querySelector(".comins-column-placeholder-label")?.textContent).toBe("Age");
 
     act(() => {
       root?.render(

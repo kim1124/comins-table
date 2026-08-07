@@ -346,10 +346,11 @@ test("interactive Header content is inert during column move and restores after 
   await beginMove();
 
   await expect(source).not.toHaveAttribute("tabindex", "0");
+  await expect(source).toHaveAttribute("aria-label", "Column2");
+  await expect(source).not.toHaveAttribute("aria-labelledby");
   await expect(headerContent).toHaveAttribute("inert", "");
   await expect(headerContent).toHaveAttribute("aria-hidden", "true");
   await expect(source.locator(".comins-column-placeholder-label")).toHaveAttribute("aria-hidden", "true");
-  await expect(source.locator(".comins-column-placeholder-accessible-name")).toHaveText("Column2");
   await expect(example.getByRole("columnheader", { exact: true, name: "Column2" })).toHaveCount(1);
 
   expect(await headerButton.evaluate((element) => {
@@ -390,6 +391,159 @@ test("interactive Header content is inert during column move and restores after 
   await expect(headerButton).toBeFocused();
   await headerButton.click();
   await expect(eventAlert).toContainText("Header Button");
+  expect(diagnostics).toEqual([]);
+});
+
+test("built-in Header input and change events are blocked during column move and restored after abort", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/examples/component");
+
+  const example = page.getByTestId("component-example-select");
+  const source = example.getByTestId("header-select-component");
+  const select = source.locator("select");
+  const eventAlert = page.getByTestId("component-event-alert");
+  const beginMove = async () => {
+    const labelBox = await source.locator(".comins-table__header-label").boundingBox();
+    expect(labelBox).not.toBeNull();
+    await source.dispatchEvent("pointerdown", {
+      bubbles: true,
+      button: 0,
+      clientX: labelBox!.x + labelBox!.width / 2,
+      clientY: labelBox!.y + labelBox!.height / 2,
+      pointerType: "mouse",
+    });
+    await page.evaluate(
+      ({ x, y }) => {
+        window.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: x + 8, clientY: y, pointerType: "mouse" }));
+      },
+      { x: labelBox!.x + labelBox!.width / 2, y: labelBox!.y + labelBox!.height / 2 },
+    );
+    await expect(source).toHaveAttribute("data-column-placeholder", "true");
+  };
+
+  await expect(eventAlert).toHaveCount(0);
+  await select.evaluate((element) => {
+    (element as HTMLSelectElement).dataset.nativeInputCount = "0";
+    element.addEventListener("input", () => {
+      (element as HTMLSelectElement).dataset.nativeInputCount = String(
+        Number((element as HTMLSelectElement).dataset.nativeInputCount) + 1,
+      );
+    });
+  });
+  await beginMove();
+  await select.evaluate((element) => {
+    const control = element as HTMLSelectElement;
+    control.value = "Editor";
+    control.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertReplacementText" }));
+    control.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+  });
+  await expect(select).toHaveAttribute("data-native-input-count", "0");
+  await expect(eventAlert).toHaveCount(0);
+
+  await page.evaluate(() => {
+    window.dispatchEvent(new PointerEvent("pointercancel", { bubbles: true, pointerType: "mouse" }));
+  });
+  await expect(source).not.toHaveAttribute("data-column-placeholder", "true");
+  await expect(source).not.toHaveAttribute("aria-label");
+  await select.evaluate((element) => {
+    const control = element as HTMLSelectElement;
+    control.value = "Editor";
+    control.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertReplacementText" }));
+    control.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+  });
+  await expect(select).toHaveAttribute("data-native-input-count", "1");
+  await expect(eventAlert).toContainText("Header Select:Editor");
+
+  expect(diagnostics).toEqual([]);
+});
+
+test("group placeholder removes rich label controls and restores inert and ARIA after every termination", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/examples/column-groups");
+
+  const example = page.getByTestId("header-example-groups");
+  const source = example.getByTestId("header-group-profile");
+  const child = example.getByTestId("header-name");
+  const target = example.getByTestId("header-group-status");
+  const sourceContent = source.locator(".comins-table__header-content");
+  await source.evaluate((element) => {
+    const label = element.querySelector(".comins-table__header-label");
+    const richButton = document.createElement("button");
+    richButton.dataset.richLabelAction = "true";
+    richButton.textContent = " rich action";
+    const richInput = document.createElement("input");
+    richInput.dataset.richLabelInput = "true";
+    label?.append(richButton, richInput);
+
+    const preservedAction = document.createElement("button");
+    preservedAction.dataset.preservedHeaderAction = "true";
+    preservedAction.textContent = "Preserved action";
+    preservedAction.addEventListener("click", () => {
+      preservedAction.dataset.actionCount = String(Number(preservedAction.dataset.actionCount ?? "0") + 1);
+    });
+    element.querySelector(".comins-table__header-content")?.append(preservedAction);
+  });
+  const preservedAction = source.locator("[data-preserved-header-action='true']");
+
+  const beginMove = async () => {
+    const sourceBox = await source.boundingBox();
+    expect(sourceBox).not.toBeNull();
+    await source.dispatchEvent("pointerdown", {
+      bubbles: true,
+      button: 0,
+      clientX: sourceBox!.x + sourceBox!.width / 2,
+      clientY: sourceBox!.y + sourceBox!.height / 2,
+      pointerType: "mouse",
+    });
+    await page.evaluate(
+      ({ x, y }) => {
+        window.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: x + 8, clientY: y, pointerType: "mouse" }));
+      },
+      { x: sourceBox!.x + sourceBox!.width / 2, y: sourceBox!.y + sourceBox!.height / 2 },
+    );
+    await expect(source).toHaveAttribute("data-column-placeholder", "true");
+    await expect(source).toHaveAttribute("aria-label", "Header 그룹 1");
+    await expect(child).toHaveAttribute("aria-label", "Column1");
+    await expect(sourceContent).toHaveAttribute("inert", "");
+    await expect(source.locator(".comins-table__header-label button, .comins-table__header-label input")).toHaveCount(0);
+    await expect(source.locator(".comins-column-placeholder-label button, .comins-column-placeholder-label input")).toHaveCount(0);
+    await expect(page.getByTestId("column-move-ghost").locator("button, input")).toHaveCount(0);
+    await preservedAction.evaluate((element) => (element as HTMLButtonElement).click());
+    await expect(preservedAction).not.toHaveAttribute("data-action-count");
+  };
+  const expectRestored = async () => {
+    await expect(source).not.toHaveAttribute("data-column-placeholder", "true");
+    await expect(source).not.toHaveAttribute("aria-label");
+    await expect(child).not.toHaveAttribute("aria-label");
+    await expect(sourceContent).not.toHaveAttribute("inert", "");
+    await preservedAction.evaluate((element) => (element as HTMLButtonElement).click());
+    await expect(preservedAction).toHaveAttribute("data-action-count", "1");
+    await preservedAction.evaluate((element) => {
+      delete (element as HTMLButtonElement).dataset.actionCount;
+    });
+  };
+
+  await beginMove();
+  await page.keyboard.press("Escape");
+  await expectRestored();
+
+  await beginMove();
+  await page.evaluate(() => {
+    window.dispatchEvent(new PointerEvent("pointercancel", { bubbles: true, pointerType: "mouse" }));
+  });
+  await expectRestored();
+
+  await beginMove();
+  await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  await expectRestored();
+
+  await beginMove();
+  const targetBox = await target.boundingBox();
+  expect(targetBox).not.toBeNull();
+  await page.mouse.move(targetBox!.x + targetBox!.width / 2, targetBox!.y + targetBox!.height / 2);
+  await page.mouse.up();
+  await expectRestored();
+
   expect(diagnostics).toEqual([]);
 });
 

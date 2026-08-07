@@ -2,6 +2,7 @@ import type React from "react";
 import {
   Fragment,
   forwardRef,
+  isValidElement,
   useEffect,
   useId,
   useImperativeHandle,
@@ -812,6 +813,60 @@ function blurCominsColumnPlaceholderFocus(event: React.FocusEvent<HTMLElement>) 
   if (event.target instanceof HTMLElement) {
     event.target.blur();
   }
+}
+
+const COMINS_COLUMN_PLACEHOLDER_INTERACTION_PROPS = {
+  onBeforeInputCapture: blockCominsColumnPlaceholderInteraction,
+  onBlurCapture: blockCominsColumnPlaceholderInteraction,
+  onChangeCapture: blockCominsColumnPlaceholderInteraction,
+  onClickCapture: blockCominsColumnPlaceholderInteraction,
+  onContextMenuCapture: blockCominsColumnPlaceholderInteraction,
+  onDoubleClickCapture: blockCominsColumnPlaceholderInteraction,
+  onFocusCapture: blurCominsColumnPlaceholderFocus,
+  onInputCapture: blockCominsColumnPlaceholderInteraction,
+  onKeyDownCapture: blockCominsColumnPlaceholderInteraction,
+  onKeyPressCapture: blockCominsColumnPlaceholderInteraction,
+  onKeyUpCapture: blockCominsColumnPlaceholderInteraction,
+  onMouseDownCapture: blockCominsColumnPlaceholderInteraction,
+  onMouseMoveCapture: blockCominsColumnPlaceholderInteraction,
+  onMouseOutCapture: blockCominsColumnPlaceholderInteraction,
+  onMouseOverCapture: blockCominsColumnPlaceholderInteraction,
+  onMouseUpCapture: blockCominsColumnPlaceholderInteraction,
+  onPointerCancelCapture: blockCominsColumnPlaceholderInteraction,
+  onPointerDownCapture: blockCominsColumnPlaceholderInteraction,
+  onPointerMoveCapture: blockCominsColumnPlaceholderInteraction,
+  onPointerOutCapture: blockCominsColumnPlaceholderInteraction,
+  onPointerOverCapture: blockCominsColumnPlaceholderInteraction,
+  onPointerUpCapture: blockCominsColumnPlaceholderInteraction,
+  onResetCapture: blockCominsColumnPlaceholderInteraction,
+  onScrollCapture: blockCominsColumnPlaceholderInteraction,
+  onSubmitCapture: blockCominsColumnPlaceholderInteraction,
+  onTouchCancelCapture: blockCominsColumnPlaceholderInteraction,
+  onTouchEndCapture: blockCominsColumnPlaceholderInteraction,
+  onTouchMoveCapture: blockCominsColumnPlaceholderInteraction,
+  onTouchStartCapture: blockCominsColumnPlaceholderInteraction,
+  onWheelCapture: blockCominsColumnPlaceholderInteraction,
+} satisfies React.HTMLAttributes<HTMLElement>;
+
+function getCominsColumnPlaceholderText(label: React.ReactNode, fallback: string): string {
+  const collectPlainText = (node: React.ReactNode): string => {
+    if (typeof node === "string" || typeof node === "number") {
+      return String(node);
+    }
+
+    if (Array.isArray(node)) {
+      return node.map(collectPlainText).join("");
+    }
+
+    if (isValidElement<{ children?: React.ReactNode }>(node) && typeof node.type === "string") {
+      return collectPlainText(node.props.children);
+    }
+
+    return "";
+  };
+  const plainText = collectPlainText(label).trim();
+
+  return plainText || fallback;
 }
 
 function renderCominsContentWithComponents<TData>(
@@ -3228,14 +3283,20 @@ function CominsTableInner<TData>(
     ? visibleColumns.find((visibleColumn) => visibleColumn.id === movingColumnId)
     : undefined;
   const movingGroup = movingGroupId ? state.columnGroups.find((group) => group.id === movingGroupId) : undefined;
-  const movingHeaderLabel = movingColumn?.label ?? movingGroup?.label;
+  const movingHeaderLabel = movingColumn
+    ? getCominsColumnPlaceholderText(movingColumn.label, movingColumn.id)
+    : movingGroup
+      ? getCominsColumnPlaceholderText(movingGroup.label, movingGroup.id)
+      : undefined;
 
   const renderHeaderCell = (cell: CominsHeaderCell<TData>, fallbackIndex: number) => {
     if (cell.kind === "group") {
       const isDropTarget = columnMoveTarget?.kind === "group" && columnMoveTarget.id === cell.groupId;
       const isGroupPlaceholder = movingGroupId === cell.groupId;
+      const groupPlaceholderLabel = getCominsColumnPlaceholderText(cell.group.label, cell.groupId);
       return (
         <th
+          aria-label={isGroupPlaceholder ? groupPlaceholderLabel : undefined}
           className={[
             "comins-table__th comins-table__group-th px-3 py-2 text-left font-semibold",
             isGroupPlaceholder ? "comins-column-moving" : undefined,
@@ -3263,20 +3324,18 @@ function CominsTableInner<TData>(
         >
           <span aria-hidden="true" className="comins-column-drop-marker" />
           <span
+            {...(isGroupPlaceholder ? COMINS_COLUMN_PLACEHOLDER_INTERACTION_PROPS : {})}
             aria-hidden={isGroupPlaceholder ? "true" : undefined}
             className="comins-table__header-content"
             data-comins-header-body="true"
             inert={isGroupPlaceholder ? true : undefined}
           >
-            <span className="comins-table__header-label">{cell.group.label}</span>
+            <span className="comins-table__header-label">{isGroupPlaceholder ? null : cell.group.label}</span>
           </span>
           {isGroupPlaceholder ? (
-            <>
-              <span className="comins-column-placeholder-accessible-name">{cell.group.label}</span>
-              <span aria-hidden="true" className="comins-column-placeholder-label">
-                {cell.group.label}
-              </span>
-            </>
+            <span aria-hidden="true" className="comins-column-placeholder-label">
+              {groupPlaceholderLabel}
+            </span>
           ) : null}
           <span
             aria-hidden="true"
@@ -3370,6 +3429,7 @@ function CominsTableInner<TData>(
     const showSortPriority = sortRule !== null && state.sortModel.length > 1;
     const isMovingGroupChild = Boolean(movingGroup?.children.includes(column.id));
     const isColumnPlaceholder = movingColumnId === column.id || isMovingGroupChild;
+    const columnPlaceholderLabel = getCominsColumnPlaceholderText(column.label, column.id);
     const headerClassName = [
       "comins-table__th px-3 py-2 text-left font-semibold",
       movingColumnId === column.id ? "comins-column-moving" : undefined,
@@ -3406,6 +3466,8 @@ function CominsTableInner<TData>(
     return (
       <th
         {...headerProps}
+        aria-label={isColumnPlaceholder ? columnPlaceholderLabel : headerProps["aria-label"]}
+        aria-labelledby={isColumnPlaceholder ? undefined : headerProps["aria-labelledby"]}
         className={headerClassName}
         colSpan={cell.colSpan}
         data-column-drop-target={isDropTarget ? "true" : undefined}
@@ -3472,22 +3534,19 @@ function CominsTableInner<TData>(
       >
         <span aria-hidden="true" className="comins-column-drop-marker" />
         <span
+          {...(isColumnPlaceholder ? COMINS_COLUMN_PLACEHOLDER_INTERACTION_PROPS : {})}
           aria-hidden={isColumnPlaceholder ? "true" : undefined}
           className="comins-table__header-content"
           data-comins-header-body="true"
           data-comins-header-components={hasHeaderComponents ? "true" : undefined}
           data-comins-sort-indicator-visible={sortIndicatorVisible ? "true" : undefined}
           inert={isColumnPlaceholder ? true : undefined}
-          onClickCapture={isColumnPlaceholder ? blockCominsColumnPlaceholderInteraction : undefined}
-          onFocusCapture={isColumnPlaceholder ? blurCominsColumnPlaceholderFocus : undefined}
-          onKeyDownCapture={isColumnPlaceholder ? blockCominsColumnPlaceholderInteraction : undefined}
-          onPointerDownCapture={isColumnPlaceholder ? blockCominsColumnPlaceholderInteraction : undefined}
         >
           <span className="comins-table__header-slot" data-comins-header-slot="left">
             {headerLeftSlots}
           </span>
           <span className="comins-table__header-label">
-            {column.header?.renderer ? headerRendererBody : column.label}
+            {column.header?.renderer ? headerRendererBody : isColumnPlaceholder ? null : column.label}
           </span>
           <span className="comins-sort-meta" data-sort-visible={sortIndicatorVisible ? "true" : undefined}>
             <span
@@ -3527,12 +3586,9 @@ function CominsTableInner<TData>(
           </span>
         </span>
         {isColumnPlaceholder ? (
-          <>
-            <span className="comins-column-placeholder-accessible-name">{column.label}</span>
-            <span aria-hidden="true" className="comins-column-placeholder-label">
-              {column.label}
-            </span>
-          </>
+          <span aria-hidden="true" className="comins-column-placeholder-label">
+            {columnPlaceholderLabel}
+          </span>
         ) : null}
         <span
           aria-hidden="true"
