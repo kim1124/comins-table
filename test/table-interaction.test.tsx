@@ -966,6 +966,131 @@ describe("comins-table keyboard interaction", () => {
     }
   });
 
+  it("keeps capped Detail anchors on the committed viewport while a candidate suspends", () => {
+    const resize = installControllableResizeObserver();
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+    const detailRows = Array.from({ length: 50_000 }, (_value, index) => ({
+      age: index,
+      id: `row-${index}`,
+      name: `Row ${index}`,
+    }));
+    const suspended = new Promise<void>(() => undefined);
+    let renderSuspendedCandidate: (() => void) | undefined;
+    let suspendedCandidateRenderCount = 0;
+
+    function SuspendAfterTable({ active }: { active: boolean }) {
+      if (active) {
+        suspendedCandidateRenderCount += 1;
+        throw suspended;
+      }
+
+      return null;
+    }
+
+    function ConcurrentHarness() {
+      const [revision, setRevision] = useState(0);
+
+      renderSuspendedCandidate = () => setRevision(1);
+
+      return (
+        <Suspense fallback={<div data-testid="capped-observer-snapshot-fallback" />}>
+          <CominsTable
+            columns={columns}
+            data={detailRows}
+            data-testid="capped-observer-snapshot-viewport"
+            estimatedRowDetailHeight={300}
+            expandedRowIds={["row-25004"]}
+            getRowDetailHeight={() => "auto"}
+            getRowId={(row) => row.id}
+            onChangeExpandedRowIds={() => undefined}
+            renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+            rowHeight={36}
+            virtualized
+          />
+          <SuspendAfterTable active={revision === 1} />
+        </Suspense>
+      );
+    }
+
+    try {
+      const element = renderTableElement(
+        <StrictMode>
+          <ConcurrentHarness />
+        </StrictMode>,
+      );
+      const viewport = element.querySelector<HTMLElement>(
+        "[data-testid='capped-observer-snapshot-viewport']",
+      )!;
+      const sizer = element.querySelector<HTMLElement>(
+        ".comins-table__body-virtual-sizer",
+      )!;
+      let assignedScrollTop = 750_000;
+      let viewportHeight = 432;
+
+      vi.spyOn(viewport, "getBoundingClientRect").mockImplementation(() => ({
+        bottom: viewportHeight,
+        height: viewportHeight,
+        left: 0,
+        right: 800,
+        top: 0,
+        width: 800,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }));
+      Object.defineProperties(viewport, {
+        clientHeight: { configurable: true, value: 0 },
+        scrollHeight: {
+          configurable: true,
+          get: () => Number.parseFloat(sizer.style.height),
+        },
+        scrollTop: {
+          configurable: true,
+          get: () => assignedScrollTop,
+          set: (value: number) => {
+            assignedScrollTop = value;
+          },
+        },
+      });
+
+      act(() => {
+        resize.emit(viewport, viewportHeight);
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+
+      expect(sizer.style.height).toBe("1500000px");
+
+      const content = element.querySelector<HTMLElement>(
+        "[data-testid='row-detail-content-row-25004']",
+      )!;
+
+      setElementRect(content, 800, 300);
+      viewportHeight = 50_000;
+      act(() => {
+        startTransition(() => {
+          resize.emit(viewport, viewportHeight);
+          renderSuspendedCandidate?.();
+        });
+      });
+
+      expect(suspendedCandidateRenderCount).toBeGreaterThan(0);
+      expect(element.querySelector("[data-testid='capped-observer-snapshot-fallback']")).toBeNull();
+
+      act(() => resize.emit(content, 420));
+
+      expect(viewport.scrollTop).toBeCloseTo(749_950, 1);
+      expect(sizer.style.height).toBe("1500000px");
+    } finally {
+      requestAnimationFrame.mockRestore();
+      resize.restore();
+    }
+  });
+
   it("ignores automatic Detail measurement deltas smaller than 0.5px", () => {
     const resize = installControllableResizeObserver();
 
