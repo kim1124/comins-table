@@ -21,13 +21,74 @@ export function ColumnGroupFeature() {
   const { locale, text } = usePlaygroundLocale();
   const groupTableRef = useRef<CominsTableRef<PersonRow>>(null);
   const [rows] = useState(() => createExampleRows(30));
+  const richHeaderFixture = useMemo(
+    () =>
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("fixture") === "rich-header-label",
+    [],
+  );
+  const [richLabelActions, setRichLabelActions] = useState({ column: 0, group: 0 });
   const groupColumns = useMemo(() => createHeaderGroupColumns(), []);
+  const renderedGroupColumns = useMemo(
+    () =>
+      richHeaderFixture
+        ? groupColumns.map((column) =>
+            column.field === "name"
+              ? {
+                  ...column,
+                  label: (
+                    <span>
+                      <span>{text(defineLocalizedText("Column1", "Column1"))}</span>{" "}
+                      <button
+                        aria-label={text(defineLocalizedText("Rich column label action", "Rich column label action"))}
+                        onClick={() =>
+                          setRichLabelActions((current) => ({ ...current, column: current.column + 1 }))
+                        }
+                        type="button"
+                      >
+                        {text(defineLocalizedText("action", "action"))}
+                      </button>
+                    </span>
+                  ),
+                }
+              : column,
+          )
+        : groupColumns,
+    [groupColumns, richHeaderFixture, text],
+  );
   const localizedHeaderColumnGroups = useMemo(
     () => headerColumnGroups.map((group, index) => ({
       ...group,
       label: text(defineLocalizedText(`Header 그룹 ${index + 1}`, `Header Group ${index + 1}`)),
     })),
     [text],
+  );
+  const renderedHeaderColumnGroups = useMemo(
+    () =>
+      richHeaderFixture
+        ? localizedHeaderColumnGroups.map((group) =>
+            group.id === "profile"
+              ? {
+                  ...group,
+                  label: (
+                    <span>
+                      <span>{group.label}</span>{" "}
+                      <button
+                        aria-label={text(defineLocalizedText("Rich group label action", "Rich group label action"))}
+                        onClick={() =>
+                          setRichLabelActions((current) => ({ ...current, group: current.group + 1 }))
+                        }
+                        type="button"
+                      >
+                        {text(defineLocalizedText("action", "action"))}
+                      </button>
+                    </span>
+                  ),
+                }
+              : group,
+          )
+        : localizedHeaderColumnGroups,
+    [localizedHeaderColumnGroups, richHeaderFixture],
   );
   const [groupLayout, setGroupLayout] = useState<CominsColumnLayout>(() => cloneGroupLayout());
   const [dynamicColumnIds, setDynamicColumnIds] = useState(() => dynamicColumnOptions.map((option) => option.value));
@@ -110,10 +171,15 @@ export function ColumnGroupFeature() {
                 </ActionButton>
               }
             />
+            {richHeaderFixture ? (
+              <output aria-label={text(defineLocalizedText("Rich header label actions", "Rich header label actions"))}>
+                {`group:${richLabelActions.group},column:${richLabelActions.column}`}
+              </output>
+            ) : null}
             <CominsTable
               className="example-table header-example-table"
-              columnGroups={localizedHeaderColumnGroups}
-              columns={groupColumns}
+              columnGroups={renderedHeaderColumnGroups}
+              columns={renderedGroupColumns}
               data={rows}
               data-testid="header-groups-viewport"
               getRowId={(row) => row.id}

@@ -815,6 +815,25 @@ function blurCominsColumnPlaceholderFocus(event: React.FocusEvent<HTMLElement>) 
   }
 }
 
+const cominsColumnPlaceholderNativeBoundaries = new WeakSet<HTMLElement>();
+
+function bindCominsColumnPlaceholderNativeBoundary(element: HTMLElement | null) {
+  if (!element || cominsColumnPlaceholderNativeBoundaries.has(element)) {
+    return;
+  }
+
+  const blockActiveInput = (event: Event) => {
+    if (element.hasAttribute("inert") && element.getAttribute("aria-hidden") === "true") {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+
+  element.addEventListener("change", blockActiveInput, true);
+  element.addEventListener("input", blockActiveInput, true);
+  cominsColumnPlaceholderNativeBoundaries.add(element);
+}
+
 const COMINS_COLUMN_PLACEHOLDER_INTERACTION_PROPS = {
   onBeforeInputCapture: blockCominsColumnPlaceholderInteraction,
   onBlurCapture: blockCominsColumnPlaceholderInteraction,
@@ -2873,9 +2892,9 @@ function CominsTableInner<TData>(
       blocked: false,
       cancelSort: false,
       cleanup: () => {
-        window.removeEventListener("pointermove", handlePointerMove);
-        window.removeEventListener("pointerup", handlePointerUp);
-        window.removeEventListener("pointercancel", handlePointerCancel);
+        window.removeEventListener("pointermove", handlePointerMove, true);
+        window.removeEventListener("pointerup", handlePointerUp, true);
+        window.removeEventListener("pointercancel", handlePointerCancel, true);
         window.removeEventListener("keydown", handleKeyDown);
         window.removeEventListener("blur", handleWindowBlur);
       },
@@ -2901,9 +2920,9 @@ function CominsTableInner<TData>(
     }
 
     columnPointerInteractionRef.current = interaction;
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
-    window.addEventListener("pointercancel", handlePointerCancel);
+    window.addEventListener("pointermove", handlePointerMove, true);
+    window.addEventListener("pointerup", handlePointerUp, true);
+    window.addEventListener("pointercancel", handlePointerCancel, true);
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("blur", handleWindowBlur);
   };
@@ -3329,6 +3348,7 @@ function CominsTableInner<TData>(
             className="comins-table__header-content"
             data-comins-header-body="true"
             inert={isGroupPlaceholder ? true : undefined}
+            ref={bindCominsColumnPlaceholderNativeBoundary}
           >
             <span className="comins-table__header-label">{isGroupPlaceholder ? null : cell.group.label}</span>
           </span>
@@ -3541,6 +3561,7 @@ function CominsTableInner<TData>(
           data-comins-header-components={hasHeaderComponents ? "true" : undefined}
           data-comins-sort-indicator-visible={sortIndicatorVisible ? "true" : undefined}
           inert={isColumnPlaceholder ? true : undefined}
+          ref={bindCominsColumnPlaceholderNativeBoundary}
         >
           <span className="comins-table__header-slot" data-comins-header-slot="left">
             {headerLeftSlots}

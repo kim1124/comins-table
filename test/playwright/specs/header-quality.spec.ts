@@ -394,17 +394,47 @@ test("interactive Header content is inert during column move and restores after 
   expect(diagnostics).toEqual([]);
 });
 
-test("built-in Header input and change events are blocked during column move and restored after abort", async ({ page }) => {
+test("built-in Header controls block input and change during a move and restore after content-target lifecycle events", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
-  await page.goto("/examples/component");
+  const cases = [
+    {
+      control: (source: ReturnType<typeof page.locator>) => source.locator("select"),
+      id: "select",
+      sourceId: "header-select-component",
+    },
+    {
+      control: (source: ReturnType<typeof page.locator>) => source.locator("input[type='checkbox']"),
+      id: "checkbox",
+      sourceId: "header-checkbox-component",
+    },
+    {
+      control: (source: ReturnType<typeof page.locator>) => source.locator("input[type='radio'][value='Editor']"),
+      id: "radio",
+      sourceId: "header-radio-component",
+    },
+  ] as const;
 
-  const example = page.getByTestId("component-example-select");
-  const source = example.getByTestId("header-select-component");
-  const select = source.locator("select");
-  const eventAlert = page.getByTestId("component-event-alert");
-  const beginMove = async () => {
+  for (const fixture of cases) {
+    await page.goto("/examples/component");
+    const example = page.getByTestId(`component-example-${fixture.id}`);
+    const source = example.getByTestId(fixture.sourceId);
+    const target = example.getByTestId("header-id");
+    const control = fixture.control(source);
+    const eventAlert = page.getByTestId("component-event-alert");
+    await source.scrollIntoViewIfNeeded();
     const labelBox = await source.locator(".comins-table__header-label").boundingBox();
     expect(labelBox).not.toBeNull();
+
+    await control.evaluate((element) => {
+      element.dataset.nativeInputCount = "0";
+      element.dataset.nativeChangeCount = "0";
+      element.addEventListener("input", () => {
+        element.dataset.nativeInputCount = String(Number(element.dataset.nativeInputCount) + 1);
+      });
+      element.addEventListener("change", () => {
+        element.dataset.nativeChangeCount = String(Number(element.dataset.nativeChangeCount) + 1);
+      });
+    });
     await source.dispatchEvent("pointerdown", {
       bubbles: true,
       button: 0,
@@ -419,71 +449,78 @@ test("built-in Header input and change events are blocked during column move and
       { x: labelBox!.x + labelBox!.width / 2, y: labelBox!.y + labelBox!.height / 2 },
     );
     await expect(source).toHaveAttribute("data-column-placeholder", "true");
-  };
 
-  await expect(eventAlert).toHaveCount(0);
-  await select.evaluate((element) => {
-    (element as HTMLSelectElement).dataset.nativeInputCount = "0";
-    element.addEventListener("input", () => {
-      (element as HTMLSelectElement).dataset.nativeInputCount = String(
-        Number((element as HTMLSelectElement).dataset.nativeInputCount) + 1,
-      );
+    await control.evaluate((element) => {
+      if (element instanceof HTMLSelectElement) {
+        element.value = "Editor";
+      } else {
+        element.checked = !element.checked;
+      }
+      element.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertReplacementText" }));
+      element.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
     });
-  });
-  await beginMove();
-  await select.evaluate((element) => {
-    const control = element as HTMLSelectElement;
-    control.value = "Editor";
-    control.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertReplacementText" }));
-    control.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
-  });
-  await expect(select).toHaveAttribute("data-native-input-count", "0");
-  await expect(eventAlert).toHaveCount(0);
+    await expect(control).toHaveAttribute("data-native-input-count", "0");
+    await expect(control).toHaveAttribute("data-native-change-count", "0");
+    await expect(eventAlert).toHaveCount(0);
 
-  await page.evaluate(() => {
-    window.dispatchEvent(new PointerEvent("pointercancel", { bubbles: true, pointerType: "mouse" }));
-  });
-  await expect(source).not.toHaveAttribute("data-column-placeholder", "true");
-  await expect(source).not.toHaveAttribute("aria-label");
-  await select.evaluate((element) => {
-    const control = element as HTMLSelectElement;
-    control.value = "Editor";
-    control.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertReplacementText" }));
-    control.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
-  });
-  await expect(select).toHaveAttribute("data-native-input-count", "1");
-  await expect(eventAlert).toContainText("Header Select:Editor");
+    if (fixture.id === "checkbox") {
+      const targetBox = await target.boundingBox();
+      expect(targetBox).not.toBeNull();
+      await control.dispatchEvent("pointermove", {
+        bubbles: true,
+        clientX: targetBox!.x + targetBox!.width / 2,
+        clientY: targetBox!.y + targetBox!.height / 2,
+        pointerType: "mouse",
+      });
+      await expect(target).toHaveAttribute("data-column-drop-target", "true");
+      await control.dispatchEvent("pointerup", {
+        bubbles: true,
+        clientX: targetBox!.x + targetBox!.width / 2,
+        clientY: targetBox!.y + targetBox!.height / 2,
+        pointerType: "mouse",
+      });
+    } else {
+      await control.dispatchEvent("pointercancel", { bubbles: true, pointerType: "mouse" });
+    }
+    await expect(source).not.toHaveAttribute("data-column-placeholder", "true");
+    await expect(source.locator(".comins-table__header-content")).not.toHaveAttribute("inert", "");
+
+    if (fixture.id === "select") {
+      await control.evaluate((element) => {
+        (element as HTMLSelectElement).value = "Owner";
+      });
+      await control.selectOption("Editor");
+      await expect(control).toHaveAttribute("data-native-input-count", "1");
+      await expect(control).toHaveAttribute("data-native-change-count", "1");
+      await expect(eventAlert).toContainText("Header Select:Editor");
+    } else {
+      await control.evaluate((element) => {
+        const input = element as HTMLInputElement;
+        input.checked = false;
+        input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
+      });
+      await expect(control).toHaveAttribute("data-native-input-count", "1");
+      await expect(control).toHaveAttribute("data-native-change-count", "1");
+      await control.click();
+      await expect(eventAlert).toContainText(fixture.id === "checkbox" ? "Header Checkbox:checked" : "Header Radio:Editor");
+    }
+  }
 
   expect(diagnostics).toEqual([]);
 });
 
-test("group placeholder removes rich label controls and restores inert and ARIA after every termination", async ({ page }) => {
+test("real rich group labels isolate every child subtree and restore after every termination", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
-  await page.goto("/examples/column-groups");
+  await page.goto("/examples/column-groups?fixture=rich-header-label");
 
   const example = page.getByTestId("header-example-groups");
   const source = example.getByTestId("header-group-profile");
-  const child = example.getByTestId("header-name");
+  const children = [example.getByTestId("header-name"), example.getByTestId("header-age")];
   const target = example.getByTestId("header-group-status");
   const sourceContent = source.locator(".comins-table__header-content");
-  await source.evaluate((element) => {
-    const label = element.querySelector(".comins-table__header-label");
-    const richButton = document.createElement("button");
-    richButton.dataset.richLabelAction = "true";
-    richButton.textContent = " rich action";
-    const richInput = document.createElement("input");
-    richInput.dataset.richLabelInput = "true";
-    label?.append(richButton, richInput);
-
-    const preservedAction = document.createElement("button");
-    preservedAction.dataset.preservedHeaderAction = "true";
-    preservedAction.textContent = "Preserved action";
-    preservedAction.addEventListener("click", () => {
-      preservedAction.dataset.actionCount = String(Number(preservedAction.dataset.actionCount ?? "0") + 1);
-    });
-    element.querySelector(".comins-table__header-content")?.append(preservedAction);
-  });
-  const preservedAction = source.locator("[data-preserved-header-action='true']");
+  const childContents = children.map((child) => child.locator(".comins-table__header-content"));
+  const actionOutput = example.getByLabel("Rich header label actions");
 
   const beginMove = async () => {
     const sourceBox = await source.boundingBox();
@@ -502,47 +539,62 @@ test("group placeholder removes rich label controls and restores inert and ARIA 
       { x: sourceBox!.x + sourceBox!.width / 2, y: sourceBox!.y + sourceBox!.height / 2 },
     );
     await expect(source).toHaveAttribute("data-column-placeholder", "true");
-    await expect(source).toHaveAttribute("aria-label", "Header 그룹 1");
-    await expect(child).toHaveAttribute("aria-label", "Column1");
-    await expect(sourceContent).toHaveAttribute("inert", "");
-    await expect(source.locator(".comins-table__header-label button, .comins-table__header-label input")).toHaveCount(0);
-    await expect(source.locator(".comins-column-placeholder-label button, .comins-column-placeholder-label input")).toHaveCount(0);
-    await expect(page.getByTestId("column-move-ghost").locator("button, input")).toHaveCount(0);
-    await preservedAction.evaluate((element) => (element as HTMLButtonElement).click());
-    await expect(preservedAction).not.toHaveAttribute("data-action-count");
+    await expect(source).toHaveAttribute("aria-label", "Header 그룹 1 action");
+    await expect(children[0]).toHaveAttribute("aria-label", "Column1 action");
+    await expect(children[1]).toHaveAttribute("aria-label", "Column2");
+    for (const content of [sourceContent, ...childContents]) {
+      await expect(content).toHaveAttribute("inert", "");
+      await expect(content).toHaveAttribute("aria-hidden", "true");
+    }
+    await expect(source.locator(".comins-table__header-label button")).toHaveCount(0);
+    await expect(children[0].locator(".comins-table__header-label button")).toHaveCount(0);
+    await expect(source.locator(".comins-column-placeholder-label button")).toHaveCount(0);
+    await expect(page.getByTestId("column-move-ghost").locator("button")).toHaveCount(0);
   };
-  const expectRestored = async () => {
+  const expectRestored = async (groupCount: number, columnCount: number) => {
     await expect(source).not.toHaveAttribute("data-column-placeholder", "true");
     await expect(source).not.toHaveAttribute("aria-label");
-    await expect(child).not.toHaveAttribute("aria-label");
-    await expect(sourceContent).not.toHaveAttribute("inert", "");
-    await preservedAction.evaluate((element) => (element as HTMLButtonElement).click());
-    await expect(preservedAction).toHaveAttribute("data-action-count", "1");
-    await preservedAction.evaluate((element) => {
-      delete (element as HTMLButtonElement).dataset.actionCount;
-    });
+    for (const child of children) {
+      await expect(child).not.toHaveAttribute("aria-label");
+    }
+    for (const content of [sourceContent, ...childContents]) {
+      await expect(content).not.toHaveAttribute("inert", "");
+      await expect(content).not.toHaveAttribute("aria-hidden", "true");
+    }
+    await source.getByRole("button", { name: "Rich group label action" }).click();
+    await children[0].getByRole("button", { name: "Rich column label action" }).click();
+    await expect(actionOutput).toHaveText(`group:${groupCount},column:${columnCount}`);
   };
 
   await beginMove();
   await page.keyboard.press("Escape");
-  await expectRestored();
+  await expectRestored(1, 1);
 
   await beginMove();
-  await page.evaluate(() => {
-    window.dispatchEvent(new PointerEvent("pointercancel", { bubbles: true, pointerType: "mouse" }));
-  });
-  await expectRestored();
+  await childContents[0].dispatchEvent("pointercancel", { bubbles: true, pointerType: "mouse" });
+  await expectRestored(2, 2);
 
   await beginMove();
   await page.evaluate(() => window.dispatchEvent(new Event("blur")));
-  await expectRestored();
+  await expectRestored(3, 3);
 
   await beginMove();
   const targetBox = await target.boundingBox();
   expect(targetBox).not.toBeNull();
-  await page.mouse.move(targetBox!.x + targetBox!.width / 2, targetBox!.y + targetBox!.height / 2);
-  await page.mouse.up();
-  await expectRestored();
+  await sourceContent.dispatchEvent("pointermove", {
+    bubbles: true,
+    clientX: targetBox!.x + targetBox!.width / 2,
+    clientY: targetBox!.y + targetBox!.height / 2,
+    pointerType: "mouse",
+  });
+  await expect(target).toHaveAttribute("data-column-drop-target", "true");
+  await sourceContent.dispatchEvent("pointerup", {
+    bubbles: true,
+    clientX: targetBox!.x + targetBox!.width / 2,
+    clientY: targetBox!.y + targetBox!.height / 2,
+    pointerType: "mouse",
+  });
+  await expectRestored(4, 4);
 
   expect(diagnostics).toEqual([]);
 });
