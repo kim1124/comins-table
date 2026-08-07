@@ -276,24 +276,49 @@ describe("comins-table user documentation contract", () => {
     expect(optionGuide).toContain('name: "onChangeExpandedRowIds"');
   });
 
-  it("keeps every public Row Expand height summary aligned with measured automatic Details", () => {
+  it("keeps README Row Expand height guidance aligned with measured automatic Details", () => {
     const readme = readWorkspaceFile("README.md");
+
+    expect(readme).not.toMatch(/\b300px\b/u);
+    expect(readme).toContain(
+      'A finite positive CSS pixel height is fixed and retains its inline height. Missing values, invalid numeric values, and `"auto"` use measured automatic height with no inline height. Before an automatic Detail has a matching-width measurement, a valid finite positive `estimatedRowDetailHeight` is used; otherwise the resolved `rowHeight` is the estimate.',
+    );
+  });
+
+  it("keeps the option guide Row Expand height guidance aligned with measured automatic Details", () => {
     const optionGuide = readWorkspaceFile("example/src/docs/dataTableOptionGuide.ts");
+
+    expect(optionGuide).not.toMatch(/\b300px\b/u);
+    expect(optionGuide).toContain(
+      'Returns a finite positive fixed Detail height. Missing, invalid, and \\"auto\\" values use measured automatic height without inline height.',
+    );
+    expect(optionGuide).toContain(
+      "Estimate for an automatic Detail before matching-width measurement: a valid finite positive value wins; otherwise the resolved rowHeight is used.",
+    );
+  });
+
+  it("keeps the English Row Expand Playground route aligned with measured automatic Details", () => {
     const routes = readWorkspaceFile("example/src/docs/docsRoutes.tsx");
+    const englishRowExpandRoute =
+      routes.match(
+        /featurePage\(\{\n    body: paragraphs\(\[\n      "The application owns expandedRowIds[\s\S]*?featureId: "row-expand",[\s\S]*?\n  \}\),/u,
+      )?.[0] ?? "";
 
-    for (const surface of [readme, optionGuide, routes]) {
-      expect(surface).not.toMatch(/\b300px\b/u);
-    }
+    expect(englishRowExpandRoute).not.toMatch(/\b300px\b/u);
+    expect(englishRowExpandRoute).toContain(
+      'Only a finite positive height is fixed and retains inline height. Missing, invalid, and "auto" Details use measured automatic height without an inline height. Before matching-width measurement, a valid estimatedRowDetailHeight wins; otherwise the resolved `rowHeight` is the estimate.',
+    );
+  });
 
-    expect(readme).toContain("finite positive CSS pixel height");
-    expect(readme).toContain("no inline height");
-    expect(readme).toContain("resolved `rowHeight`");
-    expect(optionGuide).toContain('Missing, invalid, and \\"auto\\" values use measured automatic height');
-    expect(optionGuide).toContain("otherwise the resolved rowHeight is used");
-    expect(routes).toContain("Only a finite positive height is fixed");
-    expect(routes).toContain("otherwise the resolved `rowHeight` is the estimate");
-    expect(routes).toContain("유한한 양수 높이만 fixed");
-    expect(routes).toContain("그 외에는 resolved `rowHeight`를 estimate로 사용합니다");
+  it("keeps the Korean Row Expand Playground route aligned with measured automatic Details", () => {
+    const routes = readWorkspaceFile("example/src/docs/docsRoutes.tsx");
+    const koreanRowExpandRoute =
+      routes.match(/"\/examples\/row-expand": \{[\s\S]*?\n  \},\n  "\/examples\/selection-clipboard":/u)?.[0] ?? "";
+
+    expect(koreanRowExpandRoute).not.toMatch(/\b300px\b/u);
+    expect(koreanRowExpandRoute).toContain(
+      "유한한 양수 높이만 fixed이며 inline height를 유지합니다. 값이 없거나 invalid 또는 `auto`인 Detail은 inline height 없이 자동 측정합니다. matching-width 측정 전에는 유효한 finite positive `estimatedRowDetailHeight`를 우선 사용하고, 그 외에는 resolved `rowHeight`를 estimate로 사용합니다.",
+    );
   });
 
   it("documents column drag activation and Virtual List row selection", () => {
