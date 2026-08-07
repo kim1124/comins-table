@@ -61,10 +61,8 @@ test("header boundary resize is isolated from immediate column move and animated
   await expect(indicator).toHaveCSS("opacity", "1");
   await expect(indicator).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
   const sortIcon = indicator.locator("svg[data-comins-icon='sortAscending']");
-  const sortIconBox = await sortIcon.boundingBox();
-  expect(sortIconBox).not.toBeNull();
-  expect(sortIconBox!.width).toBe(15);
-  expect(sortIconBox!.height).toBe(15);
+  await expect(sortIcon).toHaveCSS("width", "15px");
+  await expect(sortIcon).toHaveCSS("height", "15px");
   await expect(sortIcon).toHaveAttribute("aria-hidden", "true");
   await expect(sortIcon).toHaveAttribute("focusable", "false");
   await expect(page.getByTestId("header-proof-sort")).toHaveCount(0);
@@ -72,7 +70,10 @@ test("header boundary resize is isolated from immediate column move and animated
   await ageHeader.click();
   await expect(indicator).toHaveAttribute("data-sort-state", "desc");
   await expect(indicator).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
-  await expect(indicator.locator("svg[data-comins-icon='sortDescending']")).toBeVisible();
+  const descendingSortIcon = indicator.locator("svg[data-comins-icon='sortDescending']");
+  await expect(descendingSortIcon).toBeVisible();
+  await expect(descendingSortIcon).toHaveCSS("width", "15px");
+  await expect(descendingSortIcon).toHaveCSS("height", "15px");
 
   await ageHeader.click();
   await expect(indicator).toHaveAttribute("data-sort-state", "none");

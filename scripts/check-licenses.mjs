@@ -107,6 +107,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.`;
 const RADIX_ICON_EXPORT_ALLOWLIST = new Set([
+  'ArrowDownIcon',
+  'ArrowUpIcon',
   'CaretSortIcon',
   'ChevronDownIcon',
   'ChevronLeftIcon',
@@ -115,8 +117,6 @@ const RADIX_ICON_EXPORT_ALLOWLIST = new Set([
   'DoubleArrowRightIcon',
   'DragHandleDots2Icon',
   'MagnifyingGlassIcon',
-  'TriangleDownIcon',
-  'TriangleUpIcon',
 ]);
 const RADIX_NOTICE_START = '<!-- radix-icons-used-exports:start -->';
 const RADIX_NOTICE_END = '<!-- radix-icons-used-exports:end -->';

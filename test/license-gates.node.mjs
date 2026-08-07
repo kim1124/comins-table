@@ -45,6 +45,8 @@ const radixRevision = 'bde33b13aa5848555f5512ac12155930fb4beb7d';
 const radixSource = 'https://github.com/radix-ui/icons';
 const radixLicenseText = readFileSync(join(repositoryRoot, 'node_modules', radixName, 'LICENSE'), 'utf8');
 const radixCoreExports = [
+  'ArrowDownIcon',
+  'ArrowUpIcon',
   'CaretSortIcon',
   'ChevronDownIcon',
   'ChevronLeftIcon',
@@ -53,8 +55,6 @@ const radixCoreExports = [
   'DoubleArrowRightIcon',
   'DragHandleDots2Icon',
   'MagnifyingGlassIcon',
-  'TriangleDownIcon',
-  'TriangleUpIcon',
 ];
 const reservedFontNames = [
   'Spoqa Han Sans',

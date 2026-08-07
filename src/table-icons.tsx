@@ -1,10 +1,10 @@
 import {
+  ArrowDownIcon,
+  ArrowUpIcon,
   CaretSortIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   DragHandleDots2Icon,
-  TriangleDownIcon,
-  TriangleUpIcon,
 } from "@radix-ui/react-icons";
 import * as React from "react";
 
@@ -20,8 +20,8 @@ const icons = {
   columnMove: DragHandleDots2Icon,
   disclosureCollapsed: ChevronRightIcon,
   disclosureExpanded: ChevronDownIcon,
-  sortAscending: TriangleUpIcon,
-  sortDescending: TriangleDownIcon,
+  sortAscending: ArrowUpIcon,
+  sortDescending: ArrowDownIcon,
   sortUnsorted: CaretSortIcon,
 } as const;
 

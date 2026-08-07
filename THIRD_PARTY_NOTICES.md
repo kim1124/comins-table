@@ -15,6 +15,8 @@ and redistribute Radix Icons must preserve the following MIT notice in their
 distribution.
 
 <!-- radix-icons-used-exports:start -->
+- `ArrowDownIcon`
+- `ArrowUpIcon`
 - `CaretSortIcon`
 - `ChevronDownIcon`
 - `ChevronLeftIcon`
@@ -23,8 +25,6 @@ distribution.
 - `DoubleArrowRightIcon`
 - `DragHandleDots2Icon`
 - `MagnifyingGlassIcon`
-- `TriangleDownIcon`
-- `TriangleUpIcon`
 <!-- radix-icons-used-exports:end -->
 
 MIT License
