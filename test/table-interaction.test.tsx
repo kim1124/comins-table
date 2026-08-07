@@ -1994,6 +1994,276 @@ describe("comins-table keyboard interaction", () => {
     expect(headerRenderer).not.toHaveBeenCalled();
   });
 
+  it("updates custom Header content when its renderer changes during Column Move", () => {
+    const firstHeaderRenderer = vi.fn(() => <strong>First Age Header</strong>);
+    const secondHeaderRenderer = vi.fn(() => <strong>Second Age Header</strong>);
+    const element = renderTableElement(
+      <CominsTable
+        columns={[
+          { field: "name", label: "Name" },
+          { field: "age", header: { renderer: firstHeaderRenderer }, label: "Age", sort: true },
+        ]}
+        data={rows}
+        getRowId={(row) => row.id}
+      />,
+    );
+    const ageHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    firstHeaderRenderer.mockClear();
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => ageHeader),
+    });
+
+    try {
+      act(() => {
+        ageHeader.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointermove", { bubbles: true, button: 0, clientX: 16, clientY: 10 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    act(() => {
+      root?.render(
+        <CominsTable
+          columns={[
+            { field: "name", label: "Name" },
+            { field: "age", header: { renderer: secondHeaderRenderer }, label: "Age", sort: true },
+          ]}
+          data={rows}
+          getRowId={(row) => row.id}
+        />,
+      );
+    });
+
+    const updatedAgeHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
+
+    expect(updatedAgeHeader.getAttribute("data-column-placeholder")).toBe("true");
+    expect(updatedAgeHeader.querySelector("strong")?.textContent).toBe("Second Age Header");
+    expect(firstHeaderRenderer).not.toHaveBeenCalled();
+    expect(secondHeaderRenderer).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders custom Header content added during active Column Move", () => {
+    const headerRenderer = vi.fn(() => <strong>Added Age Header</strong>);
+    const element = renderTableElement(
+      <CominsTable
+        columns={[
+          { field: "name", label: "Name" },
+          { field: "age", label: "Age", sort: true },
+        ]}
+        data={rows}
+        getRowId={(row) => row.id}
+      />,
+    );
+    const ageHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => ageHeader),
+    });
+
+    try {
+      act(() => {
+        ageHeader.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointermove", { bubbles: true, button: 0, clientX: 16, clientY: 10 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    act(() => {
+      root?.render(
+        <CominsTable
+          columns={[
+            { field: "name", label: "Name" },
+            { field: "age", header: { renderer: headerRenderer }, label: "Age", sort: true },
+          ]}
+          data={rows}
+          getRowId={(row) => row.id}
+        />,
+      );
+    });
+
+    const updatedAgeHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
+
+    expect(updatedAgeHeader.getAttribute("data-column-placeholder")).toBe("true");
+    expect(updatedAgeHeader.querySelector("strong")?.textContent).toBe("Added Age Header");
+    expect(headerRenderer).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears removed custom Header content before conditionally adding the renderer during Column Move", () => {
+    let renderCount = 0;
+    const headerRenderer = vi.fn(() => {
+      renderCount += 1;
+      return <strong>{`Age Header ${renderCount}`}</strong>;
+    });
+    const element = renderTableElement(
+      <CominsTable
+        columns={[
+          { field: "name", label: "Name" },
+          { field: "age", header: { renderer: headerRenderer }, label: "Age", sort: true },
+        ]}
+        data={rows}
+        getRowId={(row) => row.id}
+      />,
+    );
+    const ageHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    headerRenderer.mockClear();
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => ageHeader),
+    });
+
+    try {
+      act(() => {
+        ageHeader.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointermove", { bubbles: true, button: 0, clientX: 16, clientY: 10 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    act(() => {
+      root?.render(
+        <CominsTable
+          columns={[
+            { field: "name", label: "Name" },
+            { field: "age", label: "Age", sort: true },
+          ]}
+          data={rows}
+          getRowId={(row) => row.id}
+        />,
+      );
+    });
+
+    const removedRendererHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
+
+    expect(removedRendererHeader.querySelector("strong")).toBeNull();
+    expect(removedRendererHeader.querySelector(".comins-table__header-label")?.textContent).toBe("Age");
+
+    act(() => {
+      root?.render(
+        <CominsTable
+          columns={[
+            { field: "name", label: "Name" },
+            { field: "age", header: { renderer: headerRenderer }, label: "Age", sort: true },
+          ]}
+          data={rows}
+          getRowId={(row) => row.id}
+        />,
+      );
+    });
+
+    const restoredRendererHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
+
+    expect(restoredRendererHeader.getAttribute("data-column-placeholder")).toBe("true");
+    expect(restoredRendererHeader.querySelector("strong")?.textContent).toBe("Age Header 2");
+    expect(headerRenderer).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears removed custom Header preservation before restoring the same column during Column Move", () => {
+    let renderCount = 0;
+    const headerRenderer = vi.fn(() => {
+      renderCount += 1;
+      return <strong>{`Age Header ${renderCount}`}</strong>;
+    });
+    const element = renderTableElement(
+      <CominsTable
+        columns={[
+          { field: "name", label: "Name" },
+          { field: "age", header: { renderer: headerRenderer }, label: "Age", sort: true },
+        ]}
+        data={rows}
+        getRowId={(row) => row.id}
+      />,
+    );
+    const ageHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    headerRenderer.mockClear();
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => ageHeader),
+    });
+
+    try {
+      act(() => {
+        ageHeader.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointermove", { bubbles: true, button: 0, clientX: 16, clientY: 10 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    act(() => {
+      root?.render(
+        <CominsTable
+          columns={[{ field: "name", label: "Name" }]}
+          data={rows}
+          getRowId={(row) => row.id}
+        />,
+      );
+    });
+
+    expect(element.querySelector("[data-testid='header-age']")).toBeNull();
+
+    act(() => {
+      root?.render(
+        <CominsTable
+          columns={[
+            { field: "name", label: "Name" },
+            { field: "age", header: { renderer: headerRenderer }, label: "Age", sort: true },
+          ]}
+          data={rows}
+          getRowId={(row) => row.id}
+        />,
+      );
+    });
+
+    const restoredAgeHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
+
+    expect(restoredAgeHeader.getAttribute("data-column-placeholder")).toBe("true");
+    expect(restoredAgeHeader.querySelector("strong")?.textContent).toBe("Age Header 2");
+    expect(headerRenderer).toHaveBeenCalledTimes(1);
+  });
+
   it("renders parent and child plain labels while a Column Group moves", () => {
     const element = renderTableElement(
       <CominsTable

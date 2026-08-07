@@ -1328,7 +1328,7 @@ function CominsTableInner<TData>(
   const rowDetailToggleElementsRef = useRef(new Map<CominsRowId, HTMLButtonElement>());
   const activePointerGestureCleanupRef = useRef<(() => void) | null>(null);
   const columnPointerInteractionRef = useRef<CominsColumnPointerInteraction | null>(null);
-  const headerRendererBodyRef = useRef(new Map<string, React.ReactNode>());
+  const headerRendererBodyRef = useRef(new Map<string, { body: React.ReactNode; renderer: unknown }>());
   const lastCellAnchorRef = useRef<CominsCellAddress | null>(null);
   const lazyAbortControllerRef = useRef<AbortController | null>(null);
   const lazyLoadingReasonRef = useRef<CominsLazyLoadReason | null>(null);
@@ -1827,6 +1827,13 @@ function CominsTableInner<TData>(
   };
 
   const visibleColumns = useMemo(() => getCominsVisibleColumns(state), [state]);
+
+  for (const columnId of headerRendererBodyRef.current.keys()) {
+    if (!visibleColumns.some((column) => column.id === columnId)) {
+      headerRendererBodyRef.current.delete(columnId);
+    }
+  }
+
   const columnWidths = useMemo(() => {
     const columnCount = visibleColumns.length;
 
@@ -3301,14 +3308,23 @@ function CominsTableInner<TData>(
       .filter(Boolean)
       .join(" ");
     const headerPayload = createHeaderComponentPayload(state, column, safeIndex);
-    const headerRendererBody = column.header?.renderer
-      ? isColumnPlaceholder
-        ? headerRendererBodyRef.current.get(column.id)
-        : column.header.renderer(headerPayload)
+    const headerRenderer = column.header?.renderer;
+    const cachedHeaderRendererBody = headerRenderer ? headerRendererBodyRef.current.get(column.id) : undefined;
+
+    if (!headerRenderer) {
+      headerRendererBodyRef.current.delete(column.id);
+    }
+
+    const shouldRefreshHeaderRendererBody =
+      Boolean(headerRenderer) && (!isColumnPlaceholder || cachedHeaderRendererBody?.renderer !== headerRenderer);
+    const headerRendererBody = headerRenderer
+      ? shouldRefreshHeaderRendererBody
+        ? headerRenderer(headerPayload)
+        : cachedHeaderRendererBody?.body
       : null;
 
-    if (!isColumnPlaceholder && column.header?.renderer) {
-      headerRendererBodyRef.current.set(column.id, headerRendererBody);
+    if (headerRenderer && shouldRefreshHeaderRendererBody) {
+      headerRendererBodyRef.current.set(column.id, { body: headerRendererBody, renderer: headerRenderer });
     }
     const headerLeftSlots = !column.header?.renderer
       ? renderCominsComponentSlots(column.header?.components, headerPayload, "left")
