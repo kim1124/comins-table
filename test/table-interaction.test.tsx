@@ -2542,8 +2542,9 @@ describe("comins-table keyboard interaction", () => {
     const ageHeader = element.querySelector("[data-testid='header-age']")!;
     const indicator = element.querySelector("[data-testid='sort-indicator-age']")!;
 
-    expect(indicator.querySelector("svg")).toBeNull();
-    expect(indicator.querySelector("span.comins-sort-icon")).not.toBeNull();
+    expect(indicator.querySelector("svg[data-comins-icon='sortUnsorted']")).not.toBeNull();
+    expect(indicator.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    expect(indicator.querySelector("svg")?.getAttribute("focusable")).toBe("false");
     expect(indicator.getAttribute("data-sort-state")).toBe("none");
 
     act(() => {
@@ -2551,18 +2552,21 @@ describe("comins-table keyboard interaction", () => {
     });
 
     expect(indicator.getAttribute("data-sort-state")).toBe("asc");
+    expect(indicator.querySelector("svg[data-comins-icon='sortAscending']")).not.toBeNull();
 
     act(() => {
       ageHeader.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
     expect(indicator.getAttribute("data-sort-state")).toBe("desc");
+    expect(indicator.querySelector("svg[data-comins-icon='sortDescending']")).not.toBeNull();
 
     act(() => {
       ageHeader.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
     expect(indicator.getAttribute("data-sort-state")).toBe("none");
+    expect(indicator.querySelector("svg[data-comins-icon='sortUnsorted']")).not.toBeNull();
   });
 
   it("renders 2-depth column groups without parent sort behavior", () => {

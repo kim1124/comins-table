@@ -43,7 +43,7 @@ import {
 import { getCominsColumnMouseIntent } from "./column-pointer";
 import { renderCominsBuiltInComponent, type CominsBuiltInComponentInteraction } from "./component-renderer";
 import { CominsRowDetailRow, CominsRowDetailToggle } from "./row-detail";
-import { CominsTableIconButton } from "./table-icons";
+import { CominsTableIcon, CominsTableIconButton } from "./table-icons";
 import { getCominsSummaryValues } from "./summary";
 import {
   flattenCominsTree,
@@ -3385,7 +3385,15 @@ function CominsTableInner<TData>(
               data-sort-visible={sortIndicatorVisible ? "true" : undefined}
               data-testid={`sort-indicator-${column.id}`}
             >
-              <span className="comins-sort-icon" />
+              <CominsTableIcon
+                name={
+                  sortIndicatorState === "asc"
+                    ? "sortAscending"
+                    : sortIndicatorState === "desc"
+                      ? "sortDescending"
+                      : "sortUnsorted"
+                }
+              />
             </span>
             {showSortPriority ? (
               <span
@@ -4173,7 +4181,8 @@ function CominsTableInner<TData>(
           data-testid="column-move-ghost"
           style={{ left: columnMovePointer.x + 12, top: columnMovePointer.y + 12 }}
         >
-          {movingHeaderLabel}
+          <CominsTableIcon name="columnMove" />
+          <span className="comins-column-move-ghost__label">{movingHeaderLabel}</span>
         </div>
       ) : null}
     </div>

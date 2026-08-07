@@ -60,48 +60,19 @@ test("header boundary resize is isolated from immediate column move and animated
   await expect(indicator).toHaveAttribute("data-sort-state", "asc");
   await expect(indicator).toHaveCSS("opacity", "1");
   await expect(indicator).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
-  const ascTransform = await indicator.evaluate((element) => getComputedStyle(element).transform);
-  const sortIcon = indicator.locator(".comins-sort-icon");
+  const sortIcon = indicator.locator("svg[data-comins-icon='sortAscending']");
   const sortIconBox = await sortIcon.boundingBox();
   expect(sortIconBox).not.toBeNull();
-  expect(sortIconBox!.width).toBe(14);
-  expect(sortIconBox!.height).toBe(14);
-  const pseudoStyles = await sortIcon.evaluate((element) => {
-    const before = getComputedStyle(element, "::before");
-    const after = getComputedStyle(element, "::after");
-
-    return {
-      before: {
-        borderBottomStyle: before.borderBottomStyle,
-        borderBottomWidth: before.borderBottomWidth,
-        borderLeftStyle: before.borderLeftStyle,
-        borderLeftWidth: before.borderLeftWidth,
-        borderRightStyle: before.borderRightStyle,
-        borderRightWidth: before.borderRightWidth,
-        borderTopWidth: before.borderTopWidth,
-        content: before.content,
-      },
-      after: {
-        content: after.content,
-      },
-    };
-  });
-  expect(pseudoStyles.before.content).not.toBe("none");
-  expect(pseudoStyles.before.borderBottomStyle).toBe("solid");
-  expect(pseudoStyles.before.borderBottomWidth).toBe("6px");
-  expect(pseudoStyles.before.borderLeftStyle).toBe("solid");
-  expect(pseudoStyles.before.borderLeftWidth).toBe("4px");
-  expect(pseudoStyles.before.borderRightStyle).toBe("solid");
-  expect(pseudoStyles.before.borderRightWidth).toBe("4px");
-  expect(pseudoStyles.before.borderTopWidth).toBe("0px");
-  expect(pseudoStyles.after.content).toBe("none");
+  expect(sortIconBox!.width).toBe(15);
+  expect(sortIconBox!.height).toBe(15);
+  await expect(sortIcon).toHaveAttribute("aria-hidden", "true");
+  await expect(sortIcon).toHaveAttribute("focusable", "false");
   await expect(page.getByTestId("header-proof-sort")).toHaveCount(0);
 
   await ageHeader.click();
   await expect(indicator).toHaveAttribute("data-sort-state", "desc");
-  await expect(indicator).toHaveCSS("transform", "matrix(-1, 0, 0, -1, 0, 0)");
-  const descTransform = await indicator.evaluate((element) => getComputedStyle(element).transform);
-  expect(descTransform).not.toBe(ascTransform);
+  await expect(indicator).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
+  await expect(indicator.locator("svg[data-comins-icon='sortDescending']")).toBeVisible();
 
   await ageHeader.click();
   await expect(indicator).toHaveAttribute("data-sort-state", "none");
@@ -124,6 +95,11 @@ test("header boundary resize is isolated from immediate column move and animated
   await page.mouse.move(ageBox!.x + ageBox!.width / 2 + 6, ageBox!.y + ageBox!.height / 2);
   await expect(ageHeader).toHaveAttribute("data-column-placeholder", "true");
   await expect(page.getByTestId("column-move-ghost")).toBeVisible();
+  const ghostIcon = page.getByTestId("column-move-ghost").locator("svg[data-comins-icon='columnMove']");
+  await expect(ghostIcon).toHaveAttribute("aria-hidden", "true");
+  await expect(ghostIcon).toHaveAttribute("focusable", "false");
+  await expect(ghostIcon).toHaveCSS("height", "15px");
+  await expect(ghostIcon).toHaveCSS("width", "15px");
   await expect(ageHeader).toHaveCSS("cursor", "grabbing");
   await page.mouse.move(nameBox!.x + nameBox!.width / 2, nameBox!.y + nameBox!.height / 2);
   await page.mouse.up();
