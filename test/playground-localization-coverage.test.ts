@@ -1,16 +1,22 @@
-import { readdirSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
 import {
   isArrayLiteralExpression,
   isCallExpression,
+  isExportKeyword,
   isIdentifier,
   isJsxAttribute,
   isJsxText,
+  isLiteralTypeNode,
   isObjectLiteralExpression,
   isPropertyAssignment,
   isStringLiteral,
+  isTypeAliasDeclaration,
+  isUnionTypeNode,
   isVariableDeclaration,
+  isVariableStatement,
   type ArrayLiteralExpression,
   type Node,
   type ObjectLiteralExpression,
@@ -114,6 +120,7 @@ describe("Playground localization coverage", () => {
     const files = [
       resolve("example/src/features/featureRegistry.tsx"),
       resolve("example/src/docs/dataTableOptionGuide.ts"),
+      resolve("example/src/features/types.ts"),
     ];
     const snapshot = api.updateSnapshot({ openFiles: files });
 
@@ -124,6 +131,7 @@ describe("Playground localization coverage", () => {
         isObjectLiteralExpression(element) ? getStringProperty(featureSource, element, "id") : "",
       );
       expect(getFeatureIdViolations(featureIds)).toEqual([]);
+      expect(getFeatureIdUnionViolations(getSourceFile(snapshot, files[2]!))).toEqual([]);
 
       for (const element of featureArray.elements) {
         expect(isObjectLiteralExpression(element), "Every feature must be an object literal.").toBe(true);
@@ -158,6 +166,102 @@ describe("Playground localization coverage", () => {
     } finally {
       snapshot.dispose();
       api.close();
+    }
+  });
+
+  it("keeps the exported FeatureId union in the canonical navigation order", () => {
+    const api = new API();
+    const file = resolve("example/src/features/types.ts");
+    const snapshot = api.updateSnapshot({ openFiles: [file] });
+
+    try {
+      const sourceFile = getSourceFile(snapshot, file);
+      expect(getFeatureIdUnionViolations(sourceFile)).toEqual([]);
+    } finally {
+      snapshot.dispose();
+      api.close();
+    }
+  });
+
+  it("rejects a nested featureRegistry shadow instead of selecting the last matching array", () => {
+    withTemporarySourceFile(
+      "export const featureRegistry = [];\nfunction createFeature() {\n  const featureRegistry = [];\n  return featureRegistry;\n}",
+      (sourceFile) => {
+        expect(() => getArrayVariable(sourceFile, "featureRegistry")).toThrow(
+          "featureRegistry must have exactly one variable declaration, but found 2.",
+        );
+      },
+    );
+  });
+
+  it("rejects non-exported, duplicate, and aliased featureRegistry declarations", () => {
+    const registryFixtures = [
+      {
+        source: "const featureRegistry = [];",
+        violation: "featureRegistry must be exported from the top level.",
+      },
+      {
+        source: "export const featureRegistry = [];\nexport const featureRegistry = [];",
+        violation: "featureRegistry must have exactly one variable declaration, but found 2.",
+      },
+      {
+        source: "const registry = [];\nexport const featureRegistry = registry;",
+        violation: "featureRegistry must be declared directly as an array literal.",
+      },
+      {
+        source: "export const featureRegistry = createRegistry();",
+        violation: "featureRegistry must be declared directly as an array literal.",
+      },
+    ];
+
+    for (const { source, violation } of registryFixtures) {
+      withTemporarySourceFile(source, (sourceFile) => {
+        expect(() => getArrayVariable(sourceFile, "featureRegistry")).toThrow(violation);
+      });
+    }
+  });
+
+  it("rejects malformed exported FeatureId unions with canonical diagnostics", () => {
+    const union = canonicalFeatureIds.map((id) => JSON.stringify(id)).join(" | ");
+    const missing = canonicalFeatureIds.slice(1).map((id) => JSON.stringify(id)).join(" | ");
+    const duplicate = [...canonicalFeatureIds, "basic"].map((id) => JSON.stringify(id)).join(" | ");
+    const extra = [...canonicalFeatureIds, "extra-feature"].map((id) => JSON.stringify(id)).join(" | ");
+    const unknown = ["unknown-feature", ...canonicalFeatureIds.slice(1)]
+      .map((id) => JSON.stringify(id))
+      .join(" | ");
+    const outOfOrder = [canonicalFeatureIds[1], canonicalFeatureIds[0], ...canonicalFeatureIds.slice(2)]
+      .map((id) => JSON.stringify(id))
+      .join(" | ");
+    const nonliteral = [JSON.stringify(canonicalFeatureIds[0]), "string", ...canonicalFeatureIds.slice(2).map(JSON.stringify)]
+      .join(" | ");
+    const fixtures = [
+      { source: `export type FeatureId = ${missing};`, violation: 'Missing canonical Feature ID "basic".' },
+      { source: `export type FeatureId = ${duplicate};`, violation: 'Duplicate Feature ID "basic".' },
+      { source: `export type FeatureId = ${extra};`, violation: 'Unknown Feature ID "extra-feature".' },
+      { source: `export type FeatureId = ${unknown};`, violation: 'Unknown Feature ID "unknown-feature".' },
+      {
+        source: `export type FeatureId = ${outOfOrder};`,
+        violation: 'Feature ID at index 0 must be "basic" but received "basic-crud".',
+      },
+      {
+        source: `export type FeatureId = ${nonliteral};`,
+        violation: "Feature ID at index 1 must be a string literal.",
+      },
+      { source: `type FeatureId = ${union};`, violation: "FeatureId must be exported from the top level." },
+      {
+        source: `export type DifferentFeatureId = ${union};`,
+        violation: "FeatureId must have exactly one top-level type alias, but found 0.",
+      },
+      {
+        source: `export type FeatureId = ${union};\nexport type FeatureId = ${union};`,
+        violation: "FeatureId must have exactly one top-level type alias, but found 2.",
+      },
+    ];
+
+    for (const { source, violation } of fixtures) {
+      withTemporarySourceFile(source, (sourceFile) => {
+        expect(getFeatureIdUnionViolations(sourceFile)).toContain(violation);
+      });
     }
   });
 
@@ -250,6 +354,32 @@ describe("Playground localization coverage", () => {
     expect(getFeatureIdViolations(featureIds)).toContain(
       'Feature ID at index 0 must be "basic" but received "basic-crud".',
     );
+  });
+
+  it("rejects an extra or nonliteral canonical Feature ID", () => {
+    const extra = [...canonicalFeatureIds, "extra-feature"];
+    const nonliteral: string[] = [...canonicalFeatureIds];
+    nonliteral[2] = undefined as never;
+
+    expect(getFeatureIdViolations(extra)).toContain('Unknown Feature ID "extra-feature".');
+    expect(getFeatureIdViolations(nonliteral)).toContain(
+      "Feature ID at index 2 must be a string literal.",
+    );
+  });
+
+  it("enforces the canonical baseline against the imported runtime featureRegistry after mutations", () => {
+    const runtimeIds = featureRegistry.map((feature) => feature.id);
+    const popped = [...runtimeIds];
+    popped.pop();
+    const sorted = [...runtimeIds].sort();
+    const extra = [...runtimeIds, "extra-runtime-feature"];
+
+    expect(getFeatureIdViolations(runtimeIds)).toEqual([]);
+    expect(getFeatureIdViolations(popped)).toContain('Missing canonical Feature ID "ref-api".');
+    expect(getFeatureIdViolations(sorted)).toContain(
+      'Feature ID at index 2 must be "size" but received "body".',
+    );
+    expect(getFeatureIdViolations(extra)).toContain('Unknown Feature ID "extra-runtime-feature".');
   });
 
   it("connects representative features to meaning-specific Korean metadata", () => {
@@ -378,25 +508,55 @@ function getSourceFile(snapshot: ReturnType<API["updateSnapshot"]>, file: string
   return sourceFile!;
 }
 
+function withTemporarySourceFile(sourceText: string, callback: (sourceFile: SourceFile) => void) {
+  const directory = mkdtempSync(resolve(tmpdir(), "comins-table-localization-"));
+  const file = resolve(directory, "fixture.ts");
+  writeFileSync(file, sourceText);
+  const api = new API();
+  const snapshot = api.updateSnapshot({ openFiles: [file] });
+
+  try {
+    callback(getSourceFile(snapshot, file));
+  } finally {
+    snapshot.dispose();
+    api.close();
+    rmSync(directory, { force: true, recursive: true });
+  }
+}
+
 function getArrayVariable(sourceFile: SourceFile, variableName: string) {
-  let result: ArrayLiteralExpression | undefined;
+  const declarations: Array<import("typescript/unstable/ast").VariableDeclaration> = [];
 
   const visit = (node: Node) => {
     if (
       isVariableDeclaration(node)
       && isIdentifier(node.name)
       && node.name.text === variableName
-      && node.initializer
-      && isArrayLiteralExpression(node.initializer)
     ) {
-      result = node.initializer;
+      declarations.push(node);
     }
     node.forEachChild(visit);
   };
 
   visit(sourceFile);
-  expect(result, `${variableName} must be declared directly as an array literal.`).toBeDefined();
-  return result!;
+  expect(
+    declarations,
+    `${variableName} must have exactly one variable declaration, but found ${declarations.length}.`,
+  ).toHaveLength(1);
+  const declaration = declarations[0]!;
+  const topLevelDeclaration = sourceFile.statements.flatMap((statement) =>
+    isVariableStatement(statement) && statement.modifiers?.some(isExportKeyword)
+      ? [...statement.declarationList.declarations]
+      : [],
+  ).find(
+    (candidate) => candidate === declaration,
+  );
+  expect(topLevelDeclaration, `${variableName} must be exported from the top level.`).toBeDefined();
+  expect(
+    declaration.initializer && isArrayLiteralExpression(declaration.initializer),
+    `${variableName} must be declared directly as an array literal.`,
+  ).toBe(true);
+  return declaration.initializer as ArrayLiteralExpression;
 }
 
 function getArrayProperty(sourceFile: SourceFile, object: ObjectLiteralExpression, propertyName: string) {
@@ -424,13 +584,39 @@ function getStringProperty(sourceFile: SourceFile, object: ObjectLiteralExpressi
   return isStringLiteral(initializer) ? initializer.text : "";
 }
 
-function getFeatureIdViolations(featureIds: readonly string[]) {
-  const actualFeatureIds = new Set(featureIds);
+function getFeatureIdUnionViolations(sourceFile: SourceFile) {
+  const aliases = sourceFile.statements.filter(
+    (statement) => isTypeAliasDeclaration(statement) && statement.name.text === "FeatureId",
+  );
+  if (aliases.length !== 1) {
+    return [`FeatureId must have exactly one top-level type alias, but found ${aliases.length}.`];
+  }
+
+  const alias = aliases[0]!;
+  if (!alias.modifiers?.some(isExportKeyword)) {
+    return ["FeatureId must be exported from the top level."];
+  }
+  if (!isUnionTypeNode(alias.type)) {
+    return ["FeatureId must be a union of string literals."];
+  }
+
+  const featureIds = alias.type.types.map((member) =>
+    isLiteralTypeNode(member) && isStringLiteral(member.literal) ? member.literal.text : undefined,
+  );
+  return getFeatureIdViolations(featureIds);
+}
+
+function getFeatureIdViolations(featureIds: readonly unknown[]) {
+  const literalFeatureIds = featureIds.filter((featureId): featureId is string => typeof featureId === "string");
+  const nonliteral = featureIds.flatMap((featureId, index) =>
+    typeof featureId === "string" ? [] : [`Feature ID at index ${index} must be a string literal.`],
+  );
+  const actualFeatureIds = new Set(literalFeatureIds);
   const missing = canonicalFeatureIds
     .filter((featureId) => !actualFeatureIds.has(featureId))
     .map((featureId) => `Missing canonical Feature ID "${featureId}".`);
   const seen = new Set<string>();
-  const duplicates = featureIds.flatMap((featureId) => {
+  const duplicates = literalFeatureIds.flatMap((featureId) => {
     if (seen.has(featureId)) {
       return [`Duplicate Feature ID "${featureId}".`];
     }
@@ -438,16 +624,16 @@ function getFeatureIdViolations(featureIds: readonly string[]) {
     return [];
   });
   const canonicalFeatureIdSet = new Set<string>(canonicalFeatureIds);
-  const unknown = featureIds
+  const unknown = literalFeatureIds
     .filter((featureId) => !canonicalFeatureIdSet.has(featureId))
     .map((featureId) => `Unknown Feature ID "${featureId}".`);
   const outOfOrder = canonicalFeatureIds.flatMap((expectedFeatureId, index) => {
     const actualFeatureId = featureIds[index];
-    return actualFeatureId && actualFeatureId !== expectedFeatureId
+    return typeof actualFeatureId === "string" && actualFeatureId !== expectedFeatureId
       ? [`Feature ID at index ${index} must be "${expectedFeatureId}" but received "${actualFeatureId}".`]
       : [];
   });
-  return [...missing, ...duplicates, ...unknown, ...outOfOrder];
+  return [...nonliteral, ...missing, ...duplicates, ...unknown, ...outOfOrder];
 }
 
 function getLocalizedCopyEntries(): LocalizedCopyEntry[] {

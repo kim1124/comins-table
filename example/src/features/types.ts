@@ -6,25 +6,25 @@ import type { LocalizedText, PlaygroundLocale } from "../i18n/types";
 export type FeatureId =
   | "basic"
   | "basic-crud"
-  | "body"
-  | "cell"
-  | "column-groups"
-  | "component"
-  | "context-menu"
-  | "export"
+  | "size"
+  | "theme"
+  | "loading"
   | "header"
+  | "column-groups"
+  | "pagination"
+  | "body"
   | "infinite-scroll"
   | "lazy-load"
-  | "loading"
-  | "pagination"
+  | "cell"
+  | "selection-clipboard"
+  | "component"
   | "row"
   | "row-expand"
-  | "ref-api"
-  | "selection-clipboard"
-  | "size"
   | "summary-row"
   | "tree-grid"
-  | "theme";
+  | "context-menu"
+  | "export"
+  | "ref-api";
 
 export type FeatureOption = {
   description: string;
