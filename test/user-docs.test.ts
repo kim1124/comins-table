@@ -249,8 +249,11 @@ describe("comins-table user documentation contract", () => {
       expect(document).toContain("getRowDetailHeight");
       expect(document).toContain("estimatedRowDetailHeight");
       expect(document).toContain("renderRowDetail");
+      expect(document).toContain("rowHeight");
       expect(document).toContain('"auto"');
       expect(document).toContain("300");
+      expect(document).not.toContain("default `300px` fixed");
+      expect(document).not.toContain("기본 fixed 높이 `300px`");
       expect(document).toContain("Expand <row-id> details");
       expect(document).toContain("Collapse <row-id> details");
       expect(document).toContain("read-only");

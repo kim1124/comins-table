@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Made unspecified, invalid, and `"auto"` Row Detail heights auto-measured while preserving finite fixed heights; placed full-size disclosure controls before Row drag, replaced Header sort triangles with directional arrows, kept Column Move source labels visible, and documented Column Filter as deferred guidance without a public API.
 - Standardized Core and Playground interaction icons on the exact external `@radix-ui/react-icons` version `1.3.2` runtime dependency, with private semantic wrappers, preserved accessibility behavior, and fail-closed provenance, notice, import-inventory, and package-artifact gates.
 - Added the Contract v1.4 lean license gate for lockfile metadata, scoped maintainer approvals, repository-only Spoqa asset evidence, and exact npm artifact verification.
 

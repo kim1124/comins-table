@@ -3,7 +3,11 @@ import path from "node:path";
 
 import { expect, test, type ConsoleMessage, type Page, type TestInfo } from "@playwright/test";
 
+import { initializePlaygroundLocale } from "../helpers/playground-locale";
+
 test.describe.configure({ mode: "serial" });
+
+test.beforeEach(async ({ page }) => initializePlaygroundLocale(page, "en"));
 
 type DevtoolsAuditSnapshot = {
   documents: number;
@@ -424,7 +428,7 @@ test("full audit keeps component column counters within 10 percent @perf", async
     await menuTrigger.scrollIntoViewIfNeeded();
     await menuTrigger.click();
     await expect(currentPage.getByRole("menu", { name: "Header menu" })).toBeVisible();
-    await currentPage.getByRole("menuitem", { name: "상태 확인" }).click();
+    await currentPage.getByRole("menuitem", { name: "Check status" }).click();
     await expect(currentPage.getByRole("menu", { name: "Header menu" })).toHaveCount(0);
 
     const moreList = currentPage.getByTestId("virtual-list-virtual-list-more-a-virtual-list-more-component");
@@ -450,13 +454,13 @@ test("full audit keeps context menu counters within 10 percent @perf", async ({ 
     await openFeature(currentPage, "Context Menu", "context-menu");
 
     await currentPage.getByTestId("row-a").click({ button: "right" });
-    await expect(currentPage.getByRole("menu", { name: "데이터 테이블 컨텍스트 메뉴" })).toBeVisible();
-    await currentPage.getByRole("menuitem", { name: "행 데이터 보기" }).click();
+    await expect(currentPage.getByRole("menu", { name: "Data table context menu" })).toBeVisible();
+    await currentPage.getByRole("menuitem", { name: "View" }).click();
     await currentPage.getByTestId("cell-a-name").click({ button: "right" });
-    await expect(currentPage.getByRole("menuitem", { name: "셀 데이터 보기" })).toBeVisible();
-    await currentPage.getByRole("menuitem", { name: "셀 데이터 보기" }).click();
+    await expect(currentPage.getByRole("menuitem", { name: "View" })).toBeVisible();
+    await currentPage.getByRole("menuitem", { name: "View" }).click();
     await currentPage.getByTestId("cell-b-name").click({ button: "right" });
-    await expect(currentPage.getByRole("menuitem", { name: "셀 데이터 보기" })).toBeVisible();
+    await expect(currentPage.getByRole("menuitem", { name: "View" })).toBeVisible();
   });
 });
 

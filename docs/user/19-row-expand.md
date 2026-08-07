@@ -66,10 +66,10 @@ controlled ID are present.
 
 ## Detail Height
 
-`getRowDetailHeight` returns either a finite positive CSS pixel height or
-`"auto"`. A missing or invalid numeric result uses the default `300px` fixed
-height. Setting `estimatedRowDetailHeight` alone does not change that fixed
-default.
+`getRowDetailHeight` accepts a finite positive CSS pixel height or `"auto"`.
+Only a finite positive number is fixed: its Detail keeps that inline height.
+Missing values, invalid numeric values, and `"auto"` use automatic measurement,
+so the rendered Detail has no inline height.
 
 ```tsx
 <CominsTable
@@ -79,11 +79,12 @@ default.
 />
 ```
 
-`"auto"` activates mounted Detail measurement. Before a matching-width
-measurement exists, `estimatedRowDetailHeight` is used and also defaults to
-`300px`. Measurements are cached by owner ID and width. A width mismatch returns
-to the estimate until the shared observer reports the new border-box height.
-Fixed Details are not observed and never use `estimatedRowDetailHeight`.
+Before an automatic Detail has a matching-width measurement,
+`estimatedRowDetailHeight` is used when it is a finite positive value; otherwise
+the current resolved `rowHeight` is the estimate. Measurements are cached by
+owner ID and width. A width mismatch returns to that estimate until the shared
+`ResizeObserver` reports the new border-box height. Fixed Details are not
+observed and never use `estimatedRowDetailHeight`.
 
 ## Semantic DOM And Focus
 

@@ -64,9 +64,10 @@ non-expandable Row는 callback과 controlled ID가 있어도 disclosure와 Detai
 
 ## Detail Height
 
-`getRowDetailHeight`는 finite positive CSS pixel 또는 `"auto"`를 반환한다. 값이
-없거나 잘못된 숫자이면 기본 fixed 높이 `300px`를 사용한다.
-`estimatedRowDetailHeight`만 지정해도 이 fixed 기본값은 바뀌지 않는다.
+`getRowDetailHeight`는 finite positive CSS pixel 또는 `"auto"`를 받는다. finite
+positive 숫자만 fixed이며 해당 Detail은 그 inline height를 유지한다. 값이 없거나,
+잘못된 숫자이거나, `"auto"`이면 automatic measurement를 사용하므로 렌더링된
+Detail에는 inline height가 없다.
 
 ```tsx
 <CominsTable
@@ -76,10 +77,11 @@ non-expandable Row는 callback과 controlled ID가 있어도 disclosure와 Detai
 />
 ```
 
-`"auto"`는 mount된 Detail 측정을 활성화한다. 같은 width의 측정값이 없으면
-`estimatedRowDetailHeight`를 사용하며 기본값도 `300px`다. 측정값은 owner ID와
-width를 기준으로 cache한다. width가 달라지면 estimate로 돌아가고 shared observer가
-새 border-box height를 보고하면 갱신한다. Fixed Detail은 observe하지 않으며
+automatic Detail에 같은 width의 측정값이 없으면 finite positive
+`estimatedRowDetailHeight`를 먼저 사용하고, 그렇지 않으면 현재 resolved `rowHeight`를
+estimate로 사용한다. 측정값은 owner ID와 width를 기준으로 cache한다. width가
+달라지면 그 estimate로 돌아가고 shared `ResizeObserver`가 새 border-box height를
+보고하면 갱신한다. Fixed Detail은 observe하지 않으며
 `estimatedRowDetailHeight`도 사용하지 않는다.
 
 ## Semantic DOM And Focus
