@@ -1328,6 +1328,7 @@ function CominsTableInner<TData>(
   const rowDetailToggleElementsRef = useRef(new Map<CominsRowId, HTMLButtonElement>());
   const activePointerGestureCleanupRef = useRef<(() => void) | null>(null);
   const columnPointerInteractionRef = useRef<CominsColumnPointerInteraction | null>(null);
+  const headerRendererBodyRef = useRef(new Map<string, React.ReactNode>());
   const lastCellAnchorRef = useRef<CominsCellAddress | null>(null);
   const lazyAbortControllerRef = useRef<AbortController | null>(null);
   const lazyLoadingReasonRef = useRef<CominsLazyLoadReason | null>(null);
@@ -3300,7 +3301,15 @@ function CominsTableInner<TData>(
       .filter(Boolean)
       .join(" ");
     const headerPayload = createHeaderComponentPayload(state, column, safeIndex);
-    const headerRendererBody = !isColumnPlaceholder && column.header?.renderer ? column.header.renderer(headerPayload) : null;
+    const headerRendererBody = column.header?.renderer
+      ? isColumnPlaceholder
+        ? headerRendererBodyRef.current.get(column.id)
+        : column.header.renderer(headerPayload)
+      : null;
+
+    if (!isColumnPlaceholder && column.header?.renderer) {
+      headerRendererBodyRef.current.set(column.id, headerRendererBody);
+    }
     const headerLeftSlots = !column.header?.renderer
       ? renderCominsComponentSlots(column.header?.components, headerPayload, "left")
       : [];

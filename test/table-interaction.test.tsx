@@ -1946,7 +1946,7 @@ describe("comins-table keyboard interaction", () => {
     expect(onChangeColumnLayout).not.toHaveBeenCalled();
   });
 
-  it("renders a plain presentation-only source label while a Column moves", () => {
+  it("keeps custom Header content accessible while rendering a plain presentation-only Column Move label", () => {
     const headerRenderer = vi.fn(() => <strong>Custom Age Header</strong>);
     const element = renderTableElement(
       <CominsTable
@@ -1990,6 +1990,7 @@ describe("comins-table keyboard interaction", () => {
     expect(placeholderLabel?.textContent).toBe("Age");
     expect(placeholderLabel?.getAttribute("aria-hidden")).toBe("true");
     expect(placeholderLabel?.querySelector("strong")).toBeNull();
+    expect(ageHeader.querySelector("strong")?.textContent).toBe("Custom Age Header");
     expect(headerRenderer).not.toHaveBeenCalled();
   });
 
