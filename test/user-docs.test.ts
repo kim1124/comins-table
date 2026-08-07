@@ -1,7 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { dataTableOptionGuide } from "../example/src/docs/dataTableOptionGuide";
+import { getDataTableOptionGuide } from "../example/src/docs/dataTableOptionGuide";
+
+const englishDataTableOptionGuide = getDataTableOptionGuide("en");
 
 const userDocs = [
   "01-quick-start.md",
@@ -130,7 +132,7 @@ function getRowExpandOptionGuideContractViolations(optionGuide: DataTableOptionG
 }
 
 function cloneDataTableOptionGuide() {
-  return dataTableOptionGuide.map((group) => ({
+  return englishDataTableOptionGuide.map((group) => ({
     ...group,
     items: group.items.map((item) => ({ ...item })),
   }));
@@ -328,7 +330,19 @@ describe("comins-table user documentation contract", () => {
   });
 
   it("keeps the option guide Row Expand height guidance aligned with measured automatic Details", () => {
-    expect(getRowExpandOptionGuideContractViolations(dataTableOptionGuide)).toEqual([]);
+    expect(getRowExpandOptionGuideContractViolations(englishDataTableOptionGuide)).toEqual([]);
+  });
+
+  it("keeps the Korean Row Expand performance guidance fully translated", () => {
+    const koreanDocs = readWorkspaceFile("docs/ko/19-row-expand.md");
+    const normalizedKoreanDocs = koreanDocs.replace(/\s+/gu, " ");
+
+    expect(koreanDocs).not.toContain(
+      "Data Rows and collapsed Detail owners keep the arithmetic fixed-height path.",
+    );
+    expect(normalizedKoreanDocs).toContain(
+      "Data Row와 접힌 Detail owner는 고정 높이 산술 경로를 유지합니다. 유효하게 펼쳐진 Detail로 인해 data Slot이 rowHeight보다 높아지는 경우에만 private height index가 활성화됩니다.",
+    );
   });
 
   it("rejects a duplicate Props group in the exported option guide", () => {

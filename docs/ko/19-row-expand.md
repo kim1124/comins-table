@@ -125,9 +125,9 @@ scroll된다.
 
 ## Virtualization And Performance
 
-Data Rows and collapsed Detail owners keep the arithmetic fixed-height path.
-The private height index is activated only when an effective expanded Detail
-makes a data Slot taller than rowHeight.
+Data Row와 접힌 Detail owner는 고정 높이 산술 경로를 유지합니다. 유효하게 펼쳐진
+Detail로 인해 data Slot이 rowHeight보다 높아지는 경우에만 private height index가
+활성화됩니다.
 
 owner와 선택적 Detail은 하나의 private virtual Slot이다. 따라서 viewport보다 큰
 Detail도 outer body viewport가 해당 영역을 통과하는 동안 mount 상태를 유지하며,

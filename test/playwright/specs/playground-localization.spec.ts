@@ -48,6 +48,28 @@ test("uses locale-specific search metadata and recovers invalid persisted values
   await expect(page.getByRole("option", { name: /Header Groups/u })).toBeVisible();
 });
 
+test("localizes the Props API reference and preserves its route while switching locale", async ({ page }) => {
+  await page.goto("/api/props");
+
+  await expect(page.getByRole("heading", { level: 1, name: "속성" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "사용 계약" })).toBeVisible();
+  await expect(page.getByText("현재 구현된 속성, 이벤트, Ref 메서드와 Core 헬퍼만 설명합니다.")).toBeVisible();
+  await expect(
+    page.getByText(
+      "외부 useState 또는 store 배열을 data에 직접 연결합니다. Table에서 발생한 변경은 onChangeData를 통해 전달됩니다.",
+    ),
+  ).toBeVisible();
+
+  await page.getByTestId("playground-locale-toggle").getByRole("button", { exact: true, name: "EN" }).click();
+
+  await expect(page).toHaveURL(/\/api\/props$/u);
+  await expect(page.getByRole("heading", { level: 1, name: "Props" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Usage Contract" })).toBeVisible();
+  await expect(
+    page.getByText("Documents only the currently implemented props, events, ref methods, and core helpers."),
+  ).toBeVisible();
+});
+
 test("keeps the readme capture route independent from the locale setting", async ({ page }) => {
   await page.addInitScript((key) => window.localStorage.setItem(key, "en"), PLAYGROUND_LOCALE_STORAGE_KEY);
   await page.goto("/readme-demo");

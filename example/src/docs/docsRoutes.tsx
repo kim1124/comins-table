@@ -30,7 +30,7 @@ import type { DocsCodeSample, DocsPage } from "./types";
 import { findFeature } from "../features/featureRegistry";
 import type { FeatureId } from "../features/types";
 import type { PlaygroundLocale } from "../i18n/types";
-import { usePlaygroundLocale } from "../i18n/playground-locale";
+import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
 function paragraphs(lines: string[]) {
   return (
@@ -76,7 +76,7 @@ function featurePage({
 }
 
 function ImplementedApiReference() {
-  const { locale } = usePlaygroundLocale();
+  const { locale, text } = usePlaygroundLocale();
   const guide = getDataTableOptionGuide(locale);
   const implementedUsageItems = guide
     .find((group) => group.title === "Roadmap" || group.title === "로드맵")
@@ -87,7 +87,7 @@ function ImplementedApiReference() {
       ? [
           {
             items: implementedUsageItems,
-            title: "Usage Contract",
+            title: text(defineLocalizedText("사용 계약", "Usage Contract")),
           },
         ]
       : []),
@@ -374,9 +374,9 @@ type KoreanDocsCopy = {
 const koreanDocsCopy: Record<string, KoreanDocsCopy> = {
   "/api/props": {
     category: "API",
-    label: "Props",
-    summary: "현재 구현된 props, events, ref method와 core helper만 설명합니다.",
-    title: "Props",
+    label: "속성",
+    summary: "현재 구현된 속성, 이벤트, Ref 메서드와 Core 헬퍼만 설명합니다.",
+    title: "속성",
   },
   "/api/ref": {
     body: [
