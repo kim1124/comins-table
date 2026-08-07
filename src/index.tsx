@@ -43,6 +43,7 @@ import {
 import { getCominsColumnMouseIntent } from "./column-pointer";
 import { renderCominsBuiltInComponent, type CominsBuiltInComponentInteraction } from "./component-renderer";
 import { CominsRowDetailRow, CominsRowDetailToggle } from "./row-detail";
+import { CominsTableIconButton } from "./table-icons";
 import { getCominsSummaryValues } from "./summary";
 import {
   flattenCominsTree,
@@ -3869,11 +3870,12 @@ function CominsTableInner<TData>(
                       style={{ "--comins-tree-depth": treeEntry.depth } as React.CSSProperties}
                     >
                       {treeEntry.hasChildren ? (
-                        <button
+                        <CominsTableIconButton
                           aria-expanded={treeEntry.expanded}
                           aria-label={`${treeEntry.expanded ? "Collapse" : "Expand"} ${String(entry.rowId)}`}
                           className="comins-tree-expander"
                           data-testid={`tree-expander-${String(entry.rowId)}`}
+                          icon={treeEntry.expanded ? "disclosureExpanded" : "disclosureCollapsed"}
                           onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
@@ -3881,10 +3883,7 @@ function CominsTableInner<TData>(
                           }}
                           onMouseDown={(event) => event.stopPropagation()}
                           onPointerDown={(event) => event.stopPropagation()}
-                          type="button"
-                        >
-                          {treeEntry.expanded ? "▾" : "▸"}
-                        </button>
+                        />
                       ) : (
                         <span aria-hidden="true" className="comins-tree-expander-spacer" />
                       )}

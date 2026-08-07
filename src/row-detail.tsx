@@ -1,6 +1,8 @@
 import { useLayoutEffect, useRef } from "react";
 import type * as React from "react";
 
+import { CominsTableIconButton } from "./table-icons";
+
 export function CominsRowDetailToggle(props: {
   controlsId?: string;
   disabled: boolean;
@@ -12,13 +14,14 @@ export function CominsRowDetailToggle(props: {
   testId: string;
 }) {
   return (
-    <button
+    <CominsTableIconButton
       aria-controls={props.expanded ? props.controlsId : undefined}
       aria-expanded={props.expanded}
       aria-label={props.label}
       className="comins-row-detail-expander"
       data-testid={props.testId}
       disabled={props.disabled}
+      icon={props.expanded ? "disclosureExpanded" : "disclosureCollapsed"}
       id={props.id}
       onClick={(event) => {
         event.preventDefault();
@@ -29,10 +32,7 @@ export function CominsRowDetailToggle(props: {
       onMouseDown={(event) => event.stopPropagation()}
       onPointerDown={(event) => event.stopPropagation()}
       ref={props.onElement}
-      type="button"
-    >
-      {props.expanded ? "▾" : "▸"}
-    </button>
+    />
   );
 }
 

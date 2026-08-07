@@ -26,10 +26,15 @@ test("Tree Grid route demonstrates 30-node defaults, array ref controls, styles,
     await expect(expander).toHaveAttribute("aria-expanded", "true");
     await expect(expander).toHaveCSS("height", "24px");
     await expect(expander).toHaveCSS("width", "24px");
-    await expect(expander).toHaveCSS("font-size", "14px");
+    const expandedIcon = expander.locator("svg[data-comins-icon='disclosureExpanded']");
+    await expect(expandedIcon).toHaveAttribute("aria-hidden", "true");
+    await expect(expandedIcon).toHaveAttribute("focusable", "false");
+    await expect(expandedIcon).toHaveCSS("height", "15px");
+    await expect(expandedIcon).toHaveCSS("width", "15px");
     await expander.click();
     await expect(viewport.locator("tr[data-comins-row-data-index]")).toHaveCount(21);
     await expect(expander).toHaveAttribute("aria-expanded", "false");
+    await expect(expander.locator("svg[data-comins-icon='disclosureCollapsed']")).toBeVisible();
     await expander.click();
     await expect(viewport.locator("tr[data-comins-row-data-index]")).toHaveCount(30);
   }

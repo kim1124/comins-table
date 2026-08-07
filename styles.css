@@ -298,22 +298,7 @@
 }
 
 .comins-tree-expander {
-  align-items: center;
-  background: transparent;
-  border: 0;
   color: var(--comins-table-accent-strong);
-  cursor: pointer;
-  display: inline-flex;
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1;
-  justify-content: center;
-  padding: 0;
-}
-
-.comins-tree-expander:focus-visible {
-  box-shadow: 0 0 0 3px var(--comins-table-focus);
-  outline: none;
 }
 
 .comins-tree-cell-value {
@@ -321,24 +306,8 @@
 }
 
 .comins-row-detail-expander {
-  align-items: center;
-  background: transparent;
-  border: 0;
   color: var(--comins-table-accent-strong);
-  cursor: pointer;
-  display: inline-flex;
-  flex: 0 0 18px;
-  font: inherit;
-  height: 18px;
-  justify-content: center;
   margin-right: 4px;
-  padding: 0;
-  width: 18px;
-}
-
-.comins-row-detail-expander:focus-visible {
-  box-shadow: 0 0 0 3px var(--comins-table-focus);
-  outline: none;
 }
 
 .comins-table__body-viewport {

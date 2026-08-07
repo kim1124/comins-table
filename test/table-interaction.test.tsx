@@ -3256,6 +3256,9 @@ describe("comins-table keyboard interaction", () => {
     expect(region?.getAttribute("aria-labelledby")).toBe(toggle?.id);
     expect(document.getElementById(region?.getAttribute("aria-labelledby") ?? "")).toBe(toggle);
     expect(toggle?.getAttribute("aria-label")).toBe("Collapse a details");
+    expect(toggle?.querySelector("svg[data-comins-icon='disclosureExpanded']")).not.toBeNull();
+    expect(toggle?.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    expect(toggle?.querySelector("svg")?.getAttribute("focusable")).toBe("false");
     expect(
       element.querySelector("[data-testid='row-detail-content-a']")?.getAttribute("style"),
     ).toContain("height: 180px");

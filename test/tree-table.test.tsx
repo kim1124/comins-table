@@ -202,11 +202,17 @@ describe("comins-table tree grid", () => {
 
     const expander = container.querySelector<HTMLButtonElement>("[data-testid='tree-expander-root']");
     expect(expander?.getAttribute("aria-expanded")).toBe("false");
+    expect(expander?.querySelector("svg[data-comins-icon='disclosureCollapsed']")).not.toBeNull();
+    expect(expander?.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    expect(expander?.querySelector("svg")?.getAttribute("focusable")).toBe("false");
 
     act(() => expander?.click());
 
     expect(container.querySelector("[data-testid='row-child']")).not.toBeNull();
     expect(container.querySelector("[data-testid='tree-expander-root']")?.getAttribute("aria-expanded")).toBe("true");
+    expect(
+      container.querySelector("[data-testid='tree-expander-root'] svg[data-comins-icon='disclosureExpanded']"),
+    ).not.toBeNull();
   });
 
   it("sorts root siblings without separating a parent from its descendants", async () => {
