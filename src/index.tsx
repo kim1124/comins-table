@@ -377,6 +377,12 @@ type CominsMixedVirtualProjection<TData> = {
   slots: Array<CominsDataVirtualSlot<TData>>;
 };
 
+type CominsCommittedDetailObserverSnapshot<TData> = Readonly<{
+  contentWidth: number;
+  projection: CominsMixedVirtualProjection<TData> | null;
+  viewportHeight: number;
+}>;
+
 type CominsVirtualProjection = {
   mixed: false;
   projectedDataIndexes: readonly number[];
@@ -1410,9 +1416,12 @@ function CominsTableInner<TData>(
   const detailElementsRef = useRef(
     new Map<Element, CominsObservedDetail>(),
   );
+  const fallbackMeasuredDetailElementsRef = useRef(new Set<Element>());
   const detailObserverRef = useRef<ResizeObserver | null>(null);
-  const detailContentWidthRef = useRef(0);
-  const mixedProjectionRef = useRef<CominsMixedVirtualProjection<TData> | null>(null);
+  const detailObserverTargetsRef = useRef(new Set<Element>());
+  const committedDetailObserverSnapshotRef = useRef<
+    CominsCommittedDetailObserverSnapshot<TData> | null
+  >(null);
   const rowDetailToggleElementsRef = useRef(new Map<CominsRowId, HTMLButtonElement>());
   const activePointerGestureCleanupRef = useRef<(() => void) | null>(null);
   const columnPointerInteractionRef = useRef<CominsColumnPointerInteraction | null>(null);
@@ -1434,7 +1443,6 @@ function CominsTableInner<TData>(
   const pendingDetailAnchorRef = useRef<CominsPendingDetailAnchor | null>(null);
   const pendingScrollTopRef = useRef(0);
   const previousVirtualProjectionRef = useRef<CominsVirtualProjection | null>(null);
-  const virtualViewportHeightRef = useRef(Math.max(1, rowHeight) * 12);
   const scrollCommitTimeoutRef = useRef<number | null>(null);
   const scrollFrameRef = useRef<number | null>(null);
   const suppressedSortClickRef = useRef<CominsSuppressedSortClick | null>(null);
@@ -1453,7 +1461,6 @@ function CominsTableInner<TData>(
   const [resizingColumnId, setResizingColumnId] = useState<string | null>(null);
   const [rowMoveState, setRowMoveState] = useState<CominsRowMoveState | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
-  virtualViewportHeightRef.current = containerHeight || Math.max(1, rowHeight) * 12;
   const rowDetailIdPrefix = useId();
   const effectiveData = lazyLoad ? lazyRows : data;
   const [state, setState] = useState(() =>
@@ -1698,12 +1705,14 @@ function CominsTableInner<TData>(
   }, [state.rows]);
 
   const updateMixedProjectionDetailHeight = (
-    projection: CominsMixedVirtualProjection<TData>,
+    snapshot: CominsCommittedDetailObserverSnapshot<TData>,
     rowId: CominsRowId,
     height: number,
     width: number,
   ) => {
-    if (width !== detailContentWidthRef.current) {
+    const projection = snapshot.projection;
+
+    if (!projection || width !== snapshot.contentWidth) {
       return false;
     }
 
@@ -1721,6 +1730,95 @@ function CominsTableInner<TData>(
     slot.detail.estimated = false;
     slot.detail.height = height;
     return delta !== 0;
+  };
+
+  const applyDetailMeasurementUpdates = (
+    updates: ReadonlyArray<{
+      height: number;
+      rowId: CominsRowId;
+      width: number;
+    }>,
+  ) => {
+    const snapshot = committedDetailObserverSnapshotRef.current;
+
+    if (!snapshot) {
+      return;
+    }
+
+    const accepted = updates.filter(({ height, rowId, width }) => {
+      const current = detailMeasurementsRef.current.get(rowId);
+
+      return (
+        !current ||
+        current.width !== width ||
+        Math.abs(current.height - height) >= 0.5
+      );
+    });
+
+    if (accepted.length === 0) {
+      return;
+    }
+
+    const projection = snapshot.projection;
+    const viewport = containerRef.current;
+    const viewportHeight = viewport?.clientHeight || snapshot.viewportHeight;
+    const currentPendingDetailAnchor = pendingDetailAnchorRef.current;
+    const pendingAnchor =
+      currentPendingDetailAnchor?.status === "pending"
+        ? currentPendingDetailAnchor
+        : !currentPendingDetailAnchor && projection && viewport
+        ? captureCominsVirtualAnchor({
+            logicalScrollTop:
+              logicalAnchorTransactionRef.current &&
+              Math.abs(
+                viewport.scrollTop -
+                  logicalAnchorTransactionRef.current.actualPhysical,
+              ) <= 0.5
+                ? logicalAnchorTransactionRef.current.targetLogical
+                : undefined,
+            physicalScrollTop: viewport.scrollTop,
+            projection: {
+              heightIndex: projection.heightIndex,
+              keys: projection.keys,
+              mixed: true,
+            },
+            viewportHeight,
+          })
+        : undefined;
+    let updatedActiveIndex = false;
+
+    for (const update of accepted) {
+      detailMeasurementsRef.current.set(update.rowId, {
+        height: update.height,
+        width: update.width,
+      });
+      updatedActiveIndex =
+        updateMixedProjectionDetailHeight(
+          snapshot,
+          update.rowId,
+          update.height,
+          update.width,
+        ) || updatedActiveIndex;
+    }
+
+    if (
+      pendingAnchor &&
+      updatedActiveIndex &&
+      currentPendingDetailAnchor?.status !== "pending"
+    ) {
+      const revision = anchorRevisionRef.current + 1;
+
+      anchorRevisionRef.current = revision;
+      pendingDetailAnchorRef.current = {
+        ...pendingAnchor,
+        revision,
+        status: "pending",
+      };
+    }
+
+    if (updatedActiveIndex || !projection) {
+      setDetailLayoutVersion((current) => current + 1);
+    }
   };
 
   const createDetailObserver = () => {
@@ -1757,102 +1855,27 @@ function CominsTableInner<TData>(
         }
       }
 
-      const accepted = updates.filter(({ height, rowId, width }) => {
-        const current = detailMeasurementsRef.current.get(rowId);
-
-        return (
-          !current ||
-          current.width !== width ||
-          Math.abs(current.height - height) >= 0.5
-        );
-      });
-
-      if (accepted.length === 0) {
-        return;
-      }
-
-      const projection = mixedProjectionRef.current;
-      const viewport = containerRef.current;
-      const viewportHeight =
-        viewport?.clientHeight || virtualViewportHeightRef.current;
-      const currentPendingDetailAnchor = pendingDetailAnchorRef.current;
-      const pendingAnchor =
-        currentPendingDetailAnchor?.status === "pending"
-          ? currentPendingDetailAnchor
-          : !currentPendingDetailAnchor && projection && viewport
-          ? captureCominsVirtualAnchor({
-              logicalScrollTop:
-                logicalAnchorTransactionRef.current &&
-                Math.abs(
-                  viewport.scrollTop -
-                    logicalAnchorTransactionRef.current.actualPhysical,
-                ) <= 0.5
-                  ? logicalAnchorTransactionRef.current.targetLogical
-                  : undefined,
-              physicalScrollTop: viewport.scrollTop,
-              projection: {
-                heightIndex: projection.heightIndex,
-                keys: projection.keys,
-                mixed: true,
-              },
-              viewportHeight,
-            })
-          : undefined;
-      let updatedActiveIndex = false;
-
-      for (const update of accepted) {
-        detailMeasurementsRef.current.set(update.rowId, {
-          height: update.height,
-          width: update.width,
-        });
-
-        if (!projection) {
-          continue;
-        }
-
-        updatedActiveIndex =
-          updateMixedProjectionDetailHeight(
-            projection,
-            update.rowId,
-            update.height,
-            update.width,
-          ) || updatedActiveIndex;
-      }
-
-      if (
-        pendingAnchor &&
-        updatedActiveIndex &&
-        currentPendingDetailAnchor?.status !== "pending"
-      ) {
-        const revision = anchorRevisionRef.current + 1;
-
-        anchorRevisionRef.current = revision;
-        pendingDetailAnchorRef.current = {
-          ...pendingAnchor,
-          revision,
-          status: "pending",
-        };
-      }
-
-      if (updatedActiveIndex || !projection) {
-        setDetailLayoutVersion((current) => current + 1);
-      }
+      applyDetailMeasurementUpdates(updates);
     });
 
     detailObserverRef.current = observer;
 
     for (const observed of detailElementsRef.current.values()) {
+      detailObserverTargetsRef.current.add(observed.element);
       observer.observe(observed.element);
     }
 
     return observer;
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     return () => {
       detailObserverRef.current?.disconnect();
       detailObserverRef.current = null;
+      detailObserverTargetsRef.current.clear();
       detailElementsRef.current.clear();
+      fallbackMeasuredDetailElementsRef.current.clear();
+      committedDetailObserverSnapshotRef.current = null;
     };
   }, []);
 
@@ -1860,6 +1883,7 @@ function CominsTableInner<TData>(
     if (detailElementsRef.current.size === 0) {
       detailObserverRef.current?.disconnect();
       detailObserverRef.current = null;
+      detailObserverTargetsRef.current.clear();
     }
   };
 
@@ -1871,7 +1895,9 @@ function CominsTableInner<TData>(
     for (const [currentElement, observed] of detailElementsRef.current) {
       if (observed.rowId === rowId && currentElement !== element) {
         detailObserverRef.current?.unobserve(currentElement);
+        detailObserverTargetsRef.current.delete(currentElement);
         detailElementsRef.current.delete(currentElement);
+        fallbackMeasuredDetailElementsRef.current.delete(currentElement);
       }
     }
 
@@ -1881,38 +1907,6 @@ function CominsTableInner<TData>(
     }
 
     detailElementsRef.current.set(element, { element, rowId });
-
-    const currentObserver = detailObserverRef.current;
-    const observer = currentObserver ?? createDetailObserver();
-
-    if (observer) {
-      if (currentObserver) {
-        observer.observe(element);
-      }
-      return;
-    }
-
-    const rect = element.getBoundingClientRect();
-
-    if (Number.isFinite(rect.height) && rect.height > 0) {
-      detailMeasurementsRef.current.set(rowId, {
-        height: rect.height,
-        width: Math.round(rect.width),
-      });
-      const projection = mixedProjectionRef.current;
-      const updatedActiveIndex = projection
-        ? updateMixedProjectionDetailHeight(
-            projection,
-            rowId,
-            rect.height,
-            Math.round(rect.width),
-          )
-        : false;
-
-      if (updatedActiveIndex || !projection) {
-        setDetailLayoutVersion((current) => current + 1);
-      }
-    }
   };
 
   const notifyChanges = (
@@ -2017,7 +2011,6 @@ function CominsTableInner<TData>(
     typeof tableWidth === "number" && Number.isFinite(tableWidth)
       ? Math.round(tableWidth)
       : 0;
-  detailContentWidthRef.current = detailContentWidth;
   const headerRows = useMemo(() => getCominsHeaderRows(state), [state]);
   const summaryValues = useMemo(
     () => (summary ? getCominsSummaryValues(treeContext?.summaryRows ?? state.rows, visibleColumns, summary) : null),
@@ -2198,7 +2191,67 @@ function CominsTableInner<TData>(
     state.rows,
     virtualized,
   ]);
-  mixedProjectionRef.current = mixedProjection;
+  const detailObserverSnapshotCandidate = useMemo<
+    CominsCommittedDetailObserverSnapshot<TData>
+  >(
+    () => ({
+      contentWidth: detailContentWidth,
+      projection: mixedProjection,
+      viewportHeight:
+        containerHeight || Math.max(1, rowHeight) * 12,
+    }),
+    [containerHeight, detailContentWidth, mixedProjection, rowHeight],
+  );
+
+  useLayoutEffect(() => {
+    committedDetailObserverSnapshotRef.current =
+      detailObserverSnapshotCandidate;
+
+    if (detailElementsRef.current.size === 0) {
+      disconnectDetailObserverIfIdle();
+      return;
+    }
+
+    if (typeof ResizeObserver !== "undefined") {
+      const currentObserver = detailObserverRef.current;
+      const observer = currentObserver ?? createDetailObserver();
+
+      if (currentObserver) {
+        for (const observed of detailElementsRef.current.values()) {
+          if (!detailObserverTargetsRef.current.has(observed.element)) {
+            detailObserverTargetsRef.current.add(observed.element);
+            observer?.observe(observed.element);
+          }
+        }
+      }
+      return;
+    }
+
+    const updates: Array<{
+      height: number;
+      rowId: CominsRowId;
+      width: number;
+    }> = [];
+
+    for (const observed of detailElementsRef.current.values()) {
+      if (fallbackMeasuredDetailElementsRef.current.has(observed.element)) {
+        continue;
+      }
+
+      fallbackMeasuredDetailElementsRef.current.add(observed.element);
+      const rect = observed.element.getBoundingClientRect();
+
+      if (Number.isFinite(rect.height) && rect.height > 0) {
+        updates.push({
+          height: rect.height,
+          rowId: observed.rowId,
+          width: Math.round(rect.width),
+        });
+      }
+    }
+
+    applyDetailMeasurementUpdates(updates);
+  });
   const rowWindow = useMemo<CominsVirtualWindow<TData>>(() => {
     if (virtualized) {
       const safeRowHeight = Math.max(1, rowHeight);

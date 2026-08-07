@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import type React from "react";
-import { act, createRef, useState } from "react";
+import { act, createRef, startTransition, StrictMode, Suspense, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -803,6 +803,165 @@ describe("comins-table keyboard interaction", () => {
     } finally {
       heightIndexUpdate.mockRestore();
       heightIndexBuild.mockRestore();
+      resize.restore();
+    }
+  });
+
+  it("keeps Detail observer inputs on one committed snapshot while a concurrent render suspends", () => {
+    const resize = installControllableResizeObserver();
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+    const suspended = new Promise<void>(() => undefined);
+    let renderSuspendedCandidate: (() => void) | undefined;
+    let commitCandidate: (() => void) | undefined;
+    let suspendedCandidateRenderCount = 0;
+
+    function SuspendAfterTable({ active }: { active: boolean }) {
+      if (active) {
+        suspendedCandidateRenderCount += 1;
+        throw suspended;
+      }
+
+      return null;
+    }
+
+    function ConcurrentHarness() {
+      const [revision, setRevision] = useState(0);
+      const candidate = revision > 0;
+
+      renderSuspendedCandidate = () => setRevision(1);
+      commitCandidate = () => setRevision(2);
+
+      return (
+        <Suspense fallback={<div data-testid="observer-snapshot-fallback" />}>
+          <CominsTable
+            columns={columns}
+            data={manyRows}
+            data-testid="observer-snapshot-viewport"
+            estimatedRowDetailHeight={300}
+            expandedRowIds={candidate ? ["row-0", "row-1"] : ["row-0"]}
+            getRowDetailHeight={() => "auto"}
+            getRowId={(row) => row.id}
+            onChangeExpandedRowIds={() => undefined}
+            renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+            rowHeight={candidate ? 60 : 36}
+            virtualized
+          />
+          <SuspendAfterTable active={revision === 1} />
+        </Suspense>
+      );
+    }
+
+    try {
+      const element = renderTableElement(
+        <StrictMode>
+          <ConcurrentHarness />
+        </StrictMode>,
+      );
+      const viewport = element.querySelector<HTMLElement>(
+        "[data-testid='observer-snapshot-viewport']",
+      )!;
+      const content = element.querySelector<HTMLElement>(
+        "[data-testid='row-detail-content-row-0']",
+      )!;
+      const sizer = element.querySelector<HTMLElement>(
+        ".comins-table__body-virtual-sizer",
+      )!;
+      let assignedScrollTop = 600;
+      let detailWidth = 800;
+      let viewportHeight = 432;
+      let viewportWidth = 800;
+
+      vi.spyOn(content, "getBoundingClientRect").mockImplementation(() => ({
+        bottom: 300,
+        height: 300,
+        left: 0,
+        right: detailWidth,
+        top: 0,
+        width: detailWidth,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }));
+      vi.spyOn(viewport, "getBoundingClientRect").mockImplementation(() => ({
+        bottom: viewportHeight,
+        height: viewportHeight,
+        left: 0,
+        right: viewportWidth,
+        top: 0,
+        width: viewportWidth,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }));
+      Object.defineProperties(viewport, {
+        clientHeight: { configurable: true, value: 0 },
+        scrollHeight: {
+          configurable: true,
+          get: () => Number.parseFloat(sizer.style.height),
+        },
+        scrollTop: {
+          configurable: true,
+          get: () => assignedScrollTop,
+          set: (value: number) => {
+            assignedScrollTop = value;
+          },
+        },
+      });
+
+      act(() => {
+        resize.emit(viewport, viewportHeight);
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      expect(sizer.style.height).toBe("7500px");
+
+      viewportHeight = 720;
+      viewportWidth = 500;
+      act(() => {
+        startTransition(() => {
+          resize.emit(viewport, viewportHeight);
+          renderSuspendedCandidate?.();
+        });
+      });
+
+      expect(suspendedCandidateRenderCount).toBeGreaterThan(0);
+      expect(element.querySelector("[data-testid='observer-snapshot-fallback']")).toBeNull();
+      expect(element.querySelector("[data-testid='row-detail-content-row-1']")).toBeNull();
+
+      detailWidth = 500;
+      act(() => resize.emit(content, 420));
+
+      expect(viewport.scrollTop).toBe(600);
+      expect(sizer.style.height).toBe("7500px");
+
+      detailWidth = 800;
+      act(() => resize.emit(content, 420));
+
+      expect(viewport.scrollTop).toBe(720);
+      expect(sizer.style.height).toBe("7620px");
+
+      act(() => commitCandidate?.());
+
+      act(() => resize.emit(viewport, viewportHeight));
+
+      const committedCandidateContent = element.querySelector<HTMLElement>(
+        "[data-testid='row-detail-content-row-0']",
+      )!;
+      const committedCandidateSizer = element.querySelector<HTMLElement>(
+        ".comins-table__body-virtual-sizer",
+      )!;
+
+      setElementRect(committedCandidateContent, 500, 300);
+      expect(committedCandidateSizer.style.height).toBe("12600px");
+
+      act(() => resize.emit(committedCandidateContent, 241));
+      expect(committedCandidateSizer.style.height).toBe("12541px");
+    } finally {
+      requestAnimationFrame.mockRestore();
       resize.restore();
     }
   });
