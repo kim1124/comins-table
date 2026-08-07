@@ -94,11 +94,13 @@ function readWorkspaceFile(path: string) {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
-function extractOptionGuideOption(optionGuide: string, name: string) {
+function extractOptionGuidePropsOptions(optionGuide: string, name: string) {
+  const propsItems =
+    optionGuide.match(/\{\s*items:\s*\[([\s\S]*?)\],\s*title:\s*"Props",\s*\},/u)?.[1] ?? "";
   const escapedName = name.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 
-  return (
-    optionGuide.match(new RegExp(`\\{[^{}]*\\bname:\\s*"${escapedName}"[^{}]*\\}`, "u"))?.[0] ?? ""
+  return [...propsItems.matchAll(new RegExp(`\\{[^{}]*\\bname:\\s*"${escapedName}"[^{}]*\\}`, "gu"))].map(
+    (match) => match[0],
   );
 }
 
@@ -299,14 +301,18 @@ describe("comins-table user documentation contract", () => {
 
   it("keeps the option guide Row Expand height guidance aligned with measured automatic Details", () => {
     const optionGuide = readWorkspaceFile("example/src/docs/dataTableOptionGuide.ts");
-    const getRowDetailHeightOption = extractOptionGuideOption(optionGuide, "getRowDetailHeight");
-    const estimatedRowDetailHeightOption = extractOptionGuideOption(optionGuide, "estimatedRowDetailHeight");
+    const getRowDetailHeightOptions = extractOptionGuidePropsOptions(optionGuide, "getRowDetailHeight");
+    const estimatedRowDetailHeightOptions = extractOptionGuidePropsOptions(optionGuide, "estimatedRowDetailHeight");
+    const getRowDetailHeightOption = getRowDetailHeightOptions[0] ?? "";
+    const estimatedRowDetailHeightOption = estimatedRowDetailHeightOptions[0] ?? "";
 
     expect(optionGuide).not.toMatch(/\b300px\b/u);
+    expect(getRowDetailHeightOptions, "getRowDetailHeight should appear exactly once in Props").toHaveLength(1);
     expect(getRowDetailHeightOption).toContain('name: "getRowDetailHeight"');
     expect(extractOptionGuideDescription(getRowDetailHeightOption)).toBe(
       'Returns a finite positive fixed Detail height. Missing, invalid, and \\"auto\\" values use measured automatic height without inline height.',
     );
+    expect(estimatedRowDetailHeightOptions, "estimatedRowDetailHeight should appear exactly once in Props").toHaveLength(1);
     expect(estimatedRowDetailHeightOption).toContain('name: "estimatedRowDetailHeight"');
     expect(extractOptionGuideDescription(estimatedRowDetailHeightOption)).toBe(
       "Estimate for an automatic Detail before matching-width measurement: a valid finite positive value wins; otherwise the resolved rowHeight is used.",
