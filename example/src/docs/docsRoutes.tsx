@@ -228,7 +228,7 @@ const englishDocsPages: DocsPage[] = [
   featurePage({
     body: paragraphs([
       "The application owns expandedRowIds and writes onChangeExpandedRowIds back to the same controlled state.",
-      'Use a positive pixel height for bounded fixed Details or "auto" for mounted content measurement. The default and automatic estimate are 300px.',
+      'Only a finite positive height is fixed and retains inline height. Missing, invalid, and "auto" Details use measured automatic height without an inline height. Before matching-width measurement, a valid estimatedRowDetailHeight wins; otherwise the resolved `rowHeight` is the estimate.',
       "Sorting, pagination, loading, movement, selection, clipboard, and callbacks continue to address owner business Rows. Detail regions remain semantic sibling Rows.",
       "Tree Grid, general owner auto-height, and nested managed Details remain unsupported.",
     ]),
@@ -475,7 +475,7 @@ const koreanDocsCopy: Record<string, KoreanDocsCopy> = {
   "/examples/row-expand": {
     body: [
       "Application은 `expandedRowIds`를 소유하고 `onChangeExpandedRowIds` 결과를 같은 controlled state에 반영합니다.",
-      "고정 Detail은 양의 pixel 높이를, 자동 측정은 `auto`를 사용하며 기본 estimate는 300px입니다.",
+      "유한한 양수 높이만 fixed이며 inline height를 유지합니다. 값이 없거나 invalid 또는 `auto`인 Detail은 inline height 없이 자동 측정합니다. matching-width 측정 전에는 유효한 finite positive `estimatedRowDetailHeight`를 우선 사용하고, 그 외에는 resolved `rowHeight`를 estimate로 사용합니다.",
       "정렬, pagination, loading, 이동, 선택과 callback은 owner business Row를 기준으로 유지됩니다.",
       "Tree Grid, 일반 owner auto-height와 중첩 managed Detail은 지원하지 않습니다.",
     ],

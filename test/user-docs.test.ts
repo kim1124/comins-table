@@ -276,6 +276,26 @@ describe("comins-table user documentation contract", () => {
     expect(optionGuide).toContain('name: "onChangeExpandedRowIds"');
   });
 
+  it("keeps every public Row Expand height summary aligned with measured automatic Details", () => {
+    const readme = readWorkspaceFile("README.md");
+    const optionGuide = readWorkspaceFile("example/src/docs/dataTableOptionGuide.ts");
+    const routes = readWorkspaceFile("example/src/docs/docsRoutes.tsx");
+
+    for (const surface of [readme, optionGuide, routes]) {
+      expect(surface).not.toMatch(/\b300px\b/u);
+    }
+
+    expect(readme).toContain("finite positive CSS pixel height");
+    expect(readme).toContain("no inline height");
+    expect(readme).toContain("resolved `rowHeight`");
+    expect(optionGuide).toContain('Missing, invalid, and \\"auto\\" values use measured automatic height');
+    expect(optionGuide).toContain("otherwise the resolved rowHeight is used");
+    expect(routes).toContain("Only a finite positive height is fixed");
+    expect(routes).toContain("otherwise the resolved `rowHeight` is the estimate");
+    expect(routes).toContain("유한한 양수 높이만 fixed");
+    expect(routes).toContain("그 외에는 resolved `rowHeight`를 estimate로 사용합니다");
+  });
+
   it("documents column drag activation and Virtual List row selection", () => {
     const header = readWorkspaceFile("docs/user/06-header.md");
     const cell = readWorkspaceFile("docs/user/08-cell.md");

@@ -160,7 +160,7 @@ const [expandedRowIds, setExpandedRowIds] = useState<readonly string[]>([]);
 />;
 ```
 
-Row Expand is controlled by stable owner business Row IDs. An interactive disclosure requires the application to feed the next value from `onChangeExpandedRowIds` back into `expandedRowIds`; when that callback is omitted, the disclosure is disabled and read-only. Fixed Details default to `300px`; `"auto"` measures mounted content from a `300px` estimate. Details render as semantic owner-following Rows, stay outside selection and clipboard addressing, and preserve dormant IDs across sorting and pagination.
+Row Expand is controlled by stable owner business Row IDs. An interactive disclosure requires the application to feed the next value from `onChangeExpandedRowIds` back into `expandedRowIds`; when that callback is omitted, the disclosure is disabled and read-only. A finite positive CSS pixel height is fixed and retains its inline height. Missing values, invalid numeric values, and `"auto"` use measured automatic height with no inline height. Before an automatic Detail has a matching-width measurement, a valid finite positive `estimatedRowDetailHeight` is used; otherwise the resolved `rowHeight` is the estimate. Details render as semantic owner-following Rows, stay outside selection and clipboard addressing, and preserve dormant IDs across sorting and pagination.
 
 Tree Grid Row Details, general automatic height for owner data Rows, and nested Details managed by Comins Table remain unsupported.
 
