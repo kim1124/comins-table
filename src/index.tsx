@@ -3195,6 +3195,11 @@ function CominsTableInner<TData>(
           <span className="comins-table__header-content" data-comins-header-body="true">
             <span className="comins-table__header-label">{cell.group.label}</span>
           </span>
+          {movingGroupId === cell.groupId ? (
+            <span aria-hidden="true" className="comins-column-placeholder-label">
+              {cell.group.label}
+            </span>
+          ) : null}
           <span
             aria-hidden="true"
             className="comins-table__resize"
@@ -3295,7 +3300,7 @@ function CominsTableInner<TData>(
       .filter(Boolean)
       .join(" ");
     const headerPayload = createHeaderComponentPayload(state, column, safeIndex);
-    const headerRendererBody = column.header?.renderer ? column.header.renderer(headerPayload) : null;
+    const headerRendererBody = !isColumnPlaceholder && column.header?.renderer ? column.header.renderer(headerPayload) : null;
     const headerLeftSlots = !column.header?.renderer
       ? renderCominsComponentSlots(column.header?.components, headerPayload, "left")
       : [];
@@ -3412,6 +3417,11 @@ function CominsTableInner<TData>(
             {headerRightSlots}
           </span>
         </span>
+        {isColumnPlaceholder ? (
+          <span aria-hidden="true" className="comins-column-placeholder-label">
+            {column.label}
+          </span>
+        ) : null}
         <span
           aria-hidden="true"
           className="comins-table__resize"

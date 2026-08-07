@@ -571,6 +571,23 @@
   pointer-events: none;
 }
 
+.comins-column-placeholder-label {
+  display: none;
+}
+
+.comins-table__th[data-column-placeholder="true"] > .comins-column-placeholder-label {
+  align-items: center;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0 12px;
+  pointer-events: none;
+  position: absolute;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .comins-table__header-content {
   align-items: center;
   column-gap: 0;

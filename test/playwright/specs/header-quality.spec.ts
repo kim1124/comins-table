@@ -246,6 +246,12 @@ test("source placeholder background stays muted while its drop marker remains vi
   await page.mouse.move(ageBox!.x + ageBox!.width / 2, ageBox!.y + ageBox!.height / 2);
   await page.mouse.down();
   await page.mouse.move(ageBox!.x + ageBox!.width / 2 + 8, ageBox!.y + ageBox!.height / 2);
+  const placeholderLabel = ageHeader.locator(".comins-column-placeholder-label");
+  await expect(placeholderLabel).toBeVisible();
+  await expect(placeholderLabel).toHaveText("Column2");
+  await expect(placeholderLabel).toHaveAttribute("aria-hidden", "true");
+  await expect(ageHeader.locator(".comins-table__header-content")).toHaveCSS("opacity", "0");
+  await expect(ageHeader.getByTestId("resize-age")).toHaveCSS("opacity", "0");
   await expect(ageHeader).toHaveAttribute("data-column-drop-target", "true");
   await expect(ageHeader.locator(".comins-column-drop-marker")).toBeVisible();
   await expect(ageHeader).toHaveCSS("outline-style", "dashed");
@@ -290,6 +296,9 @@ test("source placeholder background stays muted while its drop marker remains vi
   await page.mouse.move(profileBox!.x + profileBox!.width / 2, profileBox!.y + profileBox!.height / 2);
   await page.mouse.down();
   await page.mouse.move(profileBox!.x + profileBox!.width / 2 + 8, profileBox!.y + profileBox!.height / 2);
+  await expect(profileHeader.locator(".comins-column-placeholder-label")).toHaveText("Header 그룹 1");
+  await expect(nameHeader.locator(".comins-column-placeholder-label")).toHaveText("Column1");
+  await expect(ageGroupHeader.locator(".comins-column-placeholder-label")).toHaveText("Column2");
   await expect(profileHeader).toHaveAttribute("data-column-drop-target", "true");
   await expect(profileHeader.locator(".comins-column-drop-marker")).toBeVisible();
   const groupBackgrounds = await Promise.all(

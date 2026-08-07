@@ -326,6 +326,19 @@ describe("comins-table user documentation contract", () => {
     expect(koreanHeader).toContain("전용 public handle 또는 icon override API가 아니다");
   });
 
+  it("records Column Filter as deferred Header guidance without a Filter API", () => {
+    const englishHeader = readWorkspaceFile("docs/user/06-header.md");
+    const koreanHeader = readWorkspaceFile("docs/ko/06-header.md");
+
+    expect(englishHeader).toContain("Future Column Filter");
+    expect(englishHeader).toContain("right edge");
+    expect(englishHeader).toContain("not shipped");
+    expect(englishHeader).not.toMatch(/filter\??:\s*(true|boolean)/u);
+    expect(koreanHeader).toContain("향후 Column Filter");
+    expect(koreanHeader).toContain("우측");
+    expect(koreanHeader).toContain("제공하지");
+  });
+
   it("links Flat Table Ref methods to the live visible-index example", () => {
     const documents = [
       readWorkspaceFile("docs/user/06-header.md"),

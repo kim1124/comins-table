@@ -51,7 +51,7 @@ The live [`/api/ref`](http://127.0.0.1:4002/api/ref) example applies `setSortMod
 
 - A left-button mouse interaction activates column reorder at a 6-pixel horizontal drag threshold. Horizontal movement must be greater than vertical movement.
 - Pointer Up below the threshold preserves the normal click and sort behavior. Vertical intent cancels both the pending reorder and sort.
-- After activation, the source Header becomes a darker dashed source placeholder while a ghost and target marker show the pending move.
+- After activation, the source Header becomes a darker dashed source placeholder that keeps its plain Column or Group name visible while a ghost and target marker show the pending move. This presentation-only source label does not invoke custom Header renderers.
 - The move ghost adds a decorative Radix SVG drag-handle icon (`aria-hidden="true"`), but the whole Header remains the pointer target. It is not a dedicated public handle or icon override API.
 - A valid same-depth target uses the accent marker. A different-depth or cross-parent target uses a red invalid marker with a `not-allowed` cursor and cannot commit.
 - A move commits only on Pointer Up over a valid target. Pointer cancellation, `Escape`, or window blur cancels it without changing the layout.
@@ -71,5 +71,9 @@ Two-level headers use `columnGroups`.
 ```
 
 Parent groups resize their child columns proportionally and move as a block. Nested groups are not part of the first public release.
+
+## Future Column Filter
+
+Column Filter is not shipped: there is no Filter prop, callback, button, import, or runtime state in this release. When it is introduced, its control belongs at the Header's right edge after sort metadata and before resize. The control must isolate pointer, click, and double-click events from Header sort, resize, and move interactions; provide an accessible name and keyboard operation; and keep Filter value and open state application-owned through controlled state.
 
 In the Playground, parent Group visibility uses independent Checkboxes while child Column visibility uses the MultiSelect. Turning a parent off hides all of its children without deleting the child selection; turning it on restores the previously selected children.

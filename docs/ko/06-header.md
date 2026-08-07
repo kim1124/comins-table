@@ -167,7 +167,7 @@ Phase 2 Header components는 `button`, `input`, `checkbox`, `radio`, `select`, `
 - TH body 영역은 column move 후보 영역이며 cursor는 `grab`이다.
 - 마우스 왼쪽 버튼을 누른 상태에서 수평 이동이 수직 이동보다 크고 6픽셀에 도달하면 column move mode가 즉시 활성화되며 cursor는 `grabbing`이다.
 - 6픽셀 미만에서 Pointer Up하면 일반 click과 sort 동작을 유지한다. 수직 이동 의도가 확인되면 대기 중인 column move와 sort를 모두 취소한다.
-- Column move mode에서는 원본 Header를 현재 Header 배경보다 더 어두운 점선 source placeholder로 표시하고, 이동 중인 header ghost와 drop marker를 함께 표시한다.
+- Column move mode에서는 원본 Header를 현재 Header 배경보다 더 어두운 점선 source placeholder로 표시하고, plain Column 또는 Group 이름을 계속 보이게 하며 이동 중인 header ghost와 drop marker를 함께 표시한다. 이 presentation-only source label은 custom Header renderer를 호출하지 않는다.
 - 이동 ghost에는 장식용 Radix SVG drag-handle icon(`aria-hidden="true"`)을 표시하지만 Header 전체가 pointer target이다. 이는 전용 public handle 또는 icon override API가 아니다.
 - 같은 depth와 parent의 유효한 target은 accent marker로 표시한다. depth가 다르거나 parent 경계를 위반한 target은 붉은색 invalid marker와 `not-allowed` cursor를 표시하고 이동을 반영하지 않는다.
 - 유효한 target 위에서 Pointer Up한 경우에만 이동을 반영한다. Pointer cancel, `Escape`, window blur는 layout 변경 없이 취소한다.
@@ -180,6 +180,10 @@ Phase 2 Header components는 `button`, `input`, `checkbox`, `radio`, `select`, `
 - Header menu 버튼 클릭은 sort, resize, column move를 발생시키지 않는다.
 - Header menu는 바깥 클릭, `Escape`, item 선택 시 닫히며 `onBeforeChange`가 `false`를 반환하면 open/close를 취소한다.
 - Multi-column Sort는 `multiSort`를 명시한 경우 `Shift` 조작으로 활성화되며 각 Header에 우선순위 badge를 표시한다.
+
+## 향후 Column Filter
+
+현재 Column Filter는 제공하지 않는다. 이 릴리스에는 Filter prop, callback, button, import, 런타임 state가 없다. 향후 control은 Header 우측에서 sort metadata 뒤와 resize 앞에 배치한다. control의 pointer, click, double-click 이벤트는 Header sort, resize, move와 격리하고, 접근 가능한 이름과 keyboard 동작을 제공하며, Filter 값과 open state는 애플리케이션 소유 controlled state로 유지한다.
 
 Playground 검증 기준:
 

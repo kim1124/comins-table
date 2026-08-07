@@ -1946,6 +1946,100 @@ describe("comins-table keyboard interaction", () => {
     expect(onChangeColumnLayout).not.toHaveBeenCalled();
   });
 
+  it("renders a plain presentation-only source label while a Column moves", () => {
+    const headerRenderer = vi.fn(() => <strong>Custom Age Header</strong>);
+    const element = renderTableElement(
+      <CominsTable
+        columns={[
+          { field: "name", label: "Name" },
+          { field: "age", header: { renderer: headerRenderer }, label: "Age", sort: true },
+        ]}
+        data={rows}
+        getRowId={(row) => row.id}
+      />,
+    );
+    const ageHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    headerRenderer.mockClear();
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => ageHeader),
+    });
+
+    try {
+      act(() => {
+        ageHeader.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointermove", { bubbles: true, button: 0, clientX: 16, clientY: 10 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    const placeholderLabel = ageHeader.querySelector<HTMLElement>(".comins-column-placeholder-label");
+
+    expect(ageHeader.getAttribute("data-column-placeholder")).toBe("true");
+    expect(placeholderLabel?.textContent).toBe("Age");
+    expect(placeholderLabel?.getAttribute("aria-hidden")).toBe("true");
+    expect(placeholderLabel?.querySelector("strong")).toBeNull();
+    expect(headerRenderer).not.toHaveBeenCalled();
+  });
+
+  it("renders parent and child plain labels while a Column Group moves", () => {
+    const element = renderTableElement(
+      <CominsTable
+        columnGroups={[{ children: ["name", "age"], id: "profile", label: "Profile" }]}
+        columns={[
+          { field: "name", label: "Name" },
+          { field: "age", label: "Age", sort: true },
+        ]}
+        data={rows}
+        getRowId={(row) => row.id}
+      />,
+    );
+    const profileHeader = element.querySelector<HTMLElement>("[data-testid='header-group-profile']")!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => profileHeader),
+    });
+
+    try {
+      act(() => {
+        profileHeader.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointermove", { bubbles: true, button: 0, clientX: 16, clientY: 10 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    expect(
+      element.querySelector<HTMLElement>("[data-testid='header-group-profile'] .comins-column-placeholder-label")?.textContent,
+    ).toBe("Profile");
+    expect(
+      element.querySelector<HTMLElement>("[data-testid='header-name'] .comins-column-placeholder-label")?.textContent,
+    ).toBe("Name");
+    expect(
+      element.querySelector<HTMLElement>("[data-testid='header-age'] .comins-column-placeholder-label")?.textContent,
+    ).toBe("Age");
+  });
+
   it("marks clicked rows and cells as selected", () => {
     const element = renderTable();
     const bodyRows = element.querySelectorAll("tbody tr");
