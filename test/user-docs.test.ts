@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { dataTableOptionGuide } from "../example/src/docs/dataTableOptionGuide";
 
 const userDocs = [
   "01-quick-start.md",
@@ -94,18 +95,45 @@ function readWorkspaceFile(path: string) {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
-function extractOptionGuidePropsOptions(optionGuide: string, name: string) {
-  const propsItems =
-    optionGuide.match(/\{\s*items:\s*\[([\s\S]*?)\],\s*title:\s*"Props",\s*\},/u)?.[1] ?? "";
-  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+type DataTableOptionGuide = ReadonlyArray<{
+  items: ReadonlyArray<{ description: string; name: string }>;
+  title: string;
+}>;
 
-  return [...propsItems.matchAll(new RegExp(`\\{[^{}]*\\bname:\\s*"${escapedName}"[^{}]*\\}`, "gu"))].map(
-    (match) => match[0],
-  );
+const rowExpandHeightOptionDescriptions = {
+  estimatedRowDetailHeight:
+    "Estimate for an automatic Detail before matching-width measurement: a valid finite positive value wins; otherwise the resolved rowHeight is used.",
+  getRowDetailHeight:
+    'Returns a finite positive fixed Detail height. Missing, invalid, and "auto" values use measured automatic height without inline height.',
+} as const;
+
+function getRowExpandOptionGuideContractViolations(optionGuide: DataTableOptionGuide) {
+  const propsGroups = optionGuide.filter((group) => group.title === "Props");
+  const violations: string[] = [];
+
+  if (propsGroups.length !== 1) {
+    violations.push(`Props group must appear exactly once; received ${propsGroups.length}.`);
+    return violations;
+  }
+
+  for (const [name, description] of Object.entries(rowExpandHeightOptionDescriptions)) {
+    const options = propsGroups[0]!.items.filter((item) => item.name === name);
+
+    if (options.length !== 1) {
+      violations.push(`${name} must appear exactly once in Props; received ${options.length}.`);
+    } else if (options[0]!.description !== description) {
+      violations.push(`${name} must retain its measured automatic Detail height description.`);
+    }
+  }
+
+  return violations;
 }
 
-function extractOptionGuideDescription(option: string) {
-  return option.match(/\bdescription:\s*"((?:\\.|[^"\\])*)"/u)?.[1] ?? "";
+function cloneDataTableOptionGuide() {
+  return dataTableOptionGuide.map((group) => ({
+    ...group,
+    items: group.items.map((item) => ({ ...item })),
+  }));
 }
 
 describe("comins-table user documentation contract", () => {
@@ -300,23 +328,47 @@ describe("comins-table user documentation contract", () => {
   });
 
   it("keeps the option guide Row Expand height guidance aligned with measured automatic Details", () => {
-    const optionGuide = readWorkspaceFile("example/src/docs/dataTableOptionGuide.ts");
-    const getRowDetailHeightOptions = extractOptionGuidePropsOptions(optionGuide, "getRowDetailHeight");
-    const estimatedRowDetailHeightOptions = extractOptionGuidePropsOptions(optionGuide, "estimatedRowDetailHeight");
-    const getRowDetailHeightOption = getRowDetailHeightOptions[0] ?? "";
-    const estimatedRowDetailHeightOption = estimatedRowDetailHeightOptions[0] ?? "";
+    expect(getRowExpandOptionGuideContractViolations(dataTableOptionGuide)).toEqual([]);
+  });
 
-    expect(optionGuide).not.toMatch(/\b300px\b/u);
-    expect(getRowDetailHeightOptions, "getRowDetailHeight should appear exactly once in Props").toHaveLength(1);
-    expect(getRowDetailHeightOption).toContain('name: "getRowDetailHeight"');
-    expect(extractOptionGuideDescription(getRowDetailHeightOption)).toBe(
-      'Returns a finite positive fixed Detail height. Missing, invalid, and \\"auto\\" values use measured automatic height without inline height.',
-    );
-    expect(estimatedRowDetailHeightOptions, "estimatedRowDetailHeight should appear exactly once in Props").toHaveLength(1);
-    expect(estimatedRowDetailHeightOption).toContain('name: "estimatedRowDetailHeight"');
-    expect(extractOptionGuideDescription(estimatedRowDetailHeightOption)).toBe(
-      "Estimate for an automatic Detail before matching-width measurement: a valid finite positive value wins; otherwise the resolved rowHeight is used.",
-    );
+  it("rejects a duplicate Props group in the exported option guide", () => {
+    const optionGuide = cloneDataTableOptionGuide();
+    const propsGroup = optionGuide.find((group) => group.title === "Props")!;
+
+    optionGuide.push({ ...propsGroup, items: [...propsGroup.items] });
+
+    expect(getRowExpandOptionGuideContractViolations(optionGuide)).toEqual([
+      "Props group must appear exactly once; received 2.",
+    ]);
+  });
+
+  it("rejects a duplicate Row Expand height option in the exported Props group", () => {
+    const optionGuide = cloneDataTableOptionGuide();
+    const propsGroup = optionGuide.find((group) => group.title === "Props")!;
+    const getRowDetailHeight = propsGroup.items.find((item) => item.name === "getRowDetailHeight")!;
+
+    propsGroup.items.push({ ...getRowDetailHeight });
+
+    expect(getRowExpandOptionGuideContractViolations(optionGuide)).toEqual([
+      "getRowDetailHeight must appear exactly once in Props; received 2.",
+    ]);
+  });
+
+  it("rejects swapped Row Expand height descriptions in the exported Props group", () => {
+    const optionGuide = cloneDataTableOptionGuide();
+    const propsGroup = optionGuide.find((group) => group.title === "Props")!;
+    const getRowDetailHeight = propsGroup.items.find((item) => item.name === "getRowDetailHeight")!;
+    const estimatedRowDetailHeight = propsGroup.items.find((item) => item.name === "estimatedRowDetailHeight")!;
+
+    [getRowDetailHeight.description, estimatedRowDetailHeight.description] = [
+      estimatedRowDetailHeight.description,
+      getRowDetailHeight.description,
+    ];
+
+    expect(getRowExpandOptionGuideContractViolations(optionGuide)).toEqual([
+      "estimatedRowDetailHeight must retain its measured automatic Detail height description.",
+      "getRowDetailHeight must retain its measured automatic Detail height description.",
+    ]);
   });
 
   it("keeps the English Row Expand Playground route aligned with measured automatic Details", () => {
