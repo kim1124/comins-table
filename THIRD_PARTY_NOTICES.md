@@ -1,4 +1,53 @@
-# Legacy Third-Party Notices
+# Third-Party Notices
+
+## Radix Icons
+
+- Component: @radix-ui/react-icons
+- Version: 1.3.2
+- Revision: bde33b13aa5848555f5512ac12155930fb4beb7d
+- Source: https://github.com/radix-ui/icons
+- License: MIT
+- Use surface: external runtime dependency; may be bundled by downstream applications
+- Modified or copied by Comins: no
+
+The Comins library build keeps Radix Icons external. Applications that bundle
+and redistribute Radix Icons must preserve the following MIT notice in their
+distribution.
+
+<!-- radix-icons-used-exports:start -->
+- `CaretSortIcon`
+- `ChevronDownIcon`
+- `ChevronRightIcon`
+- `DragHandleDots2Icon`
+- `TriangleDownIcon`
+- `TriangleUpIcon`
+<!-- radix-icons-used-exports:end -->
+
+MIT License
+
+Copyright (c) 2022 WorkOS
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## Legacy Lucide and Feather notices
 
 Comins Table versions 0.1.0 through 0.1.4 included portions of Lucide in their
 generated JavaScript bundles. Current source and generated artifacts do not

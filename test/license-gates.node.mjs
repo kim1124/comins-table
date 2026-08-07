@@ -38,6 +38,20 @@ const spoqaFonts = [
 ];
 const spoqaLicense = 'example/public/fonts/spoqa/LICENSE.SpoqaHanSans.txt';
 const readmeGif = 'docs/assets/comins-table-demo.gif';
+const radixName = '@radix-ui/react-icons';
+const radixVersion = '1.3.2';
+const radixIntegrity = 'sha512-fyQIhGDhzfc9pK2kH6Pl9c4BDJGfMkPqkyIgYDthyNYoNg3wVhoJMMh19WS4Up/1KMPFVpNsT2q3WmXn2N1m6g==';
+const radixRevision = 'bde33b13aa5848555f5512ac12155930fb4beb7d';
+const radixSource = 'https://github.com/radix-ui/icons';
+const radixLicenseText = readFileSync(join(repositoryRoot, 'node_modules', radixName, 'LICENSE'), 'utf8');
+const radixCoreExports = [
+  'CaretSortIcon',
+  'ChevronDownIcon',
+  'ChevronRightIcon',
+  'DragHandleDots2Icon',
+  'TriangleDownIcon',
+  'TriangleUpIcon',
+];
 const reservedFontNames = [
   'Spoqa Han Sans',
   'Spoqa Han Sans JP',
@@ -87,10 +101,11 @@ function fixture({
     },
   ],
   approvals,
+  packageName = 'comins-license-fixture',
 } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'comins-table-license-'));
   const packageJson = {
-    name: 'comins-license-fixture',
+    name: packageName,
     version: '1.0.0',
     license: 'MIT',
     devDependencies: Object.fromEntries(
@@ -117,6 +132,7 @@ function fixture({
       dev: entry.dev || undefined,
       optional: entry.optional || undefined,
       description: entry.description,
+      integrity: entry.integrity,
     };
   }
 
@@ -129,6 +145,50 @@ function fixture({
     packages,
   });
   if (approvals) writeJson(root, 'THIRD_PARTY_LICENSE_APPROVALS.json', approvals);
+  return root;
+}
+
+function radixNotice(exports = radixCoreExports) {
+  return [
+    '# Third-Party Notices',
+    '',
+    '## Radix Icons',
+    '',
+    `Component: ${radixName}`,
+    `Version: ${radixVersion}`,
+    `Revision: ${radixRevision}`,
+    `Source: ${radixSource}`,
+    'License: MIT',
+    'Use surface: external runtime dependency; may be bundled by downstream applications',
+    'Modified or copied by Comins: no',
+    '',
+    '<!-- radix-icons-used-exports:start -->',
+    ...exports.slice().sort().map((name) => `- \`${name}\``),
+    '<!-- radix-icons-used-exports:end -->',
+    '',
+    radixLicenseText.trimEnd(),
+    '',
+  ].join('\n');
+}
+
+function radixFixture() {
+  const root = fixture({
+    packageName: 'comins-table',
+    entries: [{
+      name: radixName,
+      version: radixVersion,
+      license: 'MIT',
+      integrity: radixIntegrity,
+      dev: false,
+    }],
+  });
+  write(root, `node_modules/${radixName}/LICENSE`, radixLicenseText);
+  write(
+    root,
+    'src/table-icons.tsx',
+    `import { ${radixCoreExports.join(', ')} } from "${radixName}";\n`,
+  );
+  write(root, 'THIRD_PARTY_NOTICES.md', radixNotice());
   return root;
 }
 
@@ -645,6 +705,58 @@ test('blocks the exact current non-automatic dependencies without approvals', ()
     assert.doesNotMatch(result.stderr, /Copyright|Permission is hereby granted/);
   } finally {
     remove(root);
+  }
+});
+
+test('accepts the exact Radix icon dependency, upstream license, notice, and source inventory', () => {
+  const root = radixFixture();
+  try {
+    expectSuccess(run(root));
+  } finally {
+    remove(root);
+  }
+});
+
+test('rejects Radix version, integrity, license, notice, and source inventory drift', () => {
+  const cases = [
+    (root) => {
+      const manifest = readJson(root, 'package.json');
+      const lockfile = readJson(root, 'package-lock.json');
+      manifest.dependencies[radixName] = '^1.3.2';
+      lockfile.packages[''].dependencies[radixName] = '^1.3.2';
+      writeJson(root, 'package.json', manifest);
+      writeJson(root, 'package-lock.json', lockfile);
+    },
+    (root) => {
+      const lockfile = readJson(root, 'package-lock.json');
+      lockfile.packages[`node_modules/${radixName}`].integrity = 'sha512-invalid';
+      writeJson(root, 'package-lock.json', lockfile);
+    },
+    (root) => write(
+      root,
+      `node_modules/${radixName}/LICENSE`,
+      radixLicenseText.replace('Copyright (c) 2022 WorkOS', 'Copyright removed'),
+    ),
+    (root) => write(
+      root,
+      'THIRD_PARTY_NOTICES.md',
+      radixNotice().replace(radixRevision, '0000000000000000000000000000000000000000'),
+    ),
+    (root) => write(
+      root,
+      'src/table-icons.tsx',
+      `import { ${[...radixCoreExports, 'MagnifyingGlassIcon'].join(', ')} } from "${radixName}";\n`,
+    ),
+  ];
+
+  for (const mutate of cases) {
+    const root = radixFixture();
+    mutate(root);
+    try {
+      expectStructuralFailure(run(root));
+    } finally {
+      remove(root);
+    }
   }
 });
 

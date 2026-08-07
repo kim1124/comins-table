@@ -16,7 +16,7 @@ export default defineConfig({
       name: "KmsfDataTable",
     },
     rollupOptions: {
-      external: ["react", "react-dom", "react/jsx-runtime"],
+      external: ["@radix-ui/react-icons", "react", "react-dom", "react/jsx-runtime"],
     },
     sourcemap: true,
   },
