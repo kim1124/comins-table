@@ -172,9 +172,14 @@ export function ColumnGroupFeature() {
               }
             />
             {richHeaderFixture ? (
-              <output aria-label={text(defineLocalizedText("Rich header label actions", "Rich header label actions"))}>
-                {`group:${richLabelActions.group},column:${richLabelActions.column}`}
-              </output>
+              <>
+                <output aria-label={text(defineLocalizedText("Rich header label actions", "Rich header label actions"))}>
+                  {`group:${richLabelActions.group},column:${richLabelActions.column}`}
+                </output>
+                <output aria-label={text(defineLocalizedText("Rich header layout order", "Rich header layout order"))}>
+                  {groupLayout.order?.join(",")}
+                </output>
+              </>
             ) : null}
             <CominsTable
               className="example-table header-example-table"

@@ -521,6 +521,45 @@ test("real rich group labels isolate every child subtree and restore after every
   const sourceContent = source.locator(".comins-table__header-content");
   const childContents = children.map((child) => child.locator(".comins-table__header-content"));
   const actionOutput = example.getByLabel("Rich header label actions");
+  const layoutOutput = example.getByLabel("Rich header layout order");
+  const pointerConsumers = [sourceContent, childContents[0]];
+  const initialLayoutOrder = "name,age,active,locked,role";
+  const movedLayoutOrder = "active,locked,name,age,role";
+
+  for (const consumer of pointerConsumers) {
+    await consumer.evaluate((element) => {
+      const target = element as HTMLElement;
+      const countKeyByType = {
+        pointercancel: "pointerCancelCount",
+        pointermove: "pointerMoveCount",
+        pointerup: "pointerUpCount",
+      } as const;
+
+      for (const [type, key] of Object.entries(countKeyByType)) {
+        target.dataset[key] = "0";
+        target.addEventListener(type, () => {
+          target.dataset[key] = String(Number(target.dataset[key]) + 1);
+        });
+      }
+    });
+  }
+  const resetPointerConsumers = async () => {
+    for (const consumer of pointerConsumers) {
+      await consumer.evaluate((element) => {
+        const target = element as HTMLElement;
+        target.dataset.pointerCancelCount = "0";
+        target.dataset.pointerMoveCount = "0";
+        target.dataset.pointerUpCount = "0";
+      });
+    }
+  };
+  const expectPointerConsumers = async (count: number) => {
+    for (const consumer of pointerConsumers) {
+      await expect(consumer).toHaveAttribute("data-pointer-cancel-count", String(count));
+      await expect(consumer).toHaveAttribute("data-pointer-move-count", String(count));
+      await expect(consumer).toHaveAttribute("data-pointer-up-count", String(count));
+    }
+  };
 
   const beginMove = async () => {
     const sourceBox = await source.boundingBox();
@@ -568,15 +607,31 @@ test("real rich group labels isolate every child subtree and restore after every
 
   await beginMove();
   await page.keyboard.press("Escape");
+  await expect(layoutOutput).toHaveText(initialLayoutOrder);
+  await expectPointerConsumers(0);
   await expectRestored(1, 1);
+  await resetPointerConsumers();
+
+  for (const type of ["pointermove", "pointerup", "pointercancel"] as const) {
+    for (const consumer of pointerConsumers) {
+      await consumer.dispatchEvent(type, { bubbles: true, pointerType: "mouse" });
+    }
+  }
+  await expectPointerConsumers(1);
+  await resetPointerConsumers();
 
   await beginMove();
   await childContents[0].dispatchEvent("pointercancel", { bubbles: true, pointerType: "mouse" });
+  await expect(layoutOutput).toHaveText(initialLayoutOrder);
+  await expectPointerConsumers(0);
   await expectRestored(2, 2);
+  await resetPointerConsumers();
 
   await beginMove();
   await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  await expect(layoutOutput).toHaveText(initialLayoutOrder);
   await expectRestored(3, 3);
+  await resetPointerConsumers();
 
   await beginMove();
   const targetBox = await target.boundingBox();
@@ -594,6 +649,8 @@ test("real rich group labels isolate every child subtree and restore after every
     clientY: targetBox!.y + targetBox!.height / 2,
     pointerType: "mouse",
   });
+  await expect(layoutOutput).toHaveText(movedLayoutOrder);
+  await expectPointerConsumers(0);
   await expectRestored(4, 4);
 
   expect(diagnostics).toEqual([]);
