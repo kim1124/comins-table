@@ -372,6 +372,7 @@ type CominsVirtualWindow<TData> = {
 type CominsMixedVirtualProjection<TData> = {
   heightIndex: CominsHeightIndex;
   keys: string[];
+  slotIndexByRowId: Map<CominsRowId, number>;
   slots: Array<CominsDataVirtualSlot<TData>>;
 };
 
@@ -1609,6 +1610,32 @@ function CominsTableInner<TData>(
     );
   }, [state.rows]);
 
+  const updateMixedProjectionDetailHeight = (
+    projection: CominsMixedVirtualProjection<TData>,
+    rowId: CominsRowId,
+    height: number,
+    width: number,
+  ) => {
+    if (width !== detailContentWidthRef.current) {
+      return false;
+    }
+
+    const slotIndex = projection.slotIndexByRowId.get(rowId);
+    const slot = slotIndex === undefined ? undefined : projection.slots[slotIndex];
+
+    if (slotIndex === undefined || slot?.detail?.mode !== "auto") {
+      return false;
+    }
+
+    const nextSlotHeight =
+      projection.heightIndex.getHeight(slotIndex) - slot.detail.height + height;
+    const delta = projection.heightIndex.updateHeight(slotIndex, nextSlotHeight);
+
+    slot.detail.estimated = false;
+    slot.detail.height = height;
+    return delta !== 0;
+  };
+
   const createDetailObserver = () => {
     if (typeof ResizeObserver === "undefined") {
       return null;
@@ -1661,8 +1688,11 @@ function CominsTableInner<TData>(
       const viewport = containerRef.current;
       const viewportHeight =
         viewport?.clientHeight || virtualViewportHeightRef.current;
+      const currentPendingDetailAnchor = pendingDetailAnchorRef.current;
       const pendingAnchor =
-        projection && viewport
+        currentPendingDetailAnchor?.status === "pending"
+          ? currentPendingDetailAnchor
+          : !currentPendingDetailAnchor && projection && viewport
           ? captureCominsVirtualAnchor({
               logicalScrollTop:
                 logicalAnchorTransactionRef.current &&
@@ -1689,28 +1719,24 @@ function CominsTableInner<TData>(
           width: update.width,
         });
 
-        if (
-          !projection ||
-          update.width !== detailContentWidthRef.current
-        ) {
+        if (!projection) {
           continue;
         }
 
-        const slotIndex = projection.slots.findIndex(
-          (slot) =>
-            slot.rowId === update.rowId &&
-            slot.detail?.mode === "auto",
-        );
-        const slot = projection.slots[slotIndex];
-
-        if (slotIndex < 0 || !slot?.detail) {
-          continue;
-        }
-
-        updatedActiveIndex = true;
+        updatedActiveIndex =
+          updateMixedProjectionDetailHeight(
+            projection,
+            update.rowId,
+            update.height,
+            update.width,
+          ) || updatedActiveIndex;
       }
 
-      if (pendingAnchor && updatedActiveIndex) {
+      if (
+        pendingAnchor &&
+        updatedActiveIndex &&
+        currentPendingDetailAnchor?.status !== "pending"
+      ) {
         const revision = anchorRevisionRef.current + 1;
 
         anchorRevisionRef.current = revision;
@@ -1721,7 +1747,9 @@ function CominsTableInner<TData>(
         };
       }
 
-      setDetailLayoutVersion((current) => current + 1);
+      if (updatedActiveIndex || !projection) {
+        setDetailLayoutVersion((current) => current + 1);
+      }
     });
 
     detailObserverRef.current = observer;
@@ -1784,7 +1812,19 @@ function CominsTableInner<TData>(
         height: rect.height,
         width: Math.round(rect.width),
       });
-      setDetailLayoutVersion((current) => current + 1);
+      const projection = mixedProjectionRef.current;
+      const updatedActiveIndex = projection
+        ? updateMixedProjectionDetailHeight(
+            projection,
+            rowId,
+            rect.height,
+            Math.round(rect.width),
+          )
+        : false;
+
+      if (updatedActiveIndex || !projection) {
+        setDetailLayoutVersion((current) => current + 1);
+      }
     }
   };
 
@@ -2044,16 +2084,25 @@ function CominsTableInner<TData>(
     const heightIndex = CominsHeightIndex.from(
       slots.map((slot) => getCominsSlotHeight(slot, safeRowHeight)),
     );
+    const slotIndexByRowId = new Map<CominsRowId, number>();
+
+    for (let slotIndex = 0; slotIndex < slots.length; slotIndex += 1) {
+      const rowId = slots[slotIndex]?.rowId;
+
+      if (rowId !== undefined && !slotIndexByRowId.has(rowId)) {
+        slotIndexByRowId.set(rowId, slotIndex);
+      }
+    }
 
     return {
       heightIndex,
       keys: slots.map((slot) => slot.key),
+      slotIndexByRowId,
       slots,
     };
   }, [
     effectiveExpandedRowIdSet,
     detailContentWidth,
-    detailLayoutVersion,
     estimatedRowDetailHeight,
     getRowDetailHeight,
     projectedDataIndexes,

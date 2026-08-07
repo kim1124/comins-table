@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CominsTable, type CominsTableProps, type CominsTableRef } from "../src";
+import { CominsHeightIndex } from "../src/virtual-layout";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -160,28 +161,34 @@ function installControllableResizeObserver() {
     value: TestResizeObserver,
   });
 
-  const emit = (element: Element, blockSize: number) => {
-    const observer = observers.find((candidate) => candidate.observed.has(element));
+  const emitBatch = (measurements: ReadonlyArray<{ blockSize: number; element: Element }>) => {
+    const observer = observers.find((candidate) =>
+      measurements.every(({ element }) => candidate.observed.has(element)),
+    );
 
     if (!observer) {
-      throw new Error("Expected the element to be observed");
+      throw new Error("Expected the elements to be observed by one observer");
     }
 
-    const rect = element.getBoundingClientRect();
     observer.callback(
-      [
-        {
+      measurements.map(({ blockSize, element }) => {
+        const rect = element.getBoundingClientRect();
+
+        return {
           borderBoxSize: [{ blockSize, inlineSize: rect.width }],
           contentRect: { height: blockSize, width: rect.width },
           target: element,
-        } as unknown as ResizeObserverEntry,
-      ],
+        } as unknown as ResizeObserverEntry;
+      }),
       {} as ResizeObserver,
     );
   };
+  const emit = (element: Element, blockSize: number) =>
+    emitBatch([{ blockSize, element }]);
 
   return {
     emit,
+    emitBatch,
     observers,
     restore: () => {
       Object.defineProperty(globalThis, "ResizeObserver", {
@@ -712,6 +719,90 @@ describe("comins-table keyboard interaction", () => {
       act(() => resize.emit(content, 420));
       expect(sizer.style.height).toBe("492px");
     } finally {
+      resize.restore();
+    }
+  });
+
+  it("updates 100,000-row automatic Detail measurements without rebuilding the height index", () => {
+    const resize = installControllableResizeObserver();
+    const heightIndexBuild = vi.spyOn(CominsHeightIndex, "from");
+    const heightIndexUpdate = vi.spyOn(CominsHeightIndex.prototype, "updateHeight");
+    const detailRows = Array.from({ length: 100_000 }, (_value, index) => ({
+      age: index,
+      id: `row-${index}`,
+      name: `Row ${index}`,
+    }));
+    const getRowDetailHeight = () => "auto" as const;
+    const getRowId = (row: PersonRow) => row.id;
+    const onChangeExpandedRowIds = () => undefined;
+    const renderRowDetail = ({ row }: { row: { data: PersonRow } }) => (
+      <span>{row.data.name}</span>
+    );
+    const renderProps = (expandedRowIds: readonly string[]) => (
+      <CominsTable
+        columns={columns}
+        data={detailRows}
+        data-testid="incremental-detail-height-viewport"
+        expandedRowIds={expandedRowIds}
+        getRowDetailHeight={getRowDetailHeight}
+        getRowId={getRowId}
+        onChangeExpandedRowIds={onChangeExpandedRowIds}
+        renderRowDetail={renderRowDetail}
+        rowHeight={36}
+        virtualized
+      />
+    );
+
+    try {
+      const element = renderTableElement(renderProps(["row-0", "row-1"]));
+      const viewport = element.querySelector(
+        "[data-testid='incremental-detail-height-viewport']",
+      )!;
+      const first = element.querySelector("[data-testid='row-detail-content-row-0']")!;
+      const second = element.querySelector("[data-testid='row-detail-content-row-1']")!;
+
+      setElementRect(viewport, 800, 180);
+      setElementRect(first, 800, 36);
+      setElementRect(second, 800, 36);
+      act(() => resize.emit(viewport, 180));
+
+      const activeHeightIndex = heightIndexBuild.mock.results.at(-1)?.value;
+
+      expect(activeHeightIndex).toBeInstanceOf(CominsHeightIndex);
+      expect(activeHeightIndex?.getTotalHeight()).toBe(3_600_072);
+      heightIndexBuild.mockClear();
+      heightIndexUpdate.mockClear();
+
+      act(() => {
+        resize.emitBatch([
+          { blockSize: 420, element: first },
+          { blockSize: 180, element: second },
+        ]);
+      });
+      act(() => {
+        resize.emitBatch([
+          { blockSize: 460, element: first },
+          { blockSize: 220, element: second },
+        ]);
+      });
+
+      expect(heightIndexBuild).not.toHaveBeenCalled();
+      expect(heightIndexUpdate).toHaveBeenCalledTimes(4);
+      expect(heightIndexUpdate.mock.calls).toEqual([
+        [0, 456],
+        [1, 216],
+        [0, 496],
+        [1, 256],
+      ]);
+      expect(activeHeightIndex?.getTotalHeight()).toBe(3_600_680);
+
+      act(() => root?.render(renderProps(["row-0"])));
+
+      expect(heightIndexBuild).toHaveBeenCalledTimes(1);
+      expect(heightIndexBuild.mock.results[0]?.value.getTotalHeight()).toBe(3_600_460);
+    } finally {
+      heightIndexUpdate.mockRestore();
+      heightIndexBuild.mockRestore();
       resize.restore();
     }
   });
