@@ -929,6 +929,7 @@ describe("comins-table keyboard interaction", () => {
           columns={columns}
           data={manyRows.slice(0, 30)}
           data-testid="detail-anchor-viewport"
+          estimatedRowDetailHeight={300}
           expandedRowIds={["row-0"]}
           getRowDetailHeight={() => "auto"}
           getRowId={(row) => row.id}
@@ -989,6 +990,7 @@ describe("comins-table keyboard interaction", () => {
           columns={columns}
           data={manyRows.slice(0, 30)}
           data-testid="detail-batch-viewport"
+          estimatedRowDetailHeight={300}
           expandedRowIds={["row-0"]}
           getRowDetailHeight={() => "auto"}
           getRowId={(row) => row.id}
@@ -1064,6 +1066,7 @@ describe("comins-table keyboard interaction", () => {
           columns={fixedColumns}
           data={manyRows.slice(0, 30)}
           data-testid="detail-width-anchor-viewport"
+          estimatedRowDetailHeight={300}
           expandedRowIds={["row-0"]}
           getRowDetailHeight={() => "auto"}
           getRowId={(row) => row.id}
@@ -1152,6 +1155,7 @@ describe("comins-table keyboard interaction", () => {
           columns={columns}
           data={manyRows}
           data-testid="detail-user-scroll-viewport"
+          estimatedRowDetailHeight={300}
           expandedRowIds={["row-0"]}
           getRowDetailHeight={() => "auto"}
           getRowId={(row) => row.id}
@@ -1228,6 +1232,7 @@ describe("comins-table keyboard interaction", () => {
           columns={columns}
           data={manyRows}
           data-testid="detail-pending-user-scroll-viewport"
+          estimatedRowDetailHeight={300}
           expandedRowIds={["row-0"]}
           getRowDetailHeight={() => "auto"}
           getRowId={(row) => row.id}
@@ -1303,6 +1308,7 @@ describe("comins-table keyboard interaction", () => {
           columns={columns}
           data={manyRows}
           data-testid="detail-newer-revision-viewport"
+          estimatedRowDetailHeight={300}
           expandedRowIds={["row-0"]}
           getRowDetailHeight={() => "auto"}
           getRowId={(row) => row.id}
@@ -3407,29 +3413,28 @@ describe("comins-table keyboard interaction", () => {
     expect(onChangeData).not.toHaveBeenCalled();
   });
 
-  it("keeps estimatedRowDetailHeight from changing the non-virtual fixed default", () => {
+  it("auto-sizes an expanded Detail when no height callback is provided", () => {
     const element = renderTableElement(
       <CominsTable
         columns={columns}
         data={rows}
-        estimatedRowDetailHeight={180}
         expandedRowIds={["a"]}
         getRowId={(row) => row.id}
         renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+        rowHeight={40}
       />,
     );
 
     expect(
       element.querySelector<HTMLElement>("[data-testid='row-detail-content-a']")?.style.height,
-    ).toBe("300px");
+    ).toBe("");
   });
 
-  it("keeps estimatedRowDetailHeight from changing the virtual fixed default", () => {
-    const element = renderTableElement(
+  it("auto-sizes a virtualized expanded Detail when no height callback is provided", () => {
+    const virtualizedElement = renderTableElement(
       <CominsTable
         columns={columns}
         data={rows}
-        estimatedRowDetailHeight={180}
         expandedRowIds={["a"]}
         getRowId={(row) => row.id}
         renderRowDetail={({ row }) => <span>{row.data.name}</span>}
@@ -3438,8 +3443,8 @@ describe("comins-table keyboard interaction", () => {
     );
 
     expect(
-      element.querySelector<HTMLElement>("[data-testid='row-detail-content-a']")?.style.height,
-    ).toBe("300px");
+      virtualizedElement.querySelector<HTMLElement>("[data-testid='row-detail-content-a']")?.style.height,
+    ).toBe("");
   });
 
   it("retains a fixed detail region when its renderer returns null", () => {
@@ -3461,7 +3466,7 @@ describe("comins-table keyboard interaction", () => {
     expect(content?.style.height).toBe("96px");
   });
 
-  it("falls back to a 300px detail height for every invalid numeric result", () => {
+  it("auto-sizes Detail rows for every invalid numeric height result", () => {
     const invalidRows: PersonRow[] = [
       { age: 1, id: "zero", name: "Zero" },
       { age: 2, id: "negative", name: "Negative" },
@@ -3474,7 +3479,7 @@ describe("comins-table keyboard interaction", () => {
       negative: -24,
       zero: 0,
     };
-    const element = renderTableElement(
+    const invalidElement = renderTableElement(
       <CominsTable
         columns={columns}
         data={invalidRows}
@@ -3485,11 +3490,28 @@ describe("comins-table keyboard interaction", () => {
       />,
     );
 
-    for (const row of invalidRows) {
+    for (const rowId of ["zero", "negative", "nan", "infinity"]) {
       expect(
-        element.querySelector<HTMLElement>(`[data-testid='row-detail-content-${row.id}']`)?.style.height,
-      ).toBe("300px");
+        invalidElement.querySelector<HTMLElement>(`[data-testid='row-detail-content-${rowId}']`)?.style.height,
+      ).toBe("");
     }
+  });
+
+  it("keeps a valid numeric Detail height fixed", () => {
+    const fixedElement = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={rows}
+        expandedRowIds={["a"]}
+        getRowDetailHeight={() => 96}
+        getRowId={(row) => row.id}
+        renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+      />,
+    );
+
+    expect(
+      fixedElement.querySelector<HTMLElement>("[data-testid='row-detail-content-a']")?.style.height,
+    ).toBe("96px");
   });
 
   it("does not invoke the detail-height callback when detail rendering is absent", () => {

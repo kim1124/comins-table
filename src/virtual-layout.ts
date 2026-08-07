@@ -1,6 +1,5 @@
 import type { CominsRowId } from "./core";
 
-export const COMINS_DEFAULT_DETAIL_HEIGHT = 300;
 export const COMINS_MAX_PHYSICAL_TOTAL_HEIGHT = 1_500_000;
 
 export type CominsDataVirtualSlot<TData> = {
@@ -67,26 +66,23 @@ export function createCominsDataVirtualSlot<TData>(input: {
   };
 }
 
-export function normalizeCominsDetailEstimate(value: number | undefined) {
-  return typeof value === "number" && Number.isFinite(value) && value > 0
-    ? value
-    : COMINS_DEFAULT_DETAIL_HEIGHT;
+export function normalizeCominsDetailEstimate(
+  value: number | undefined,
+  fallbackHeight: number,
+) {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return value;
+  }
+
+  return Math.max(1, fallbackHeight);
 }
 
 export function normalizeCominsDetailHeight(
   value: number | "auto" | undefined,
-): { height: number; mode: "auto" | "fixed" } {
-  if (value === "auto") {
-    return { height: COMINS_DEFAULT_DETAIL_HEIGHT, mode: "auto" };
-  }
-
-  return {
-    height:
-      typeof value === "number" && Number.isFinite(value) && value > 0
-        ? value
-        : COMINS_DEFAULT_DETAIL_HEIGHT,
-    mode: "fixed",
-  };
+): { mode: "auto" } | { height: number; mode: "fixed" } {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? { height: value, mode: "fixed" }
+    : { mode: "auto" };
 }
 
 export class CominsHeightIndex {

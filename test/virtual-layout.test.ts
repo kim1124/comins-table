@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  COMINS_DEFAULT_DETAIL_HEIGHT,
   COMINS_MAX_PHYSICAL_TOTAL_HEIGHT,
   CominsHeightIndex,
   captureCominsScrollAnchor,
@@ -20,19 +19,13 @@ import {
 describe("virtual layout", () => {
   it("normalizes fixed, automatic, and invalid detail heights", () => {
     expect(normalizeCominsDetailHeight(240)).toEqual({ height: 240, mode: "fixed" });
-    expect(normalizeCominsDetailHeight("auto")).toEqual({
-      height: COMINS_DEFAULT_DETAIL_HEIGHT,
-      mode: "auto",
-    });
-    expect(normalizeCominsDetailHeight(0)).toEqual({
-      height: COMINS_DEFAULT_DETAIL_HEIGHT,
-      mode: "fixed",
-    });
-    expect(normalizeCominsDetailHeight(Number.POSITIVE_INFINITY)).toEqual({
-      height: COMINS_DEFAULT_DETAIL_HEIGHT,
-      mode: "fixed",
-    });
-    expect(normalizeCominsDetailEstimate(-1)).toBe(COMINS_DEFAULT_DETAIL_HEIGHT);
+    expect(normalizeCominsDetailHeight("auto")).toEqual({ mode: "auto" });
+    expect(normalizeCominsDetailHeight(undefined)).toEqual({ mode: "auto" });
+    expect(normalizeCominsDetailHeight(0)).toEqual({ mode: "auto" });
+    expect(normalizeCominsDetailHeight(Number.POSITIVE_INFINITY)).toEqual({ mode: "auto" });
+    expect(normalizeCominsDetailEstimate(undefined, 36)).toBe(36);
+    expect(normalizeCominsDetailEstimate(180, 36)).toBe(180);
+    expect(normalizeCominsDetailEstimate(-1, 42)).toBe(42);
   });
 
   it("supports prefix, total, lower-bound, and logarithmic updates", () => {

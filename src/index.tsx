@@ -151,8 +151,6 @@ type CominsRowMoveState = {
 };
 
 const COMINS_MIN_COLUMN_WIDTH = 50;
-const COMINS_DEFAULT_ROW_DETAIL_HEIGHT = 300;
-
 function getCominsColumnDropStatus(
   source: CominsColumnMoveHeader,
   target: CominsColumnMoveHeader,
@@ -2017,7 +2015,7 @@ function CominsTableInner<TData>(
                     detailMeasurementsRef.current,
                     rowId,
                     detailContentWidth,
-                    normalizeCominsDetailEstimate(estimatedRowDetailHeight),
+                    normalizeCominsDetailEstimate(estimatedRowDetailHeight, rowHeight),
                   ),
                   mode: "auto",
                 }
@@ -2158,7 +2156,7 @@ function CominsTableInner<TData>(
                     detailMeasurementsRef.current,
                     entry.rowId,
                     detailContentWidth,
-                    normalizeCominsDetailEstimate(estimatedRowDetailHeight),
+                    normalizeCominsDetailEstimate(estimatedRowDetailHeight, rowHeight),
                   ),
                   mode: "auto",
                 }
@@ -3715,19 +3713,11 @@ function CominsTableInner<TData>(
             const rowDetailParams: CominsRowDetailParams<TData> = { row: createEventRow(entry) };
             const rowDetailExpandable = rowDetailEnabled && (isRowExpandable?.(rowDetailParams) ?? true);
             const rowDetailExpanded = rowDetailExpandable && effectiveExpandedRowIdSet.has(entry.rowId);
-            const rowDetailHeight = rowDetailExpanded
-              ? entry.detail?.mode === "fixed"
-                ? entry.detail.height
-                : entry.detail?.mode
-              : undefined;
             const rowDetailFixedHeight =
-              typeof rowDetailHeight === "number"
-                ? Number.isFinite(rowDetailHeight) && rowDetailHeight > 0
-                  ? rowDetailHeight
-                  : COMINS_DEFAULT_ROW_DETAIL_HEIGHT
+              rowDetailExpanded && entry.detail?.mode === "fixed"
+                ? entry.detail.height
                 : undefined;
-            const rowDetailMode =
-              rowDetailHeight === "auto" ? "auto" : "fixed";
+            const rowDetailMode = entry.detail?.mode ?? "fixed";
             const rowDetailIdToken = `${typeof entry.rowId}-${encodeURIComponent(String(entry.rowId))}`;
             const rowDetailId = `comins-row-detail-${encodeURIComponent(rowDetailIdPrefix)}-${rowDetailIdToken}`;
             const rowDetailContentId = `${rowDetailId}-content`;
