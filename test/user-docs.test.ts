@@ -341,7 +341,7 @@ describe("comins-table user documentation contract", () => {
       "Data Rows and collapsed Detail owners keep the arithmetic fixed-height path.",
     );
     expect(normalizedKoreanDocs).toContain(
-      "Data Row와 접힌 Detail owner는 고정 높이 산술 경로를 유지합니다. 유효하게 펼쳐진 Detail로 인해 data Slot이 rowHeight보다 높아지는 경우에만 private height index가 활성화됩니다.",
+      "Data Row와 접힌 Detail owner는 고정 높이 산술 경로를 유지한다. 유효하게 펼쳐진 Detail로 인해 data Slot이 rowHeight보다 높아지는 경우에만 private height index가 활성화된다.",
     );
   });
 

@@ -34,7 +34,7 @@ export const featureRegistry: FeatureDefinitionSource[] = [
     label: defineLocalizedText("기본", "Basic"),
     options: [
       { description: defineLocalizedText("Table이 렌더링할 Column 정의입니다.", "Column definitions rendered by the table."), example: "[{ label: 'Name', field: 'name' }]", name: "columns" },
-      { description: defineLocalizedText("Table이 렌더링하는 결정적인 30개 Row 배열입니다.", "Deterministic 30-row array rendered by the table."), example: "createExampleRows(30)", name: "data" },
+      { description: defineLocalizedText("Table 렌더링을 위해 항상 동일하게 생성되는 30개 Row 배열입니다.", "Deterministic 30-row array rendered by the table."), example: "createExampleRows(30)", name: "data" },
       { description: defineLocalizedText("안정적인 Row ID를 결정하는 resolver입니다.", "Stable row id resolver."), example: "(row) => row.id", name: "getRowId" },
       { description: defineLocalizedText("외부 useState에 연결된 data 변경 callback입니다.", "Data change callback connected to external useState."), example: "onChangeData={setRows}", name: "onChangeData" },
       { description: defineLocalizedText("Table 밀도와 기본 styling을 지정합니다.", "Table density and base styling."), example: "{ density: 'compact' }", name: "theme" },
@@ -47,7 +47,7 @@ export const featureRegistry: FeatureDefinitionSource[] = [
     id: "basic-crud",
     label: defineLocalizedText("CRUD", "CRUD"),
     options: [
-      { description: defineLocalizedText("추가, 수정과 삭제에 사용하는 결정적인 30개 Row source입니다.", "Deterministic 30-row source for add, update, and delete actions."), example: "useState(createExampleRows(30))", name: "data" },
+      { description: defineLocalizedText("추가, 수정과 삭제를 위해 항상 동일하게 생성되는 30개 Row source입니다.", "Deterministic 30-row source for add, update, and delete actions."), example: "useState(createExampleRows(30))", name: "data" },
       { description: defineLocalizedText("Selection state 변경을 전달하는 callback입니다.", "Selection state change callback."), example: "onChangeSelection={syncSelection}", name: "onChangeSelection" },
       { description: defineLocalizedText("클릭한 Row를 수정 대상으로 지정합니다.", "Marks the clicked row as the update target."), example: "onClickRow={({ row }) => ...}", name: "onClickRow" },
     ],
@@ -275,7 +275,7 @@ export const featureRegistry: FeatureDefinitionSource[] = [
       { description: defineLocalizedText("Node.item과 기존 Component Cell 및 renderer 정의를 함께 사용합니다.", "Uses existing Component Cell and renderer definitions with node.item."), example: "cell.components / cell.renderer", name: "component / renderer" },
       { description: defineLocalizedText("설정된 aggregate 값에 leaf item만 사용합니다.", "Uses only leaf items for configured aggregate values."), example: "{ columns: { age: 'sum' } }", name: "summary" },
     ],
-    summary: defineLocalizedText("배열 Ref 펼침, 10000개 Node 가상화, Component, renderer와 styling을 포함한 controlled nested Row 예제입니다.", "Controlled nested rows with array ref expansion, 10000-node virtualization, components, renderers, and styling."),
+    summary: defineLocalizedText("Node ID 배열을 받는 Ref 기반 펼침 제어, 10000개 Node 가상화, Component, renderer와 styling을 포함한 controlled nested Row 예제입니다.", "Controlled nested rows with array ref expansion, 10000-node virtualization, components, renderers, and styling."),
   },
   {
     Component: ContextMenuFeature,
