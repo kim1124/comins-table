@@ -308,6 +308,24 @@ describe("comins-table user documentation contract", () => {
     expect(optionGuide).toContain("ordered multi-column sort model");
   });
 
+  it("documents the decorative Radix Header icons without implying a public icon API", () => {
+    const englishHeader = readWorkspaceFile("docs/user/06-header.md");
+    const koreanHeader = readWorkspaceFile("docs/ko/06-header.md");
+
+    for (const document of [englishHeader, koreanHeader]) {
+      expect(document).toContain("Radix SVG");
+      expect(document).toContain('aria-hidden="true"');
+      expect(document).toContain("aria-sort");
+      expect(document).not.toContain("module-owned CSS");
+      expect(document).not.toContain("Comins가 소유한 CSS");
+    }
+
+    expect(englishHeader).toContain("whole Header remains the pointer target");
+    expect(englishHeader).toContain("not a dedicated public handle or icon override API");
+    expect(koreanHeader).toContain("Header 전체가 pointer target");
+    expect(koreanHeader).toContain("전용 public handle 또는 icon override API가 아니다");
+  });
+
   it("links Flat Table Ref methods to the live visible-index example", () => {
     const documents = [
       readWorkspaceFile("docs/user/06-header.md"),

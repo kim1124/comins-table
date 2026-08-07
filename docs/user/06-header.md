@@ -36,8 +36,7 @@ tableRef.current?.setSortModel([
 - A normal click or `Enter`/`Space` keeps the existing single-column `none -> asc -> desc -> none` cycle.
 - `Shift` plus click or `Enter`/`Space` appends a new ascending rule, updates an existing rule in place, or removes its descending rule.
 - Header badges show the 1-based comparison priority. Removing a rule compacts the remaining priorities.
-- The sort indicator is drawn with module-owned CSS and rotates or fades for
-  `asc`, `desc`, and unsorted states.
+- The sort indicator uses state-specific decorative Radix SVG icons (`aria-hidden="true"`) for `asc`, `desc`, and unsorted states. The Header keeps the existing click and `Enter`/`Space` keyboard cycle and continues to expose `aria-sort`.
 - `getSortModel()` and `setSortModel(model)` read and restore the full ordered model. `getSortState()` and `setSortState(rule)` remain available for one-rule compatibility; `setSortState` replaces the full model.
 - `clearSort()` clears every rule. `onChangeSort` continues to observe the first rule, while `onChangeSortModel` observes the complete model.
 - Hidden sortable Columns keep their rules. Removed or non-sortable Columns are removed from the model.
@@ -53,11 +52,11 @@ The live [`/api/ref`](http://127.0.0.1:4002/api/ref) example applies `setSortMod
 - A left-button mouse interaction activates column reorder at a 6-pixel horizontal drag threshold. Horizontal movement must be greater than vertical movement.
 - Pointer Up below the threshold preserves the normal click and sort behavior. Vertical intent cancels both the pending reorder and sort.
 - After activation, the source Header becomes a darker dashed source placeholder while a ghost and target marker show the pending move.
+- The move ghost adds a decorative Radix SVG drag-handle icon (`aria-hidden="true"`), but the whole Header remains the pointer target. It is not a dedicated public handle or icon override API.
 - A valid same-depth target uses the accent marker. A different-depth or cross-parent target uses a red invalid marker with a `not-allowed` cursor and cannot commit.
 - A move commits only on Pointer Up over a valid target. Pointer cancellation, `Escape`, or window blur cancels it without changing the layout.
 - For non-mouse pointer input, one-second long-press compatibility is retained.
 - Parent groups use the same interaction and move all child columns as one block.
-- A dedicated drag handle remains a future alternative; it is not a shipped API.
 
 Two-level headers use `columnGroups`.
 
