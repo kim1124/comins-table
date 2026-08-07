@@ -1827,12 +1827,11 @@ function CominsTableInner<TData>(
   };
 
   const visibleColumns = useMemo(() => getCominsVisibleColumns(state), [state]);
+  const renderedHeaderRendererBodies = new Map<string, { body: React.ReactNode; renderer: unknown }>();
 
-  for (const columnId of headerRendererBodyRef.current.keys()) {
-    if (!visibleColumns.some((column) => column.id === columnId)) {
-      headerRendererBodyRef.current.delete(columnId);
-    }
-  }
+  useEffect(() => {
+    headerRendererBodyRef.current = renderedHeaderRendererBodies;
+  });
 
   const columnWidths = useMemo(() => {
     const columnCount = visibleColumns.length;
@@ -3311,10 +3310,6 @@ function CominsTableInner<TData>(
     const headerRenderer = column.header?.renderer;
     const cachedHeaderRendererBody = headerRenderer ? headerRendererBodyRef.current.get(column.id) : undefined;
 
-    if (!headerRenderer) {
-      headerRendererBodyRef.current.delete(column.id);
-    }
-
     const shouldRefreshHeaderRendererBody =
       Boolean(headerRenderer) && (!isColumnPlaceholder || cachedHeaderRendererBody?.renderer !== headerRenderer);
     const headerRendererBody = headerRenderer
@@ -3324,7 +3319,9 @@ function CominsTableInner<TData>(
       : null;
 
     if (headerRenderer && shouldRefreshHeaderRendererBody) {
-      headerRendererBodyRef.current.set(column.id, { body: headerRendererBody, renderer: headerRenderer });
+      renderedHeaderRendererBodies.set(column.id, { body: headerRendererBody, renderer: headerRenderer });
+    } else if (headerRenderer && cachedHeaderRendererBody) {
+      renderedHeaderRendererBodies.set(column.id, cachedHeaderRendererBody);
     }
     const headerLeftSlots = !column.header?.renderer
       ? renderCominsComponentSlots(column.header?.components, headerPayload, "left")

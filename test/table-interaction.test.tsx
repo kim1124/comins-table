@@ -1994,6 +1994,67 @@ describe("comins-table keyboard interaction", () => {
     expect(headerRenderer).not.toHaveBeenCalled();
   });
 
+  it("refreshes moved Header content after its column is hidden then restored", () => {
+    let renderCount = 0;
+    const headerRenderer = vi.fn(() => {
+      renderCount += 1;
+      return <strong>{`Age Header ${renderCount}`}</strong>;
+    });
+    const tableRef = createRef<CominsTableRef<PersonRow>>();
+    const element = renderTableElement(
+      <CominsTable
+        columns={[
+          { field: "name", label: "Name" },
+          { field: "age", header: { renderer: headerRenderer }, label: "Age", sort: true },
+        ]}
+        data={rows}
+        getRowId={(row) => row.id}
+        ref={tableRef}
+      />,
+    );
+    const ageHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    headerRenderer.mockClear();
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => ageHeader),
+    });
+
+    try {
+      act(() => {
+        ageHeader.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointermove", { bubbles: true, button: 0, clientX: 16, clientY: 10 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    act(() => {
+      tableRef.current?.setColumnLayout({ columns: { age: { hidden: true } } });
+    });
+
+    expect(element.querySelector("[data-testid='header-age']")).toBeNull();
+
+    act(() => {
+      tableRef.current?.setColumnLayout({ columns: { age: { hidden: false } } });
+    });
+
+    const restoredAgeHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
+
+    expect(restoredAgeHeader.getAttribute("data-column-placeholder")).toBe("true");
+    expect(restoredAgeHeader.querySelector("strong")?.textContent).toBe("Age Header 2");
+    expect(headerRenderer).toHaveBeenCalledTimes(1);
+  });
+
   it("updates custom Header content when its renderer changes during Column Move", () => {
     const firstHeaderRenderer = vi.fn(() => <strong>First Age Header</strong>);
     const secondHeaderRenderer = vi.fn(() => <strong>Second Age Header</strong>);
