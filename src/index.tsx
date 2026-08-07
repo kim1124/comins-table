@@ -801,6 +801,19 @@ function renderCominsComponentSlots<TData>(
     ));
 }
 
+function blockCominsColumnPlaceholderInteraction(event: React.SyntheticEvent<HTMLElement>) {
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function blurCominsColumnPlaceholderFocus(event: React.FocusEvent<HTMLElement>) {
+  event.stopPropagation();
+
+  if (event.target instanceof HTMLElement) {
+    event.target.blur();
+  }
+}
+
 function renderCominsContentWithComponents<TData>(
   content: React.ReactNode,
   components: ReadonlyArray<CominsRenderableComponent<TData>> | undefined,
@@ -3220,11 +3233,12 @@ function CominsTableInner<TData>(
   const renderHeaderCell = (cell: CominsHeaderCell<TData>, fallbackIndex: number) => {
     if (cell.kind === "group") {
       const isDropTarget = columnMoveTarget?.kind === "group" && columnMoveTarget.id === cell.groupId;
+      const isGroupPlaceholder = movingGroupId === cell.groupId;
       return (
         <th
           className={[
             "comins-table__th comins-table__group-th px-3 py-2 text-left font-semibold",
-            movingGroupId === cell.groupId ? "comins-column-moving" : undefined,
+            isGroupPlaceholder ? "comins-column-moving" : undefined,
           ]
             .filter(Boolean)
             .join(" ")}
@@ -3237,8 +3251,8 @@ function CominsTableInner<TData>(
                 : "false"
               : undefined
           }
-          data-column-moving={movingGroupId === cell.groupId ? "true" : undefined}
-          data-column-placeholder={movingGroupId === cell.groupId ? "true" : undefined}
+          data-column-moving={isGroupPlaceholder ? "true" : undefined}
+          data-column-placeholder={isGroupPlaceholder ? "true" : undefined}
           data-comins-column-depth="0"
           data-comins-column-group-id={cell.groupId}
           data-testid={`header-group-${cell.groupId}`}
@@ -3248,13 +3262,21 @@ function CominsTableInner<TData>(
           scope="colgroup"
         >
           <span aria-hidden="true" className="comins-column-drop-marker" />
-          <span className="comins-table__header-content" data-comins-header-body="true">
+          <span
+            aria-hidden={isGroupPlaceholder ? "true" : undefined}
+            className="comins-table__header-content"
+            data-comins-header-body="true"
+            inert={isGroupPlaceholder ? true : undefined}
+          >
             <span className="comins-table__header-label">{cell.group.label}</span>
           </span>
-          {movingGroupId === cell.groupId ? (
-            <span aria-hidden="true" className="comins-column-placeholder-label">
-              {cell.group.label}
-            </span>
+          {isGroupPlaceholder ? (
+            <>
+              <span className="comins-column-placeholder-accessible-name">{cell.group.label}</span>
+              <span aria-hidden="true" className="comins-column-placeholder-label">
+                {cell.group.label}
+              </span>
+            </>
           ) : null}
           <span
             aria-hidden="true"
@@ -3408,6 +3430,11 @@ function CominsTableInner<TData>(
         aria-sort={column.sort ? getAriaSortState(state.sortModel, column.id) : undefined}
         key={`column-${column.id}`}
         onClick={(event) => {
+          if (isColumnPlaceholder) {
+            event.preventDefault();
+            return;
+          }
+
           headerProps.onClick?.(event);
 
           if (event.defaultPrevented || !column.sort) {
@@ -3421,6 +3448,11 @@ function CominsTableInner<TData>(
           activateHeaderSort(column, event.shiftKey);
         }}
         onKeyDown={(event) => {
+          if (isColumnPlaceholder) {
+            event.preventDefault();
+            return;
+          }
+
           headerProps.onKeyDown?.(event);
 
           if (event.defaultPrevented || !column.sort) {
@@ -3436,14 +3468,20 @@ function CominsTableInner<TData>(
         rowSpan={cell.rowSpan}
         scope="col"
         style={{ width: columnState?.width ?? column.width, ...headerProps.style }}
-        tabIndex={column.sort ? 0 : undefined}
+        tabIndex={column.sort && !isColumnPlaceholder ? 0 : undefined}
       >
         <span aria-hidden="true" className="comins-column-drop-marker" />
         <span
+          aria-hidden={isColumnPlaceholder ? "true" : undefined}
           className="comins-table__header-content"
           data-comins-header-body="true"
           data-comins-header-components={hasHeaderComponents ? "true" : undefined}
           data-comins-sort-indicator-visible={sortIndicatorVisible ? "true" : undefined}
+          inert={isColumnPlaceholder ? true : undefined}
+          onClickCapture={isColumnPlaceholder ? blockCominsColumnPlaceholderInteraction : undefined}
+          onFocusCapture={isColumnPlaceholder ? blurCominsColumnPlaceholderFocus : undefined}
+          onKeyDownCapture={isColumnPlaceholder ? blockCominsColumnPlaceholderInteraction : undefined}
+          onPointerDownCapture={isColumnPlaceholder ? blockCominsColumnPlaceholderInteraction : undefined}
         >
           <span className="comins-table__header-slot" data-comins-header-slot="left">
             {headerLeftSlots}
@@ -3489,9 +3527,12 @@ function CominsTableInner<TData>(
           </span>
         </span>
         {isColumnPlaceholder ? (
-          <span aria-hidden="true" className="comins-column-placeholder-label">
-            {column.label}
-          </span>
+          <>
+            <span className="comins-column-placeholder-accessible-name">{column.label}</span>
+            <span aria-hidden="true" className="comins-column-placeholder-label">
+              {column.label}
+            </span>
+          </>
         ) : null}
         <span
           aria-hidden="true"

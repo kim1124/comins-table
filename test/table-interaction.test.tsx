@@ -2037,8 +2037,17 @@ describe("comins-table keyboard interaction", () => {
     expect(onChangeColumnLayout).not.toHaveBeenCalled();
   });
 
-  it("keeps custom Header content accessible while rendering a plain presentation-only Column Move label", () => {
-    const headerRenderer = vi.fn(() => <strong>Custom Age Header</strong>);
+  it("makes interactive custom Header content inert during Column Move and restores it after cancellation", () => {
+    const onAction = vi.fn();
+    const onFocus = vi.fn();
+    const headerRenderer = vi.fn(() => (
+      <span>
+        <button onClick={onAction} onKeyDown={onAction} type="button">
+          Custom Age Header
+        </button>
+        <input aria-label="Custom Age input" onFocus={onFocus} />
+      </span>
+    ));
     const element = renderTableElement(
       <CominsTable
         columns={[
@@ -2050,8 +2059,12 @@ describe("comins-table keyboard interaction", () => {
       />,
     );
     const ageHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
+    const customButton = ageHeader.querySelector<HTMLButtonElement>("button")!;
+    const customInput = ageHeader.querySelector<HTMLInputElement>("input")!;
     const originalElementFromPoint = document.elementFromPoint;
 
+    customButton.focus();
+    expect(document.activeElement).toBe(customButton);
     headerRenderer.mockClear();
 
     Object.defineProperty(document, "elementFromPoint", {
@@ -2076,13 +2089,52 @@ describe("comins-table keyboard interaction", () => {
     }
 
     const placeholderLabel = ageHeader.querySelector<HTMLElement>(".comins-column-placeholder-label");
+    const accessibleName = ageHeader.querySelector<HTMLElement>(".comins-column-placeholder-accessible-name");
+    const headerContent = ageHeader.querySelector<HTMLElement>(".comins-table__header-content")!;
 
     expect(ageHeader.getAttribute("data-column-placeholder")).toBe("true");
+    expect(ageHeader.getAttribute("tabindex")).toBeNull();
+    expect(headerContent.hasAttribute("inert")).toBe(true);
+    expect(headerContent.getAttribute("aria-hidden")).toBe("true");
+    expect(accessibleName?.textContent).toBe("Age");
+    expect(accessibleName?.getAttribute("aria-hidden")).toBeNull();
     expect(placeholderLabel?.textContent).toBe("Age");
     expect(placeholderLabel?.getAttribute("aria-hidden")).toBe("true");
-    expect(placeholderLabel?.querySelector("strong")).toBeNull();
-    expect(ageHeader.querySelector("strong")?.textContent).toBe("Custom Age Header");
+    expect(placeholderLabel?.querySelector("button, input")).toBeNull();
+    expect(customButton.textContent).toBe("Custom Age Header");
     expect(headerRenderer).not.toHaveBeenCalled();
+
+    act(() => {
+      customInput.focus();
+      customButton.click();
+      customButton.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Enter" }));
+      customButton.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: " " }));
+    });
+
+    expect(document.activeElement).not.toBe(customInput);
+    expect(onFocus).not.toHaveBeenCalled();
+    expect(onAction).not.toHaveBeenCalled();
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }));
+    });
+
+    expect(ageHeader.getAttribute("data-column-placeholder")).toBeNull();
+    expect(ageHeader.getAttribute("tabindex")).toBe("0");
+    expect(headerContent.hasAttribute("inert")).toBe(false);
+    expect(headerContent.getAttribute("aria-hidden")).toBeNull();
+    expect(ageHeader.querySelector(".comins-column-placeholder-accessible-name")).toBeNull();
+
+    act(() => {
+      customInput.focus();
+      customButton.click();
+      customButton.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Enter" }));
+      customButton.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: " " }));
+    });
+
+    expect(document.activeElement).toBe(customInput);
+    expect(onFocus).toHaveBeenCalledOnce();
+    expect(onAction).toHaveBeenCalledTimes(3);
   });
 
   it("refreshes moved Header content after its column is hidden then restored", () => {

@@ -313,6 +313,86 @@ test("source placeholder background stays muted while its drop marker remains vi
   expect(diagnostics).toEqual([]);
 });
 
+test("interactive Header content is inert during column move and restores after cancel and drop", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/examples/component");
+
+  const example = page.getByTestId("component-example-button");
+  const source = example.getByTestId("header-button-component");
+  const target = example.getByTestId("header-id");
+  const headerButton = source.locator("thead .comins-table__component-button, .comins-table__component-button").first();
+  const headerContent = source.locator(".comins-table__header-content");
+  const eventAlert = page.getByTestId("component-event-alert");
+  await expect(eventAlert).toHaveCount(0);
+  await source.evaluate((element) => {
+    const sentinel = document.createElement("button");
+    sentinel.id = "column-move-focus-sentinel";
+    sentinel.textContent = "Column move focus sentinel";
+    element.closest("table")?.before(sentinel);
+  });
+  const sentinel = page.locator("#column-move-focus-sentinel");
+
+  const beginMove = async () => {
+    const labelBox = await source.locator(".comins-table__header-label").boundingBox();
+    expect(labelBox).not.toBeNull();
+    await page.mouse.move(labelBox!.x + labelBox!.width / 2, labelBox!.y + labelBox!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(labelBox!.x + labelBox!.width / 2 + 8, labelBox!.y + labelBox!.height / 2);
+    await expect(source).toHaveAttribute("data-column-placeholder", "true");
+  };
+
+  await headerButton.focus();
+  await expect(headerButton).toBeFocused();
+  await beginMove();
+
+  await expect(source).not.toHaveAttribute("tabindex", "0");
+  await expect(headerContent).toHaveAttribute("inert", "");
+  await expect(headerContent).toHaveAttribute("aria-hidden", "true");
+  await expect(source.locator(".comins-column-placeholder-label")).toHaveAttribute("aria-hidden", "true");
+  await expect(source.locator(".comins-column-placeholder-accessible-name")).toHaveText("Column2");
+  await expect(example.getByRole("columnheader", { exact: true, name: "Column2" })).toHaveCount(1);
+
+  expect(await headerButton.evaluate((element) => {
+    element.focus();
+    return document.activeElement === element;
+  })).toBe(false);
+  await sentinel.focus();
+  await page.keyboard.press("Tab");
+  expect(await source.evaluate((element) => element.contains(document.activeElement))).toBe(false);
+
+  await headerButton.evaluate((element) => element.click());
+  await headerButton.dispatchEvent("keydown", { bubbles: true, key: "Enter" });
+  await headerButton.dispatchEvent("keydown", { bubbles: true, key: " " });
+  await expect(eventAlert).toHaveCount(0);
+
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expect(source).not.toHaveAttribute("data-column-placeholder", "true");
+  await expect(source).toHaveAttribute("tabindex", "0");
+  await expect(headerContent).not.toHaveAttribute("inert", "");
+  await expect(headerContent).not.toHaveAttribute("aria-hidden", "true");
+  await headerButton.focus();
+  await expect(headerButton).toBeFocused();
+  await headerButton.click();
+  await expect(eventAlert).toContainText("Header Button");
+
+  await example.locator("tbody .comins-table__component-button").first().click();
+  await expect(eventAlert).toContainText("Cell Button");
+  await beginMove();
+  const targetBox = await target.boundingBox();
+  expect(targetBox).not.toBeNull();
+  await page.mouse.move(targetBox!.x + targetBox!.width / 2, targetBox!.y + targetBox!.height / 2);
+  await page.mouse.up();
+
+  await expect(source).not.toHaveAttribute("data-column-placeholder", "true");
+  await expect(headerContent).not.toHaveAttribute("inert", "");
+  await headerButton.focus();
+  await expect(headerButton).toBeFocused();
+  await headerButton.click();
+  await expect(eventAlert).toContainText("Header Button");
+  expect(diagnostics).toEqual([]);
+});
+
 test("column move marks same-depth targets valid and cross-depth targets invalid", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/examples/column-groups");
