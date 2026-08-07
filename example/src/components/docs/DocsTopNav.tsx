@@ -1,3 +1,4 @@
+import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 
@@ -50,7 +51,12 @@ export function DocsTopNav({ pages }: DocsTopNavProps) {
         </div>
         <div className="global-data-table-search" ref={searchRef}>
         <label className="example-search">
-          <span aria-hidden="true" className="example-search__icon" />
+          <MagnifyingGlassIcon
+            aria-hidden="true"
+            className="example-search__icon"
+            data-example-icon="docs-search"
+            focusable="false"
+          />
           <input
             aria-label={text(playgroundMessages.searchLabel)}
             onBlur={(event) => {

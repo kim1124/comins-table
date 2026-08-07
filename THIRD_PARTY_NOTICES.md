@@ -17,8 +17,12 @@ distribution.
 <!-- radix-icons-used-exports:start -->
 - `CaretSortIcon`
 - `ChevronDownIcon`
+- `ChevronLeftIcon`
 - `ChevronRightIcon`
+- `DoubleArrowLeftIcon`
+- `DoubleArrowRightIcon`
 - `DragHandleDots2Icon`
+- `MagnifyingGlassIcon`
 - `TriangleDownIcon`
 - `TriangleUpIcon`
 <!-- radix-icons-used-exports:end -->

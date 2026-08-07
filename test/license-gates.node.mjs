@@ -47,8 +47,12 @@ const radixLicenseText = readFileSync(join(repositoryRoot, 'node_modules', radix
 const radixCoreExports = [
   'CaretSortIcon',
   'ChevronDownIcon',
+  'ChevronLeftIcon',
   'ChevronRightIcon',
+  'DoubleArrowLeftIcon',
+  'DoubleArrowRightIcon',
   'DragHandleDots2Icon',
+  'MagnifyingGlassIcon',
   'TriangleDownIcon',
   'TriangleUpIcon',
 ];
@@ -745,7 +749,7 @@ test('rejects Radix version, integrity, license, notice, and source inventory dr
     (root) => write(
       root,
       'src/table-icons.tsx',
-      `import { ${[...radixCoreExports, 'MagnifyingGlassIcon'].join(', ')} } from "${radixName}";\n`,
+      `import { ${radixCoreExports.slice(1).join(', ')} } from "${radixName}";\n`,
     ),
   ];
 

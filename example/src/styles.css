@@ -181,25 +181,10 @@ body {
 }
 
 .example-search__icon {
-  border: 2px solid currentColor;
-  border-radius: 50%;
-  box-sizing: border-box;
-  display: inline-block;
-  flex: 0 0 auto;
-  height: 11px;
-  position: relative;
-  width: 11px;
-}
-
-.example-search__icon::after {
-  background: currentColor;
-  content: "";
-  height: 2px;
-  position: absolute;
-  right: -5px;
-  top: 8px;
-  transform: rotate(45deg);
-  width: 6px;
+  color: currentColor;
+  flex: 0 0 15px;
+  height: 15px;
+  width: 15px;
 }
 
 .global-search-popup {
@@ -2011,11 +1996,17 @@ body {
   padding: 6px 10px;
 }
 
-.ui-pagination__glyph {
-  display: inline-grid;
-  font-size: 20px;
-  line-height: 1;
-  place-items: center;
+.ui-pagination__button.ui-button--icon {
+  min-height: 32px;
+  padding: 0;
+  width: 32px;
+}
+
+.ui-pagination__icon {
+  color: currentColor;
+  flex: 0 0 15px;
+  height: 15px;
+  width: 15px;
 }
 
 .ui-pagination__status {

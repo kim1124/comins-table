@@ -1,3 +1,9 @@
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  DoubleArrowLeftIcon,
+  DoubleArrowRightIcon,
+} from "@radix-ui/react-icons";
 import { useMemo, useState } from "react";
 
 import { CominsTable } from "../../../src";
@@ -37,7 +43,12 @@ export function PaginationFeature() {
                   size="icon"
                   title={text(defineLocalizedText("첫 페이지", "First page"))}
                 >
-                  <span aria-hidden="true" className="ui-pagination__glyph">«</span>
+                  <DoubleArrowLeftIcon
+                    aria-hidden="true"
+                    className="ui-pagination__icon"
+                    data-example-icon="pagination-first"
+                    focusable="false"
+                  />
                 </PaginationButton>
               </PaginationItem>
               <PaginationItem>
@@ -48,7 +59,12 @@ export function PaginationFeature() {
                   size="icon"
                   title={text(defineLocalizedText("이전 페이지", "Previous page"))}
                 >
-                  <span aria-hidden="true" className="ui-pagination__glyph">‹</span>
+                  <ChevronLeftIcon
+                    aria-hidden="true"
+                    className="ui-pagination__icon"
+                    data-example-icon="pagination-previous"
+                    focusable="false"
+                  />
                 </PaginationButton>
               </PaginationItem>
               <PaginationItem>
@@ -64,7 +80,12 @@ export function PaginationFeature() {
                   size="icon"
                   title={text(defineLocalizedText("다음 페이지", "Next page"))}
                 >
-                  <span aria-hidden="true" className="ui-pagination__glyph">›</span>
+                  <ChevronRightIcon
+                    aria-hidden="true"
+                    className="ui-pagination__icon"
+                    data-example-icon="pagination-next"
+                    focusable="false"
+                  />
                 </PaginationButton>
               </PaginationItem>
               <PaginationItem>
@@ -75,7 +96,12 @@ export function PaginationFeature() {
                   size="icon"
                   title={text(defineLocalizedText("마지막 페이지", "Last page"))}
                 >
-                  <span aria-hidden="true" className="ui-pagination__glyph">»</span>
+                  <DoubleArrowRightIcon
+                    aria-hidden="true"
+                    className="ui-pagination__icon"
+                    data-example-icon="pagination-last"
+                    focusable="false"
+                  />
                 </PaginationButton>
               </PaginationItem>
             </PaginationContent>

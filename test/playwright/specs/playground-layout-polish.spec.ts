@@ -309,13 +309,30 @@ test("pagination page owns the table paging example above virtualization", async
   await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "pagination");
   await expect(page.getByTestId("pagination-control")).toContainText("1 / 4");
   await expect(page.getByTestId("pagination-state")).toContainText("페이지 1");
-  await expect(page.getByRole("button", { exact: true, name: "첫 페이지" })).toBeDisabled();
-  await expect(page.getByRole("button", { exact: true, name: "이전 페이지" })).toBeDisabled();
+  const firstPage = page.getByRole("button", { exact: true, name: "첫 페이지" });
+  const previousPage = page.getByRole("button", { exact: true, name: "이전 페이지" });
+  await expect(firstPage).toBeDisabled();
+  await expect(previousPage).toBeDisabled();
   const nextPage = page.getByRole("button", { exact: true, name: "다음 페이지" });
+  const lastPage = page.getByRole("button", { exact: true, name: "마지막 페이지" });
   await expect(nextPage).toBeEnabled();
-  await expect(nextPage.locator("svg")).toHaveCount(0);
-  await expect(nextPage.locator(".ui-pagination__glyph")).toHaveCount(1);
-  await expect(page.getByRole("button", { exact: true, name: "마지막 페이지" })).toBeEnabled();
+  await expect(lastPage).toBeEnabled();
+  for (const [button, iconName] of [
+    [firstPage, "pagination-first"],
+    [previousPage, "pagination-previous"],
+    [nextPage, "pagination-next"],
+    [lastPage, "pagination-last"],
+  ] as const) {
+    const icon = button.locator(`svg[data-example-icon='${iconName}']`);
+    await expect(icon).toHaveAttribute("aria-hidden", "true");
+    await expect(icon).toHaveAttribute("focusable", "false");
+    await expect(icon).toHaveCSS("height", "15px");
+    await expect(icon).toHaveCSS("width", "15px");
+    await expect(button.locator(".ui-pagination__glyph")).toHaveCount(0);
+    const box = await button.boundingBox();
+    expect(box?.height).toBe(32);
+    expect(box?.width).toBe(32);
+  }
   await expect(page.getByTestId("row-a")).toBeVisible();
   await nextPage.click();
   await expect(page.getByTestId("row-a")).toHaveCount(0);
