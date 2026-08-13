@@ -63,20 +63,9 @@ test("lazy load example uses mocked remote rows for initial, refresh, and append
   await expect(page.getByTestId("data-table-infinite-loading-row")).toHaveCount(0);
 
   await page.getByRole("button", { exact: true, name: "새로고침" }).click();
-  const overlay = page.getByTestId("data-table-loading-overlay");
-  await expect(overlay).toBeVisible();
-  await expect.poll(() => overlay.boundingBox()).toMatchObject({
-    height: expect.any(Number),
-    width: expect.any(Number),
-  });
-
-  const overlayBox = await overlay.boundingBox();
-  const viewportBox = await page.getByTestId("lazy-load-viewport").boundingBox();
-
-  expect(overlayBox).not.toBeNull();
-  expect(viewportBox).not.toBeNull();
-  expect(overlayBox!.y).toBeGreaterThanOrEqual(viewportBox!.y);
-  expect(overlayBox!.y + overlayBox!.height).toBeLessThanOrEqual(viewportBox!.y + viewportBox!.height + 1);
+  await expect(page.getByTestId("lazy-load-state")).toContainText("불러옴 0 / 0");
+  await expect(page.getByTestId("row-dummy-1")).toHaveCount(0);
+  await expect(page.getByTestId("loading-skeleton-row").first()).toBeVisible();
   await expect(page.getByTestId("lazy-load-state")).toContainText("불러옴 30 / 90");
   expect(requestCount).toBeGreaterThanOrEqual(4);
   expect(requestSkips).toContain(0);

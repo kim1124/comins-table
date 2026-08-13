@@ -6,7 +6,7 @@ Table의 sorting, pagination, loading, movement, selection, clipboard, callback�
 owner Row만 대상으로 유지된다.
 
 `npm run dev` 실행 후 `/examples/row-expand`에서 fixed, automatic, viewport보다
-큰 Detail, read-only controlled, non-expandable 예제를 확인할 수 있다.
+큰 Detail 예제를 확인할 수 있다. 각 예제는 한 번에 하나의 owner만 확장한다.
 
 ## Public Types
 
@@ -54,6 +54,21 @@ const [expandedRowIds, setExpandedRowIds] = useState<readonly string[]>([]);
 애플리케이션은 그 값을 다시 prop으로 전달한다. 기본 expandable Row에서 callback을
 생략하면 read-only controlled disclosure는 전달된 상태를 표시하지만 disabled
 상태가 된다. ID가 유효하면 Detail은 mount 상태를 유지한다.
+
+라이브러리는 여러 Detail을 동시에 열 수 있도록 복수 ID를 받는다. accordion처럼
+하나만 확장하려면 controlled state에 기록하기 전에 callback 값을 정규화한다.
+
+```tsx
+const [expandedRowIds, setExpandedRowIds] = useState<readonly CominsRowId[]>([]);
+
+<CominsTable
+  expandedRowIds={expandedRowIds}
+  onChangeExpandedRowIds={(nextIds) => setExpandedRowIds(nextIds.slice(-1))}
+/>
+```
+
+callback이 빈 배열을 전달하면 현재 Detail도 정상적으로 접힌다. Row Expand
+Playground는 별도 Table mode prop 없이 이 애플리케이션 소유 정책을 사용한다.
 
 owner가 filter, pagination, loading 또는 일시적 data 변경으로 보이지 않아도 ID는
 dormant 상태로 보존된다. 다음 callback 입력에도 포함되고 owner가 다시 나타나면
@@ -132,6 +147,10 @@ Detail로 인해 data Slot이 rowHeight보다 높아지는 경우에만 private 
 owner와 선택적 Detail은 하나의 private virtual Slot이다. 따라서 viewport보다 큰
 Detail도 outer body viewport가 해당 영역을 통과하는 동안 mount 상태를 유지하며,
 Detail content가 business Row로 취급되지 않는다.
+
+Virtual content가 body viewport보다 짧으면 마지막 Row의 하단 구분선을 유지한다.
+Content가 viewport 경계에 도달한 경우에는 Cell Border를 중복하지 않고 외부 Table
+frame이 최종 Border를 제공한다.
 
 bounded panel, large list 또는 nested application widget에는 finite fixed height를
 우선 사용하고 큰 inner content에는 별도 scroll이나 virtualization을 적용한다.

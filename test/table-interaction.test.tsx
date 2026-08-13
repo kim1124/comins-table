@@ -2039,26 +2039,28 @@ describe("comins-table keyboard interaction", () => {
     expect(onLoadMore).toHaveBeenCalledTimes(0);
   });
 
-  it("loads initial lazy rows and renders the existing loading skeleton while pending", async () => {
-    let resolveLazyLoad: ((result: { rows: PersonRow[]; total: number }) => void) | undefined;
+  it("requests initial lazy rows while rendering only controlled data and loading state", async () => {
+    let resolveLazyLoad: (() => void) | undefined;
     const onLazyLoad = vi.fn(
       () =>
-        new Promise<{ rows: PersonRow[]; total: number }>((resolve) => {
-          resolveLazyLoad = resolve;
+        new Promise<void>((resolve) => {
+          resolveLazyLoad = () => resolve();
         }),
     );
-    const element = renderTableElement(
+    const renderLazyTable = (data: readonly PersonRow[], loading: boolean) => (
       <CominsTable
         columns={columns}
-        data={[]}
+        data={data}
         getRowId={(row) => row.id}
         lazyLoad
         lazyLoadBatchSize={2}
+        loading={loading}
         onLazyLoad={onLazyLoad}
         pagination={{ pageIndex: 0, pageSize: 2 }}
         skeletonRowCount={2}
-      />,
+      />
     );
+    const element = renderTableElement(renderLazyTable([], true));
 
     expect(onLazyLoad).toHaveBeenCalledTimes(1);
     expect(onLazyLoad).toHaveBeenLastCalledWith(
@@ -2068,7 +2070,13 @@ describe("comins-table keyboard interaction", () => {
     expect(element.querySelectorAll("[data-testid='loading-skeleton-row']")).toHaveLength(2);
 
     await act(async () => {
-      resolveLazyLoad?.({ rows, total: 2 });
+      resolveLazyLoad?.();
+    });
+
+    expect(element.querySelector("[data-testid='row-a']")).toBeNull();
+
+    act(() => {
+      root?.render(renderLazyTable(rows, false));
     });
 
     expect(element.querySelector("[data-testid='row-a']")).not.toBeNull();
@@ -2076,39 +2084,51 @@ describe("comins-table keyboard interaction", () => {
     expect(element.querySelector("[data-testid='loading-skeleton-row']")).toBeNull();
   });
 
-  it("appends lazy rows near the bottom and blocks duplicate requests while pending", async () => {
-    let resolveInitial: ((result: { rows: PersonRow[]; total: number }) => void) | undefined;
-    let resolveAppend: ((result: { rows: PersonRow[]; total: number }) => void) | undefined;
+  it("requests controlled lazy appends with data length offsets and blocks duplicates while pending", async () => {
+    let resolveInitial: (() => void) | undefined;
+    let resolveAppend: (() => void) | undefined;
     const onLazyLoad = vi
       .fn()
       .mockImplementationOnce(
         () =>
-          new Promise<{ rows: PersonRow[]; total: number }>((resolve) => {
-            resolveInitial = resolve;
+          new Promise<void>((resolve) => {
+            resolveInitial = () => resolve();
           }),
       )
       .mockImplementationOnce(
         () =>
-          new Promise<{ rows: PersonRow[]; total: number }>((resolve) => {
-            resolveAppend = resolve;
+          new Promise<void>((resolve) => {
+            resolveAppend = () => resolve();
           }),
       );
-    const element = renderTableElement(
+    const renderLazyTable = (
+      data: readonly PersonRow[],
+      options: { hasMoreRows: boolean; loading: boolean; loadingMore: boolean },
+    ) => (
       <CominsTable
         columns={columns}
-        data={[]}
+        data={data}
         data-testid="lazy-load-viewport"
         getRowId={(row) => row.id}
+        hasMoreRows={options.hasMoreRows}
         lazyLoad
         lazyLoadBatchSize={2}
         lazyLoadThreshold={80}
+        loading={options.loading}
+        loadingMore={options.loadingMore}
         onLazyLoad={onLazyLoad}
         pagination={{ pageIndex: 0, pageSize: 4 }}
-      />,
+      />
+    );
+    const element = renderTableElement(
+      renderLazyTable([], { hasMoreRows: true, loading: true, loadingMore: false }),
     );
 
     await act(async () => {
-      resolveInitial?.({ rows, total: 4 });
+      resolveInitial?.();
+    });
+    act(() => {
+      root?.render(renderLazyTable(rows, { hasMoreRows: true, loading: false, loadingMore: false }));
     });
 
     const viewport = element.querySelector<HTMLElement>("[data-testid='lazy-load-viewport']")!;
@@ -2129,10 +2149,21 @@ describe("comins-table keyboard interaction", () => {
     expect(onLazyLoad).toHaveBeenLastCalledWith(
       expect.objectContaining({ limit: 2, offset: 2, reason: "scroll" }),
     );
+    act(() => {
+      root?.render(renderLazyTable(rows, { hasMoreRows: true, loading: false, loadingMore: true }));
+    });
     expect(element.querySelector("[data-testid='data-table-infinite-loading-row']")).not.toBeNull();
 
     await act(async () => {
-      resolveAppend?.({ rows: [{ age: 27, id: "c", name: "Gamma" }, { age: 24, id: "d", name: "Delta" }], total: 4 });
+      resolveAppend?.();
+    });
+    act(() => {
+      root?.render(
+        renderLazyTable(
+          [...rows, { age: 27, id: "c", name: "Gamma" }, { age: 24, id: "d", name: "Delta" }],
+          { hasMoreRows: false, loading: false, loadingMore: false },
+        ),
+      );
     });
 
     expect(element.querySelector("[data-testid='row-c']")).not.toBeNull();
@@ -2142,12 +2173,12 @@ describe("comins-table keyboard interaction", () => {
 
   it("aborts pending lazy load requests on unmount and ignores stale results", async () => {
     let capturedSignal: AbortSignal | undefined;
-    let resolveLazyLoad: ((result: { rows: PersonRow[]; total: number }) => void) | undefined;
+    let resolveLazyLoad: (() => void) | undefined;
     const onLazyLoad = vi.fn(
       ({ signal }) =>
-        new Promise<{ rows: PersonRow[]; total: number }>((resolve) => {
+        new Promise<void>((resolve) => {
           capturedSignal = signal;
-          resolveLazyLoad = resolve;
+          resolveLazyLoad = () => resolve();
         }),
     );
     const element = renderTableElement(
@@ -2169,7 +2200,7 @@ describe("comins-table keyboard interaction", () => {
     expect(capturedSignal?.aborted).toBe(true);
 
     await act(async () => {
-      resolveLazyLoad?.({ rows, total: 2 });
+      resolveLazyLoad?.();
     });
 
     expect(element.querySelector("[data-testid='row-a']")).toBeNull();
@@ -2418,6 +2449,73 @@ describe("comins-table keyboard interaction", () => {
     expect(document.activeElement).toBe(customInput);
     expect(onFocus).toHaveBeenCalledOnce();
     expect(onAction).toHaveBeenCalledTimes(3);
+  });
+
+  it("shows immediate move handles only for unlocked headers and keeps whole-header drag optional", () => {
+    const element = renderTableElement(
+      <CominsTable
+        columnGroups={[
+          { children: ["name"], id: "identity", label: "Identity" },
+          { children: ["age"], id: "metrics", label: "Metrics", lockPosition: true },
+        ]}
+        columns={[
+          { field: "name", label: "Name" },
+          { field: "age", label: "Age", lockPosition: true },
+        ]}
+        data={rows}
+        getRowId={(row) => row.id}
+      />,
+    );
+    const nameHeader = element.querySelector<HTMLElement>("[data-testid='header-name']")!;
+    const nameHandle = element.querySelector<HTMLElement>("[data-testid='column-move-handle-name']")!;
+
+    expect(nameHandle).not.toBeNull();
+    expect(element.querySelector("[data-testid='column-move-handle-age']")).toBeNull();
+    expect(element.querySelector("[data-testid='column-group-move-handle-identity']")).not.toBeNull();
+    expect(element.querySelector("[data-testid='column-group-move-handle-metrics']")).toBeNull();
+
+    act(() => {
+      nameHandle.dispatchEvent(
+        createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+      );
+    });
+
+    expect(nameHeader.getAttribute("data-column-placeholder")).toBe("true");
+
+    act(() => {
+      window.dispatchEvent(createMousePointerEvent("pointercancel", { bubbles: true, pointerType: "mouse" }));
+    });
+
+    act(() => {
+      root?.render(
+        <CominsTable
+          columns={columns}
+          data={rows}
+          getRowId={(row) => row.id}
+          showColumnMoveHandle={false}
+        />,
+      );
+    });
+
+    expect(element.querySelector("[data-testid^='column-move-handle-']")).toBeNull();
+    expect(element.querySelector("[data-testid='header-name']")).not.toBeNull();
+  });
+
+  it("keeps the built-in Header controls visible at the minimum column width", () => {
+    const element = renderTableElement(
+      <CominsTable
+        columns={[
+          { field: "name", label: "Name", sort: true, width: 20 },
+          { field: "age", label: "Age", sort: true, width: 20 },
+        ]}
+        data={rows}
+        getRowId={(row) => row.id}
+      />,
+    );
+    const columnsAtMinimum = element.querySelectorAll<HTMLTableColElement>(".comins-table__header-table col");
+
+    expect(columnsAtMinimum[0]?.style.width).toBe("88px");
+    expect(columnsAtMinimum[1]?.style.width).toBe("88px");
   });
 
   it("uses side-effect-free plain text for rich column and group placeholders with stable id fallback", () => {
@@ -3999,37 +4097,39 @@ describe("comins-table keyboard interaction", () => {
   });
 
   it("uses owner business Row counts for lazy and infinite loading when Details are mounted", async () => {
-    let resolveInitial: ((result: { rows: PersonRow[]; total: number }) => void) | undefined;
+    let resolveInitial: (() => void) | undefined;
     const onLazyLoad = vi
       .fn()
       .mockImplementationOnce(
         () =>
-          new Promise<{ rows: PersonRow[]; total: number }>((resolve) => {
-            resolveInitial = resolve;
+          new Promise<void>((resolve) => {
+            resolveInitial = () => resolve();
           }),
       )
-      .mockResolvedValueOnce({
-        rows: [{ age: 27, id: "c", name: "Gamma" }],
-        total: 3,
-      });
-    const lazyElement = renderTableElement(
+      .mockResolvedValueOnce(undefined);
+    const renderLazyDetailTable = (data: readonly PersonRow[]) => (
       <CominsTable
         columns={columns}
-        data={[]}
+        data={data}
         data-testid="detail-lazy-viewport"
         expandedRowIds={["a"]}
         getRowId={(row) => row.id}
+        hasMoreRows
         lazyLoad
         lazyLoadBatchSize={2}
         lazyLoadThreshold={80}
         onLazyLoad={onLazyLoad}
         pagination={{ pageIndex: 0, pageSize: 3 }}
         renderRowDetail={({ row }) => <span>{`Detail ${row.id}`}</span>}
-      />,
+      />
     );
+    const lazyElement = renderTableElement(renderLazyDetailTable([]));
 
     await act(async () => {
-      resolveInitial?.({ rows, total: 3 });
+      resolveInitial?.();
+    });
+    act(() => {
+      root?.render(renderLazyDetailTable(rows));
     });
 
     expect(lazyElement.querySelectorAll("tbody tr")).toHaveLength(3);

@@ -78,7 +78,7 @@ export const featureRegistry: FeatureDefinitionSource[] = [
   },
   {
     Component: LoadingStateFeature,
-    description: defineLocalizedText("초기 loading, 재조회 loading, 빈 data, Header와 Body 상태를 확인하는 예제입니다.", "Example page for initial loading, refetch loading, empty data, header, and body states."),
+    description: defineLocalizedText("Infinite Scroll과 같은 원격 API로 초기 loading, 재조회, 빈 응답, Header와 Body 상태를 확인하는 예제입니다.", "Example page using the same remote API as Infinite Scroll for initial loading, refetch, empty responses, header, and body states."),
     id: "loading",
     label: defineLocalizedText("Loading / Empty 상태", "Loading / Empty State"),
     options: [
@@ -87,7 +87,7 @@ export const featureRegistry: FeatureDefinitionSource[] = [
       { description: defineLocalizedText("Data가 없을 때 렌더링하는 fallback입니다.", "Fallback rendered when there is no data."), example: "emptyComponent={<Empty />}", name: "emptyComponent" },
       { description: defineLocalizedText("기존 Row 위에 렌더링하는 overlay입니다.", "Overlay rendered over existing rows."), example: "loadingComponent={<Spinner />}", name: "loadingComponent" },
     ],
-    summary: defineLocalizedText("Data가 없는 초기 skeleton, 30개 Row 재조회 overlay, 빈 상태와 준비된 data 예제입니다.", "Initial zero-data skeleton, 30-row refetch overlay, empty state, and ready data example."),
+    summary: defineLocalizedText("원격 초기 skeleton, 매핑된 Row 재조회 overlay, 실제 빈 응답과 준비 상태 예제입니다.", "Remote initial skeleton, mapped-row refetch overlay, real empty response, and ready-state example."),
   },
   {
     Component: HeaderFeature,
@@ -99,6 +99,8 @@ export const featureRegistry: FeatureDefinitionSource[] = [
       { description: defineLocalizedText("Shift 키로 여러 Column의 우선순위 정렬을 활성화합니다.", "Enables Shift-assisted priority sorting across multiple Columns."), example: "multiSort", name: "multiSort" },
       { description: defineLocalizedText("순서가 포함된 전체 sort model을 관찰합니다.", "Observes the complete ordered sort model."), example: "onChangeSortModel={setSortModel}", name: "onChangeSortModel" },
       { description: defineLocalizedText("Header 렌더링 여부를 제어합니다.", "Controls whether headers are rendered."), example: "showHeader={showHeader}", name: "showHeader" },
+      { description: defineLocalizedText("Header 좌측 이동 Handle 표시 여부입니다.", "Controls the left-side Header move handle."), example: "showColumnMoveHandle={false}", name: "showColumnMoveHandle" },
+      { description: defineLocalizedText("Column 또는 Group 위치를 고정하고 crossing 이동을 차단합니다.", "Locks a Column or Group position and blocks crossing moves."), example: "lockPosition: true", name: "columns.lockPosition / columnGroups.lockPosition" },
       { description: defineLocalizedText("Column 순서와 너비를 저장합니다.", "Saves column order and width."), example: "getColumnLayout()", name: "getColumnLayout" },
       { description: defineLocalizedText("Column 순서와 너비를 복원하거나 초기화합니다.", "Restores or resets column order and width."), example: "setColumnLayout(layout)", name: "setColumnLayout" },
       { description: defineLocalizedText("Column resize와 reorder 상태 변경 callback입니다.", "Callback for column resize and reorder state changes."), example: "onChangeColumnLayout={setColumnLayout}", name: "onChangeColumnLayout" },
@@ -158,7 +160,7 @@ export const featureRegistry: FeatureDefinitionSource[] = [
   },
   {
     Component: LazyLoadFeature,
-    description: defineLocalizedText("onLazyLoad를 통해 remote datasource의 offset/limit Row batch를 가져오는 예제입니다.", "Example page that fetches offset/limit row batches from a remote datasource through onLazyLoad."),
+    description: defineLocalizedText("onLazyLoad request를 받아 application-owned data를 replace/append하는 예제입니다.", "Example page that receives onLazyLoad requests and replaces or appends application-owned data."),
     id: "lazy-load",
     label: defineLocalizedText("Lazy Load", "Lazy Load"),
     options: [
@@ -166,7 +168,7 @@ export const featureRegistry: FeatureDefinitionSource[] = [
       { description: defineLocalizedText("Request 한 번에 가져오는 Row 수입니다.", "Number of rows fetched per request."), example: "lazyLoadBatchSize={30}", name: "lazyLoadBatchSize" },
       { description: defineLocalizedText("Loading을 시작하는 하단 기준 거리입니다.", "Distance from the bottom that triggers loading."), example: "lazyLoadThreshold={140}", name: "lazyLoadThreshold" },
       { description: defineLocalizedText("현재 지원하는 append mode입니다.", "The currently supported append mode."), example: 'lazyLoadMode="append"', name: "lazyLoadMode" },
-      { description: defineLocalizedText("Offset, limit와 signal을 받고 Row와 total을 반환합니다.", "Receives offset, limit, and signal, then returns rows and total."), example: "onLazyLoad={fetchRows}", name: "onLazyLoad" },
+      { description: defineLocalizedText("Offset, limit, reason과 signal을 받고 controlled data를 갱신합니다.", "Receives offset, limit, reason, and signal, then updates controlled data."), example: "onLazyLoad={loadRows}", name: "onLazyLoad" },
     ],
     summary: defineLocalizedText("DummyJSON 형태 remote API에 연결한 append-mode Lazy Load 예제입니다.", "Append-mode lazy-load example connected to a DummyJSON-style remote API."),
   },

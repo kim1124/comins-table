@@ -168,8 +168,11 @@ Phase 2 Header components는 `button`, `input`, `checkbox`, `radio`, `select`, `
 - 마우스 왼쪽 버튼을 누른 상태에서 수평 이동이 수직 이동보다 크고 6픽셀에 도달하면 column move mode가 즉시 활성화되며 cursor는 `grabbing`이다.
 - 6픽셀 미만에서 Pointer Up하면 일반 click과 sort 동작을 유지한다. 수직 이동 의도가 확인되면 대기 중인 column move와 sort를 모두 취소한다.
 - Column move mode에서는 원본 Header를 현재 Header 배경보다 더 어두운 점선 source placeholder로 표시하고, plain Column 또는 Group 이름을 계속 보이게 하며 이동 중인 header ghost와 drop marker를 함께 표시한다. 이 presentation-only source label은 custom Header renderer를 호출하지 않는다.
-- 이동 ghost에는 장식용 Radix SVG drag-handle icon(`aria-hidden="true"`)을 표시하지만 Header 전체가 pointer target이다. 이는 전용 public handle 또는 icon override API가 아니다.
-- 같은 depth와 parent의 유효한 target은 accent marker로 표시한다. depth가 다르거나 parent 경계를 위반한 target은 붉은색 invalid marker와 `not-allowed` cursor를 표시하고 이동을 반영하지 않는다.
+- 기본적으로 Header 좌측에 24px 이동 Handle과 15px 장식용 Radix SVG icon(`aria-hidden="true"`)을 표시하며 Handle은 즉시 이동 mode를 활성화한다. Header 전체의 기존 6픽셀 gesture도 유지한다. `showColumnMoveHandle={false}`이면 Handle만 숨긴다.
+- Column 또는 Group에 `lockPosition: true`를 지정하면 해당 위치를 고정한다. 잠긴 Header는 Handle을 표시하지 않고 직접 이동할 수 없으며, 다른 Header도 잠긴 위치를 가로지르거나 밀어낼 수 없다.
+- 같은 depth와 parent의 유효한 target은 파란색 2px 테두리, marker, 저투명도 배경으로 표시한다. depth, parent 또는 position lock을 위반한 target은 같은 형태의 붉은색 표시와 `not-allowed` cursor를 사용한다. Header content 자체의 opacity는 변경하지 않는다.
+- 유효한 이동을 반영하면 Header, 현재 렌더링된 Body Cell과 Summary Cell이 새 수평 위치로 짧게 이동한다. `prefers-reduced-motion: reduce`에서는 transition을 적용하지 않는다.
+- built-in Header control을 유지하기 위한 기본 최소 Column 너비는 88px다. Label은 말줄임될 수 있고, 더 넓은 custom Header content는 별도 `minWidth`를 지정한다.
 - 유효한 target 위에서 Pointer Up한 경우에만 이동을 반영한다. Pointer cancel, `Escape`, window blur는 layout 변경 없이 취소한다.
 - non-mouse pointer 입력은 1초 long-press 호환 동작을 유지한다.
 - Parent group도 동일한 동작을 사용하며 child columns를 하나의 block으로 이동한다.

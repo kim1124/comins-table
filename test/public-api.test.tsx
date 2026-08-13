@@ -151,8 +151,27 @@ describe("comins-table public API", () => {
           expect(["initial", "scroll", "refresh"]).toContain(reason);
           expect(signal).toBeInstanceOf(AbortSignal);
 
-          return { rows: data, total: 1 };
+          return undefined;
         }}
+      />,
+    ).toBeTruthy();
+  });
+
+  it("accepts Header move handles and position locks", () => {
+    const data = [{ age: 31, id: "a", name: "Alpha" }];
+
+    expect(
+      <CominsTable
+        columnGroups={[
+          { children: ["name", "age"], id: "profile", label: "Profile", lockPosition: true },
+        ]}
+        columns={[
+          { field: "name", label: "Name", lockPosition: true },
+          { field: "age", label: "Age" },
+        ]}
+        data={data}
+        getRowId={(row) => row.id}
+        showColumnMoveHandle={false}
       />,
     ).toBeTruthy();
   });
@@ -241,7 +260,7 @@ describe("comins-table public API", () => {
         data={data}
         getRowId={(item) => item.id}
         // @ts-expect-error Tree Grid V1 does not support lazy callbacks.
-        onLazyLoad={async () => ({ rows: [], total: 0 })}
+        onLazyLoad={async () => undefined}
         tree
       />,
       <CominsTable

@@ -146,12 +146,27 @@ export const themeSamples: DocsCodeSample[] = [
 
 export const loadingSamples: DocsCodeSample[] = [
   {
-    code: `<CominsTable
+    code: `const [rows, setRows] = useState<PersonRow[]>([]);
+const [loadingMode, setLoadingMode] = useState<"initial" | "ready" | "refetch">("initial");
+
+async function loadRows(mode: "initial" | "ready" | "refetch", empty = false) {
+  setLoadingMode(mode);
+  if (mode === "initial") setRows([]);
+
+  const response = await fetch(
+    \`/api/users?limit=30&skip=\${empty ? 10000 : 0}\`,
+  );
+  const result = await response.json();
+  setRows(result.users.map(toPersonRow));
+  setLoadingMode("ready");
+}
+
+<CominsTable
   columns={columns}
-  data={isInitialLoading ? [] : rows}
+  data={rows}
   emptyComponent={<span>No rows to display.</span>}
   getRowId={(row) => row.id}
-  loading={isInitialLoading || isRefetching}
+  loading={loadingMode === "initial" || loadingMode === "refetch"}
   loadingComponent={<span>Refreshing rows.</span>}
   persistHeaderWhenEmpty
   skeletonRowCount={5}
@@ -351,36 +366,50 @@ const appendRows = useCallback(async () => {
 
 export const lazyLoadSamples: DocsCodeSample[] = [
   {
-    code: `const [refreshVersion, setRefreshVersion] = useState(0);
+    code: `const [rows, setRows] = useState<PersonRow[]>([]);
+const [total, setTotal] = useState(0);
+const [loading, setLoading] = useState(false);
+const [loadingMore, setLoadingMore] = useState(false);
 
 const loadRows = useCallback(async ({ offset, limit, reason, signal }) => {
+  reason === "scroll" ? setLoadingMore(true) : setLoading(true);
   const params = new URLSearchParams({
     delay: "700",
     limit: String(limit),
     select: "id,firstName,lastName,age,email,role",
     skip: String(offset),
   });
-  const response = await fetch(\`https://dummyjson.com/users?\${params}\`, { signal });
-  const result = await response.json();
+  try {
+    const response = await fetch(\`https://dummyjson.com/users?\${params}\`, { signal });
+    const result = await response.json();
+    const nextRows = result.users.map(toPersonRow);
+    setRows((current) => reason === "scroll" ? [...current, ...nextRows] : nextRows);
+    setTotal(result.total);
+  } finally {
+    reason === "scroll" ? setLoadingMore(false) : setLoading(false);
+  }
+}, []);
 
-  return {
-    rows: result.users.map(toPersonRow),
-    total: result.total,
-  };
-}, [refreshVersion]);
-
-const refreshRows = () => setRefreshVersion((current) => current + 1);
+const refreshRows = () => {
+  const controller = new AbortController();
+  setRows([]);
+  setTotal(0);
+  void loadRows({ limit: 30, offset: 0, reason: "refresh", signal: controller.signal });
+};
 
 <Button onClick={refreshRows}>Refresh</Button>
 <CominsTable
   columns={columns}
-  data={[]}
+  data={rows}
   emptyComponent={<span>No rows to display.</span>}
   getRowId={(row) => row.id}
+  hasMoreRows={rows.length < total}
   lazyLoad
   lazyLoadBatchSize={30}
   lazyLoadMode="append"
   lazyLoadThreshold={140}
+  loading={loading}
+  loadingMore={loadingMore}
   onLazyLoad={loadRows}
   pagination={{ pageIndex: 0, pageSize: 90 }}
   skeletonRowCount={5}

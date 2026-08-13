@@ -351,10 +351,10 @@ test("pagination page owns the table paging example above virtualization", async
   await expect(page.getByTestId("pagination-state")).toContainText("페이지 1");
 
   const performanceLinks = await page
-    .locator(".docs-sidebar__group", { hasText: "Body / 성능" })
+    .locator(".docs-sidebar__group", { hasText: "Body / Performance" })
     .getByRole("link")
     .allTextContents();
-  expect(performanceLinks).toEqual(["페이지네이션", "Infinite Scroll", "Lazy Load", "가상화"]);
+  expect(performanceLinks).toEqual(["Pagination", "Infinite Scroll", "Lazy Load", "Virtualization"]);
   expect(diagnostics).toEqual([]);
 });
 
@@ -629,8 +629,13 @@ test("body viewport keeps a single bottom border at max scroll @perf", async ({ 
   await page.goto("/performance/virtualization");
   await expect(page.getByTestId("body-proof-virtualization")).toHaveCount(0);
 
-  const metrics = await page.getByTestId("data-table-viewport").evaluate((viewport) => {
-    viewport.scrollTop = viewport.scrollHeight;
+  const viewport = page.getByTestId("data-table-viewport");
+  await viewport.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect(viewport.getByTestId("row-99999")).toBeVisible();
+
+  const metrics = await viewport.evaluate((viewport) => {
     const tableRoot = viewport.closest(".comins-table");
     const dataRows = Array.from(
       viewport.querySelectorAll<HTMLTableRowElement>(".comins-table__body-table tbody tr[data-comins-row-data-index]"),

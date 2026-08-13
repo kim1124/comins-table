@@ -32,6 +32,58 @@ test("defaults to Korean and switches the docs shell to English without remounti
   await expect(page.getByRole("heading", { level: 1, name: "Header Basics" })).toBeVisible();
 });
 
+test("keeps every Sidebar group and route name in English for both locales", async ({ page }) => {
+  const expectedGroups = [
+    "Getting Started",
+    "Basics",
+    "Styling",
+    "Header",
+    "Cell",
+    "Examples",
+    "Row / Context",
+    "API",
+    "Body / Performance",
+  ];
+  const expectedLinks = [
+    "Getting Started",
+    "CRUD",
+    "Sizing",
+    "Loading / Empty State",
+    "Theme",
+    "Header Basics",
+    "Header Groups",
+    "Cells",
+    "Components",
+    "Selection & Clipboard",
+    "Rows",
+    "Row Expand",
+    "Summary Row",
+    "Tree Grid",
+    "Context Menu",
+    "Export Helper",
+    "Props",
+    "Ref API",
+    "Pagination",
+    "Infinite Scroll",
+    "Lazy Load",
+    "Virtualization",
+  ];
+
+  await page.goto("/examples/header");
+
+  const koreanNavigation = page.getByRole("navigation", { name: "문서 탐색" });
+  await expect(page.getByRole("heading", { level: 1, name: "헤더 기본" })).toBeVisible();
+  expect(await koreanNavigation.locator("h2").allTextContents()).toEqual(expectedGroups);
+  expect(await koreanNavigation.locator("a").allTextContents()).toEqual(expectedLinks);
+
+  await page.getByTestId("playground-locale-toggle").getByRole("button", { exact: true, name: "EN" }).click();
+
+  const englishNavigation = page.getByRole("navigation", { name: "Docs navigation" });
+  await expect(page.getByRole("heading", { level: 1, name: "Header Basics" })).toBeVisible();
+  expect(await englishNavigation.locator("h2").allTextContents()).toEqual(expectedGroups);
+  expect(await englishNavigation.locator("a").allTextContents()).toEqual(expectedLinks);
+});
+
 test("uses locale-specific search metadata and recovers invalid persisted values", async ({ page }) => {
   await page.addInitScript((key) => window.localStorage.setItem(key, "unsupported"), PLAYGROUND_LOCALE_STORAGE_KEY);
   await page.goto("/docs/getting-started");
@@ -91,16 +143,6 @@ test("localizes core feature controls while preserving live example state", asyn
   await expect(page.getByTestId("row-new-1")).toBeVisible();
   await expect(page.getByTestId("mount-id")).toHaveText(mountId ?? "");
 
-  await page.getByRole("link", { exact: true, name: "Loading / Empty State" }).click();
-  await page.getByTestId("playground-locale-toggle").getByRole("button", { exact: true, name: "한" }).click();
-  await page.getByRole("button", { exact: true, name: "데이터 표시" }).click();
-  await expect(page.getByTestId("loading-state-viewport").locator("tbody tr[data-comins-row-data-index]")).toHaveCount(30);
-  const loadingMountId = await page.getByTestId("mount-id").textContent();
-
-  await page.getByTestId("playground-locale-toggle").getByRole("button", { exact: true, name: "EN" }).click();
-  await expect(page.getByRole("button", { exact: true, name: "Show data" })).toBeVisible();
-  await expect(page.getByTestId("loading-state-viewport").locator("tbody tr[data-comins-row-data-index]")).toHaveCount(30);
-  await expect(page.getByTestId("mount-id")).toHaveText(loadingMountId ?? "");
 });
 
 test("localizes interaction examples without resetting sort selection or expansion", async ({ page }) => {
@@ -166,6 +208,15 @@ test("localizes virtual and remote-loading examples without resetting loaded or 
       },
     });
   });
+
+  await page.goto("/examples/loading");
+  await expect(page.getByTestId("row-dummy-1")).toBeVisible();
+  const loadingMountId = await page.getByTestId("mount-id").textContent();
+  await page.getByTestId("playground-locale-toggle").getByRole("button", { exact: true, name: "EN" }).click();
+  await expect(page.getByRole("button", { exact: true, name: "Show data" })).toBeVisible();
+  await expect(page.getByTestId("row-dummy-1")).toBeVisible();
+  await expect(page.getByTestId("mount-id")).toHaveText(loadingMountId ?? "");
+  await page.getByTestId("playground-locale-toggle").getByRole("button", { exact: true, name: "한" }).click();
 
   await page.goto("/performance/infinite-scroll");
   await expect(page.getByTestId("infinite-load-count")).toContainText("불러옴 40 / 80");

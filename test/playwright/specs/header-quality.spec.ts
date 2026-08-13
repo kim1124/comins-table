@@ -22,6 +22,14 @@ test("header boundary resize is isolated from immediate column move and animated
   await page.goto("/examples/header");
   await expect(page.getByTestId("header-proof-layout")).toHaveCount(0);
   const basicExample = page.getByTestId("header-example-basic");
+  const headerBoundaryCell = basicExample.getByTestId("header-name");
+  const bodyBoundaryCell = basicExample.locator(".comins-table__body-table .comins-table__td").first();
+  expect(await headerBoundaryCell.evaluate((element) => getComputedStyle(element).borderBottomColor)).toBe(
+    await bodyBoundaryCell.evaluate((element) => getComputedStyle(element).borderBottomColor),
+  );
+  expect(await headerBoundaryCell.evaluate((element) => getComputedStyle(element).borderRightColor)).toBe(
+    await bodyBoundaryCell.evaluate((element) => getComputedStyle(element).borderRightColor),
+  );
 
   await expect(basicExample.getByTestId("header-role")).toHaveAttribute("data-sortable", "false");
   await expect(basicExample.getByTestId("header-role").locator(".comins-table__header-content")).toHaveCSS(
@@ -685,6 +693,8 @@ test("column move marks same-depth targets valid and cross-depth targets invalid
   await page.mouse.move(statusBox!.x + statusBox!.width / 2, statusBox!.y + statusBox!.height / 2);
   await expect(statusHeader).toHaveAttribute("data-column-drop-target", "true");
   await expect(statusHeader).toHaveAttribute("data-column-drop-valid", "true");
+  await expect(statusHeader).toHaveCSS("outline-color", "rgb(37, 99, 235)");
+  await expect(statusHeader).toHaveCSS("background-color", "rgba(37, 99, 235, 0.22)");
   await page.keyboard.press("Escape");
   await page.mouse.up();
 
@@ -695,12 +705,50 @@ test("column move marks same-depth targets valid and cross-depth targets invalid
   await expect(childHeader).toHaveAttribute("data-column-drop-target", "true");
   await expect(childHeader).toHaveAttribute("data-column-drop-valid", "false");
   await expect(childHeader).toHaveCSS("cursor", "not-allowed");
+  await expect(childHeader).toHaveCSS("background-color", "rgba(220, 38, 38, 0.22)");
   await expect(childHeader.locator(".comins-column-drop-marker")).toHaveCSS("background-color", "rgb(220, 38, 38)");
   await page.mouse.up();
 
   await expect.poll(() =>
     headers.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-comins-column-id"))),
   ).toEqual(orderBefore);
+  expect(diagnostics).toEqual([]);
+});
+
+test("column move handle activates immediately and moved cells settle with a position animation", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/examples/header");
+
+  const example = page.getByTestId("header-example-basic");
+  const ageHeader = example.getByTestId("header-age");
+  const nameHeader = example.getByTestId("header-name");
+  const handle = ageHeader.getByTestId("column-move-handle-age");
+  await handle.scrollIntoViewIfNeeded();
+  const handleBox = await handle.boundingBox();
+  const nameBox = await nameHeader.boundingBox();
+  expect(handleBox).not.toBeNull();
+  expect(nameBox).not.toBeNull();
+
+  await page.mouse.move(handleBox!.x + handleBox!.width / 2, handleBox!.y + handleBox!.height / 2);
+  await page.mouse.down();
+  await expect(ageHeader).toHaveAttribute("data-column-placeholder", "true");
+  await page.mouse.move(nameBox!.x + nameBox!.width / 2, nameBox!.y + nameBox!.height / 2);
+  await expect(nameHeader).toHaveAttribute("data-column-drop-valid", "true");
+  await nameHeader.evaluate((element) => {
+    const animationStates: string[] = [];
+    (window as typeof window & { __cominsColumnMoveAnimationStates?: string[] }).__cominsColumnMoveAnimationStates = animationStates;
+    new MutationObserver(() => {
+      animationStates.push(element.getAttribute("data-column-move-animating") ?? "removed");
+    }).observe(element, { attributeFilter: ["data-column-move-animating"], attributes: true });
+  });
+  await page.mouse.up();
+
+  await expect.poll(() => page.evaluate(() =>
+    (window as typeof window & { __cominsColumnMoveAnimationStates?: string[] }).__cominsColumnMoveAnimationStates ?? [],
+  )).toContain("true");
+  await expect(nameHeader).not.toHaveAttribute("data-column-move-animating", "true", { timeout: 1_000 });
+  await expect(example.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("Column2");
   expect(diagnostics).toEqual([]);
 });
 

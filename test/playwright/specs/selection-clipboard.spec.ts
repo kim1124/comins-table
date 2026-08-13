@@ -47,15 +47,28 @@ test("cell pointer drag creates a range without reordering controlled rows", asy
   await page.goto("/examples/selection-clipboard");
 
   const rows = page.getByTestId("selection-clipboard-viewport").locator("tbody tr[data-comins-row-data-index]");
+  await expect(page.locator("h1", { hasText: "선택과 Clipboard" })).toBeVisible();
+  await expect(rows).toHaveCount(30);
   const before = await rows.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-testid")));
 
-  await page.getByTestId("cell-a-name").hover();
+  const anchorCell = page.getByTestId("cell-a-name");
+  const focusCell = page.getByTestId("cell-b-age");
+
+  await anchorCell.scrollIntoViewIfNeeded();
+  const anchorBox = await anchorCell.boundingBox();
+  const focusBox = await focusCell.boundingBox();
+
+  expect(anchorBox).not.toBeNull();
+  expect(focusBox).not.toBeNull();
+
+  await page.mouse.move(anchorBox!.x + anchorBox!.width / 2, anchorBox!.y + anchorBox!.height / 2);
   await page.mouse.down();
-  await page.getByTestId("cell-b-age").hover();
+  await page.mouse.move(focusBox!.x + focusBox!.width / 2, focusBox!.y + focusBox!.height / 2, { steps: 4 });
+  await expect(focusCell).toHaveAttribute("data-range-selected", "true");
   await page.mouse.up();
 
-  await expect(page.getByTestId("cell-a-name")).toHaveAttribute("data-range-selected", "true");
-  await expect(page.getByTestId("cell-b-age")).toHaveAttribute("data-range-selected", "true");
+  await expect(anchorCell).toHaveAttribute("data-range-selected", "true");
+  await expect(focusCell).toHaveAttribute("data-range-selected", "true");
   await expect(page.getByTestId("selection-state")).toContainText('"range"');
   const after = await rows.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-testid")));
   expect(after).toEqual(before);

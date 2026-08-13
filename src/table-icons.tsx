@@ -1,10 +1,9 @@
 import {
-  ArrowDownIcon,
-  ArrowUpIcon,
   CaretSortIcon,
-  ChevronDownIcon,
   ChevronRightIcon,
   DragHandleDots2Icon,
+  ThickArrowDownIcon,
+  ThickArrowUpIcon,
 } from "@radix-ui/react-icons";
 import * as React from "react";
 
@@ -19,9 +18,9 @@ export type CominsTableIconName =
 const icons = {
   columnMove: DragHandleDots2Icon,
   disclosureCollapsed: ChevronRightIcon,
-  disclosureExpanded: ChevronDownIcon,
-  sortAscending: ArrowUpIcon,
-  sortDescending: ArrowDownIcon,
+  disclosureExpanded: ChevronRightIcon,
+  sortAscending: ThickArrowUpIcon,
+  sortDescending: ThickArrowDownIcon,
   sortUnsorted: CaretSortIcon,
 } as const;
 

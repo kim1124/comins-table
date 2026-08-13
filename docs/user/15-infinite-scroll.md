@@ -23,6 +23,6 @@ Set a synchronous request guard before starting the Promise. This prevents repea
 Infinite Scroll and Lazy Load have different ownership:
 
 - Controlled Infinite Scroll keeps `rows`, offsets, cancellation, `hasMoreRows`, and `loadingMore` in application state. Comins Table only emits `onLoadMore`.
-- Lazy Load lets Comins Table request `{ offset, limit, reason, signal }` batches through `onLazyLoad` and append the returned Rows.
+- Lazy Load lets Comins Table request `{ offset, limit, reason, signal }` through `onLazyLoad`; the application updates controlled `data`, `hasMoreRows`, and loading state.
 
 Network failure and retry policy remain application-owned in both modes.

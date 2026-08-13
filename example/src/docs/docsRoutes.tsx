@@ -159,15 +159,15 @@ const englishDocsPages: DocsPage[] = [
   }),
   featurePage({
     body: paragraphs([
-      "Initial loading keeps the table structure visible with skeleton rows while no data has loaded yet.",
-      "Refetch loading keeps existing rows visible behind an overlay, and empty data renders the emptyComponent fallback.",
+      "The Playground maps the same remote users API as Infinite Scroll into controlled rows. Initial loading keeps the table structure visible with skeleton rows.",
+      "Refetch keeps existing rows visible behind an overlay, and an out-of-range empty response renders the emptyComponent fallback.",
     ]),
     category: "Basics",
     codeSamples: loadingSamples,
     featureId: "loading",
     label: "Loading / Empty State",
     path: "/examples/loading",
-    summary: "Review initial skeleton rows, refetch overlay, empty state, and header persistence.",
+    summary: "Review remote initial skeleton rows, refetch overlay, an empty response, and header persistence.",
     title: "Loading / Empty State",
   }),
   featurePage({
@@ -335,8 +335,8 @@ const englishDocsPages: DocsPage[] = [
   }),
   featurePage({
     body: paragraphs([
-      "Lazy Load delegates network access through `onLazyLoad` instead of letting CominsTable own the datasource.",
-      "Initial requests can render skeleton rows, refetches can render an overlay, and append requests can render a bottom loading row.",
+      "Lazy Load emits `{ offset, limit, reason, signal }` through `onLazyLoad`; the application owns the fetched rows and maps them into controlled `data`.",
+      "Controlled `loading`, `loadingMore`, and `hasMoreRows` select skeleton, overlay, bottom-loading, and exhaustion behavior.",
     ]),
     category: "Body / Performance",
     codeSamples: lazyLoadSamples,
@@ -457,12 +457,12 @@ const koreanDocsCopy: Record<string, KoreanDocsCopy> = {
   },
   "/examples/loading": {
     body: [
-      "초기 loading은 아직 data가 없을 때 Table 구조와 skeleton Row를 유지합니다.",
-      "재조회 loading은 기존 Row 위에 overlay를 표시하고 빈 data는 emptyComponent를 렌더링합니다.",
+      "Playground는 Infinite Scroll과 같은 원격 사용자 API를 controlled Row로 매핑하며, 초기 loading은 Table 구조와 skeleton Row를 유지합니다.",
+      "재조회 loading은 기존 Row 위에 overlay를 표시하고 범위를 벗어난 실제 빈 응답은 emptyComponent를 렌더링합니다.",
     ],
     category: "기본",
     label: "Loading / Empty 상태",
-    summary: "초기 skeleton, 재조회 overlay, 빈 상태와 Header 유지 동작을 확인합니다.",
+    summary: "원격 초기 skeleton, 재조회 overlay, 빈 응답과 Header 유지 동작을 확인합니다.",
     title: "Loading / Empty 상태",
   },
   "/examples/row": {
@@ -550,8 +550,8 @@ const koreanDocsCopy: Record<string, KoreanDocsCopy> = {
   },
   "/performance/lazy-load": {
     body: [
-      "Lazy Load는 datasource를 소유하지 않고 `onLazyLoad`를 통해 network 접근을 위임합니다.",
-      "초기 request는 skeleton, refetch는 overlay, append request는 하단 loading Row를 표시할 수 있습니다.",
+      "Lazy Load는 `onLazyLoad`로 `{ offset, limit, reason, signal }`을 전달하고 application이 fetch Row를 controlled `data`에 매핑합니다.",
+      "Controlled `loading`, `loadingMore`, `hasMoreRows`가 skeleton, overlay, 하단 loading과 종료 상태를 결정합니다.",
     ],
     category: "Body / 성능",
     label: "Lazy Load",

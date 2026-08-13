@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import {
   CominsTable,
   type CominsColumnLayout,
+  type CominsRowId,
   type CominsTableColumn,
   type CominsTableRef,
 } from "../../../src";
@@ -54,6 +55,10 @@ const reorderedFixedLayout: CominsColumnLayout = {
   order: ["status", "name", "role", "id", "age"],
 };
 
+function keepLastExpandedRowId(rowIds: CominsRowId[]) {
+  return rowIds.slice(-1);
+}
+
 export function RowExpandFeature() {
   const { locale, text } = usePlaygroundLocale();
   const fixedColumns = useMemo<Array<CominsTableColumn<RowExpandExampleRow>>>(
@@ -75,9 +80,9 @@ export function RowExpandFeature() {
     [text],
   );
   const fixedTableRef = useRef<CominsTableRef<RowExpandExampleRow>>(null);
-  const [fixedExpandedRowIds, setFixedExpandedRowIds] = useState<readonly string[]>([]);
-  const [autoExpandedRowIds, setAutoExpandedRowIds] = useState<readonly string[]>([]);
-  const [tallExpandedRowIds, setTallExpandedRowIds] = useState<readonly string[]>([]);
+  const [fixedExpandedRowIds, setFixedExpandedRowIds] = useState<readonly CominsRowId[]>([]);
+  const [autoExpandedRowIds, setAutoExpandedRowIds] = useState<readonly CominsRowId[]>([]);
+  const [tallExpandedRowIds, setTallExpandedRowIds] = useState<readonly CominsRowId[]>([]);
   const [autoDetailGrown, setAutoDetailGrown] = useState(false);
   const [fixedPageIndex, setFixedPageIndex] = useState(0);
   const originalFixedLayout = useMemo<CominsColumnLayout>(
@@ -89,7 +94,7 @@ export function RowExpandFeature() {
   );
 
   return (
-    <section className="feature-panel feature-panel--components">
+    <section className="feature-panel feature-panel--components feature-panel--row-expand">
       <FeatureSampleSection
         description={text(defineLocalizedText(
           "expandedRowIds를 application state로 소유하며 모든 Detail에 정확한 240px fixed height를 적용합니다.",
@@ -148,7 +153,7 @@ export function RowExpandFeature() {
           expandedRowIds={fixedExpandedRowIds}
           getRowDetailHeight={() => 240}
           getRowId={(row) => row.id}
-          onChangeExpandedRowIds={setFixedExpandedRowIds}
+          onChangeExpandedRowIds={(rowIds) => setFixedExpandedRowIds(keepLastExpandedRowId(rowIds))}
           pagination={{ pageIndex: fixedPageIndex, pageSize: 4 }}
           renderRowDetail={({ row }) => (
             <div
@@ -203,7 +208,7 @@ export function RowExpandFeature() {
           expandedRowIds={autoExpandedRowIds}
           getRowDetailHeight={() => "auto"}
           getRowId={(row) => row.id}
-          onChangeExpandedRowIds={setAutoExpandedRowIds}
+          onChangeExpandedRowIds={(rowIds) => setAutoExpandedRowIds(keepLastExpandedRowId(rowIds))}
           pagination={{ pageIndex: 0, pageSize: autoRows.length }}
           renderRowDetail={({ row }) => (
             <div data-testid={`auto-detail-${row.id}`} style={{ display: "grid", gap: 10 }}>
@@ -289,7 +294,7 @@ export function RowExpandFeature() {
             expandedRowIds={tallExpandedRowIds}
             getRowDetailHeight={() => 960}
             getRowId={(row) => row.id}
-            onChangeExpandedRowIds={setTallExpandedRowIds}
+            onChangeExpandedRowIds={(rowIds) => setTallExpandedRowIds(keepLastExpandedRowId(rowIds))}
             pagination={{ pageIndex: 0, pageSize: tallRows.length }}
             renderRowDetail={({ row }) => (
               <div
@@ -315,60 +320,6 @@ export function RowExpandFeature() {
         </div>
       </FeatureSampleSection>
 
-      <FeatureSampleSection
-        description={text(defineLocalizedText(
-          "onChangeExpandedRowIds를 생략한 기본 expandable Row는 현재 상태와 Detail을 표시하지만 disclosure가 disabled됩니다.",
-          "An expandable Row without onChangeExpandedRowIds shows its current state and Detail with a disabled disclosure.",
-        ))}
-        id="row-expand-readonly"
-        title={text(defineLocalizedText("제어형 읽기 전용 disclosure", "Controlled read-only disclosure"))}
-      >
-        <CominsTable
-          className="example-table"
-          columns={autoColumns}
-          data={[{ age: 37, id: "readonly-1", name: "Read-only owner", role: "Viewer", status: "Locked" }]}
-          data-testid="row-expand-example-readonly"
-          expandedRowIds={["readonly-1"]}
-          getRowDetailHeight={() => 160}
-          getRowId={(row) => row.id}
-          renderRowDetail={({ row }) => (
-            <span>{locale === "ko" ? `${row.data.name}의 읽기 전용 Detail` : `Read-only Detail for ${row.data.name}`}</span>
-          )}
-          theme={{ density: "compact" }}
-        />
-      </FeatureSampleSection>
-
-      <FeatureSampleSection
-        description={text(defineLocalizedText(
-          "isRowExpandable=false인 owner는 callback과 controlled ID가 있어도 disclosure와 Detail을 렌더링하지 않습니다.",
-          "An owner with isRowExpandable=false renders neither a disclosure nor a Detail even when a callback and controlled ID exist.",
-        ))}
-        id="row-expand-non-expandable"
-        title={text(defineLocalizedText("펼칠 수 없는 owner", "Non-expandable owner"))}
-      >
-        <CominsTable
-          className="example-table"
-          columns={autoColumns}
-          data={[
-            {
-              age: 41,
-              id: "non-expandable-1",
-              name: "Non-expandable owner",
-              role: "Auditor",
-              status: "Locked",
-            },
-          ]}
-          data-testid="row-expand-example-non-expandable"
-          expandedRowIds={["non-expandable-1"]}
-          getRowId={(row) => row.id}
-          isRowExpandable={() => false}
-          onChangeExpandedRowIds={() => undefined}
-          renderRowDetail={({ row }) => (
-            <span>{locale === "ko" ? `${row.data.name}에서 사용할 수 없는 Detail` : `Unavailable Detail for ${row.data.name}`}</span>
-          )}
-          theme={{ density: "compact" }}
-        />
-      </FeatureSampleSection>
     </section>
   );
 }

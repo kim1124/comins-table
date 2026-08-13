@@ -52,8 +52,11 @@ The live [`/api/ref`](http://127.0.0.1:4002/api/ref) example applies `setSortMod
 - A left-button mouse interaction activates column reorder at a 6-pixel horizontal drag threshold. Horizontal movement must be greater than vertical movement.
 - Pointer Up below the threshold preserves the normal click and sort behavior. Vertical intent cancels both the pending reorder and sort.
 - After activation, the source Header becomes a darker dashed source placeholder that keeps its plain Column or Group name visible while a ghost and target marker show the pending move. This presentation-only source label does not invoke custom Header renderers.
-- The move ghost adds a decorative Radix SVG drag-handle icon (`aria-hidden="true"`), but the whole Header remains the pointer target. It is not a dedicated public handle or icon override API.
-- A valid same-depth target uses the accent marker. A different-depth or cross-parent target uses a red invalid marker with a `not-allowed` cursor and cannot commit.
+- A 24px move handle with a 15px decorative Radix SVG icon (`aria-hidden="true"`) appears at the left by default and activates immediately. The whole Header retains the 6-pixel gesture. Set `showColumnMoveHandle={false}` to hide handles without removing that existing gesture.
+- Set `lockPosition: true` on a Column or Group to keep its position fixed. A locked Header has no handle, cannot be moved, and prevents another move from crossing or shifting its position.
+- A valid same-depth target uses a blue two-pixel border, blue marker, and low-alpha blue background. A different-depth, cross-parent, or position-locked target uses the corresponding red treatment with a `not-allowed` cursor and cannot commit. Content opacity is unchanged.
+- A committed move animates Header, rendered body cells, and Summary cells to their new horizontal positions. `prefers-reduced-motion: reduce` disables the transition.
+- The built-in Header control contract uses an 88px default minimum Column width. Labels may truncate; custom Header content that needs more room should set a larger `minWidth`.
 - A move commits only on Pointer Up over a valid target. Pointer cancellation, `Escape`, or window blur cancels it without changing the layout.
 - For non-mouse pointer input, one-second long-press compatibility is retained.
 - Parent groups use the same interaction and move all child columns as one block.
@@ -64,7 +67,7 @@ Two-level headers use `columnGroups`.
 <CominsTable
   columns={columns}
   columnGroups={[
-    { id: "profile", label: "Profile", children: ["name", "age"] },
+    { id: "profile", label: "Profile", children: ["name", "age"], lockPosition: true },
   ]}
   data={data}
 />

@@ -1,6 +1,6 @@
 # Loading and Empty Remote API Example Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Make the Loading / Empty Playground route demonstrate real DummyJSON-backed initial, refetch, empty, ready, and Lazy Load states using the Infinite Scroll example's endpoint and row mapping contract.
 
@@ -32,7 +32,7 @@
 - Produces: `toPersonRows(response: DummyUsersResponse): PersonRow[]`
 - Consumes: `PersonRow` from `example/src/fixtures/people.ts`
 
-- [ ] **Step 1: Strengthen the existing Infinite Scroll boundary test**
+- [x] **Step 1: Strengthen the existing Infinite Scroll boundary test**
 
 In `infinite-scroll.spec.ts`, record the first request URL and assert its pathname and selected field query. This test must catch a helper extraction that changes the endpoint, `skip`, `limit`, or `select` contract.
 
@@ -48,13 +48,13 @@ expect(requestUrls[0]?.searchParams.get("select")).toBe(
 );
 ```
 
-- [ ] **Step 2: Run the focused test before extraction**
+- [x] **Step 2: Run the focused test before extraction**
 
 Run: `npm run test:e2e -- test/playwright/specs/infinite-scroll.spec.ts --workers=1`
 
 Expected: PASS as a characterization of the currently shipped Infinite Scroll request boundary.
 
-- [ ] **Step 3: Create the shared adapter and migrate Infinite Scroll**
+- [x] **Step 3: Create the shared adapter and migrate Infinite Scroll**
 
 Create `dummyUsers.ts` with complete remote types and pure helpers:
 
@@ -99,7 +99,7 @@ export function toPersonRows(response: DummyUsersResponse): PersonRow[] {
 
 Remove the duplicated response types, URL builder, and mapper from `InfiniteScrollFeature.tsx`. Import these helpers and keep all request guards and append state unchanged.
 
-- [ ] **Step 4: Run the Infinite Scroll regression**
+- [x] **Step 4: Run the Infinite Scroll regression**
 
 Run: `npm run test:e2e -- test/playwright/specs/infinite-scroll.spec.ts --workers=1`
 
@@ -117,7 +117,7 @@ Expected: PASS with `[0, 40, 0]` request offsets, mapped `dummy-*` Rows, and unc
 - Consumes: `buildDummyUsersUrl` and `toPersonRows` from Task 1
 - Produces: user-triggered modes `initial`, `refetch`, `empty`, and `ready` backed by controlled remote rows
 
-- [ ] **Step 1: Replace the local-fixture Playwright setup with a remote boundary fixture**
+- [x] **Step 1: Replace the local-fixture Playwright setup with a remote boundary fixture**
 
 Intercept `https://dummyjson.com/users*`. Return 30 complete users for `skip=0` and `users: []` for out-of-range `skip`. Delay refetch responses long enough to observe the overlay. Assert behavior, not request-mock existence:
 
@@ -138,13 +138,13 @@ await expect(page.getByTestId("row-dummy-1")).toBeVisible();
 
 Also assert recorded offsets begin with `0`, include an out-of-range value, and return to `0`. This catches direct local Empty simulation or fixture restoration.
 
-- [ ] **Step 2: Run the primary sample test to verify RED**
+- [x] **Step 2: Run the primary sample test to verify RED**
 
 Run: `npm run test:e2e -- test/playwright/specs/loading-empty-state.spec.ts --workers=1`
 
 Expected: FAIL because current primary controls directly switch local fixture arrays and do not render `row-dummy-1`.
 
-- [ ] **Step 3: Implement replace-mode remote request lifecycle**
+- [x] **Step 3: Implement replace-mode remote request lifecycle**
 
 In `LoadingStateFeature.tsx`:
 
@@ -157,7 +157,7 @@ In `LoadingStateFeature.tsx`:
 - Mount calls `loadPrimaryRows("initial")`; cleanup aborts and increments the request version.
 - Buttons call the same loader rather than mutating rows directly.
 
-- [ ] **Step 4: Run the primary sample test to verify GREEN**
+- [x] **Step 4: Run the primary sample test to verify GREEN**
 
 Run: `npm run test:e2e -- test/playwright/specs/loading-empty-state.spec.ts --workers=1`
 
@@ -175,25 +175,25 @@ Expected: PASS with remote `dummy-*` Rows, observable overlay, remote Empty, and
 - Consumes: shared DummyJSON adapter and `CominsLazyLoadRequest`
 - Produces: lower sample Data/Empty actions that remount Lazy Load with normal or out-of-range remote offset policy
 
-- [ ] **Step 1: Add failing Lazy Load and race behavior tests**
+- [x] **Step 1: Add failing Lazy Load and race behavior tests**
 
 Extend the focused spec to click `원격 데이터 로드`, observe five skeleton Rows, then assert mapped `row-dummy-1`. Click `원격 빈 결과` and assert the empty state after a recorded out-of-range request.
 
 Add a race sequence where the out-of-range response is delayed, the Data action is selected immediately afterward, and the final visible state remains remote data. This catches stale Empty overwriting a newer Data response.
 
-- [ ] **Step 2: Run the focused test to verify RED**
+- [x] **Step 2: Run the focused test to verify RED**
 
 Run: `npm run test:e2e -- test/playwright/specs/loading-empty-state.spec.ts --workers=1`
 
 Expected: FAIL because the lower sample currently waits on `setTimeout` and maps local fixtures without a network request.
 
-- [ ] **Step 3: Replace the timer-backed callback**
+- [x] **Step 3: Replace the timer-backed callback**
 
 Update `loadRemoteRows` to call `fetch(buildDummyUsersUrl(remoteOffset, request.limit, 500), { signal: request.signal })`, parse `DummyUsersResponse`, and map through `toPersonRows`. Use `10_000` for Empty and `request.offset` for Data. Keep `remoteKey` remounting so the Lazy Load callback is emitted for each selected scenario.
 
 Use a ref for the selected remote intent so the callback reads the current scenario without capturing an obsolete value. Check `request.signal.aborted` and an intent version before committing rows or loading state.
 
-- [ ] **Step 4: Run the focused test to verify GREEN**
+- [x] **Step 4: Run the focused test to verify GREEN**
 
 Run: `npm run test:e2e -- test/playwright/specs/loading-empty-state.spec.ts --workers=1`
 
@@ -218,24 +218,24 @@ Expected: PASS for primary and lower samples, including stale-response protectio
 - Consumes: final Loading / Empty behavior from Tasks 2 and 3
 - Produces: public English/Korean guidance that describes consumer-owned fetch state without naming competitor behavior
 
-- [ ] **Step 1: Update localization Playwright interception before production copy**
+- [x] **Step 1: Update localization Playwright interception before production copy**
 
 Move the Loading route into the existing remote-loading localization test or add the same complete DummyJSON route there. Assert loaded `row-dummy-1` remains visible and the feature mount ID remains stable after switching Korean to English.
 
-- [ ] **Step 2: Run localization to verify RED**
+- [x] **Step 2: Run localization to verify RED**
 
 Run: `npm run test:e2e -- test/playwright/specs/playground-localization.spec.ts --workers=1`
 
 Expected: FAIL until the test's old local `row-a` assumption and route interception are aligned with remote behavior.
 
-- [ ] **Step 3: Update user-facing examples and copy**
+- [x] **Step 3: Update user-facing examples and copy**
 
 - Change the Loading code sample to show application-owned `fetch`, controlled rows, and `loading` selection.
 - State that the Playground uses the same remote `/users` datasource as Infinite Scroll for initial/refetch/empty demonstration.
 - Keep the public API explanation generic: consumers may use their own endpoint.
 - Update English and Korean route summaries and feature metadata from local “30 Row data” wording to remote mapped Row wording.
 
-- [ ] **Step 4: Run documentation and localization checks**
+- [x] **Step 4: Run documentation and localization checks**
 
 Run: `npm run test:run -- test/user-docs.test.ts`
 
@@ -256,7 +256,7 @@ Expected: PASS with stable mount ID and retained remote row.
 - Consumes: completed implementation and focused evidence from Tasks 1–4
 - Produces: current local verification record; no remote publication
 
-- [ ] **Step 1: Run affected browser specs together**
+- [x] **Step 1: Run affected browser specs together**
 
 Run:
 
@@ -270,19 +270,19 @@ npm run test:e2e -- \
 
 Expected: PASS.
 
-- [ ] **Step 2: Run the repository verification gate**
+- [x] **Step 2: Run the repository verification gate**
 
 Run: `npm run verify`
 
 Expected: hygiene, security, license, lint, typecheck, Vitest, and build all PASS.
 
-- [ ] **Step 3: Run the full Playground E2E gate once**
+- [x] **Step 3: Run the full Playground E2E gate once**
 
 Run: `npm run test:e2e -- --workers=1`
 
 Expected: all tests PASS.
 
-- [ ] **Step 4: Record evidence and inspect the final diff**
+- [x] **Step 4: Record evidence and inspect the final diff**
 
 Append the request, changed files, RED/GREEN evidence, executed checks, and residual external-network risk to `reports/2026-08-12.md`.
 

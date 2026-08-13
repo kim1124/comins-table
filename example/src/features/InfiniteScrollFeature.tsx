@@ -3,49 +3,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CominsTable, type CominsTableColumn } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Button } from "../components/ui/button";
+import {
+  buildDummyUsersUrl,
+  toPersonRows,
+  type DummyUsersResponse,
+} from "../data/dummyUsers";
 import type { PersonRow } from "../fixtures/people";
 import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
-type DummyUser = {
-  age: number;
-  email: string;
-  firstName: string;
-  id: number;
-  lastName: string;
-  role?: string;
-};
-
-type DummyUsersResponse = {
-  limit: number;
-  skip: number;
-  total: number;
-  users: DummyUser[];
-};
-
-const DUMMY_USERS_URL = "https://dummyjson.com/users";
 const BATCH_SIZE = 40;
-
-function toPersonRow(user: DummyUser): PersonRow {
-  return {
-    active: user.id % 2 === 0,
-    age: user.age,
-    id: `dummy-${user.id}`,
-    locked: user.email,
-    name: `${user.firstName} ${user.lastName}`,
-    role: user.role ?? (user.id % 2 === 0 ? "Owner" : "Viewer"),
-  };
-}
-
-function buildInfiniteScrollUrl(offset: number, limit: number) {
-  const params = new URLSearchParams({
-    delay: "500",
-    limit: String(limit),
-    select: "id,firstName,lastName,age,email,role",
-    skip: String(offset),
-  });
-
-  return `${DUMMY_USERS_URL}?${params.toString()}`;
-}
 
 export function InfiniteScrollFeature() {
   const { locale, text } = usePlaygroundLocale();
@@ -102,7 +68,7 @@ export function InfiniteScrollFeature() {
     setTotal(0);
 
     try {
-      const response = await fetch(buildInfiniteScrollUrl(0, BATCH_SIZE), {
+      const response = await fetch(buildDummyUsersUrl(0, BATCH_SIZE), {
         signal: controller.signal,
       });
       const result = (await response.json()) as DummyUsersResponse;
@@ -111,7 +77,7 @@ export function InfiniteScrollFeature() {
         return;
       }
 
-      setRows(result.users.map(toPersonRow));
+      setRows(toPersonRows(result));
       setTotal(result.total);
     } catch {
       // Request failure and retry UI remain application-owned in this focused example.
@@ -138,7 +104,7 @@ export function InfiniteScrollFeature() {
     setLoadingMore(true);
 
     try {
-      const response = await fetch(buildInfiniteScrollUrl(offset, BATCH_SIZE), {
+      const response = await fetch(buildDummyUsersUrl(offset, BATCH_SIZE), {
         signal: controller.signal,
       });
       const result = (await response.json()) as DummyUsersResponse;
@@ -147,7 +113,7 @@ export function InfiniteScrollFeature() {
         return;
       }
 
-      const nextRows = result.users.map(toPersonRow);
+      const nextRows = toPersonRows(result);
       setRows((currentRows) => {
         if (currentRows.length !== offset) {
           return currentRows;

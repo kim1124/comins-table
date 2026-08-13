@@ -297,6 +297,7 @@ export type CominsTableColumn<TData, TValue = unknown> = {
   hidden?: boolean;
   id?: string;
   label: React.ReactNode;
+  lockPosition?: boolean;
   maxWidth?: number;
   minWidth?: number;
   sort?: boolean | ((left: TValue, right: TValue, leftRow: TData, rightRow: TData) => number);
@@ -308,6 +309,7 @@ export type CominsTableColumnGroup = {
   hidden?: boolean;
   id: string;
   label: React.ReactNode;
+  lockPosition?: boolean;
 };
 
 export type CominsTableRuntimeColumn<TData, TValue = unknown> = Omit<
@@ -503,7 +505,7 @@ export type CominsFillCellRangeOptions = {
   target: CominsCellRange;
 };
 
-const COMINS_MIN_COLUMN_WIDTH = 50;
+const COMINS_MIN_COLUMN_WIDTH = 88;
 
 function defaultGetRowId<TData>(_row: TData, index: number) {
   return index;
@@ -618,40 +620,59 @@ function normalizeColumnOrder<TData>(
   const missing = columns.map((column) => column.id).filter((id) => !ordered.includes(id));
   const flatOrder = [...ordered, ...missing];
 
-  if (columnGroups.length === 0) {
-    return flatOrder;
-  }
-
-  const groupIdByColumnId = getColumnGroupIdMap(columnGroups);
-  const groupById = new Map(columnGroups.map((group) => [group.id, group]));
-  const emittedGroups = new Set<string>();
-  const nextOrder: string[] = [];
-
-  for (const columnId of flatOrder) {
-    const groupId = groupIdByColumnId.get(columnId);
-
-    if (!groupId) {
-      nextOrder.push(columnId);
-      continue;
+  const normalizedOrder = (() => {
+    if (columnGroups.length === 0) {
+      return flatOrder;
     }
 
-    if (emittedGroups.has(groupId)) {
-      continue;
+    const groupIdByColumnId = getColumnGroupIdMap(columnGroups);
+    const groupById = new Map(columnGroups.map((group) => [group.id, group]));
+    const emittedGroups = new Set<string>();
+    const nextOrder: string[] = [];
+
+    for (const columnId of flatOrder) {
+      const groupId = groupIdByColumnId.get(columnId);
+
+      if (!groupId) {
+        nextOrder.push(columnId);
+        continue;
+      }
+
+      if (emittedGroups.has(groupId)) {
+        continue;
+      }
+
+      const group = groupById.get(groupId);
+
+      if (!group) {
+        nextOrder.push(columnId);
+        continue;
+      }
+
+      const groupChildrenInOrder = flatOrder.filter((currentId) => group.children.includes(currentId));
+      nextOrder.push(...groupChildrenInOrder);
+      emittedGroups.add(groupId);
     }
 
-    const group = groupById.get(groupId);
+    return nextOrder;
+  })();
 
-    if (!group) {
-      nextOrder.push(columnId);
-      continue;
+  columns.forEach((column, declaredIndex) => {
+    if (!column.lockPosition) {
+      return;
     }
 
-    const groupChildrenInOrder = flatOrder.filter((currentId) => group.children.includes(currentId));
-    nextOrder.push(...groupChildrenInOrder);
-    emittedGroups.add(groupId);
-  }
+    const currentIndex = normalizedOrder.indexOf(column.id);
 
-  return nextOrder;
+    if (currentIndex < 0 || currentIndex === declaredIndex) {
+      return;
+    }
+
+    normalizedOrder.splice(currentIndex, 1);
+    normalizedOrder.splice(Math.min(declaredIndex, normalizedOrder.length), 0, column.id);
+  });
+
+  return normalizedOrder;
 }
 
 function createEmptySelection(): CominsSelectionState {
@@ -1198,11 +1219,62 @@ export function setCominsColumnGroupWidth<TData>(
   };
 }
 
+function doesColumnMoveChangeLockedPositions<TData>(
+  state: CominsTableState<TData>,
+  nextOrder: readonly string[],
+) {
+  const currentIndexByColumnId = new Map(
+    state.columnOrder.map((columnId, index) => [columnId, index] as const),
+  );
+  const nextIndexByColumnId = new Map(
+    nextOrder.map((columnId, index) => [columnId, index] as const),
+  );
+
+  for (const column of state.columns) {
+    if (
+      column.lockPosition &&
+      currentIndexByColumnId.get(column.id) !== nextIndexByColumnId.get(column.id)
+    ) {
+      return true;
+    }
+  }
+
+  for (const group of state.columnGroups) {
+    if (!group.lockPosition) {
+      continue;
+    }
+
+    const currentPositions = group.children
+      .map((columnId) => currentIndexByColumnId.get(columnId))
+      .filter((index): index is number => index !== undefined)
+      .sort((left, right) => left - right);
+    const nextPositions = group.children
+      .map((columnId) => nextIndexByColumnId.get(columnId))
+      .filter((index): index is number => index !== undefined)
+      .sort((left, right) => left - right);
+
+    if (
+      currentPositions.length !== nextPositions.length ||
+      currentPositions.some((index, position) => index !== nextPositions[position])
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export function moveCominsColumn<TData>(
   state: CominsTableState<TData>,
   columnId: string,
   targetIndex: number,
 ) {
+  const sourceColumn = findColumn(state, columnId);
+
+  if (!sourceColumn || sourceColumn.lockPosition) {
+    return state;
+  }
+
   const groupIdByColumnId = getColumnGroupIdMap(state.columnGroups);
   const sourceGroupId = groupIdByColumnId.get(columnId);
 
@@ -1247,6 +1319,14 @@ export function moveCominsColumn<TData>(
 
   current.splice(nextIndex, 0, columnId);
 
+  if (doesColumnMoveChangeLockedPositions(state, current)) {
+    return state;
+  }
+
+  if (current.every((id, index) => id === state.columnOrder[index])) {
+    return state;
+  }
+
   return { ...state, columnOrder: current };
 }
 
@@ -1257,7 +1337,7 @@ export function moveCominsColumnGroup<TData>(
 ) {
   const group = findColumnGroupById(state.columnGroups, groupId);
 
-  if (!group) {
+  if (!group || group.lockPosition) {
     return state;
   }
 
@@ -1270,6 +1350,14 @@ export function moveCominsColumnGroup<TData>(
   const current = state.columnOrder.filter((id) => !group.children.includes(id));
   const nextIndex = Math.max(0, Math.min(targetIndex, current.length));
   const nextOrder = [...current.slice(0, nextIndex), ...groupChildren, ...current.slice(nextIndex)];
+
+  if (doesColumnMoveChangeLockedPositions(state, nextOrder)) {
+    return state;
+  }
+
+  if (nextOrder.every((id, index) => id === state.columnOrder[index])) {
+    return state;
+  }
 
   return { ...state, columnOrder: nextOrder };
 }

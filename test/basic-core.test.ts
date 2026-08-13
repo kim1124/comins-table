@@ -231,9 +231,9 @@ describe("comins-table basic core", () => {
 
     state = setCominsColumnGroupWidth(state, "profile", 180);
 
-    expect(state.columnState.name?.width).toBe(80);
-    expect(state.columnState.age?.width).toBe(50);
-    expect(state.columnState["profile.score"]?.width).toBe(50);
+    expect(state.columnState.name?.width).toBeCloseTo(88, 5);
+    expect(state.columnState.age?.width).toBeCloseTo(88, 5);
+    expect(state.columnState["profile.score"]?.width).toBeCloseTo(88, 5);
   });
 
   it("moves parent groups as a block and prevents child columns from leaving their group", () => {
@@ -291,6 +291,40 @@ describe("comins-table basic core", () => {
       "profile.score",
       "name",
       "age",
+    ]);
+  });
+
+  it("keeps locked column and group positions unchanged for every move source", () => {
+    const lockedColumnState = createCominsTableState<PersonRow>({
+      columns: [
+        { field: "name", label: "Name" },
+        { field: "age", label: "Age", lockPosition: true },
+        { field: "profile.score", label: "Score" },
+      ],
+      getRowId: (row) => row.id,
+      rows,
+    });
+
+    expect(moveCominsColumn(lockedColumnState, "age", 0)).toBe(lockedColumnState);
+    expect(moveCominsColumn(lockedColumnState, "name", 2)).toBe(lockedColumnState);
+    expect(moveCominsColumn(lockedColumnState, "profile.score", 0)).toBe(lockedColumnState);
+
+    const lockedGroupState = createCominsTableState<PersonRow>({
+      columnGroups: [
+        { children: ["name", "age"], id: "profile", label: "Profile", lockPosition: true },
+        { children: ["profile.score"], id: "metrics", label: "Metrics" },
+      ],
+      columns,
+      getRowId: (row) => row.id,
+      rows,
+    });
+
+    expect(moveCominsColumnGroup(lockedGroupState, "profile", 1)).toBe(lockedGroupState);
+    expect(moveCominsColumnGroup(lockedGroupState, "metrics", 0)).toBe(lockedGroupState);
+    expect(moveCominsColumn(lockedGroupState, "age", 0).columnOrder).toEqual([
+      "age",
+      "name",
+      "profile.score",
     ]);
   });
 

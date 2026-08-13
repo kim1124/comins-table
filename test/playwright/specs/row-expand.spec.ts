@@ -31,18 +31,26 @@ test("controls fixed Row Details with semantic disclosure state and focus restor
   const fixed = page.getByTestId("row-expand-example-fixed");
   const toggle = fixed.getByTestId("row-detail-toggle-fixed-1");
   const drag = fixed.getByTestId("row-drag-handle-fixed-1");
+  const value = fixed.getByTestId("cell-fixed-1-name").locator(".comins-table__cell-value");
   const state = page.getByTestId("row-expand-fixed-state");
 
   const toggleBox = await toggle.boundingBox();
   const dragBox = await drag.boundingBox();
+  const valueBox = await value.boundingBox();
 
   expect(toggleBox?.width).toBe(24);
   expect(toggleBox?.height).toBe(24);
   expect(dragBox?.width).toBe(24);
   expect(dragBox?.height).toBe(24);
+  expect(valueBox).not.toBeNull();
   expect(toggleBox!.x).toBeLessThan(dragBox!.x);
+  expect(dragBox!.x + dragBox!.width).toBeLessThanOrEqual(valueBox!.x);
+  expect(
+    Math.abs(toggleBox!.y + toggleBox!.height / 2 - (valueBox!.y + valueBox!.height / 2)),
+  ).toBeLessThanOrEqual(1);
   await expect(toggle.locator("svg")).toHaveCSS("width", "15px");
   await expect(toggle.locator("svg")).toHaveCSS("height", "15px");
+  await expect(toggle.locator("svg")).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
   expect(await drag.evaluate((element) => getComputedStyle(element, "::before").width)).toBe("15px");
   expect(await drag.evaluate((element) => getComputedStyle(element, "::before").height)).toBe("15px");
 
@@ -57,6 +65,8 @@ test("controls fixed Row Details with semantic disclosure state and focus restor
   const controlsId = await toggle.getAttribute("aria-controls");
   expect(controlsId).not.toBeNull();
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(toggle.locator("svg")).toHaveCSS("transform", "matrix(0, 1, -1, 0, 0, 0)");
+  await expect(toggle.locator("svg")).toHaveCSS("transition-duration", "0.16s");
   await expect(toggle).toHaveAccessibleName("Collapse fixed-1 details");
   await expect(region).toHaveAttribute("id", controlsId!);
   await expect(region).toHaveAttribute("aria-labelledby", await toggle.getAttribute("id"));
@@ -74,24 +84,82 @@ test("controls fixed Row Details with semantic disclosure state and focus restor
 
   await toggle.press("Space");
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
-  await toggle.press("Space");
+  const nextToggle = fixed.getByTestId("row-detail-toggle-fixed-2");
+  await nextToggle.click();
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(fixed.locator("[data-detail-for='fixed-1']")).toHaveCount(0);
+  await expect(nextToggle).toHaveAttribute("aria-expanded", "true");
+  await expect(fixed.locator("[data-detail-for='fixed-2']")).toBeVisible();
+  await expect(state).toHaveText('[\n  "fixed-2"\n]');
 
-  const readOnly = page.getByTestId("row-expand-example-readonly");
-  const readOnlyToggle = readOnly.getByTestId("row-detail-toggle-readonly-1");
-  await expect(readOnly.getByTestId("row-readonly-1")).toBeVisible();
-  await expect(readOnlyToggle).toBeDisabled();
-  await expect(readOnlyToggle).toHaveAccessibleName("Collapse readonly-1 details");
-  await expect(readOnlyToggle).toHaveAttribute("aria-expanded", "true");
-  await expect(readOnlyToggle).toHaveAttribute("aria-controls", /.+/u);
-  await expect(
-    readOnly.getByRole("region", { exact: true, name: "Collapse readonly-1 details" }),
-  ).toBeVisible();
+  await expect(page.locator("[data-feature-option='row-expand-readonly']")).toHaveCount(0);
+  await expect(page.locator("[data-feature-option='row-expand-non-expandable']")).toHaveCount(0);
 
-  const nonExpandable = page.getByTestId("row-expand-example-non-expandable");
-  await expect(nonExpandable.getByTestId("row-non-expandable-1")).toBeVisible();
-  await expect(nonExpandable.getByTestId("row-detail-toggle-non-expandable-1")).toHaveCount(0);
-  await expect(nonExpandable.locator("[data-detail-for='non-expandable-1']")).toHaveCount(0);
+  expect(diagnostics).toEqual([]);
+});
+
+test("keeps fixed Row Details inside the sample and exposes them through the Table body scrollbar", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/examples/row-expand");
+
+  const card = page.locator("[data-feature-option='row-expand-fixed']");
+  const sampleInner = card.locator(".feature-option-sample__inner");
+  const viewport = page.getByTestId("row-expand-example-fixed");
+  const table = viewport.locator("..");
+  await viewport.getByTestId("row-detail-toggle-fixed-1").click();
+
+  const bounds = await Promise.all([sampleInner.boundingBox(), table.boundingBox()]);
+  expect(bounds[0]).not.toBeNull();
+  expect(bounds[1]).not.toBeNull();
+  expect(bounds[1]!.y + bounds[1]!.height).toBeLessThanOrEqual(bounds[0]!.y + bounds[0]!.height + 1);
+  await expect(table).toHaveCSS("border-bottom-style", "solid");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight - element.clientHeight)).toBeGreaterThan(0);
+
+  await viewport.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+  await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await expect(viewport.getByTestId("fixed-detail-action-fixed-1")).toBeVisible();
+
+  expect(diagnostics).toEqual([]);
+});
+
+test("keeps the last visible owner Row bottom separator when its Detail is expanded", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/examples/row-expand");
+
+  const fixed = page.getByTestId("row-expand-example-fixed");
+  const lastOwnerCell = fixed.getByTestId("row-fixed-4").locator(".comins-table__td").first();
+  await expect(lastOwnerCell).toHaveCSS("border-bottom-width", "0px");
+
+  await fixed.getByTestId("row-detail-toggle-fixed-4").click();
+  await expect(lastOwnerCell).toHaveCSS("border-bottom-width", "1px");
+  await expect(fixed.getByTestId("row-detail-content-fixed-4")).toHaveCSS("border-bottom-width", "1px");
+
+  expect(diagnostics).toEqual([]);
+});
+
+test("keeps the final automatic Row separator when virtual content is shorter than the viewport", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.setViewportSize({ height: 900, width: 900 });
+  await page.goto("/examples/row-expand");
+
+  const automatic = page.getByTestId("row-expand-example-auto");
+  const sizer = automatic.locator(".comins-table__body-virtual-sizer");
+  await automatic.scrollIntoViewIfNeeded();
+  await expect.poll(() => sizer.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThan(0);
+
+  const metrics = await automatic.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    sizerHeight:
+      element.querySelector<HTMLElement>(".comins-table__body-virtual-sizer")?.getBoundingClientRect().height ?? 0,
+  }));
+  expect(metrics.sizerHeight).toBeLessThan(metrics.clientHeight);
+  await expect(automatic.getByTestId("row-auto-6").locator(".comins-table__td").first()).toHaveCSS(
+    "border-bottom-width",
+    "1px",
+  );
 
   expect(diagnostics).toEqual([]);
 });
@@ -123,6 +191,44 @@ test("remeasures asynchronous automatic Detail growth and Column width changes w
   const detailWidthBefore = (await detail.boundingBox())!.width;
   const logicalHeightAfterGrowth = await sizer.evaluate((element) => element.getBoundingClientRect().height);
   expect(logicalHeightAfterGrowth).toBeGreaterThan(logicalHeightBefore + 20);
+  await expect.poll(async () => {
+    const detailHeight = (await detail.boundingBox())?.height ?? 0;
+    const logicalHeight = await sizer.evaluate((element) => element.getBoundingClientRect().height);
+
+    return Math.abs(logicalHeight - (216 + detailHeight));
+  }).toBeLessThanOrEqual(1);
+
+  const scrollExtentSamples = await automatic.evaluate(async (element) => {
+    const samples: Array<{ clientHeight: number; scrollHeight: number; scrollTop: number; sizerHeight: number }> = [];
+
+    for (let step = 0; step < 8; step += 1) {
+      element.scrollTop = Math.min(element.scrollHeight - element.clientHeight, element.scrollTop + 40);
+      element.dispatchEvent(new Event("scroll", { bubbles: true }));
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      samples.push({
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+        scrollTop: element.scrollTop,
+        sizerHeight:
+          element.querySelector<HTMLElement>(".comins-table__body-virtual-sizer")?.getBoundingClientRect().height ?? 0,
+      });
+    }
+
+    return samples;
+  });
+  const settledScrollHeight = scrollExtentSamples[0]?.scrollHeight ?? 0;
+  expect(scrollExtentSamples.every((sample) => Math.abs(sample.scrollHeight - settledScrollHeight) <= 1)).toBe(true);
+  expect(
+    scrollExtentSamples.every(
+      (sample) => sample.scrollHeight <= Math.ceil(Math.max(sample.clientHeight, sample.sizerHeight)) + 1,
+    ),
+  ).toBe(true);
+
+  await automatic.evaluate((element) => {
+    element.scrollTop = 0;
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+  await expect.poll(() => automatic.evaluate((element) => element.scrollTop)).toBe(0);
 
   const resize = automaticCard.getByTestId("resize-name");
   const resizeBox = await resize.boundingBox();
@@ -252,9 +358,12 @@ test("keeps automatic Row Detail growth anchored and repeated toggles bounded @p
   await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
   await viewport.scrollIntoViewIfNeeded();
   const scrollToFixtureRow = () =>
-    viewport.evaluate((element) => {
+    viewport.evaluate(async (element) => {
       element.scrollTop = Math.floor(element.scrollHeight / 2);
       element.dispatchEvent(new Event("scroll", { bubbles: true }));
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
     });
   await scrollToFixtureRow();
 
@@ -299,11 +408,15 @@ test("keeps automatic Row Detail growth anchored and repeated toggles bounded @p
   const anchorDelta = Math.abs(ownerTopAfter - ownerTopBefore);
 
   for (let cycle = 0; cycle < 10; cycle += 1) {
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
     await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
     await expect(viewport.locator("[data-detail-for]")).toHaveCount(0);
     await scrollToFixtureRow();
     await expect(toggle).toBeVisible();
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
     await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
     await expect(viewport.locator("[data-detail-for]")).toHaveCount(1);
   }
 

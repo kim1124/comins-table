@@ -12,7 +12,13 @@ test("Tree Grid route demonstrates 30-node defaults, array ref controls, styles,
   await expect(page).toHaveURL(/\/examples\/tree-grid$/u);
   await expect(page.getByRole("heading", { level: 1, name: "Tree Grid" })).toBeVisible();
 
+  const basicCard = page.locator("[data-feature-option='tree-grid-basic']");
   const basic = page.getByTestId("tree-grid-basic-viewport");
+  await expect(basicCard.getByTestId("header-name")).toHaveAttribute("data-column-position-locked", "true");
+  await expect(basicCard.getByTestId("column-move-handle-name")).toHaveCount(0);
+  await expect(basicCard.getByTestId("column-move-handle-age")).toBeVisible();
+  await expect(basic.getByTestId("tree-expander-department-1").locator("xpath=ancestor::td[1]"))
+    .toHaveAttribute("data-comins-cell-column-id", "name");
   await expect(page.getByTestId("tree-basic-node-count")).toHaveText("30 nodes");
   for (const testId of [
     "tree-grid-basic-viewport",

@@ -78,6 +78,24 @@ describe("virtual layout", () => {
     });
   });
 
+  it("clamps mixed rendering to the virtual sizer when the DOM reports overflow beyond it", () => {
+    const heightIndex = CominsHeightIndex.from([36, 336, 36, 36]);
+    const atVirtualBottom = getCominsMixedVirtualRange({
+      heightIndex,
+      overscan: 0,
+      physicalScrollTop: 344,
+      viewportHeight: 100,
+    });
+    const beyondVirtualBottom = getCominsMixedVirtualRange({
+      heightIndex,
+      overscan: 0,
+      physicalScrollTop: 500,
+      viewportHeight: 100,
+    });
+
+    expect(beyondVirtualBottom).toEqual(atVirtualBottom);
+  });
+
   it("uses a width-matched automatic measurement and evicts removed row ids", () => {
     const cache = new Map([
       ["a", { height: 420, width: 800 }],

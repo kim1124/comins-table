@@ -69,6 +69,6 @@ Promise를 시작하기 전에 동기식 ref guard를 설정해야 React가 `loa
 ## Infinite Scroll과 Lazy Load
 
 - Controlled Infinite Scroll은 application이 `rows`, offset, 취소, `hasMoreRows`, `loadingMore`를 소유하고 Table은 `onLoadMore`만 호출한다.
-- Lazy Load는 Table이 `onLazyLoad`를 통해 `{ offset, limit, reason, signal }` batch를 요청하고 응답 Row를 append한다.
+- Lazy Load는 Table이 `onLazyLoad`를 통해 `{ offset, limit, reason, signal }`을 전달하고 application이 controlled `data`, `hasMoreRows`, loading 상태를 갱신한다.
 
 두 방식 모두 네트워크 실패와 retry 정책은 application data layer에서 처리한다.

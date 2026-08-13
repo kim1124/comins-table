@@ -69,7 +69,7 @@ export function SelectionClipboardFeature() {
             ))}
           </span>
         </div>
-        <pre className="state-output" data-testid="selection-state">
+        <pre className="state-output state-output--selection" data-testid="selection-state">
           {JSON.stringify(selection, null, 2)}
         </pre>
         <CominsTable

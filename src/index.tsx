@@ -132,9 +132,10 @@ type CominsColumnMoveTarget = CominsColumnMoveHeader & {
   status: CominsColumnDropStatus;
 };
 type CominsColumnPointerOptions = {
+  activateImmediately?: boolean;
   activate: (x: number, y: number) => void;
   commitTarget: (target: CominsColumnMoveHeader) => void;
-  event: React.PointerEvent<HTMLTableCellElement>;
+  event: React.PointerEvent<HTMLElement>;
   id: string;
   kind: "column" | "group";
   resolveTarget: (target: CominsColumnMoveHeader) => CominsColumnDropStatus;
@@ -151,7 +152,7 @@ type CominsRowMoveState = {
   targetDataIndex: number;
 };
 
-const COMINS_MIN_COLUMN_WIDTH = 50;
+const COMINS_MIN_COLUMN_WIDTH = 88;
 function getCominsColumnDropStatus(
   source: CominsColumnMoveHeader,
   target: CominsColumnMoveHeader,
@@ -165,7 +166,7 @@ function getCominsColumnDropStatus(
     return "invalid";
   }
 
-  return orderChanged ? "valid" : "neutral";
+  return orderChanged ? "valid" : "invalid";
 }
 
 function selectRowForContextMenu<TData>(state: CominsTableState<TData>, rowId: CominsRowId) {
@@ -250,11 +251,6 @@ export type CominsLazyLoadRequest = {
   signal: AbortSignal;
 };
 
-export type CominsLazyLoadResult<TData> = {
-  rows: readonly TData[];
-  total?: number;
-};
-
 type CominsTableFlatProps<TData> = {
   "buffer-size"?: number;
   cellSelection?: boolean;
@@ -289,12 +285,13 @@ type CominsTableFlatProps<TData> = {
   onDoubleClickRow?: (payload: CominsRowEventPayload<TData>) => void;
   onKeyDownCell?: (payload: CominsCellKeyboardEventPayload<TData>) => void;
   onKeyDownRow?: (payload: CominsRowKeyboardEventPayload<TData>) => void;
-  onLazyLoad?: (request: CominsLazyLoadRequest) => Promise<CominsLazyLoadResult<TData>>;
+  onLazyLoad?: (request: CominsLazyLoadRequest) => Promise<void> | void;
   onLoadMore?: () => void;
   pagination?: Partial<CominsPaginationState>;
   persistHeaderWhenEmpty?: boolean;
   rowHeight?: number;
   rowProps?: CominsTableRowProps<TData>;
+  showColumnMoveHandle?: boolean;
   showHeader?: boolean;
   skeletonRowCount?: number;
   style?: React.CSSProperties;
@@ -426,6 +423,7 @@ type CominsTreeRenderContext<TData> = {
   onFold: (nodeIds?: readonly CominsRowId[]) => void;
   onToggle: (rowId: CominsRowId) => void;
   summaryRows: readonly TData[];
+  treeColumnId: string | null;
 };
 
 type CominsTableInnerProps<TData> = CominsTableProps<TData> & {
@@ -1394,6 +1392,7 @@ function CominsTableInner<TData>(
     rowProps,
     isRowExpandable,
     renderRowDetail,
+    showColumnMoveHandle = true,
     showHeader = true,
     skeletonRowCount,
     style,
@@ -1425,13 +1424,13 @@ function CominsTableInner<TData>(
   const rowDetailToggleElementsRef = useRef(new Map<CominsRowId, HTMLButtonElement>());
   const activePointerGestureCleanupRef = useRef<(() => void) | null>(null);
   const columnPointerInteractionRef = useRef<CominsColumnPointerInteraction | null>(null);
+  const columnMoveAnimationCleanupRef = useRef<(() => void) | null>(null);
+  const columnMoveAnimationSnapshotRef = useRef<Map<HTMLElement, number> | null>(null);
   const headerRendererBodyRef = useRef(new Map<string, { body: React.ReactNode; renderer: unknown }>());
   const lastCellAnchorRef = useRef<CominsCellAddress | null>(null);
   const lazyAbortControllerRef = useRef<AbortController | null>(null);
   const lazyLoadingReasonRef = useRef<CominsLazyLoadReason | null>(null);
   const lazyRequestIdRef = useRef(0);
-  const lazyRowsRef = useRef<readonly TData[]>(data);
-  const lazyTotalRowsRef = useRef<number | undefined>(undefined);
   const lastLoadMoreRowCountRef = useRef<number | null>(null);
   const lastRowAnchorRef = useRef<CominsRowId | null>(null);
   const rangeDragAnchorRef = useRef<CominsCellAddress | null>(null);
@@ -1453,16 +1452,13 @@ function CominsTableInner<TData>(
   const [movingGroupId, setMovingGroupId] = useState<string | null>(null);
   const [columnMovePointer, setColumnMovePointer] = useState<{ x: number; y: number } | null>(null);
   const [columnMoveTarget, setColumnMoveTarget] = useState<CominsColumnMoveTarget | null>(null);
-  const [lazyLoadingReason, setLazyLoadingReason] = useState<CominsLazyLoadReason | null>(null);
-  const [lazyRows, setLazyRows] = useState<readonly TData[]>(data);
-  const [lazyTotalRows, setLazyTotalRows] = useState<number | undefined>(undefined);
   const [logicalAnchorTransaction, setLogicalAnchorTransaction] =
     useState<CominsLogicalAnchorTransaction | null>(null);
   const [resizingColumnId, setResizingColumnId] = useState<string | null>(null);
   const [rowMoveState, setRowMoveState] = useState<CominsRowMoveState | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const rowDetailIdPrefix = useId();
-  const effectiveData = lazyLoad ? lazyRows : data;
+  const effectiveData = data;
   const [state, setState] = useState(() =>
     createCominsTableState({
       columnGroups,
@@ -1525,7 +1521,7 @@ function CominsTableInner<TData>(
 
     const currentRowsLength = stateRef.current.rows.length;
 
-    if (reason === "scroll" && lazyTotalRowsRef.current !== undefined && currentRowsLength >= lazyTotalRowsRef.current) {
+    if (reason === "scroll" && (!hasMoreRows || loading || loadingMore)) {
       return;
     }
 
@@ -1544,26 +1540,22 @@ function CominsTableInner<TData>(
         containerRef.current.scrollTop = 0;
       }
     }
-    setLazyLoadingReason(reason);
+    let result: Promise<void> | void;
 
-    void onLazyLoad({
-      limit: resolvedLazyLoadBatchSize,
-      offset,
-      reason,
-      signal: controller.signal,
-    })
-      .then((result) => {
-        if (controller.signal.aborted || lazyRequestIdRef.current !== requestId) {
-          return;
-        }
+    try {
+      result = onLazyLoad({
+        limit: resolvedLazyLoadBatchSize,
+        offset,
+        reason,
+        signal: controller.signal,
+      });
+    } catch {
+      lazyLoadingReasonRef.current = null;
+      lazyAbortControllerRef.current = null;
+      return;
+    }
 
-        const nextRows = reason === "scroll" ? [...lazyRowsRef.current, ...result.rows] : [...result.rows];
-
-        lazyRowsRef.current = nextRows;
-        lazyTotalRowsRef.current = result.total;
-        setLazyRows(nextRows);
-        setLazyTotalRows(result.total);
-      })
+    void Promise.resolve(result)
       .catch(() => {
         // Error and retry UI are intentionally left to the consumer in this API pass.
       })
@@ -1574,28 +1566,8 @@ function CominsTableInner<TData>(
 
         lazyLoadingReasonRef.current = null;
         lazyAbortControllerRef.current = null;
-        setLazyLoadingReason(null);
       });
   };
-
-  useEffect(() => {
-    lazyRowsRef.current = lazyRows;
-  }, [lazyRows]);
-
-  useEffect(() => {
-    lazyTotalRowsRef.current = lazyTotalRows;
-  }, [lazyTotalRows]);
-
-  useEffect(() => {
-    if (lazyLoad) {
-      return;
-    }
-
-    lazyRowsRef.current = data;
-    setLazyRows(data);
-    lazyTotalRowsRef.current = undefined;
-    setLazyTotalRows(undefined);
-  }, [data, lazyLoad]);
 
   useEffect(() => {
     if (!lazyLoad || !onLazyLoad) {
@@ -1966,7 +1938,19 @@ function CominsTableInner<TData>(
     if (containerWidth <= 0) {
       const fallbackWidth = `${100 / columnCount}%`;
 
-      return configuredWidths.map((width) => width ?? fallbackWidth);
+      return configuredWidths.map((width, index) => {
+        if (width === undefined) {
+          return fallbackWidth;
+        }
+
+        const column = visibleColumns[index]!;
+
+        return clampColumnWidth(
+          width,
+          getEffectiveColumnMinWidth(column),
+          getEffectiveColumnMaxWidth(column),
+        );
+      });
     }
 
     let fixedTotal = 0;
@@ -2564,10 +2548,9 @@ function CominsTableInner<TData>(
   const selectedRowIdSet = useMemo(() => new Set(state.selection.rowIds), [state.selection.rowIds]);
   const hasHorizontalOverflow =
     typeof columnWidthTotal === "number" && containerWidth > 0 ? columnWidthTotal > containerWidth + 1 : false;
-  const lazyHasMoreRows = lazyLoad && (lazyTotalRows === undefined || visibleRowCount < lazyTotalRows);
-  const resolvedHasMoreRows = lazyLoad ? lazyHasMoreRows : hasMoreRows;
-  const resolvedLoading = loading || lazyLoadingReason === "initial" || lazyLoadingReason === "refresh";
-  const resolvedLoadingMore = loadingMore || lazyLoadingReason === "scroll";
+  const resolvedHasMoreRows = hasMoreRows;
+  const resolvedLoading = loading;
+  const resolvedLoadingMore = loadingMore;
   const isEmpty = visibleRowCount === 0;
   const shouldRenderSkeleton = resolvedLoading && isEmpty;
   const shouldRenderEmpty = !resolvedLoading && isEmpty;
@@ -2833,9 +2816,96 @@ function CominsTableInner<TData>(
     () => () => {
       clearColumnPointerInteraction();
       clearSuppressedSortClick();
+      columnMoveAnimationCleanupRef.current?.();
     },
     [],
   );
+
+  const captureColumnMoveAnimationSnapshot = () => {
+    columnMoveAnimationCleanupRef.current?.();
+    columnMoveAnimationCleanupRef.current = null;
+    columnMoveAnimationSnapshotRef.current = null;
+
+    if (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
+    const elements = [headerRef.current, containerRef.current, footerRef.current].flatMap((root) =>
+      root
+        ? Array.from(
+            root.querySelectorAll<HTMLElement>(
+              "[data-comins-column-id], [data-comins-cell-column-id], [data-comins-summary-column-id]",
+            ),
+          )
+        : [],
+    );
+    const snapshot = new Map<HTMLElement, number>();
+
+    for (const element of elements) {
+      snapshot.set(element, element.getBoundingClientRect().left);
+    }
+
+    columnMoveAnimationSnapshotRef.current = snapshot;
+  };
+
+  useLayoutEffect(() => {
+    const snapshot = columnMoveAnimationSnapshotRef.current;
+    columnMoveAnimationSnapshotRef.current = null;
+
+    if (!snapshot) {
+      return undefined;
+    }
+
+    const animatedElements: HTMLElement[] = [];
+
+    for (const [element, previousLeft] of snapshot) {
+      if (!element.isConnected) {
+        continue;
+      }
+
+      const offset = previousLeft - element.getBoundingClientRect().left;
+
+      if (Math.abs(offset) < 0.5) {
+        continue;
+      }
+
+      element.dataset.columnMoveAnimating = "prepare";
+      element.style.setProperty("--comins-column-move-offset", `${offset}px`);
+      animatedElements.push(element);
+    }
+
+    if (animatedElements.length === 0) {
+      return undefined;
+    }
+
+    void animatedElements[0]?.getBoundingClientRect();
+    let frame = 0;
+    let timeout = 0;
+    const cleanup = () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+
+      for (const element of animatedElements) {
+        delete element.dataset.columnMoveAnimating;
+        element.style.removeProperty("--comins-column-move-offset");
+      }
+
+      if (columnMoveAnimationCleanupRef.current === cleanup) {
+        columnMoveAnimationCleanupRef.current = null;
+      }
+    };
+
+    columnMoveAnimationCleanupRef.current = cleanup;
+    frame = window.requestAnimationFrame(() => {
+      for (const element of animatedElements) {
+        element.dataset.columnMoveAnimating = "true";
+        element.style.setProperty("--comins-column-move-offset", "0px");
+      }
+    });
+    timeout = window.setTimeout(cleanup, 220);
+
+    return cleanup;
+  }, [state.columnOrder]);
 
   const beginColumnPointerInteraction = (options: CominsColumnPointerOptions) => {
     if (options.event.button !== 0) {
@@ -2978,13 +3048,23 @@ function CominsTableInner<TData>(
     window.addEventListener("pointercancel", handlePointerCancel, true);
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("blur", handleWindowBlur);
+
+    if (options.activateImmediately) {
+      activateCurrent(interaction.startX, interaction.startY);
+    }
   };
 
   const beginHeaderPointerInteraction = (
-    event: React.PointerEvent<HTMLTableCellElement>,
+    event: React.PointerEvent<HTMLElement>,
     cell: Extract<CominsHeaderCell<TData>, { kind: "column" }>,
+    activateImmediately = false,
   ) => {
     const column = cell.column;
+
+    if (column.lockPosition) {
+      return;
+    }
+
     const source: CominsColumnMoveHeader = {
       depth: cell.groupId ? 1 : 0,
       id: column.id,
@@ -2992,6 +3072,7 @@ function CominsTableInner<TData>(
       parentGroupId: cell.groupId,
     };
     beginColumnPointerInteraction({
+      activateImmediately,
       activate: (x, y) => {
         setColumnMovePointer({ x, y });
         setMovingGroupId(null);
@@ -3008,6 +3089,7 @@ function CominsTableInner<TData>(
             next !== current &&
             next.columnOrder.some((columnId, index) => columnId !== current.columnOrder[index])
           ) {
+            captureColumnMoveAnimationSnapshot();
             commitState(next, { columnLayoutChanged: true });
           }
         }
@@ -3037,11 +3119,17 @@ function CominsTableInner<TData>(
   };
 
   const beginGroupPointerInteraction = (
-    event: React.PointerEvent<HTMLTableCellElement>,
+    event: React.PointerEvent<HTMLElement>,
     group: CominsTableRuntimeColumnGroup,
+    activateImmediately = false,
   ) => {
+    if (group.lockPosition) {
+      return;
+    }
+
     const source: CominsColumnMoveHeader = { depth: 0, id: group.id, kind: "group" };
     beginColumnPointerInteraction({
+      activateImmediately,
       activate: (x, y) => {
         setColumnMovePointer({ x, y });
         setMovingColumnId(null);
@@ -3058,6 +3146,7 @@ function CominsTableInner<TData>(
             next !== current &&
             next.columnOrder.some((columnId, index) => columnId !== current.columnOrder[index])
           ) {
+            captureColumnMoveAnimationSnapshot();
             commitState(next, { columnLayoutChanged: true });
           }
         }
@@ -3365,6 +3454,7 @@ function CominsTableInner<TData>(
     if (cell.kind === "group") {
       const isDropTarget = columnMoveTarget?.kind === "group" && columnMoveTarget.id === cell.groupId;
       const isGroupPlaceholder = movingGroupId === cell.groupId;
+      const groupPositionLocked = cell.group.lockPosition === true;
       const groupPlaceholderLabel = getCominsColumnPlaceholderText(cell.group.label, cell.groupId);
       return (
         <th
@@ -3386,6 +3476,7 @@ function CominsTableInner<TData>(
           }
           data-column-moving={isGroupPlaceholder ? "true" : undefined}
           data-column-placeholder={isGroupPlaceholder ? "true" : undefined}
+          data-column-position-locked={groupPositionLocked ? "true" : undefined}
           data-comins-column-depth="0"
           data-comins-column-group-id={cell.groupId}
           data-testid={`header-group-${cell.groupId}`}
@@ -3403,6 +3494,23 @@ function CominsTableInner<TData>(
             inert={isGroupPlaceholder ? true : undefined}
             ref={bindCominsColumnPlaceholderNativeBoundary}
           >
+            {showColumnMoveHandle && !groupPositionLocked ? (
+              <span
+                aria-hidden="true"
+                className="comins-column-move-handle"
+                data-comins-column-move-handle="true"
+                data-testid={`column-group-move-handle-${cell.groupId}`}
+                draggable={false}
+                onClick={(event) => event.stopPropagation()}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  beginGroupPointerInteraction(event, cell.group, true);
+                }}
+              >
+                <CominsTableIcon name="columnMove" />
+              </span>
+            ) : null}
             <span className="comins-table__header-label">{isGroupPlaceholder ? null : cell.group.label}</span>
           </span>
           {isGroupPlaceholder ? (
@@ -3535,6 +3643,7 @@ function CominsTableInner<TData>(
       : [];
     const hasHeaderComponents = headerLeftSlots.length > 0 || headerRightSlots.length > 0;
     const isDropTarget = columnMoveTarget?.kind === "column" && columnMoveTarget.id === column.id;
+    const columnPositionLocked = column.lockPosition === true;
 
     return (
       <th
@@ -3553,6 +3662,7 @@ function CominsTableInner<TData>(
         }
         data-column-moving={movingColumnId === column.id ? "true" : undefined}
         data-column-placeholder={isColumnPlaceholder ? "true" : undefined}
+        data-column-position-locked={columnPositionLocked ? "true" : undefined}
         data-comins-column-depth={cell.groupId ? "1" : "0"}
         data-comins-column-id={column.id}
         data-comins-column-index={safeIndex}
@@ -3617,6 +3727,23 @@ function CominsTableInner<TData>(
           ref={bindCominsColumnPlaceholderNativeBoundary}
         >
           <span className="comins-table__header-slot" data-comins-header-slot="left">
+            {showColumnMoveHandle && !columnPositionLocked ? (
+              <span
+                aria-hidden="true"
+                className="comins-column-move-handle"
+                data-comins-column-move-handle="true"
+                data-testid={`column-move-handle-${column.id}`}
+                draggable={false}
+                onClick={(event) => event.stopPropagation()}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  beginHeaderPointerInteraction(event, cell, true);
+                }}
+              >
+                <CominsTableIcon name="columnMove" />
+              </span>
+            ) : null}
             {headerLeftSlots}
           </span>
           <span className="comins-table__header-label">
@@ -3954,7 +4081,14 @@ function CominsTableInner<TData>(
             const entry = slot;
             const rowRuntimeProps = resolveRowProps(rowProps, entry.row, entry.visibleIndex);
             const isRowSelected = selectedRowIdSet.has(entry.rowId);
-            const isViewportEndRow = emptyFillerHeight === 0 && entryIndex === rowWindow.slots.length - 1;
+            const isLastRenderedSlot = entryIndex === rowWindow.slots.length - 1;
+            const isLastLogicalRow = entry.visibleIndex === visibleRowCount - 1;
+            const virtualContentFillsViewport = rowWindow.scrollHeight >= containerHeight - 1;
+            const isViewportEndRow =
+              isLastRenderedSlot &&
+              (virtualized
+                ? isLastLogicalRow && virtualContentFillsViewport
+                : emptyFillerHeight === 0);
             const rowCustomBackground = getRowCustomBackground(rowRuntimeProps.style);
             const rowRenderKey =
               virtualized && rowWindow.mixed
@@ -3989,7 +4123,7 @@ function CominsTableInner<TData>(
                 aria-selected={isRowSelected}
                 className={[
                   "comins-table__tr",
-                  isViewportEndRow ? "comins-table__tr--viewport-end" : undefined,
+                  isViewportEndRow && !rowDetailExpanded ? "comins-table__tr--viewport-end" : undefined,
                   isRowSelected ? "comins-row-selected" : undefined,
                   rowRuntimeProps.className,
                 ]
@@ -4113,7 +4247,10 @@ function CominsTableInner<TData>(
                   );
                   const tooltip =
                     typeof column.cell?.tooltip === "function" ? column.cell.tooltip(cellPayload) : column.cell?.tooltip;
-                  const treeEntry = columnIndex === 0 ? treeContext?.entriesByRowId.get(entry.rowId) : undefined;
+                  const treeEntry =
+                    column.id === treeContext?.treeColumnId
+                      ? treeContext.entriesByRowId.get(entry.rowId)
+                      : undefined;
                   const renderedCellContent = treeEntry ? (
                     <span
                       className="comins-tree-cell-content"
@@ -4289,55 +4426,59 @@ function CominsTableInner<TData>(
                       tabIndex={cellDisabled ? -1 : 0}
                     >
                       {columnIndex === 0 && (rowDetailEnabled || rowRuntimeProps.draggable) ? (
-                        <span className="comins-row-leading-controls">
-                          {rowDetailEnabled ? (
-                            rowDetailExpandable ? (
-                              <CominsRowDetailToggle
-                                controlsId={rowDetailContentId}
-                                disabled={!onChangeExpandedRowIds}
-                                expanded={rowDetailExpanded}
-                                id={rowDetailToggleId}
-                                label={`${rowDetailExpanded ? "Collapse" : "Expand"} ${String(entry.rowId)} details`}
-                                onElement={(element) => {
-                                  if (element) {
-                                    rowDetailToggleElementsRef.current.set(entry.rowId, element);
-                                  } else {
-                                    rowDetailToggleElementsRef.current.delete(entry.rowId);
-                                  }
-                                }}
-                                onToggle={() => toggleRowDetail(entry.rowId, rowDetailExpandable)}
-                                testId={`row-detail-toggle-${String(entry.rowId)}`}
-                              />
-                            ) : (
+                        <div className="comins-row-cell-content">
+                          <span className="comins-row-leading-controls">
+                            {rowDetailEnabled ? (
+                              rowDetailExpandable ? (
+                                <CominsRowDetailToggle
+                                  controlsId={rowDetailContentId}
+                                  disabled={!onChangeExpandedRowIds}
+                                  expanded={rowDetailExpanded}
+                                  id={rowDetailToggleId}
+                                  label={`${rowDetailExpanded ? "Collapse" : "Expand"} ${String(entry.rowId)} details`}
+                                  onElement={(element) => {
+                                    if (element) {
+                                      rowDetailToggleElementsRef.current.set(entry.rowId, element);
+                                    } else {
+                                      rowDetailToggleElementsRef.current.delete(entry.rowId);
+                                    }
+                                  }}
+                                  onToggle={() => toggleRowDetail(entry.rowId, rowDetailExpandable)}
+                                  testId={`row-detail-toggle-${String(entry.rowId)}`}
+                                />
+                              ) : (
+                                <span
+                                  aria-hidden="true"
+                                  className="comins-row-detail-expander-spacer"
+                                  data-comins-row-leading-control="disclosure"
+                                />
+                              )
+                            ) : null}
+                            {rowRuntimeProps.draggable ? (
                               <span
                                 aria-hidden="true"
-                                className="comins-row-detail-expander-spacer"
-                                data-comins-row-leading-control="disclosure"
+                                className="comins-row-drag-handle"
+                                data-comins-row-leading-control="drag"
+                                data-testid={`row-drag-handle-${String(entry.rowId)}`}
+                                draggable={false}
+                                onClick={(event) => event.stopPropagation()}
+                                onMouseDown={(event) => event.stopPropagation()}
+                                onPointerDown={(event) =>
+                                  beginRowHandlePointerDrag(
+                                    event,
+                                    entry,
+                                    rowRuntimeProps.disabled,
+                                    rowRuntimeProps.draggable,
+                                  )
+                                }
                               />
-                            )
-                          ) : null}
-                          {rowRuntimeProps.draggable ? (
-                            <span
-                              aria-hidden="true"
-                              className="comins-row-drag-handle"
-                              data-comins-row-leading-control="drag"
-                              data-testid={`row-drag-handle-${String(entry.rowId)}`}
-                              draggable={false}
-                              onClick={(event) => event.stopPropagation()}
-                              onMouseDown={(event) => event.stopPropagation()}
-                              onPointerDown={(event) =>
-                                beginRowHandlePointerDrag(
-                                  event,
-                                  entry,
-                                  rowRuntimeProps.disabled,
-                                  rowRuntimeProps.draggable,
-                                )
-                              }
-                            />
-                          ) : null}
-                        </span>
-                      ) : null}
-                      {renderedCellContent}
+                            ) : null}
+                          </span>
+                          <div className="comins-row-cell-content__value">{renderedCellContent}</div>
+                        </div>
+                      ) : (
+                        renderedCellContent
+                      )}
                     </td>
                   );
                 })}
@@ -4416,6 +4557,7 @@ function CominsTableInner<TData>(
                   <td
                     className={["comins-table__summary-cell px-3 py-2", cell.className].filter(Boolean).join(" ")}
                     colSpan={cell.colSpan}
+                    data-comins-summary-column-id={cell.column.id}
                     data-testid={`summary-cell-${cell.column.id}`}
                     key={cell.column.id}
                     style={cell.style}
@@ -4475,9 +4617,17 @@ function CominsTreeTableInner<TData>(
 ) {
   const initialDefaultExpandAll = useRef(defaultExpandAll).current;
   const [treeSortModel, setTreeSortModel] = useState<CominsSortModel>([]);
+  const treeColumns = useMemo(
+    () =>
+      props.columns.map((column, index) =>
+        index === 0 ? { ...column, lockPosition: true } : column,
+      ),
+    [props.columns],
+  );
+  const treeColumnId = treeColumns[0]?.id ?? treeColumns[0]?.field ?? null;
   const sortedTree = useMemo(
-    () => getSortedCominsTree(data, props.columns, treeSortModel),
-    [data, props.columns, treeSortModel],
+    () => getSortedCominsTree(data, treeColumns, treeSortModel),
+    [data, treeColumns, treeSortModel],
   );
   const visibleTreeRows = useMemo(
     () => flattenCominsTree(sortedTree, getRowId, { defaultExpandAll: initialDefaultExpandAll }),
@@ -4507,8 +4657,9 @@ function CominsTreeTableInner<TData>(
       onToggle: (rowId) =>
         onChangeData?.(toggleCominsTreeNode(data, rowId, getRowId, { defaultExpandAll: initialDefaultExpandAll })),
       summaryRows: getCominsTreeLeafItems(data),
+      treeColumnId,
     }),
-    [data, entriesByRowId, getRowId, initialDefaultExpandAll, onChangeData],
+    [data, entriesByRowId, getRowId, initialDefaultExpandAll, onChangeData, treeColumnId],
   );
   const handleFlatDataChange = (nextRows: TData[]) => {
     let nextTree: readonly CominsTreeNode<TData>[] = data;
@@ -4527,6 +4678,7 @@ function CominsTreeTableInner<TData>(
   };
   const flatProps: CominsTableProps<TData> = {
     ...props,
+    columns: treeColumns,
     data: visibleTreeRows.map((entry) => entry.item),
     getRowId,
     hasMoreRows: false,

@@ -13,7 +13,7 @@ export function DocsShell() {
   const location = useLocation();
   const { locale } = usePlaygroundLocale();
   const docsPages = useMemo(() => createDocsPages(locale), [locale]);
-  const docsNavGroups = useMemo(() => createDocsNavGroups(docsPages), [docsPages]);
+  const docsNavGroups = useMemo(() => createDocsNavGroups(createDocsPages("en")), []);
 
   if (location.pathname === "/readme-demo") {
     return <ReadmeDemoPage />;

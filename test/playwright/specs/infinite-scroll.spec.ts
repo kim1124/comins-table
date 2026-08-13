@@ -4,6 +4,7 @@ const dummyJsonUrl = /https:\/\/dummyjson\.com\/users.*/u;
 
 test("controlled infinite scroll appends once, stops at exhaustion, and refreshes", async ({ page }) => {
   const requestSkips: number[] = [];
+  const requestUrls: URL[] = [];
 
   await page.route(dummyJsonUrl, async (route) => {
     const url = new URL(route.request().url());
@@ -11,6 +12,7 @@ test("controlled infinite scroll appends once, stops at exhaustion, and refreshe
     const skip = Number(url.searchParams.get("skip") ?? 0);
 
     requestSkips.push(skip);
+    requestUrls.push(url);
 
     if (skip > 0) {
       await new Promise((resolve) => {
@@ -51,6 +53,12 @@ test("controlled infinite scroll appends once, stops at exhaustion, and refreshe
   await expect(page.getByTestId("infinite-load-count")).toContainText("불러옴 40 / 80");
   await expect(page.getByTestId("row-dummy-1")).toBeVisible();
   await expect(page.getByTestId("cell-dummy-1-name")).toContainText("Remote 1");
+  expect(requestUrls[0]?.pathname).toBe("/users");
+  expect(requestUrls[0]?.searchParams.get("skip")).toBe("0");
+  expect(requestUrls[0]?.searchParams.get("limit")).toBe("40");
+  expect(requestUrls[0]?.searchParams.get("select")).toBe(
+    "id,firstName,lastName,age,email,role",
+  );
 
   await page.getByTestId("infinite-scroll-viewport").evaluate((element) => {
     for (let index = 0; index < 3; index += 1) {

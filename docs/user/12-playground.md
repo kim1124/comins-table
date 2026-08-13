@@ -10,7 +10,7 @@ The playground starts at `/docs/getting-started`.
 
 ## Language switching
 
-The Playground defaults to Korean (`"ko"`) and supports Korean and English (`"en"`). Use the `한 / EN` segmented toggle immediately to the left of the search input. Switching the language updates the Sidebar, article copy, code sample titles, feature metadata, controls, Alerts, and loading or empty messages without changing the URL path or remounting the current feature.
+The Playground defaults to Korean (`"ko"`) and supports Korean and English (`"en"`). Use the `한 / EN` segmented toggle immediately to the left of the search input. Sidebar group and route names remain English in both locales. Switching the language updates article copy, search metadata, code sample titles, feature metadata, controls, Alerts, and loading or empty messages without changing the URL path or remounting the current feature.
 
 The selected locale is stored in `localStorage` under `comins-table-playground-locale` and restored on reload and same-origin route navigation. Missing, inaccessible, or invalid storage values use `"ko"`. The active locale is synchronized to `<html lang>`.
 
@@ -51,7 +51,7 @@ The `/examples/selection-clipboard` route demonstrates controlled React Rows, vi
 
 - General examples use deterministic 30 Row data: Basic, CRUD, Header, Header Group, Cell, Components, Row, Context Menu, Selection/Clipboard, Export, and Ref API.
 - Purpose-specific fixtures retain their own size, including the six-Row multi-sort sample and pagination, lazy-load, infinite-scroll, Row Expand, and Tree scenarios.
-- Loading `ready` and `refetch` retain 30 Row data. Initial loading and Empty use 0 Row data; initial loading renders skeleton Rows and refetch renders an overlay over the retained data.
+- Loading maps the same remote users API as Infinite Scroll. Initial loading starts with 0 Rows and skeletons, ready/refetch use 30 mapped Rows, refetch retains them under an overlay, and Empty maps an out-of-range response.
 - CRUD provides add, update, delete, and reset. The ambiguous Owner-only filtering control is not part of the example.
 - Header Group examples combine child Column MultiSelect selection with parent Group visibility Checkboxes. Disabling a parent preserves the selected children for restoration.
 - The 960px tall Row Detail stays semantic content inside a 480px Table frame. The Table body owns scrolling so following owner Rows remain reachable.

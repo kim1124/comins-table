@@ -1478,6 +1478,7 @@ body {
 }
 
 .row-expand-tall-frame {
+  flex: 0 0 480px;
   height: 480px;
   min-height: 0;
   overflow: hidden;
@@ -1487,6 +1488,23 @@ body {
   height: 100%;
   max-height: 100%;
   min-height: 0;
+}
+
+.feature-panel--row-expand .feature-option-sample__inner {
+  height: 100%;
+  overflow: hidden;
+}
+
+.feature-panel--row-expand .feature-option-sample__inner > .example-table.comins-table {
+  flex: 1 1 0;
+  height: auto;
+  max-height: 100%;
+  min-height: 0;
+}
+
+.feature-panel--row-expand [data-feature-option="row-expand-tall"] .feature-option-sample {
+  height: 580px;
+  min-height: 580px;
 }
 
 .feature-panel--header {
@@ -2043,6 +2061,10 @@ body {
   overflow: auto;
   padding: 10px;
   white-space: pre-wrap;
+}
+
+.state-output--selection {
+  height: 140px;
 }
 
 .code-sample {

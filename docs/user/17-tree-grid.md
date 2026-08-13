@@ -57,6 +57,7 @@ export function DepartmentTable() {
 - `children` is a recursive node array.
 - `getRowId(item)` must return a stable id that is globally unique across every level, including currently collapsed descendants.
 - The expander and cell updates emit a new tree through `onChangeData`; caller-owned nodes are not mutated.
+- The first declared column is the Tree anchor. It remains fixed at the far left, does not render a column-move handle, and owns the expander even when other columns are reordered.
 
 Tree sorting is recursive: each sibling set is sorted while a parent remains before its visible descendants. Set `multiSort` and use the same Shift-assisted Header gestures as the flat table to apply the complete ordered sort model to every sibling set. Summary values aggregate leaf `item` rows only, regardless of whether their parent is expanded. Parent values are excluded to avoid double counting.
 

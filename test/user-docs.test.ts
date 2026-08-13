@@ -302,13 +302,14 @@ describe("comins-table user documentation contract", () => {
       expect(document).toContain("Collapse <row-id> details");
       expect(document).toContain("read-only");
       expect(document).toContain("non-expandable");
+      expect(document).toContain("slice(-1)");
     }
 
     expect(playground).toContain('data-testid="row-expand-example-fixed"');
     expect(playground).toContain('data-testid="row-expand-example-auto"');
-    expect(playground).toContain('data-testid="row-expand-example-readonly"');
-    expect(playground).toContain('data-testid="row-expand-example-non-expandable"');
-    expect(playground).toContain('isRowExpandable={() => false}');
+    expect(playground).not.toContain('data-testid="row-expand-example-readonly"');
+    expect(playground).not.toContain('data-testid="row-expand-example-non-expandable"');
+    expect(playground).not.toContain('isRowExpandable={() => false}');
     expect(advanced).not.toContain('"Flat Row Expand"');
     expect(advanced).not.toContain('"master/detail"');
     expect(registry).toContain('id: "row-expand"');
@@ -456,10 +457,12 @@ describe("comins-table user documentation contract", () => {
       expect(document).not.toContain("Comins가 소유한 CSS");
     }
 
-    expect(englishHeader).toContain("whole Header remains the pointer target");
-    expect(englishHeader).toContain("not a dedicated public handle or icon override API");
-    expect(koreanHeader).toContain("Header 전체가 pointer target");
-    expect(koreanHeader).toContain("전용 public handle 또는 icon override API가 아니다");
+    expect(englishHeader).toContain("showColumnMoveHandle");
+    expect(englishHeader).toContain("lockPosition");
+    expect(englishHeader).toContain("88px");
+    expect(koreanHeader).toContain("showColumnMoveHandle");
+    expect(koreanHeader).toContain("lockPosition");
+    expect(koreanHeader).toContain("88px");
   });
 
   it("records Column Filter as deferred Header guidance without a Filter API", () => {
@@ -541,9 +544,11 @@ describe("comins-table user documentation contract", () => {
     const koreanTree = readWorkspaceFile("docs/ko/17-tree-grid.md");
 
     expect(englishHeader).toContain("darker dashed source placeholder");
-    expect(englishHeader).toContain("red invalid marker");
+    expect(englishHeader).toContain("blue two-pixel border");
+    expect(englishHeader).toContain("corresponding red treatment");
     expect(koreanHeader).toContain("더 어두운 점선 source placeholder");
-    expect(koreanHeader).toContain("붉은색 invalid marker");
+    expect(koreanHeader).toContain("파란색 2px 테두리");
+    expect(koreanHeader).toContain("같은 형태의 붉은색 표시");
     expect(koreanHeader).not.toContain("단일 toggle control");
 
     for (const row of [englishRow, koreanRow]) {

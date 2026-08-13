@@ -235,9 +235,13 @@ export function getCominsMixedVirtualRange(input: {
     input.heightIndex.getTotalHeight(),
     input.viewportHeight,
   );
+  const physicalScrollTop = Math.min(
+    metrics.physicalScrollableHeight,
+    Math.max(0, input.physicalScrollTop),
+  );
   const logicalScrollTop = Math.min(
     metrics.logicalScrollableHeight,
-    Math.max(0, input.physicalScrollTop) * metrics.scrollScale,
+    physicalScrollTop * metrics.scrollScale,
   );
   const firstVisibleIndex = input.heightIndex.findIndexAtOffset(logicalScrollTop);
   const lastVisibleIndex = input.heightIndex.findIndexAtOffset(
@@ -256,7 +260,7 @@ export function getCominsMixedVirtualRange(input: {
     logicalStartOffset,
     physicalScrollHeight: metrics.physicalScrollHeight,
     renderOffset:
-      Math.max(0, input.physicalScrollTop) -
+      physicalScrollTop -
       (logicalScrollTop - logicalStartOffset),
     scrollScale: metrics.scrollScale,
     startIndex,

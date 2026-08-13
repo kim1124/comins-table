@@ -215,6 +215,49 @@ describe("comins-table tree grid", () => {
     ).not.toBeNull();
   });
 
+  it("keeps the first declared Tree column locked as the expander anchor across ref layouts", () => {
+    const ref = createRef<CominsTableRef<PersonRow>>();
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    act(() => {
+      root?.render(
+        <CominsTable
+          ref={ref}
+          columns={columns}
+          data={initialData}
+          getRowId={(item) => item.id}
+          tree
+        />,
+      );
+    });
+
+    act(() => {
+      ref.current?.setColumnLayout({
+        columns: { age: {}, name: {} },
+        order: ["age", "name"],
+      });
+    });
+
+    expect(
+      [...container.querySelectorAll("th[data-comins-column-id]")].map((header) =>
+        header.getAttribute("data-comins-column-id"),
+      ),
+    ).toEqual(["name", "age"]);
+    expect(container.querySelector("[data-testid='header-name']")?.getAttribute("data-column-position-locked")).toBe(
+      "true",
+    );
+    expect(container.querySelector("[data-testid='column-move-handle-name']")).toBeNull();
+    expect(container.querySelector("[data-testid='column-move-handle-age']")).not.toBeNull();
+    expect(
+      container
+        .querySelector("[data-testid='tree-expander-root']")
+        ?.closest("td")
+        ?.getAttribute("data-comins-cell-column-id"),
+    ).toBe("name");
+  });
+
   it("sorts root siblings without separating a parent from its descendants", async () => {
     container = document.createElement("div");
     document.body.append(container);
@@ -333,7 +376,7 @@ describe("comins-table tree grid", () => {
   });
 
   it("hard-disables runtime lazy and infinite loading props in Tree Grid", async () => {
-    const onLazyLoad = vi.fn(async () => ({ rows: [], total: 0 }));
+    const onLazyLoad = vi.fn(async () => undefined);
     const onLoadMore = vi.fn();
     const UnsafeTreeTable = CominsTable as unknown as ComponentType<Record<string, unknown>>;
 

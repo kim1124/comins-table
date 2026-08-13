@@ -5,8 +5,8 @@ owner business Row. The application owns the expanded IDs and Detail content;
 Comins Table keeps sorting, pagination, loading, movement, selection, clipboard,
 and callbacks addressed to owner Rows only.
 
-Open `/examples/row-expand` after `npm run dev` for fixed, automatic, tall,
-read-only controlled, and non-expandable examples.
+Open `/examples/row-expand` after `npm run dev` for fixed, automatic, and tall
+Detail examples. Each sample demonstrates one expanded owner at a time.
 
 ## Public Types
 
@@ -55,6 +55,22 @@ application writes it back to keep the UI controlled. If the callback is
 omitted for an otherwise expandable Row, the read-only controlled disclosure
 reflects the supplied state but is disabled. Its effective Detail remains
 mounted when its ID is present.
+
+The library accepts multiple IDs so applications can keep several Details open.
+To use an accordion-style single expansion policy, normalize the callback before
+writing the controlled state:
+
+```tsx
+const [expandedRowIds, setExpandedRowIds] = useState<readonly CominsRowId[]>([]);
+
+<CominsTable
+  expandedRowIds={expandedRowIds}
+  onChangeExpandedRowIds={(nextIds) => setExpandedRowIds(nextIds.slice(-1))}
+/>
+```
+
+An empty callback value still collapses the current Detail. The Row Expand
+Playground uses this application-owned policy without adding a Table mode prop.
 
 IDs remain dormant when their owner is filtered out, paged out, not loaded, or
 temporarily unavailable. They are preserved in subsequent callback input and
@@ -135,6 +151,10 @@ makes a data Slot taller than rowHeight.
 The owner and its optional Detail are one private virtual Slot. This keeps a
 Detail taller than the viewport mounted while the outer body viewport scrolls
 through it, without turning Detail content into a business Row.
+
+When virtual content is shorter than the body viewport, the final Row keeps its
+bottom separator. Once the content reaches the viewport boundary, the outer
+Table frame supplies the terminal border without a duplicate Cell border.
 
 Prefer a finite fixed height for bounded panels, large lists, or nested
 application widgets, and give large inner content its own scroll or
