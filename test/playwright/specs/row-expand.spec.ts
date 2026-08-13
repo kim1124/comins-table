@@ -125,13 +125,16 @@ test("keeps fixed Row Details inside the sample and exposes them through the Tab
   expect(diagnostics).toEqual([]);
 });
 
-test("keeps the last visible owner Row bottom separator when its Detail is expanded", async ({ page }) => {
+test("keeps the last visible owner Row bottom separator before and after its Detail is expanded", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/examples/row-expand");
 
   const fixed = page.getByTestId("row-expand-example-fixed");
   const lastOwnerCell = fixed.getByTestId("row-fixed-4").locator(".comins-table__td").first();
-  await expect(lastOwnerCell).toHaveCSS("border-bottom-width", "0px");
+  await expect
+    .poll(() => fixed.locator(".comins-table-empty-filler").evaluate((element) => element.clientHeight))
+    .toBeGreaterThan(0);
+  await expect(lastOwnerCell).toHaveCSS("border-bottom-width", "1px");
 
   await fixed.getByTestId("row-detail-toggle-fixed-4").click();
   await expect(lastOwnerCell).toHaveCSS("border-bottom-width", "1px");
