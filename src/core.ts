@@ -619,22 +619,27 @@ function normalizeColumnOrder<TData>(
   const ordered = (layout?.order ?? []).filter((id) => knownIds.has(id));
   const missing = columns.map((column) => column.id).filter((id) => !ordered.includes(id));
   const flatOrder = [...ordered, ...missing];
-
-  const normalizedOrder = (() => {
-    if (columnGroups.length === 0) {
-      return flatOrder;
-    }
-
-    const groupIdByColumnId = getColumnGroupIdMap(columnGroups);
-    const groupById = new Map(columnGroups.map((group) => [group.id, group]));
+  const columnById = new Map(columns.map((column) => [column.id, column]));
+  const groupIdByColumnId = getColumnGroupIdMap(columnGroups);
+  const groupById = new Map(columnGroups.map((group) => [group.id, group]));
+  type ColumnOrderEntity = {
+    columnIds: string[];
+    key: string;
+    locked: boolean;
+  };
+  const createEntities = (order: readonly string[]) => {
     const emittedGroups = new Set<string>();
-    const nextOrder: string[] = [];
+    const entities: ColumnOrderEntity[] = [];
 
-    for (const columnId of flatOrder) {
+    for (const columnId of order) {
       const groupId = groupIdByColumnId.get(columnId);
 
       if (!groupId) {
-        nextOrder.push(columnId);
+        entities.push({
+          columnIds: [columnId],
+          key: `column:${columnId}`,
+          locked: columnById.get(columnId)?.lockPosition === true,
+        });
         continue;
       }
 
@@ -645,34 +650,129 @@ function normalizeColumnOrder<TData>(
       const group = groupById.get(groupId);
 
       if (!group) {
-        nextOrder.push(columnId);
+        entities.push({
+          columnIds: [columnId],
+          key: `column:${columnId}`,
+          locked: columnById.get(columnId)?.lockPosition === true,
+        });
         continue;
       }
 
-      const groupChildrenInOrder = flatOrder.filter((currentId) => group.children.includes(currentId));
-      nextOrder.push(...groupChildrenInOrder);
+      const groupChildrenInOrder = order.filter((currentId) => group.children.includes(currentId));
+      entities.push({
+        columnIds: groupChildrenInOrder,
+        key: `group:${groupId}`,
+        locked:
+          group.lockPosition ||
+          groupChildrenInOrder.some((currentId) => columnById.get(currentId)?.lockPosition === true),
+      });
       emittedGroups.add(groupId);
     }
 
-    return nextOrder;
-  })();
+    return entities;
+  };
+  const declaredEntities = createEntities(columns.map((column) => column.id));
+  const proposedEntities = createEntities(flatOrder);
+  const declaredEntityByKey = new Map(declaredEntities.map((entity) => [entity.key, entity]));
+  const declaredSegmentByKey = new Map<string, number>();
+  let segmentCount = 0;
 
-  columns.forEach((column, declaredIndex) => {
-    if (!column.lockPosition) {
-      return;
+  for (const entity of declaredEntities) {
+    declaredSegmentByKey.set(entity.key, segmentCount);
+
+    if (entity.locked) {
+      segmentCount += 1;
+    }
+  }
+
+  const movableEntitiesBySegment = Array.from(
+    { length: segmentCount + 1 },
+    () => [] as ColumnOrderEntity[],
+  );
+  const proposedEntityByKey = new Map(proposedEntities.map((entity) => [entity.key, entity]));
+
+  for (const entity of proposedEntities) {
+    const declaredEntity = declaredEntityByKey.get(entity.key);
+
+    if (!declaredEntity || declaredEntity.locked) {
+      continue;
     }
 
-    const currentIndex = normalizedOrder.indexOf(column.id);
+    const segment = declaredSegmentByKey.get(entity.key) ?? 0;
+    movableEntitiesBySegment[segment]?.push(entity);
+  }
 
-    if (currentIndex < 0 || currentIndex === declaredIndex) {
-      return;
+  const normalizedEntities: ColumnOrderEntity[] = [];
+  let currentSegment = 0;
+
+  for (const entity of declaredEntities) {
+    if (!entity.locked) {
+      continue;
     }
 
-    normalizedOrder.splice(currentIndex, 1);
-    normalizedOrder.splice(Math.min(declaredIndex, normalizedOrder.length), 0, column.id);
+    normalizedEntities.push(...(movableEntitiesBySegment[currentSegment] ?? []));
+    normalizedEntities.push(proposedEntityByKey.get(entity.key) ?? entity);
+    currentSegment += 1;
+  }
+
+  normalizedEntities.push(...(movableEntitiesBySegment[currentSegment] ?? []));
+
+  return normalizedEntities.flatMap((entity) => {
+    const declaredEntity = declaredEntityByKey.get(entity.key);
+
+    if (!declaredEntity || entity.columnIds.length === 1) {
+      return entity.columnIds;
+    }
+
+    const lockedChildIds = new Set(
+      declaredEntity.columnIds.filter((columnId) => columnById.get(columnId)?.lockPosition),
+    );
+
+    if (lockedChildIds.size === 0) {
+      return entity.columnIds;
+    }
+
+    const declaredChildSegmentById = new Map<string, number>();
+    let childSegmentCount = 0;
+
+    for (const columnId of declaredEntity.columnIds) {
+      declaredChildSegmentById.set(columnId, childSegmentCount);
+
+      if (lockedChildIds.has(columnId)) {
+        childSegmentCount += 1;
+      }
+    }
+
+    const movableChildrenBySegment = Array.from(
+      { length: childSegmentCount + 1 },
+      () => [] as string[],
+    );
+
+    for (const columnId of entity.columnIds) {
+      if (lockedChildIds.has(columnId)) {
+        continue;
+      }
+
+      const segment = declaredChildSegmentById.get(columnId) ?? 0;
+      movableChildrenBySegment[segment]?.push(columnId);
+    }
+
+    const normalizedChildren: string[] = [];
+    let currentChildSegment = 0;
+
+    for (const columnId of declaredEntity.columnIds) {
+      if (!lockedChildIds.has(columnId)) {
+        continue;
+      }
+
+      normalizedChildren.push(...(movableChildrenBySegment[currentChildSegment] ?? []));
+      normalizedChildren.push(columnId);
+      currentChildSegment += 1;
+    }
+
+    normalizedChildren.push(...(movableChildrenBySegment[currentChildSegment] ?? []));
+    return normalizedChildren;
   });
-
-  return normalizedOrder;
 }
 
 function createEmptySelection(): CominsSelectionState {

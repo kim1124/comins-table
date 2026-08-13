@@ -723,6 +723,54 @@ describe("comins-table keyboard interaction", () => {
     }
   });
 
+  it("drops automatic Detail measurements when stable data receives new Row ids", () => {
+    const resize = installControllableResizeObserver();
+    const detailRows = rows;
+    const renderProps = (getRowId: (row: PersonRow, index: number) => string) => (
+      <CominsTable
+        columns={columns}
+        data={detailRows}
+        data-testid="remapped-detail-viewport"
+        estimatedRowDetailHeight={300}
+        expandedRowIds={["a"]}
+        getRowDetailHeight={() => "auto"}
+        getRowId={getRowId}
+        onChangeExpandedRowIds={() => undefined}
+        renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+        rowHeight={36}
+        virtualized
+      />
+    );
+
+    try {
+      const element = renderTableElement(renderProps((row) => row.id));
+      const viewport = element.querySelector("[data-testid='remapped-detail-viewport']")!;
+      const firstContent = element.querySelector("[data-testid='row-detail-content-a']")!;
+      const sizer = element.querySelector<HTMLElement>(".comins-table__body-virtual-sizer")!;
+
+      setElementRect(viewport, 800, 180);
+      setElementRect(firstContent, 800, 300);
+      act(() => resize.emit(viewport, 180));
+      act(() => resize.emit(firstContent, 420));
+      expect(sizer.style.height).toBe("492px");
+
+      act(() => {
+        root?.render(renderProps((row) => row.id));
+      });
+
+      expect(sizer.style.height).toBe("492px");
+
+      act(() => {
+        root?.render(renderProps((_row, index) => (index === 0 ? "c" : "a")));
+      });
+
+      expect(element.querySelector("[data-testid='row-detail-content-a']")?.textContent).toBe("Beta");
+      expect(sizer.style.height).toBe("372px");
+    } finally {
+      resize.restore();
+    }
+  });
+
   it("updates 100,000-row automatic Detail measurements without rebuilding the height index", () => {
     const resize = installControllableResizeObserver();
     const heightIndexBuild = vi.spyOn(CominsHeightIndex, "from");
@@ -2082,6 +2130,39 @@ describe("comins-table keyboard interaction", () => {
     expect(element.querySelector("[data-testid='row-a']")).not.toBeNull();
     expect(element.querySelector("[data-testid='row-b']")).not.toBeNull();
     expect(element.querySelector("[data-testid='loading-skeleton-row']")).toBeNull();
+  });
+
+  it("does not restart the initial lazy request when an inline callback changes identity", () => {
+    const onLazyLoad = vi.fn();
+
+    function InlineLazyTable() {
+      const [revision, setRevision] = useState(0);
+
+      return (
+        <CominsTable
+          columns={columns}
+          data={[]}
+          getRowId={(row) => row.id}
+          lazyLoad
+          onLazyLoad={(request) => {
+            onLazyLoad(request);
+
+            if (revision === 0) {
+              setRevision(1);
+            }
+          }}
+          pagination={{ pageIndex: 0, pageSize: 2 }}
+        />
+      );
+    }
+
+    renderTableElement(<InlineLazyTable />);
+
+    expect(onLazyLoad).toHaveBeenCalledTimes(1);
+    expect(onLazyLoad).toHaveBeenLastCalledWith(
+      expect.objectContaining({ offset: 0, reason: "initial" }),
+    );
+    expect(onLazyLoad.mock.calls[0]?.[0].signal.aborted).toBe(false);
   });
 
   it("requests controlled lazy appends with data length offsets and blocks duplicates while pending", async () => {

@@ -328,6 +328,116 @@ describe("comins-table basic core", () => {
     ]);
   });
 
+  it("keeps locked group positions unchanged when applying a saved layout", () => {
+    const state = createCominsTableState<PersonRow>({
+      columnGroups: [
+        { children: ["name", "age"], id: "profile", label: "Profile", lockPosition: true },
+        { children: ["profile.score"], id: "metrics", label: "Metrics" },
+      ],
+      columns,
+      getRowId: (row) => row.id,
+      rows,
+    });
+
+    const restored = applyCominsColumnLayout(state, {
+      columns: {},
+      order: ["profile.score", "name", "age"],
+    });
+
+    expect(restored.columnOrder).toEqual(["name", "age", "profile.score"]);
+  });
+
+  it("keeps locked group positions unchanged in an initial saved layout", () => {
+    const state = createCominsTableState<PersonRow>({
+      columnGroups: [
+        { children: ["name", "age"], id: "profile", label: "Profile", lockPosition: true },
+        { children: ["profile.score"], id: "metrics", label: "Metrics" },
+      ],
+      columnLayout: {
+        columns: {},
+        order: ["profile.score", "name", "age"],
+      },
+      columns,
+      getRowId: (row) => row.id,
+      rows,
+    });
+
+    expect(state.columnOrder).toEqual(["name", "age", "profile.score"]);
+  });
+
+  it("restores multiple locked groups by declared position when groups are declared in reverse", () => {
+    const groupedColumns = [
+      { field: "first", label: "First" },
+      { field: "second", label: "Second" },
+      { field: "third", label: "Third" },
+      { field: "fourth", label: "Fourth" },
+      { field: "fifth", label: "Fifth" },
+    ];
+    const state = createCominsTableState<Record<string, string>>({
+      columnGroups: [
+        { children: ["third", "fourth"], id: "later", label: "Later", lockPosition: true },
+        { children: ["first", "second"], id: "earlier", label: "Earlier", lockPosition: true },
+      ],
+      columnLayout: {
+        columns: {},
+        order: ["fifth", "third", "fourth", "first", "second"],
+      },
+      columns: groupedColumns,
+      getRowId: (_row, index) => index,
+      rows: [],
+    });
+
+    expect(state.columnOrder).toEqual(["first", "second", "third", "fourth", "fifth"]);
+  });
+
+  it("uses group-aware declared positions for a locked child column", () => {
+    const state = createCominsTableState<Record<string, string>>({
+      columnGroups: [
+        { children: ["first", "second"], id: "group", label: "Group" },
+      ],
+      columnLayout: {
+        columns: {},
+        order: ["first", "second", "outside"],
+      },
+      columns: [
+        { field: "first", label: "First" },
+        { field: "outside", label: "Outside" },
+        { field: "second", label: "Second", lockPosition: true },
+      ],
+      getRowId: (_row, index) => index,
+      rows: [],
+    });
+
+    expect(state.columnOrder).toEqual(["first", "second", "outside"]);
+  });
+
+  it("keeps movable group children on their side of locked child barriers", () => {
+    const state = createCominsTableState<Record<string, string>>({
+      columnGroups: [
+        {
+          children: ["first", "second", "third", "fourth", "fifth"],
+          id: "group",
+          label: "Group",
+        },
+      ],
+      columnLayout: {
+        columns: {},
+        order: ["fifth", "fourth", "third", "second", "first"],
+      },
+      columns: [
+        { field: "first", label: "First" },
+        { field: "second", label: "Second", lockPosition: true },
+        { field: "third", label: "Third" },
+        { field: "fourth", label: "Fourth", lockPosition: true },
+        { field: "fifth", label: "Fifth" },
+      ],
+      getRowId: (_row, index) => index,
+      rows: [],
+    });
+
+    expect(state.columnOrder).toEqual(["first", "second", "third", "fourth", "fifth"]);
+  });
+
   it("supports pagination and virtual row windows for 100000 rows", () => {
     const largeRows = Array.from({ length: 100_000 }, (_, index) => ({
       age: index,

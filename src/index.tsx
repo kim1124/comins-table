@@ -1430,6 +1430,7 @@ function CominsTableInner<TData>(
   const lastCellAnchorRef = useRef<CominsCellAddress | null>(null);
   const lazyAbortControllerRef = useRef<AbortController | null>(null);
   const lazyLoadingReasonRef = useRef<CominsLazyLoadReason | null>(null);
+  const onLazyLoadRef = useRef(onLazyLoad);
   const lazyRequestIdRef = useRef(0);
   const lastLoadMoreRowCountRef = useRef<number | null>(null);
   const lastRowAnchorRef = useRef<CominsRowId | null>(null);
@@ -1475,6 +1476,7 @@ function CominsTableInner<TData>(
   const virtualBufferSize = Math.max(0, Math.floor(Number.isFinite(bufferSize) ? Number(bufferSize) : 10));
   const resolvedLazyLoadBatchSize = Math.max(1, Math.floor(lazyLoadBatchSize));
   const resolvedLazyLoadThreshold = Math.max(0, Math.floor(lazyLoadThreshold ?? infiniteScrollThreshold));
+  const hasLazyLoadHandler = typeof onLazyLoad === "function";
   const rowDetailEnabled = typeof renderRowDetail === "function" && !treeContext;
   const normalizedExpandedRowIds = useMemo(() => {
     const seen = new Set<CominsRowId>();
@@ -1514,8 +1516,14 @@ function CominsTableInner<TData>(
     activePointerGestureCleanupRef.current = cleanup;
   };
 
+  useLayoutEffect(() => {
+    onLazyLoadRef.current = onLazyLoad;
+  }, [onLazyLoad]);
+
   const requestLazyLoad = (reason: CominsLazyLoadReason) => {
-    if (!lazyLoad || lazyLoadMode !== "append" || !onLazyLoad || lazyLoadingReasonRef.current) {
+    const lazyLoadHandler = onLazyLoadRef.current;
+
+    if (!lazyLoad || lazyLoadMode !== "append" || !lazyLoadHandler || lazyLoadingReasonRef.current) {
       return;
     }
 
@@ -1543,7 +1551,7 @@ function CominsTableInner<TData>(
     let result: Promise<void> | void;
 
     try {
-      result = onLazyLoad({
+      result = lazyLoadHandler({
         limit: resolvedLazyLoadBatchSize,
         offset,
         reason,
@@ -1570,7 +1578,7 @@ function CominsTableInner<TData>(
   };
 
   useEffect(() => {
-    if (!lazyLoad || !onLazyLoad) {
+    if (!lazyLoad || !hasLazyLoadHandler) {
       return undefined;
     }
 
@@ -1582,7 +1590,7 @@ function CominsTableInner<TData>(
       lazyAbortControllerRef.current?.abort();
       lazyAbortControllerRef.current = null;
     };
-  }, [lazyLoad, onLazyLoad, resolvedLazyLoadBatchSize]);
+  }, [hasLazyLoadHandler, lazyLoad, resolvedLazyLoadBatchSize]);
 
   useEffect(() => {
     const previousInput = stateInputRef.current;
@@ -1614,6 +1622,18 @@ function CominsTableInner<TData>(
     const next = canPreserveSelection(current, nextState)
       ? { ...nextState, selection: current.selection }
       : nextState;
+
+    if (previousInput.getRowId !== getRowId) {
+      const previousRowById = new Map(
+        current.rowIds.map((rowId, index) => [rowId, current.rows[index]]),
+      );
+
+      next.rowIds.forEach((rowId, index) => {
+        if (previousRowById.has(rowId) && previousRowById.get(rowId) !== next.rows[index]) {
+          detailMeasurementsRef.current.delete(rowId);
+        }
+      });
+    }
 
     stateRef.current = next;
     setState(next);
@@ -1674,7 +1694,7 @@ function CominsTableInner<TData>(
       detailMeasurementsRef.current,
       new Set(state.rowIds),
     );
-  }, [state.rows]);
+  }, [state.rowIds]);
 
   const updateMixedProjectionDetailHeight = (
     snapshot: CominsCommittedDetailObserverSnapshot<TData>,
