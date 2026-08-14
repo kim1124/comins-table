@@ -51,11 +51,11 @@ function constantFailure(result) {
   assert.equal(result.stderr, failure);
 }
 
-test('adopts the lean Contract v1.5 module policy', () => {
+test('adopts the lean Contract v1.6 module policy', () => {
   const agents = read('AGENTS.md');
   const security = read('SECURITY.md');
 
-  assert.match(agents, /managed-start contract=v1\.5/);
+  assert.match(agents, /managed-start contract=v1\.6/);
   assert.match(
     agents,
     /license compliance; security and sensitive data; Comins common rules;/,
@@ -120,6 +120,16 @@ test('pins shared Gitleaks, hooks, scripts, and workflows', () => {
   }
   assert.match(verify, /fetch-depth: 0/);
   assert.match(verify, /--log-opts="\$BASE_SHA\.\.\$HEAD_SHA"/);
+  assert.match(verify, /name: Change scope/);
+  assert.match(verify, /name: Fast verification/);
+  assert.match(verify, /name: Chromium E2E/);
+  assert.match(verify, /needs: \[changes, fast\]/);
+  assert.match(verify, /npm run verify\n/);
+  assert.match(verify, /npm run verify:e2e/);
+  assert.doesNotMatch(verify, /npm run verify:full/);
+  assert.match(verify, /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/);
+  assert.match(verify, /needs: \[changes, security, fast, gif_metadata, browser\]/);
+  assert.match(verify, /required-verification: failed/);
   assert.match(publish, /verify-package-artifact\.mjs/);
   assert.match(publish, /tar -xzf "\$package_file"/);
   assert.match(publish, /gitleaks dir/);

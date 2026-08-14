@@ -14,23 +14,26 @@ function getReadmeSection(readme: string, heading: string) {
 }
 
 describe("README preview contract", () => {
-  it("makes the required Verify job depend on the macOS ImageIO metadata gate", () => {
+  it("routes the macOS ImageIO metadata gate only for affected changes", () => {
     const workflow = readFileSync(".github/workflows/verify.yml", "utf8");
+    const playwrightConfig = readFileSync("playwright.config.ts", "utf8");
+    const changesJob = workflow.match(/  changes:\n(?<body>[\s\S]*?)(?=\n  [a-z][a-z_-]+:\n)/u)?.groups?.body ?? "";
     const metadataJob = workflow.match(/  gif_metadata:\n(?<body>[\s\S]*?)(?=\n  [a-z][a-z_-]+:\n)/u)?.groups?.body ?? "";
     const verifyJob = workflow.match(/  verify:\n(?<body>[\s\S]*)$/u)?.groups?.body ?? "";
-    const verifySteps = verifyJob.slice(verifyJob.indexOf("steps:\n") + "steps:\n".length).trimStart();
-    const dependencyGateIndex = verifyJob.indexOf("- name: Require README GIF metadata success");
-    const checkoutIndex = verifyJob.indexOf("- uses: actions/checkout@");
 
+    expect(changesJob).toContain("README.md|docs/assets/comins-table-demo.gif");
+    expect(changesJob).toContain("gif: ${{ steps.scope.outputs.gif }}");
     expect(metadataJob).toContain("runs-on: macos-latest");
+    expect(metadataJob).toContain("needs: changes");
+    expect(metadataJob).toContain("needs.changes.outputs.gif == 'true'");
     expect(metadataJob).toContain("npm run test:run -- test/readme-preview.test.ts");
     expect(verifyJob).toContain("if: ${{ always() }}");
-    expect(verifyJob).toContain("needs: gif_metadata");
+    expect(verifyJob).toContain("needs: [changes, security, fast, gif_metadata, browser]");
     expect(verifyJob).toContain("GIF_METADATA_RESULT: ${{ needs.gif_metadata.result }}");
-    expect(verifyJob).toContain('test "$GIF_METADATA_RESULT" != \'success\'');
-    expect(verifySteps.startsWith("- name: Require README GIF metadata success")).toBe(true);
-    expect(dependencyGateIndex).toBeGreaterThanOrEqual(0);
-    expect(dependencyGateIndex).toBeLessThan(checkoutIndex);
+    expect(verifyJob).toContain("$result\" != 'success' && \"$result\" != 'skipped'");
+    expect(playwrightConfig).toContain('? [["github"]');
+    expect(playwrightConfig).toContain("retries: isCI ? 1 : 0");
+    expect(playwrightConfig).toContain('trace: "retain-on-failure-and-retries"');
   });
 
   it("separates controlled data mutations and Row Expand write-back from internal view state", () => {
