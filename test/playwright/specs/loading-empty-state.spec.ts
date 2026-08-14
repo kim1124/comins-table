@@ -77,6 +77,10 @@ test("loading example maps remote initial, refetch, empty, and ready responses w
 
 test("lazy load integration maps remote data and ignores a stale empty response", async ({ page }) => {
   const lazyRequestOffsets: number[] = [];
+  let releaseFirstLazyResponse = () => {};
+  const firstLazyResponse = new Promise<void>((resolve) => {
+    releaseFirstLazyResponse = resolve;
+  });
 
   await page.route(dummyJsonUrl, async (route) => {
     const url = new URL(route.request().url());
@@ -87,9 +91,17 @@ test("lazy load integration maps remote data and ignores a stale empty response"
       lazyRequestOffsets.push(skip);
     }
 
-    await new Promise((resolve) => {
-      setTimeout(resolve, limit === 5 && skip >= 10_000 ? 220 : 80);
-    });
+    const isFirstLazyDataRequest = limit === 5
+      && skip === 0
+      && lazyRequestOffsets.length === 1;
+
+    if (isFirstLazyDataRequest) {
+      await firstLazyResponse;
+    } else {
+      await new Promise((resolve) => {
+        setTimeout(resolve, limit === 5 && skip >= 10_000 ? 220 : 80);
+      });
+    }
 
     await route.fulfill({
       contentType: "application/json",
@@ -120,7 +132,11 @@ test("lazy load integration maps remote data and ignores a stale empty response"
 
   await page.getByRole("button", { exact: true, name: "원격 데이터 로드" }).click();
   let lazyViewport = page.getByTestId("loading-lazy-viewport");
-  await expect(lazyViewport.getByTestId("loading-skeleton-row")).toHaveCount(5);
+  try {
+    await expect(lazyViewport.getByTestId("loading-skeleton-row")).toHaveCount(5);
+  } finally {
+    releaseFirstLazyResponse();
+  }
   await expect(lazyViewport.getByTestId("row-dummy-1")).toBeVisible();
 
   await page.getByRole("button", { exact: true, name: "원격 빈 결과" }).click();
