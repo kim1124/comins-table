@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.6 - 2026-08-14
+
 - Updated automatic Row Detail measurement to apply each accepted Detail delta through the virtual height index in O(log N), preserving coalesced scroll-anchor correction; observer reads now use one atomically committed `{ projection, contentWidth, viewportHeight }` snapshot, including concurrent Suspense and StrictMode coverage.
 - Added a capped-height concurrent Row Detail regression with 50,000 Rows, a 1,800,300px logical projection, a 1,500,000px physical cap, and a viewport-only suspended candidate that preserves the committed 749,950px physical anchor.
 - Completed deterministic Korean/English Playground localization with explicit pairs for 21 Features, 85 Feature options, 46 Option Guide descriptions, and 4 group titles; canonical `FeatureId`, AST/runtime completeness, duplicate/generic/allowlist gates, Tree Grid copy, and the live `/api/props` route share the same contract.
@@ -10,6 +12,8 @@
 - Made unspecified, invalid, and `"auto"` Row Detail heights auto-measured while preserving finite fixed heights; placed full-size disclosure controls before Row drag, replaced Header sort triangles with directional arrows, kept Column Move source labels visible, and documented Column Filter as deferred guidance without a public API.
 - Standardized Core and Playground interaction icons on the exact external `@radix-ui/react-icons` version `1.3.2` runtime dependency, with private semantic wrappers, preserved accessibility behavior, and fail-closed provenance, notice, import-inventory, and package-artifact gates.
 - Added the Contract v1.4 lean license gate for lockfile metadata, scoped maintainer approvals, repository-only Spoqa asset evidence, and exact npm artifact verification.
+- Updated Playwright, React type definitions, and the Vite React plugin while retaining Vite `8.1.5` and Lightning CSS `1.32.0` under the existing exact scoped license approval.
+- Updated Undici to `7.29.0`, PostCSS to `8.5.26`, and Nano ID to `3.3.18` to clear the current npm audit findings without changing the distributed runtime boundary.
 
 ## 0.1.5 - 2026-07-29
 
