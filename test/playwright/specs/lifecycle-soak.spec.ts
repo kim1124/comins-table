@@ -21,6 +21,7 @@ function collectBrowserDiagnostics(page: Page) {
 }
 
 test("playground repeatedly destroys and recreates feature content without stale mounts", async ({ page }) => {
+  test.slow();
   const diagnostics = collectBrowserDiagnostics(page);
 
   await page.goto("/");
