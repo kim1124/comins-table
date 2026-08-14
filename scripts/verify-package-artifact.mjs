@@ -5,6 +5,14 @@ import { fileURLToPath } from 'node:url';
 
 const FAILURE = 'package-artifact-check: failed\n';
 const licenseChecker = fileURLToPath(new URL('./check-licenses.mjs', import.meta.url));
+const radixIcons = '@radix-ui/react-icons';
+const radixVersion = '1.3.2';
+const publicDeclarations = [
+  'dist/clipboard.d.ts',
+  'dist/core.d.ts',
+  'dist/index.d.ts',
+  'dist/selection.d.ts',
+];
 
 function normalize(value) {
   const path = value.replaceAll('\\', '/').replace(/^\.\//, '').replace(/\/$/, '');
@@ -43,12 +51,33 @@ function assertNoBundledThirdPartySources(filename, paths) {
     throw new Error('forbidden dependency declaration');
   }
 
+  const isCominsTable = manifest.name === 'comins-table';
+  if (isCominsTable) {
+    if (
+      manifest.dependencies?.[radixIcons] !== radixVersion
+      || Object.hasOwn(manifest.optionalDependencies ?? {}, radixIcons)
+      || Object.hasOwn(manifest.peerDependencies ?? {}, radixIcons)
+      || Object.hasOwn(manifest.devDependencies ?? {}, radixIcons)
+    ) {
+      throw new Error('invalid Radix dependency boundary');
+    }
+    if (!paths.includes('THIRD_PARTY_NOTICES.md')) throw new Error('missing Radix notice');
+    const packedNotice = readPackedFile(filename, 'THIRD_PARTY_NOTICES.md');
+    const repositoryNotice = readFileSync('THIRD_PARTY_NOTICES.md', 'utf8');
+    if (packedNotice !== repositoryNotice) throw new Error('Radix notice drift');
+  }
+
+  let radixExternalImport = false;
   for (const path of paths.filter((value) => /^dist\/.*\.js$/.test(value))) {
     const source = readPackedFile(filename, path);
     if (/(?:^|\n)\/\/#region node_modules\//.test(source) || /lucide-react/.test(source)) {
       throw new Error('bundled third-party JavaScript');
     }
+    if (/(?:from\s*|import\s*)["']@radix-ui\/react-icons["']/.test(source)) {
+      radixExternalImport = true;
+    }
   }
+  if (isCominsTable && !radixExternalImport) throw new Error('missing Radix external import');
 
   for (const path of paths.filter((value) => /^dist\/.*\.js\.map$/.test(value))) {
     const sourceMap = JSON.parse(readPackedFile(filename, path));
@@ -59,6 +88,16 @@ function assertNoBundledThirdPartySources(filename, paths) {
       )
     ) {
       throw new Error('bundled third-party source map');
+    }
+  }
+
+  if (isCominsTable) {
+    for (const path of publicDeclarations) {
+      if (!paths.includes(path)) throw new Error('missing public declaration');
+      const declaration = readPackedFile(filename, path);
+      if (declaration.includes(radixIcons) || /CominsTableIcon(?:Button)?/.test(declaration)) {
+        throw new Error('private icon declaration leak');
+      }
     }
   }
 }

@@ -4,6 +4,7 @@ import { cn } from "../../lib/utils";
 
 export type ContextMenuItem =
   | {
+      disabled?: boolean;
       label: string;
       onSelect?: () => void;
       type?: "item";
@@ -35,7 +36,14 @@ export function ContextMenu({ "aria-label": ariaLabel, className, items, style }
             {item.label}
           </div>
         ) : (
-          <button key={item.label} onClick={item.onSelect} role="menuitem" type="button">
+          <button
+            aria-disabled={item.disabled ? "true" : undefined}
+            disabled={item.disabled}
+            key={item.label}
+            onClick={item.onSelect}
+            role="menuitem"
+            type="button"
+          >
             {item.label}
           </button>
         ),

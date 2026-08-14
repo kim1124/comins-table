@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 
+import { initializePlaygroundLocale } from "../helpers/playground-locale";
+
 test.describe("docs playground routing", () => {
+  test.beforeEach(async ({ page }) => initializePlaygroundLocale(page, "en"));
+
   test("loads the getting started route directly", async ({ page }) => {
     await page.goto("/docs/getting-started");
 
@@ -9,6 +13,9 @@ test.describe("docs playground routing", () => {
     await expect(page.getByRole("main")).toContainText("Getting Started");
     await expect(page.getByRole("main")).toContainText("Example");
     await expect(page.getByRole("searchbox", { name: "Search all docs" })).toBeVisible();
+    const searchIcon = page.locator(".example-search svg[data-example-icon='docs-search']");
+    await expect(searchIcon).toHaveAttribute("aria-hidden", "true");
+    await expect(searchIcon).toHaveAttribute("focusable", "false");
   });
 
   test("redirects legacy duplicate example routes to the canonical docs pages", async ({ page }) => {

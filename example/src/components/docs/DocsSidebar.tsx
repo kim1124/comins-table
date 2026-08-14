@@ -1,12 +1,20 @@
 import { NavLink } from "react-router";
 
-import { docsNavGroups } from "../../docs/docsRoutes";
+import type { DocsPage } from "../../docs/types";
+import { playgroundMessages } from "../../i18n/messages";
+import { usePlaygroundLocale } from "../../i18n/playground-locale";
 
-export function DocsSidebar() {
+interface DocsSidebarProps {
+  groups: Array<{ category: string; pages: DocsPage[] }>;
+}
+
+export function DocsSidebar({ groups }: DocsSidebarProps) {
+  const { text } = usePlaygroundLocale();
+
   return (
     <aside className="docs-sidebar">
-      <nav aria-label="Docs navigation">
-        {docsNavGroups.map((group) => (
+      <nav aria-label={text(playgroundMessages.docsNavigation)}>
+        {groups.map((group) => (
           <section className="docs-sidebar__group" key={group.category}>
             <h2>{group.category}</h2>
             <div className="docs-sidebar__links">

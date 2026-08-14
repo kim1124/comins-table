@@ -286,14 +286,14 @@ test("playground verifies 2-depth parent and child move constraints", async ({ p
   const profileGroup = groupExample.getByTestId("header-group-profile");
   await expect(profileGroup).toHaveCSS("border-bottom-width", "0px");
 
-  const groupToggle = groupExample.getByRole("button", { exact: true, name: "Header 그룹 1 표시" });
-  await expect(groupToggle).toHaveAttribute("aria-pressed", "true");
+  const groupToggle = groupExample.getByRole("checkbox", { exact: true, name: "Header 그룹 1 표시" });
+  await expect(groupToggle).toBeChecked();
   await groupToggle.click();
-  await expect(groupToggle).toHaveAttribute("aria-pressed", "false");
+  await expect(groupToggle).not.toBeChecked();
   await expect(groupExample.getByTestId("header-group-profile")).toHaveCount(0);
   await expect(groupExample.getByTestId("header-name")).toHaveCount(0);
   await groupToggle.click();
-  await expect(groupToggle).toHaveAttribute("aria-pressed", "true");
+  await expect(groupToggle).toBeChecked();
   await expect(groupExample.getByTestId("header-group-profile")).toBeVisible();
 
   expect(diagnostics).toEqual([]);
@@ -431,6 +431,17 @@ test("playground verifies dynamic column visibility for column groups", async ({
   await expect(dynamicExample.getByTestId("dynamic-group-table").getByTestId("cell-a-active")).toHaveCount(0);
   await expect(dynamicExample.getByTestId("dynamic-group-table").getByTestId("header-group-profile")).toBeVisible();
   await expect(dynamicExample.getByTestId("dynamic-group-table").getByTestId("header-group-status")).toBeVisible();
+  const profileGroupToggle = dynamicExample.getByRole("checkbox", {
+    exact: true,
+    name: "Header 그룹 1 표시",
+  });
+  await expect(profileGroupToggle).toBeChecked();
+  await profileGroupToggle.click();
+  await expect(dynamicExample.getByTestId("dynamic-group-table").getByTestId("header-group-profile")).toHaveCount(0);
+  await expect(dynamicExample.getByTestId("dynamic-group-table").getByTestId("header-name")).toHaveCount(0);
+  await profileGroupToggle.click();
+  await expect(dynamicExample.getByTestId("dynamic-group-table").getByTestId("header-name")).toBeVisible();
+  await expect(dynamicExample.getByTestId("dynamic-group-table").getByTestId("header-age")).toHaveCount(0);
   await dynamicExample.getByTestId("column-group-column-select-trigger").click();
   await expect(page.getByRole("checkbox", { exact: true, name: "Column2" })).not.toBeChecked();
   await expect(page.getByRole("checkbox", { exact: true, name: "Column3" })).not.toBeChecked();

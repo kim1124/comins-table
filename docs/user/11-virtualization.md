@@ -16,4 +16,8 @@ The package is validated against a 100000-row virtualization scenario. Performan
 
 `"buffer-size"` controls how many rows remain mounted around the viewport. `rowHeight` must match the visual row height when CSS overrides `--comins-table-row-height`.
 
+Data Rows and collapsed Detail owners keep the arithmetic fixed-height path.
+The private height index is activated only when an effective expanded Detail
+makes a data Slot taller than rowHeight.
+
 Virtualization reduces DOM work, but the application still owns the full `data` array in the current CSR model.

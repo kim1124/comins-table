@@ -1,14 +1,51 @@
 import { expect, test } from "@playwright/test";
 
+import { initializePlaygroundLocale } from "../helpers/playground-locale";
+
+test.beforeEach(async ({ page }) => {
+  await initializePlaygroundLocale(page, "en");
+});
+
 test("Tree Grid route demonstrates 30-node defaults, array ref controls, styles, and component cells", async ({ page }) => {
   await page.goto("/examples/tree-grid");
 
   await expect(page).toHaveURL(/\/examples\/tree-grid$/u);
   await expect(page.getByRole("heading", { level: 1, name: "Tree Grid" })).toBeVisible();
 
+  const basicCard = page.locator("[data-feature-option='tree-grid-basic']");
   const basic = page.getByTestId("tree-grid-basic-viewport");
+  await expect(basicCard.getByTestId("header-name")).toHaveAttribute("data-column-position-locked", "true");
+  await expect(basicCard.getByTestId("column-move-handle-name")).toHaveCount(0);
+  await expect(basicCard.getByTestId("column-move-handle-age")).toBeVisible();
+  await expect(basic.getByTestId("tree-expander-department-1").locator("xpath=ancestor::td[1]"))
+    .toHaveAttribute("data-comins-cell-column-id", "name");
   await expect(page.getByTestId("tree-basic-node-count")).toHaveText("30 nodes");
-  await expect(basic.locator("tr[data-comins-row-data-index]")).toHaveCount(30);
+  for (const testId of [
+    "tree-grid-basic-viewport",
+    "tree-style-viewport",
+    "tree-components-viewport",
+    "tree-renderer-viewport",
+  ]) {
+    const viewport = page.getByTestId(testId);
+    const expander = viewport.getByTestId("tree-expander-department-1");
+    await expect(viewport.locator("tr[data-comins-row-data-index]")).toHaveCount(30);
+    await expect(expander).toHaveAttribute("aria-expanded", "true");
+    await expect(expander).toHaveCSS("height", "24px");
+    await expect(expander).toHaveCSS("width", "24px");
+    const expandedIcon = expander.locator("svg[data-comins-icon='disclosureExpanded']");
+    await expect(expandedIcon).toHaveAttribute("aria-hidden", "true");
+    await expect(expandedIcon).toHaveAttribute("focusable", "false");
+    await expect(expandedIcon).toHaveCSS("height", "15px");
+    await expect(expandedIcon).toHaveCSS("width", "15px");
+    await expander.click();
+    await expect(viewport.locator("tr[data-comins-row-data-index]")).toHaveCount(21);
+    await expect(expander).toHaveAttribute("aria-expanded", "false");
+    await expect(expander.locator("svg[data-comins-icon='disclosureCollapsed']")).toBeVisible();
+    await expander.click();
+    await expect(viewport.locator("tr[data-comins-row-data-index]")).toHaveCount(30);
+  }
+  await expect(basic.locator(".comins-tree-expander-spacer").first()).toHaveCSS("height", "24px");
+  await expect(basic.locator(".comins-tree-expander-spacer").first()).toHaveCSS("width", "24px");
 
   const controls = page.getByTestId("tree-grid-controls");
   const controlViewport = page.getByTestId("tree-grid-controls-viewport");

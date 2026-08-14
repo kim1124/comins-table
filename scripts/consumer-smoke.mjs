@@ -80,6 +80,9 @@ for (const entry of [root, core, clipboard, selection]) {
 }
 
 assert.match(import.meta.resolve("comins-table/styles.css"), /^file:/);
+assert.match(import.meta.resolve("@radix-ui/react-icons"), /^file:/);
+assert.equal(root.CominsTableIcon, undefined);
+assert.equal(root.CominsTableIconButton, undefined);
 process.stdout.write("Consumer package smoke check passed.\\n");
 `,
   );

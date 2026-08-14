@@ -21,15 +21,18 @@ test("row and cell context examples show selected data objects", async ({ page }
   await page.goto("/");
 
   await page.goto("/examples/context-menu");
+  await expect(page.locator("tbody tr[data-comins-row-data-index]")).toHaveCount(30);
   await page.getByTestId("row-a").click({ button: "right" });
-  await expect(page.getByRole("menuitem", { name: "행 데이터 보기" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { exact: true, name: "조회" })).toBeVisible();
   await expect(page.getByTestId("context-data-preview")).toContainText('"id": "a"');
   await expect(page.getByTestId("context-data-preview")).toContainText('"name": "Data 1"');
 
   await page.getByTestId("cell-a-name").click({ button: "right" });
-  await expect(page.getByRole("menuitem", { name: "셀 데이터 보기" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { exact: true, name: "수정" })).toBeEnabled();
   await expect(page.getByTestId("context-data-preview")).toContainText('"columnId": "name"');
   await expect(page.getByTestId("context-data-preview")).toContainText('"value": "Data 1"');
+  await page.getByRole("menuitem", { exact: true, name: "수정" }).click();
+  await expect(page.getByTestId("context-menu-alert")).toContainText("수정 기능을 선택했습니다");
 
   expect(diagnostics).toEqual([]);
 });

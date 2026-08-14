@@ -1,4 +1,48 @@
 import type { DocsCodeSample } from "./types";
+import type { PlaygroundLocale } from "../i18n/types";
+import { defineLocalizedText, resolveLocalizedText } from "../i18n/playground-locale";
+
+const codeSampleTitles = {
+  "100000-row component virtualization": defineLocalizedText("100000행 컴포넌트 가상화", "100000-row component virtualization"),
+  "100000-row virtualization": defineLocalizedText("100000행 가상화", "100000-row virtualization"),
+  "Basic table": defineLocalizedText("기본 테이블", "Basic table"),
+  "Built-in components": defineLocalizedText("내장 컴포넌트", "Built-in components"),
+  "CSV / JSON helper": defineLocalizedText("CSV / JSON 헬퍼", "CSV / JSON helper"),
+  "Cell renderer": defineLocalizedText("Cell 렌더러", "Cell renderer"),
+  "Context menu payload": defineLocalizedText("Context Menu payload", "Context menu payload"),
+  "Controlled CRUD state": defineLocalizedText("Controlled CRUD 상태", "Controlled CRUD state"),
+  "Controlled Flat Table ref usage": defineLocalizedText("Controlled Flat Table ref 사용", "Controlled Flat Table ref usage"),
+  "Controlled Row Expand": defineLocalizedText("Controlled Row Expand", "Controlled Row Expand"),
+  "Controlled Tree Grid": defineLocalizedText("Controlled Tree Grid", "Controlled Tree Grid"),
+  "Controlled remote infinite scroll": defineLocalizedText("Controlled 원격 Infinite Scroll", "Controlled remote infinite scroll"),
+  "Controlled selection and clipboard": defineLocalizedText("Controlled 선택과 Clipboard", "Controlled selection and clipboard"),
+  "Core props": defineLocalizedText("Core props", "Core props"),
+  "CSS override": defineLocalizedText("CSS 재정의", "CSS override"),
+  "DummyJSON Lazy Load": defineLocalizedText("DummyJSON Lazy Load", "DummyJSON Lazy Load"),
+  "External pagination state": defineLocalizedText("외부 Pagination 상태", "External pagination state"),
+  "Header move and persistence": defineLocalizedText("Header 이동과 저장", "Header move and persistence"),
+  "Height container": defineLocalizedText("높이 컨테이너", "Height container"),
+  "Install": defineLocalizedText("설치", "Install"),
+  "Loading / Empty State": defineLocalizedText("Loading / Empty 상태", "Loading / Empty State"),
+  "Ref type": defineLocalizedText("Ref 타입", "Ref type"),
+  "Row props": defineLocalizedText("Row props", "Row props"),
+  "Shift-assisted multi-column sort": defineLocalizedText("Shift 다중 Column 정렬", "Shift-assisted multi-column sort"),
+  "Summary Row configuration": defineLocalizedText("Summary Row 설정", "Summary Row configuration"),
+  "Theme class": defineLocalizedText("Theme class", "Theme class"),
+  "Tree expansion ref": defineLocalizedText("Tree 펼침 ref", "Tree expansion ref"),
+  "Two-level header": defineLocalizedText("2단계 Header", "Two-level header"),
+} as const;
+
+export function localizeDocsCodeSamples(samples: DocsCodeSample[], locale: PlaygroundLocale): DocsCodeSample[] {
+  return samples.map((sample) => {
+    const localizedTitle = codeSampleTitles[sample.title as keyof typeof codeSampleTitles];
+    if (!localizedTitle) {
+      throw new Error(`playground-localization: missing code sample title for ${sample.title}`);
+    }
+
+    return { ...sample, title: resolveLocalizedText(localizedTitle, locale) };
+  });
+}
 
 export const installSamples: DocsCodeSample[] = [
   {
@@ -102,12 +146,27 @@ export const themeSamples: DocsCodeSample[] = [
 
 export const loadingSamples: DocsCodeSample[] = [
   {
-    code: `<CominsTable
+    code: `const [rows, setRows] = useState<PersonRow[]>([]);
+const [loadingMode, setLoadingMode] = useState<"initial" | "ready" | "refetch">("initial");
+
+async function loadRows(mode: "initial" | "ready" | "refetch", empty = false) {
+  setLoadingMode(mode);
+  if (mode === "initial") setRows([]);
+
+  const response = await fetch(
+    \`/api/users?limit=30&skip=\${empty ? 10000 : 0}\`,
+  );
+  const result = await response.json();
+  setRows(result.users.map(toPersonRow));
+  setLoadingMode("ready");
+}
+
+<CominsTable
   columns={columns}
-  data={isInitialLoading ? [] : rows}
+  data={rows}
   emptyComponent={<span>No rows to display.</span>}
   getRowId={(row) => row.id}
-  loading={isInitialLoading || isRefetching}
+  loading={loadingMode === "initial" || loadingMode === "refetch"}
   loadingComponent={<span>Refreshing rows.</span>}
   persistHeaderWhenEmpty
   skeletonRowCount={5}
@@ -307,36 +366,50 @@ const appendRows = useCallback(async () => {
 
 export const lazyLoadSamples: DocsCodeSample[] = [
   {
-    code: `const [refreshVersion, setRefreshVersion] = useState(0);
+    code: `const [rows, setRows] = useState<PersonRow[]>([]);
+const [total, setTotal] = useState(0);
+const [loading, setLoading] = useState(false);
+const [loadingMore, setLoadingMore] = useState(false);
 
 const loadRows = useCallback(async ({ offset, limit, reason, signal }) => {
+  reason === "scroll" ? setLoadingMore(true) : setLoading(true);
   const params = new URLSearchParams({
     delay: "700",
     limit: String(limit),
     select: "id,firstName,lastName,age,email,role",
     skip: String(offset),
   });
-  const response = await fetch(\`https://dummyjson.com/users?\${params}\`, { signal });
-  const result = await response.json();
+  try {
+    const response = await fetch(\`https://dummyjson.com/users?\${params}\`, { signal });
+    const result = await response.json();
+    const nextRows = result.users.map(toPersonRow);
+    setRows((current) => reason === "scroll" ? [...current, ...nextRows] : nextRows);
+    setTotal(result.total);
+  } finally {
+    reason === "scroll" ? setLoadingMore(false) : setLoading(false);
+  }
+}, []);
 
-  return {
-    rows: result.users.map(toPersonRow),
-    total: result.total,
-  };
-}, [refreshVersion]);
-
-const refreshRows = () => setRefreshVersion((current) => current + 1);
+const refreshRows = () => {
+  const controller = new AbortController();
+  setRows([]);
+  setTotal(0);
+  void loadRows({ limit: 30, offset: 0, reason: "refresh", signal: controller.signal });
+};
 
 <Button onClick={refreshRows}>Refresh</Button>
 <CominsTable
   columns={columns}
-  data={[]}
+  data={rows}
   emptyComponent={<span>No rows to display.</span>}
   getRowId={(row) => row.id}
+  hasMoreRows={rows.length < total}
   lazyLoad
   lazyLoadBatchSize={30}
   lazyLoadMode="append"
   lazyLoadThreshold={140}
+  loading={loading}
+  loadingMore={loadingMore}
   onLazyLoad={loadRows}
   pagination={{ pageIndex: 0, pageSize: 90 }}
   skeletonRowCount={5}
@@ -456,6 +529,24 @@ export const rowSamples: DocsCodeSample[] = [
 />;`,
     language: "tsx",
     title: "Row props",
+  },
+];
+
+export const rowExpandSamples: DocsCodeSample[] = [
+  {
+    code: `const [expandedRowIds, setExpandedRowIds] = useState<readonly string[]>([]);
+
+<CominsTable
+  columns={columns}
+  data={rows}
+  expandedRowIds={expandedRowIds}
+  getRowDetailHeight={({ row }) => (row.id === "large" ? 480 : "auto")}
+  getRowId={(row) => row.id}
+  onChangeExpandedRowIds={setExpandedRowIds}
+  renderRowDetail={({ row }) => <Detail row={row.data} />}
+/>;`,
+    language: "tsx",
+    title: "Controlled Row Expand",
   },
 ];
 

@@ -4,6 +4,7 @@ import { CominsTable, type CominsTableColumn, type CominsVirtualListItem } from 
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { createExampleRows, type PersonRow } from "../fixtures/people";
+import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
 type ComponentExampleId =
   | "button"
@@ -99,11 +100,44 @@ const componentExamples: Array<{
   },
 ];
 
-const roleOptions = [
-  { label: "Owner", value: "Owner" },
-  { label: "Editor", value: "Editor" },
-  { label: "Viewer", value: "Viewer" },
-];
+const componentExampleEnglish: Record<ComponentExampleId, { description: string; title: string }> = {
+  button: {
+    description: "Connect Button callbacks through header.components and cell.components and update the shared event log.",
+    title: "Button example",
+  },
+  input: {
+    description: "Keep Cell input in an internal draft and commit external data changes on Enter or Blur.",
+    title: "Input Field example",
+  },
+  checkbox: {
+    description: "Render Boolean values as checked state and update them immutably.",
+    title: "Checkbox example",
+  },
+  radio: { description: "Select a role with Radio Buttons.", title: "Radio Button example" },
+  select: { description: "Select an option and update Row data.", title: "Select Option Box example" },
+  toggle: { description: "Represent Boolean values with Toggle Buttons.", title: "Toggle Button example" },
+  progress: { description: "Represent numeric values as progress.", title: "Progress Component example" },
+  menu: {
+    description: "Open a popover menu below the Header button and inspect item selection events.",
+    title: "Header Menu example",
+  },
+  "virtual-list": {
+    description: "Show a five-item preview with no selection and enable full virtual scrolling when one Row is selected.",
+    title: "Virtual Scroll Item List basics",
+  },
+  "virtual-list-more": {
+    description: "Apply standard Row selection on item click, then select only that Row and expand the full list on More.",
+    title: "Virtual Scroll Item List More example",
+  },
+  "virtual-list-search": {
+    description: "Show a search input for a single selected Row and inspect the filtered virtual range.",
+    title: "Virtual Scroll Item List Search example",
+  },
+  renderer: {
+    description: "Connect a custom React renderer to the Header and Cell.",
+    title: "Custom Renderer example",
+  },
+};
 
 const virtualListItemsFixture: CominsVirtualListItem[] = Array.from({ length: 10_000 }, (_value, index) => ({
   data: { index },
@@ -116,7 +150,7 @@ function getVirtualListItems() {
 }
 
 function createComponentRows(componentId: ComponentExampleId): ComponentRow[] {
-  return createExampleRows(100).map((row) => ({
+  return createExampleRows(30).map((row) => ({
     ...row,
     id: `${componentId}-${row.id}`,
     virtualListItems: componentId.startsWith("virtual-list") ? getVirtualListItems() : undefined,
@@ -158,6 +192,15 @@ function getComponentField(componentId: ComponentExampleId): keyof ComponentRow 
 }
 
 export function ComponentFeature() {
+  const { locale, text } = usePlaygroundLocale();
+  const roleOptions = useMemo(
+    () => [
+      { label: text(defineLocalizedText("소유자", "Owner")), value: "Owner" },
+      { label: text(defineLocalizedText("편집자", "Editor")), value: "Editor" },
+      { label: text(defineLocalizedText("조회자", "Viewer")), value: "Viewer" },
+    ],
+    [text],
+  );
   const [rowsByExample, setRowsByExample] = useState<Record<ComponentExampleId, ComponentRow[]>>(() =>
     createInitialRowsByExample(),
   );
@@ -227,7 +270,10 @@ export function ComponentFeature() {
               setHeaderState((current) => ({ ...current, input: value }));
               reportComponentEvent("Header Input", value);
             },
-            props: { "aria-label": "컴포넌트 헤더 입력", value: headerState.input },
+            props: {
+              "aria-label": text(defineLocalizedText("컴포넌트 헤더 입력", "Component Header input")),
+              value: headerState.input,
+            },
             type: "input",
           },
         ],
@@ -239,7 +285,10 @@ export function ComponentFeature() {
               updateRow(componentId, row.id, { name: value });
               reportComponentEvent("Cell Input", value);
             },
-            props: ({ value }) => ({ "aria-label": "Cell 이름 입력", value: String(value) }),
+            props: ({ value }) => ({
+              "aria-label": text(defineLocalizedText("Cell 이름 입력", "Cell name input")),
+              value: String(value),
+            }),
             type: "input",
           },
         ],
@@ -254,7 +303,10 @@ export function ComponentFeature() {
               setHeaderState((current) => ({ ...current, checkbox: checked }));
               reportComponentEvent("Header Checkbox", checked ? "checked" : "unchecked");
             },
-            props: { "aria-label": "컴포넌트 헤더 체크박스", checked: headerState.checkbox },
+            props: {
+              "aria-label": text(defineLocalizedText("컴포넌트 헤더 체크박스", "Component Header checkbox")),
+              checked: headerState.checkbox,
+            },
             type: "checkbox",
           },
         ],
@@ -266,7 +318,10 @@ export function ComponentFeature() {
               updateRow(componentId, row.id, { active: checked });
               reportComponentEvent("Cell Checkbox", checked ? "checked" : "unchecked");
             },
-            props: ({ value }) => ({ "aria-label": "Cell 활성 체크박스", checked: Boolean(value) }),
+            props: ({ value }) => ({
+              "aria-label": text(defineLocalizedText("Cell 활성 체크박스", "Cell active checkbox")),
+              checked: Boolean(value),
+            }),
             type: "checkbox",
           },
         ],
@@ -282,7 +337,10 @@ export function ComponentFeature() {
               reportComponentEvent("Header Radio", value);
             },
             options: roleOptions,
-            props: { "aria-label": "컴포넌트 헤더 라디오", value: headerState.radio },
+            props: {
+              "aria-label": text(defineLocalizedText("컴포넌트 헤더 라디오", "Component Header radio")),
+              value: headerState.radio,
+            },
             type: "radio",
           },
         ],
@@ -295,7 +353,10 @@ export function ComponentFeature() {
               reportComponentEvent("Cell Radio", value);
             },
             options: roleOptions,
-            props: ({ value }) => ({ "aria-label": `Cell 역할 라디오 ${String(value)}`, value: String(value) }),
+            props: ({ value }) => ({
+              "aria-label": locale === "ko" ? `Cell 역할 라디오 ${String(value)}` : `Cell role radio ${String(value)}`,
+              value: String(value),
+            }),
             type: "radio",
           },
         ],
@@ -311,7 +372,10 @@ export function ComponentFeature() {
               reportComponentEvent("Header Select", value);
             },
             options: roleOptions,
-            props: { "aria-label": "컴포넌트 헤더 셀렉트", value: headerState.select },
+            props: {
+              "aria-label": text(defineLocalizedText("컴포넌트 헤더 셀렉트", "Component Header select")),
+              value: headerState.select,
+            },
             type: "select",
           },
         ],
@@ -324,7 +388,10 @@ export function ComponentFeature() {
               reportComponentEvent("Cell Select", value);
             },
             options: roleOptions,
-            props: ({ value }) => ({ "aria-label": "Cell 역할 셀렉트", value: String(value) }),
+            props: ({ value }) => ({
+              "aria-label": text(defineLocalizedText("Cell 역할 셀렉트", "Cell role select")),
+              value: String(value),
+            }),
             type: "select",
           },
         ],
@@ -383,10 +450,10 @@ export function ComponentFeature() {
           {
             direction: "right",
             items: [
-              { label: "메뉴", type: "label" },
-              { label: "상태 확인", value: "status-check" },
+              { label: text(defineLocalizedText("메뉴", "Menu")), type: "label" },
+              { label: text(defineLocalizedText("상태 확인", "Check status")), value: "status-check" },
               { type: "divider" },
-              { disabled: true, label: "비활성 항목", value: "disabled" },
+              { disabled: true, label: text(defineLocalizedText("비활성 항목", "Disabled item")), value: "disabled" },
             ],
             onBeforeChange: ({ open }) => {
               setEventLog(`Header Menu before:${open}`);
@@ -397,7 +464,7 @@ export function ComponentFeature() {
               setEventAlert(`Header Menu:${String(value)}`);
               setEventLog(`Header Menu 선택:${String(value)}`);
             },
-            props: { children: "메뉴" },
+            props: { children: text(defineLocalizedText("메뉴", "Menu")) },
             type: "menu",
           },
         ],
@@ -421,7 +488,7 @@ export function ComponentFeature() {
               setEventLog(`Virtual List 우클릭:${String(item.label)}`);
             },
             props: {
-              "aria-label": "Virtual List Item",
+              "aria-label": text(defineLocalizedText("Virtual List 항목", "Virtual List Item")),
               height: 186,
               itemHeight: 28,
               limit: 5,
@@ -438,11 +505,17 @@ export function ComponentFeature() {
 
     if (componentId === "renderer") {
       componentColumn.header = {
-        renderer: ({ column }) => <span data-testid="component-header-renderer">사용자 renderer:{column.label}</span>,
+        renderer: ({ column }) => (
+          <span data-testid="component-header-renderer">
+            {`${text(defineLocalizedText("사용자 renderer", "Custom renderer"))}:${column.label}`}
+          </span>
+        ),
       };
       componentColumn.cell = {
         renderer: ({ row, value }) => (
-          <span data-testid={`component-cell-renderer-${String(row.id)}`}>사용자 renderer:{String(value)}</span>
+          <span data-testid={`component-cell-renderer-${String(row.id)}`}>
+            {`${text(defineLocalizedText("사용자 renderer", "Custom renderer"))}:${String(value)}`}
+          </span>
         ),
       };
     }
@@ -469,7 +542,7 @@ export function ComponentFeature() {
         width: 150,
       },
     ];
-  }, [headerState, reportComponentEvent, updateRow]);
+  }, [headerState, locale, reportComponentEvent, roleOptions, text, updateRow]);
 
   const columnsByExample = useMemo(
     () =>
@@ -490,14 +563,18 @@ export function ComponentFeature() {
       </pre>
       {eventAlert ? (
         <Alert data-testid="component-event-alert">
-          <AlertTitle>컴포넌트 이벤트</AlertTitle>
+          <AlertTitle>{text(defineLocalizedText("컴포넌트 이벤트", "Component event"))}</AlertTitle>
           <AlertDescription>{eventAlert}</AlertDescription>
         </Alert>
       ) : null}
       <div className="component-showcase">
         {componentExamples.map((example) => (
           <section className="component-example-section" data-testid={`component-section-${example.id}`} key={example.id}>
-            <FeatureSampleSection description={example.description} id={`component-${example.id}`} title={example.title}>
+            <FeatureSampleSection
+              description={locale === "ko" ? example.description : componentExampleEnglish[example.id].description}
+              id={`component-${example.id}`}
+              title={locale === "ko" ? example.title : componentExampleEnglish[example.id].title}
+            >
               <div className="component-example-table-wrap" data-testid={`component-example-${example.id}`}>
                 <CominsTable
                   className="example-table component-example-table"

@@ -3,50 +3,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CominsTable, type CominsTableColumn } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Button } from "../components/ui/button";
+import {
+  buildDummyUsersUrl,
+  toPersonRows,
+  type DummyUsersResponse,
+} from "../data/dummyUsers";
 import type { PersonRow } from "../fixtures/people";
+import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
-type DummyUser = {
-  age: number;
-  email: string;
-  firstName: string;
-  id: number;
-  lastName: string;
-  role?: string;
-};
-
-type DummyUsersResponse = {
-  limit: number;
-  skip: number;
-  total: number;
-  users: DummyUser[];
-};
-
-const DUMMY_USERS_URL = "https://dummyjson.com/users";
 const BATCH_SIZE = 40;
 
-function toPersonRow(user: DummyUser): PersonRow {
-  return {
-    active: user.id % 2 === 0,
-    age: user.age,
-    id: `dummy-${user.id}`,
-    locked: user.email,
-    name: `${user.firstName} ${user.lastName}`,
-    role: user.role ?? (user.id % 2 === 0 ? "Owner" : "Viewer"),
-  };
-}
-
-function buildInfiniteScrollUrl(offset: number, limit: number) {
-  const params = new URLSearchParams({
-    delay: "500",
-    limit: String(limit),
-    select: "id,firstName,lastName,age,email,role",
-    skip: String(offset),
-  });
-
-  return `${DUMMY_USERS_URL}?${params.toString()}`;
-}
-
 export function InfiniteScrollFeature() {
+  const { locale, text } = usePlaygroundLocale();
   const [rows, setRows] = useState<PersonRow[]>([]);
   const [total, setTotal] = useState(0);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -100,7 +68,7 @@ export function InfiniteScrollFeature() {
     setTotal(0);
 
     try {
-      const response = await fetch(buildInfiniteScrollUrl(0, BATCH_SIZE), {
+      const response = await fetch(buildDummyUsersUrl(0, BATCH_SIZE), {
         signal: controller.signal,
       });
       const result = (await response.json()) as DummyUsersResponse;
@@ -109,7 +77,7 @@ export function InfiniteScrollFeature() {
         return;
       }
 
-      setRows(result.users.map(toPersonRow));
+      setRows(toPersonRows(result));
       setTotal(result.total);
     } catch {
       // Request failure and retry UI remain application-owned in this focused example.
@@ -136,7 +104,7 @@ export function InfiniteScrollFeature() {
     setLoadingMore(true);
 
     try {
-      const response = await fetch(buildInfiniteScrollUrl(offset, BATCH_SIZE), {
+      const response = await fetch(buildDummyUsersUrl(offset, BATCH_SIZE), {
         signal: controller.signal,
       });
       const result = (await response.json()) as DummyUsersResponse;
@@ -145,7 +113,7 @@ export function InfiniteScrollFeature() {
         return;
       }
 
-      const nextRows = result.users.map(toPersonRow);
+      const nextRows = toPersonRows(result);
       setRows((currentRows) => {
         if (currentRows.length !== offset) {
           return currentRows;
@@ -180,20 +148,23 @@ export function InfiniteScrollFeature() {
   return (
     <section className="feature-panel">
       <FeatureSampleSection
-        description="소비자가 rows와 요청 상태를 소유하고, viewport 하단 근접 시 onLoadMore를 받아 원격 batch를 append합니다."
+        description={text(defineLocalizedText(
+          "소비자가 rows와 요청 상태를 소유하고, viewport 하단 근접 시 onLoadMore를 받아 원격 batch를 append합니다.",
+          "The consumer owns rows and request state and appends a remote batch through onLoadMore near the bottom of the viewport.",
+        ))}
         id="infinite-scroll"
-        title="Infinite Scroll"
+        title={text(defineLocalizedText("무한 스크롤", "Infinite Scroll"))}
       >
         <div className="table-toolbar">
           <Button
-            aria-label="새로고침"
+            aria-label={text(defineLocalizedText("새로고침", "Refresh"))}
             onClick={() => setRefreshVersion((current) => current + 1)}
             variant="outline"
           >
-            새로고침
+            {text(defineLocalizedText("새로고침", "Refresh"))}
           </Button>
           <span className="table-toolbar__state" data-testid="infinite-load-count">
-            Loaded {rows.length} / {total}
+            {locale === "ko" ? `불러옴 ${rows.length} / ${total}` : `Loaded ${rows.length} / ${total}`}
           </span>
         </div>
         <CominsTable

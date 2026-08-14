@@ -55,6 +55,25 @@ describe("comins-table public API boundary", () => {
     expect(source).not.toMatch(/from ["'](?:radix-ui|@radix-ui|tailwindcss|@tailwindcss|class-variance-authority)/u);
   });
 
+  it("declares only the exact Radix icon runtime dependency without exporting an icon API", async () => {
+    const packageJson = JSON.parse(readPackageFile("package.json")) as {
+      dependencies?: Record<string, string>;
+      optionalDependencies?: Record<string, string>;
+      peerDependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+      exports?: Record<string, unknown>;
+    };
+    const entry = await import("../src");
+
+    expect(packageJson.dependencies?.["@radix-ui/react-icons"]).toBe("1.3.2");
+    expect(packageJson.optionalDependencies?.["@radix-ui/react-icons"]).toBeUndefined();
+    expect(packageJson.peerDependencies?.["@radix-ui/react-icons"]).toBeUndefined();
+    expect(packageJson.devDependencies?.["@radix-ui/react-icons"]).toBeUndefined();
+    expect(packageJson.exports?.["./icons"]).toBeUndefined();
+    expect(entry.CominsTableIcon).toBeUndefined();
+    expect(entry.CominsTableIconButton).toBeUndefined();
+  });
+
   it("keeps Lucide out of the package manifest", () => {
     const packageJson = JSON.parse(readPackageFile("package.json")) as {
       dependencies?: Record<string, string>;

@@ -1,5 +1,7 @@
 import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
 
+import { initializePlaygroundLocale } from "../helpers/playground-locale";
+
 function collectBrowserDiagnostics(page: Page) {
   const diagnostics: Array<{ text: string; type: ReturnType<ConsoleMessage["type"]> | "pageerror" }> = [];
 
@@ -280,9 +282,10 @@ test("CRUD page removes noisy query output and keeps pagination controls out of 
   await expect(page.getByTestId("pagination-state")).toHaveCount(0);
   await expect(page.getByTestId("selected-row-state")).toHaveCount(0);
   await expect(page.getByTestId("feature-control-label")).toHaveCount(0);
-  for (const label of ["추가", "수정", "삭제", "초기화", "필터링"]) {
+  for (const label of ["추가", "수정", "삭제", "초기화"]) {
     await expect(page.getByRole("button", { exact: true, name: label })).toBeVisible();
   }
+  await expect(page.getByRole("button", { exact: true, name: "필터링" })).toHaveCount(0);
   await expect(page.getByTestId("crud-pagination")).toHaveCount(0);
   await expect(page.locator(".comins-table__header-table th")).toHaveCount(6);
 
@@ -305,30 +308,47 @@ test("pagination page owns the table paging example above virtualization", async
 
   await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "pagination");
   await expect(page.getByTestId("pagination-control")).toContainText("1 / 4");
-  await expect(page.getByTestId("pagination-state")).toContainText("Page 1");
-  await expect(page.getByRole("button", { exact: true, name: "첫 페이지" })).toBeDisabled();
-  await expect(page.getByRole("button", { exact: true, name: "이전 페이지" })).toBeDisabled();
+  await expect(page.getByTestId("pagination-state")).toContainText("페이지 1");
+  const firstPage = page.getByRole("button", { exact: true, name: "첫 페이지" });
+  const previousPage = page.getByRole("button", { exact: true, name: "이전 페이지" });
+  await expect(firstPage).toBeDisabled();
+  await expect(previousPage).toBeDisabled();
   const nextPage = page.getByRole("button", { exact: true, name: "다음 페이지" });
+  const lastPage = page.getByRole("button", { exact: true, name: "마지막 페이지" });
   await expect(nextPage).toBeEnabled();
-  await expect(nextPage.locator("svg")).toHaveCount(0);
-  await expect(nextPage.locator(".ui-pagination__glyph")).toHaveCount(1);
-  await expect(page.getByRole("button", { exact: true, name: "마지막 페이지" })).toBeEnabled();
+  await expect(lastPage).toBeEnabled();
+  for (const [button, iconName] of [
+    [firstPage, "pagination-first"],
+    [previousPage, "pagination-previous"],
+    [nextPage, "pagination-next"],
+    [lastPage, "pagination-last"],
+  ] as const) {
+    const icon = button.locator(`svg[data-example-icon='${iconName}']`);
+    await expect(icon).toHaveAttribute("aria-hidden", "true");
+    await expect(icon).toHaveAttribute("focusable", "false");
+    await expect(icon).toHaveCSS("height", "15px");
+    await expect(icon).toHaveCSS("width", "15px");
+    await expect(button.locator(".ui-pagination__glyph")).toHaveCount(0);
+    const box = await button.boundingBox();
+    expect(box?.height).toBe(32);
+    expect(box?.width).toBe(32);
+  }
   await expect(page.getByTestId("row-a")).toBeVisible();
   await nextPage.click();
   await expect(page.getByTestId("row-a")).toHaveCount(0);
   await expect(page.getByTestId("row-row-30")).toBeVisible();
   await expect(page.getByTestId("pagination-control")).toContainText("2 / 4");
-  await expect(page.getByTestId("pagination-state")).toContainText("Page 2");
+  await expect(page.getByTestId("pagination-state")).toContainText("페이지 2");
   await page.getByRole("button", { exact: true, name: "마지막 페이지" }).click();
   await expect(page.getByTestId("row-row-90")).toBeVisible();
   await expect(
     page.getByTestId("pagination-viewport").locator("tbody tr[data-comins-row-data-index]"),
   ).toHaveCount(10);
   await expect(page.getByTestId("pagination-control")).toContainText("4 / 4");
-  await expect(page.getByTestId("pagination-state")).toContainText("Page 4");
+  await expect(page.getByTestId("pagination-state")).toContainText("페이지 4");
   await page.getByRole("button", { exact: true, name: "첫 페이지" }).click();
   await expect(page.getByTestId("pagination-control")).toContainText("1 / 4");
-  await expect(page.getByTestId("pagination-state")).toContainText("Page 1");
+  await expect(page.getByTestId("pagination-state")).toContainText("페이지 1");
 
   const performanceLinks = await page
     .locator(".docs-sidebar__group", { hasText: "Body / Performance" })
@@ -350,7 +370,7 @@ test("general samples render thirty rows per page", async ({ page }) => {
 
   await page.goto("/examples/crud");
   await expect(page.getByTestId("data-table-viewport")).toBeVisible();
-  await expect(page.locator(".comins-table__body-table tbody tr[data-comins-row-data-index]")).toHaveCount(100);
+  await expect(page.locator(".comins-table__body-table tbody tr[data-comins-row-data-index]")).toHaveCount(30);
 
   await page.goto("/examples/row");
   await expect(
@@ -376,8 +396,8 @@ test("general samples render thirty rows per page", async ({ page }) => {
   await page.goto("/examples/column-groups");
   for (const testId of ["header-example-groups", "column-group-dynamic-columns"]) {
     await expect(
-      page.getByTestId(testId).locator(".comins-table__body-table tbody tr[data-comins-row-data-index]").first(),
-    ).toBeVisible();
+      page.getByTestId(testId).locator(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
+    ).toHaveCount(30);
   }
 
   await page.goto("/examples/component");
@@ -416,7 +436,7 @@ test("header page keeps only requested actions and state outputs", async ({ page
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "Header 기본 기능" })).toBeVisible();
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "Header 숨김 / 표시" })).toBeVisible();
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "컬럼 설정 저장 / 불러오기" })).toBeVisible();
-  await expect(page.getByTestId("feature-option-heading").filter({ hasText: "Multi-column Sort" })).toBeVisible();
+  await expect(page.getByTestId("feature-option-heading").filter({ hasText: "다중 컬럼 정렬" })).toBeVisible();
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "컬럼 동적 표시" })).toHaveCount(0);
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "2중 헤더 예제" })).toHaveCount(0);
   await expect(page.getByTestId("header-example-basic").getByRole("button", { exact: true, name: "초기화" })).toBeVisible();
@@ -434,7 +454,7 @@ test("header page keeps only requested actions and state outputs", async ({ page
   await expect(page.getByTestId("header-component-event")).toHaveCount(0);
 
   await page.goto("/examples/column-groups");
-  await expect(page.getByTestId("header-example-groups").getByRole("button", { exact: true, name: "Header 그룹 1 표시" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("header-example-groups").getByRole("checkbox", { exact: true, name: "Header 그룹 1 표시" })).toBeChecked();
   await expect(page.getByTestId("header-example-groups").getByRole("button", { exact: true, name: "초기화" })).toBeVisible();
   await expect(page.getByTestId("column-group-dynamic-columns")).toBeVisible();
   expect(diagnostics).toEqual([]);
@@ -609,8 +629,13 @@ test("body viewport keeps a single bottom border at max scroll @perf", async ({ 
   await page.goto("/performance/virtualization");
   await expect(page.getByTestId("body-proof-virtualization")).toHaveCount(0);
 
-  const metrics = await page.getByTestId("data-table-viewport").evaluate((viewport) => {
-    viewport.scrollTop = viewport.scrollHeight;
+  const viewport = page.getByTestId("data-table-viewport");
+  await viewport.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect(viewport.getByTestId("row-99999")).toBeVisible();
+
+  const metrics = await viewport.evaluate((viewport) => {
     const tableRoot = viewport.closest(".comins-table");
     const dataRows = Array.from(
       viewport.querySelectorAll<HTMLTableRowElement>(".comins-table__body-table tbody tr[data-comins-row-data-index]"),
@@ -643,7 +668,7 @@ test("example controls stay in one horizontal row with overflow scrolling", asyn
   const crudControlRow = page.getByTestId("feature-control-row");
   const actionButtons = crudControlRow.locator(".feature-action-button");
   await expect(crudControlRow).toBeVisible();
-  await expect(actionButtons).toHaveCount(5);
+  await expect(actionButtons).toHaveCount(4);
   await expect(actionButtons.locator("svg")).toHaveCount(0);
   await expect(crudControlRow.locator(".feature-action-button__icon")).toHaveCount(0);
   const rowMetrics = await crudControlRow.evaluate((element) => {
@@ -662,13 +687,14 @@ test("example controls stay in one horizontal row with overflow scrolling", asyn
   expect(rowMetrics.wrapped).toBe(false);
   expect(["auto", "scroll"]).toContain(rowMetrics.overflowX);
   await expect(page.getByRole("button", { exact: true, name: "삭제" })).toHaveAttribute("data-action-tone", "danger");
-  await expect(page.getByRole("button", { exact: true, name: "필터링" })).toHaveAttribute("data-action-tone", "filter");
+  await expect(page.getByRole("button", { exact: true, name: "필터링" })).toHaveCount(0);
 
   expect(diagnostics).toEqual([]);
 });
 
 test("docs sidebar keeps feature-specific route identities", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
+  await initializePlaygroundLocale(page, "en");
   await page.goto("/");
 
   await expect(page.getByRole("navigation", { name: "Docs navigation" })).toBeVisible();
@@ -708,7 +734,7 @@ test("table size menu demonstrates manual and parent sizing only", async ({ page
   await page.goto("/examples/size");
 
   await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "size");
-  await expect(page.getByTestId("feature-option-heading").filter({ hasText: "테이블 사이즈" })).toBeVisible();
+  await expect(page.getByTestId("feature-option-heading").filter({ hasText: "테이블 크기" })).toBeVisible();
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "브라우저 100%" })).toHaveCount(0);
   await expect(page.getByText("브라우저 100%")).toHaveCount(0);
   await expect(page.getByTestId("size-case-manual")).toBeVisible();

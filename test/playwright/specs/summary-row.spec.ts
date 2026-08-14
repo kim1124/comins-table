@@ -12,6 +12,14 @@ test("Summary Row route demonstrates aggregates, colSpan, format, and styling", 
   await expect(basic.getByTestId("summary-cell-unitPrice")).toHaveText("200");
   await expect(basic.getByTestId("summary-cell-amount")).toHaveText("1500");
   await expect(basic.getByTestId("summary-cell-score")).toHaveText("70");
+  const bodyBoundaryCell = basic.locator(".comins-table__body-table .comins-table__td").first();
+  const summaryBoundaryCell = basic.getByTestId("summary-cell-item");
+  expect(await summaryBoundaryCell.evaluate((element) => getComputedStyle(element).borderTopColor)).toBe(
+    await bodyBoundaryCell.evaluate((element) => getComputedStyle(element).borderBottomColor),
+  );
+  expect(await summaryBoundaryCell.evaluate((element) => getComputedStyle(element).borderRightColor)).toBe(
+    await bodyBoundaryCell.evaluate((element) => getComputedStyle(element).borderRightColor),
+  );
 
   const colSpan = page.locator("[data-feature-option='summary-colspan']");
   await expect(colSpan.getByTestId("summary-cell-item")).toHaveAttribute("colspan", "2");

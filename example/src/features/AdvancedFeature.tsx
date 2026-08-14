@@ -9,8 +9,6 @@ const unavailable = [
   "viewport datasource model",
   "Row Grouping",
   "피벗",
-  "Flat Row Expand",
-  "master/detail",
   "charts integration",
   "AI assistant",
 ];

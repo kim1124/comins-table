@@ -1,5 +1,16 @@
 import type React from "react";
-import { Fragment, forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  forwardRef,
+  isValidElement,
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   applyCominsColumnLayout,
@@ -32,6 +43,8 @@ import {
 } from "./core";
 import { getCominsColumnMouseIntent } from "./column-pointer";
 import { renderCominsBuiltInComponent, type CominsBuiltInComponentInteraction } from "./component-renderer";
+import { CominsRowDetailRow, CominsRowDetailToggle } from "./row-detail";
+import { CominsTableIcon, CominsTableIconButton } from "./table-icons";
 import { getCominsSummaryValues } from "./summary";
 import {
   flattenCominsTree,
@@ -40,6 +53,25 @@ import {
   toggleCominsTreeNode,
   updateCominsTreeItem,
 } from "./tree";
+import {
+  CominsHeightIndex,
+  captureCominsScrollAnchor,
+  createCominsDataVirtualSlot,
+  getCominsDataSlotKey,
+  getCominsMixedVirtualRange,
+  getCominsPhysicalScrollTop,
+  getCominsScrollScale,
+  getCominsSlotHeight,
+  normalizeCominsDetailEstimate,
+  normalizeCominsDetailHeight,
+  reconcileCominsDetailMeasurements,
+  resolveCominsAnchorTarget,
+  resolveCominsMeasuredDetailHeight,
+  type CominsDataVirtualSlot,
+  type CominsDetailMeasurement,
+  type CominsScrollAnchor,
+  type CominsVirtualSlot,
+} from "./virtual-layout";
 
 export * from "./core";
 export * from "./summary";
@@ -89,13 +121,26 @@ type CominsColumnPointerInteraction = {
   startY: number;
   timer: number | null;
 };
-type CominsColumnPointerOptions = {
-  activate: (x: number, y: number) => void;
-  commitTarget: (targetId: string) => void;
-  event: React.PointerEvent<HTMLTableCellElement>;
+type CominsColumnDropStatus = "invalid" | "neutral" | "valid";
+type CominsColumnMoveHeader = {
+  depth: 0 | 1;
   id: string;
   kind: "column" | "group";
+  parentGroupId?: string;
+};
+type CominsColumnMoveTarget = CominsColumnMoveHeader & {
+  status: CominsColumnDropStatus;
+};
+type CominsColumnPointerOptions = {
+  activateImmediately?: boolean;
+  activate: (x: number, y: number) => void;
+  commitTarget: (target: CominsColumnMoveHeader) => void;
+  event: React.PointerEvent<HTMLElement>;
+  id: string;
+  kind: "column" | "group";
+  resolveTarget: (target: CominsColumnMoveHeader) => CominsColumnDropStatus;
   sortColumnId?: string;
+  source: CominsColumnMoveHeader;
 };
 type CominsSuppressedSortClick = {
   cleanup: () => void;
@@ -107,7 +152,26 @@ type CominsRowMoveState = {
   targetDataIndex: number;
 };
 
-const COMINS_MIN_COLUMN_WIDTH = 50;
+const COMINS_MIN_COLUMN_WIDTH = 88;
+function getCominsColumnDropStatus(
+  source: CominsColumnMoveHeader,
+  target: CominsColumnMoveHeader,
+  orderChanged: boolean,
+): CominsColumnDropStatus {
+  if (source.id === target.id && source.kind === target.kind) {
+    return "neutral";
+  }
+
+  if (source.depth !== target.depth || source.parentGroupId !== target.parentGroupId) {
+    return "invalid";
+  }
+
+  return orderChanged ? "valid" : "invalid";
+}
+
+function selectRowForContextMenu<TData>(state: CominsTableState<TData>, rowId: CominsRowId) {
+  return state.selection.rowIds.includes(rowId) ? state : selectRow(state, rowId);
+}
 
 export type CominsTableRowProps<TData> = {
   className?: CominsRowPropValue<TData, CominsClassValue>;
@@ -148,6 +212,21 @@ export type CominsCellKeyboardEventPayload<TData, TValue = unknown> = CominsCell
   React.KeyboardEvent<HTMLTableCellElement>
 >;
 
+export type CominsRowDetailParams<TData> = {
+  row: CominsEventRow<TData>;
+};
+
+export type CominsRowDetailHeight = number | "auto";
+
+export type CominsRowDetailProps<TData> = {
+  estimatedRowDetailHeight?: number;
+  expandedRowIds?: readonly CominsRowId[];
+  getRowDetailHeight?: (params: CominsRowDetailParams<TData>) => CominsRowDetailHeight;
+  isRowExpandable?: (params: CominsRowDetailParams<TData>) => boolean;
+  onChangeExpandedRowIds?: (rowIds: CominsRowId[]) => void;
+  renderRowDetail?: (params: CominsRowDetailParams<TData>) => React.ReactNode;
+};
+
 export type CominsTableRef<TData = unknown> = {
   clearSort: () => void;
   expand: (nodeIds?: readonly CominsRowId[]) => void;
@@ -172,12 +251,7 @@ export type CominsLazyLoadRequest = {
   signal: AbortSignal;
 };
 
-export type CominsLazyLoadResult<TData> = {
-  rows: readonly TData[];
-  total?: number;
-};
-
-export type CominsTableProps<TData> = {
+type CominsTableFlatProps<TData> = {
   "buffer-size"?: number;
   cellSelection?: boolean;
   className?: string;
@@ -211,12 +285,13 @@ export type CominsTableProps<TData> = {
   onDoubleClickRow?: (payload: CominsRowEventPayload<TData>) => void;
   onKeyDownCell?: (payload: CominsCellKeyboardEventPayload<TData>) => void;
   onKeyDownRow?: (payload: CominsRowKeyboardEventPayload<TData>) => void;
-  onLazyLoad?: (request: CominsLazyLoadRequest) => Promise<CominsLazyLoadResult<TData>>;
+  onLazyLoad?: (request: CominsLazyLoadRequest) => Promise<void> | void;
   onLoadMore?: () => void;
   pagination?: Partial<CominsPaginationState>;
   persistHeaderWhenEmpty?: boolean;
   rowHeight?: number;
   rowProps?: CominsTableRowProps<TData>;
+  showColumnMoveHandle?: boolean;
   showHeader?: boolean;
   skeletonRowCount?: number;
   style?: React.CSSProperties;
@@ -225,6 +300,8 @@ export type CominsTableProps<TData> = {
   tree?: false;
   virtualized?: boolean;
 };
+
+export type CominsTableProps<TData> = CominsTableFlatProps<TData> & CominsRowDetailProps<TData>;
 
 export type CominsTreeTableProps<TData> = Omit<
   CominsTableProps<TData>,
@@ -243,6 +320,12 @@ export type CominsTreeTableProps<TData> = Omit<
   | "onLoadMore"
   | "pagination"
   | "rowProps"
+  | "estimatedRowDetailHeight"
+  | "expandedRowIds"
+  | "getRowDetailHeight"
+  | "isRowExpandable"
+  | "onChangeExpandedRowIds"
+  | "renderRowDetail"
   | "tree"
 > & {
   data: readonly CominsTreeNode<TData>[];
@@ -261,6 +344,12 @@ export type CominsTreeTableProps<TData> = Omit<
   onLoadMore?: never;
   pagination?: never;
   rowProps?: Omit<CominsTableRowProps<TData>, "draggable"> & { draggable?: never };
+  estimatedRowDetailHeight?: never;
+  expandedRowIds?: never;
+  getRowDetailHeight?: never;
+  isRowExpandable?: never;
+  onChangeExpandedRowIds?: never;
+  renderRowDetail?: never;
   tree: true;
 };
 
@@ -271,12 +360,70 @@ type VisibleRowEntry<TData> = {
   visibleIndex: number;
 };
 
+type CominsVirtualWindow<TData> = {
+  mixed: boolean;
+  renderOffset: number;
+  scrollHeight: number;
+  slots: Array<CominsVirtualSlot<TData>>;
+};
+
+type CominsMixedVirtualProjection<TData> = {
+  heightIndex: CominsHeightIndex;
+  keys: string[];
+  slotIndexByRowId: Map<CominsRowId, number>;
+  slots: Array<CominsDataVirtualSlot<TData>>;
+};
+
+type CominsCommittedDetailObserverSnapshot<TData> = Readonly<{
+  contentWidth: number;
+  projection: CominsMixedVirtualProjection<TData> | null;
+  viewportHeight: number;
+}>;
+
+type CominsVirtualProjection = {
+  mixed: false;
+  projectedDataIndexes: readonly number[];
+  rowHeight: number;
+  rowIds: readonly CominsRowId[];
+  visibleRowCount: number;
+} | {
+  heightIndex: CominsHeightIndex;
+  keys: readonly string[];
+  mixed: true;
+};
+
+type CominsPendingVirtualAnchor = {
+  anchor: CominsScrollAnchor;
+  previousKeys: readonly string[];
+  previousLogicalScrollTop: number;
+  previousPhysicalScrollTop: number;
+  previousViewportHeight: number;
+};
+
+type CominsPendingDetailAnchor = CominsPendingVirtualAnchor & {
+  revision: number;
+  status: "cancelled" | "pending";
+};
+
+type CominsLogicalAnchorTransaction = {
+  actualPhysical: number;
+  requestedPhysical: number;
+  revision: number;
+  targetLogical: number;
+};
+
+type CominsObservedDetail = {
+  element: HTMLDivElement;
+  rowId: CominsRowId;
+};
+
 type CominsTreeRenderContext<TData> = {
   entriesByRowId: Map<CominsRowId, CominsVisibleTreeRow<TData>>;
   onExpand: (nodeIds?: readonly CominsRowId[]) => void;
   onFold: (nodeIds?: readonly CominsRowId[]) => void;
   onToggle: (rowId: CominsRowId) => void;
   summaryRows: readonly TData[];
+  treeColumnId: string | null;
 };
 
 type CominsTableInnerProps<TData> = CominsTableProps<TData> & {
@@ -306,6 +453,83 @@ function createVisibleRowEntries<TData>(
   }
 
   return entries;
+}
+
+function getCominsVirtualProjectionKeys(projection: CominsVirtualProjection) {
+  if (projection.mixed) {
+    return projection.keys;
+  }
+
+  return projection.projectedDataIndexes.flatMap((dataIndex) => {
+    const rowId = projection.rowIds[dataIndex];
+
+    return rowId === undefined ? [] : [getCominsDataSlotKey(rowId)];
+  });
+}
+
+function captureCominsVirtualAnchor(input: {
+  logicalScrollTop?: number;
+  physicalScrollTop: number;
+  projection: CominsVirtualProjection;
+  viewportHeight: number;
+}): CominsPendingVirtualAnchor | undefined {
+  const previousKeys = getCominsVirtualProjectionKeys(input.projection);
+  const previousLogicalScrollTop =
+    input.logicalScrollTop ??
+    (input.projection.mixed
+      ? getCominsMixedVirtualRange({
+          heightIndex: input.projection.heightIndex,
+          overscan: 0,
+          physicalScrollTop: input.physicalScrollTop,
+          viewportHeight: input.viewportHeight,
+        }).logicalScrollTop
+      : (() => {
+          const metrics = getCominsScrollScale(
+            input.projection.visibleRowCount * input.projection.rowHeight,
+            input.viewportHeight,
+          );
+
+          return Math.min(
+            metrics.logicalScrollableHeight,
+            Math.max(0, input.physicalScrollTop) * metrics.scrollScale,
+          );
+        })());
+  const anchor = input.projection.mixed
+    ? captureCominsScrollAnchor({
+        heightIndex: input.projection.heightIndex,
+        keys: previousKeys,
+        logicalScrollTop: previousLogicalScrollTop,
+      })
+    : (() => {
+        if (input.projection.visibleRowCount === 0) {
+          return undefined;
+        }
+
+        const previousIndex = Math.min(
+          input.projection.visibleRowCount - 1,
+          Math.floor(previousLogicalScrollTop / input.projection.rowHeight),
+        );
+        const key = previousKeys[previousIndex];
+
+        return key === undefined
+          ? undefined
+          : {
+              key,
+              offsetWithinSlot:
+                previousLogicalScrollTop - previousIndex * input.projection.rowHeight,
+              previousIndex,
+            };
+      })();
+
+  return anchor
+    ? {
+        anchor,
+        previousKeys,
+        previousLogicalScrollTop,
+        previousPhysicalScrollTop: input.physicalScrollTop,
+        previousViewportHeight: input.viewportHeight,
+      }
+    : undefined;
 }
 
 function toClassName(value: CominsClassValue) {
@@ -580,6 +804,92 @@ function renderCominsComponentSlots<TData>(
         {renderCominsBuiltInComponent(component as never, payload as never, interaction)}
       </span>
     ));
+}
+
+function blockCominsColumnPlaceholderInteraction(event: React.SyntheticEvent<HTMLElement>) {
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function blurCominsColumnPlaceholderFocus(event: React.FocusEvent<HTMLElement>) {
+  event.stopPropagation();
+
+  if (event.target instanceof HTMLElement) {
+    event.target.blur();
+  }
+}
+
+const cominsColumnPlaceholderNativeBoundaries = new WeakSet<HTMLElement>();
+
+function bindCominsColumnPlaceholderNativeBoundary(element: HTMLElement | null) {
+  if (!element || cominsColumnPlaceholderNativeBoundaries.has(element)) {
+    return;
+  }
+
+  const blockActiveInput = (event: Event) => {
+    if (element.hasAttribute("inert") && element.getAttribute("aria-hidden") === "true") {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+
+  element.addEventListener("change", blockActiveInput, true);
+  element.addEventListener("input", blockActiveInput, true);
+  cominsColumnPlaceholderNativeBoundaries.add(element);
+}
+
+const COMINS_COLUMN_PLACEHOLDER_INTERACTION_PROPS = {
+  onBeforeInputCapture: blockCominsColumnPlaceholderInteraction,
+  onBlurCapture: blockCominsColumnPlaceholderInteraction,
+  onChangeCapture: blockCominsColumnPlaceholderInteraction,
+  onClickCapture: blockCominsColumnPlaceholderInteraction,
+  onContextMenuCapture: blockCominsColumnPlaceholderInteraction,
+  onDoubleClickCapture: blockCominsColumnPlaceholderInteraction,
+  onFocusCapture: blurCominsColumnPlaceholderFocus,
+  onInputCapture: blockCominsColumnPlaceholderInteraction,
+  onKeyDownCapture: blockCominsColumnPlaceholderInteraction,
+  onKeyPressCapture: blockCominsColumnPlaceholderInteraction,
+  onKeyUpCapture: blockCominsColumnPlaceholderInteraction,
+  onMouseDownCapture: blockCominsColumnPlaceholderInteraction,
+  onMouseMoveCapture: blockCominsColumnPlaceholderInteraction,
+  onMouseOutCapture: blockCominsColumnPlaceholderInteraction,
+  onMouseOverCapture: blockCominsColumnPlaceholderInteraction,
+  onMouseUpCapture: blockCominsColumnPlaceholderInteraction,
+  onPointerCancelCapture: blockCominsColumnPlaceholderInteraction,
+  onPointerDownCapture: blockCominsColumnPlaceholderInteraction,
+  onPointerMoveCapture: blockCominsColumnPlaceholderInteraction,
+  onPointerOutCapture: blockCominsColumnPlaceholderInteraction,
+  onPointerOverCapture: blockCominsColumnPlaceholderInteraction,
+  onPointerUpCapture: blockCominsColumnPlaceholderInteraction,
+  onResetCapture: blockCominsColumnPlaceholderInteraction,
+  onScrollCapture: blockCominsColumnPlaceholderInteraction,
+  onSubmitCapture: blockCominsColumnPlaceholderInteraction,
+  onTouchCancelCapture: blockCominsColumnPlaceholderInteraction,
+  onTouchEndCapture: blockCominsColumnPlaceholderInteraction,
+  onTouchMoveCapture: blockCominsColumnPlaceholderInteraction,
+  onTouchStartCapture: blockCominsColumnPlaceholderInteraction,
+  onWheelCapture: blockCominsColumnPlaceholderInteraction,
+} satisfies React.HTMLAttributes<HTMLElement>;
+
+function getCominsColumnPlaceholderText(label: React.ReactNode, fallback: string): string {
+  const collectPlainText = (node: React.ReactNode): string => {
+    if (typeof node === "string" || typeof node === "number") {
+      return String(node);
+    }
+
+    if (Array.isArray(node)) {
+      return node.map(collectPlainText).join("");
+    }
+
+    if (isValidElement<{ children?: React.ReactNode }>(node) && typeof node.type === "string") {
+      return collectPlainText(node.props.children);
+    }
+
+    return "";
+  };
+  const plainText = collectPlainText(label).trim();
+
+  return plainText || fallback;
 }
 
 function renderCominsContentWithComponents<TData>(
@@ -1045,6 +1355,9 @@ function CominsTableInner<TData>(
     data,
     "data-testid": dataTestId,
     emptyComponent,
+    estimatedRowDetailHeight,
+    expandedRowIds,
+    getRowDetailHeight,
     getRowId,
     hasMoreRows = false,
     infiniteScroll = false,
@@ -1066,6 +1379,7 @@ function CominsTableInner<TData>(
     onClickRow,
     onContextMenuCell,
     onContextMenuRow,
+    onChangeExpandedRowIds,
     onDoubleClickCell,
     onDoubleClickRow,
     onKeyDownCell,
@@ -1076,6 +1390,9 @@ function CominsTableInner<TData>(
     persistHeaderWhenEmpty = true,
     rowHeight = 36,
     rowProps,
+    isRowExpandable,
+    renderRowDetail,
+    showColumnMoveHandle = true,
     showHeader = true,
     skeletonRowCount,
     style,
@@ -1092,37 +1409,57 @@ function CominsTableInner<TData>(
   const copiedCellRef = useRef<CominsCopiedCell | null>(null);
   const copiedRangeRef = useRef<CominsCopiedCellRange | null>(null);
   const copiedRowRef = useRef<CominsCopiedRow<TData> | null>(null);
+  const detailMeasurementsRef = useRef(
+    new Map<CominsRowId, CominsDetailMeasurement>(),
+  );
+  const detailElementsRef = useRef(
+    new Map<Element, CominsObservedDetail>(),
+  );
+  const fallbackMeasuredDetailElementsRef = useRef(new Set<Element>());
+  const detailObserverRef = useRef<ResizeObserver | null>(null);
+  const detailObserverTargetsRef = useRef(new Set<Element>());
+  const committedDetailObserverSnapshotRef = useRef<
+    CominsCommittedDetailObserverSnapshot<TData> | null
+  >(null);
+  const rowDetailToggleElementsRef = useRef(new Map<CominsRowId, HTMLButtonElement>());
   const activePointerGestureCleanupRef = useRef<(() => void) | null>(null);
   const columnPointerInteractionRef = useRef<CominsColumnPointerInteraction | null>(null);
+  const columnMoveAnimationCleanupRef = useRef<(() => void) | null>(null);
+  const columnMoveAnimationSnapshotRef = useRef<Map<HTMLElement, number> | null>(null);
+  const headerRendererBodyRef = useRef(new Map<string, { body: React.ReactNode; renderer: unknown }>());
   const lastCellAnchorRef = useRef<CominsCellAddress | null>(null);
   const lazyAbortControllerRef = useRef<AbortController | null>(null);
   const lazyLoadingReasonRef = useRef<CominsLazyLoadReason | null>(null);
+  const onLazyLoadRef = useRef(onLazyLoad);
   const lazyRequestIdRef = useRef(0);
-  const lazyRowsRef = useRef<readonly TData[]>(data);
-  const lazyTotalRowsRef = useRef<number | undefined>(undefined);
   const lastLoadMoreRowCountRef = useRef<number | null>(null);
   const lastRowAnchorRef = useRef<CominsRowId | null>(null);
   const rangeDragAnchorRef = useRef<CominsCellAddress | null>(null);
   const rangeDragLastAddressRef = useRef<CominsCellAddress | null>(null);
   const rangeDragMovedRef = useRef(false);
   const rowMoveStateRef = useRef<CominsRowMoveState | null>(null);
+  const anchorRevisionRef = useRef(0);
+  const logicalAnchorTransactionRef = useRef<CominsLogicalAnchorTransaction | null>(null);
+  const pendingDetailAnchorRef = useRef<CominsPendingDetailAnchor | null>(null);
   const pendingScrollTopRef = useRef(0);
+  const previousVirtualProjectionRef = useRef<CominsVirtualProjection | null>(null);
   const scrollCommitTimeoutRef = useRef<number | null>(null);
   const scrollFrameRef = useRef<number | null>(null);
   const suppressedSortClickRef = useRef<CominsSuppressedSortClick | null>(null);
   const [containerHeight, setContainerHeight] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [detailLayoutVersion, setDetailLayoutVersion] = useState(0);
   const [movingColumnId, setMovingColumnId] = useState<string | null>(null);
   const [movingGroupId, setMovingGroupId] = useState<string | null>(null);
   const [columnMovePointer, setColumnMovePointer] = useState<{ x: number; y: number } | null>(null);
-  const [columnMoveTargetId, setColumnMoveTargetId] = useState<string | null>(null);
-  const [lazyLoadingReason, setLazyLoadingReason] = useState<CominsLazyLoadReason | null>(null);
-  const [lazyRows, setLazyRows] = useState<readonly TData[]>(data);
-  const [lazyTotalRows, setLazyTotalRows] = useState<number | undefined>(undefined);
+  const [columnMoveTarget, setColumnMoveTarget] = useState<CominsColumnMoveTarget | null>(null);
+  const [logicalAnchorTransaction, setLogicalAnchorTransaction] =
+    useState<CominsLogicalAnchorTransaction | null>(null);
   const [resizingColumnId, setResizingColumnId] = useState<string | null>(null);
   const [rowMoveState, setRowMoveState] = useState<CominsRowMoveState | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
-  const effectiveData = lazyLoad ? lazyRows : data;
+  const rowDetailIdPrefix = useId();
+  const effectiveData = data;
   const [state, setState] = useState(() =>
     createCominsTableState({
       columnGroups,
@@ -1139,6 +1476,35 @@ function CominsTableInner<TData>(
   const virtualBufferSize = Math.max(0, Math.floor(Number.isFinite(bufferSize) ? Number(bufferSize) : 10));
   const resolvedLazyLoadBatchSize = Math.max(1, Math.floor(lazyLoadBatchSize));
   const resolvedLazyLoadThreshold = Math.max(0, Math.floor(lazyLoadThreshold ?? infiniteScrollThreshold));
+  const hasLazyLoadHandler = typeof onLazyLoad === "function";
+  const rowDetailEnabled = typeof renderRowDetail === "function" && !treeContext;
+  const normalizedExpandedRowIds = useMemo(() => {
+    const seen = new Set<CominsRowId>();
+
+    return (expandedRowIds ?? []).filter((rowId) => {
+      if (seen.has(rowId)) {
+        return false;
+      }
+
+      seen.add(rowId);
+      return true;
+    });
+  }, [expandedRowIds]);
+  const expandedRowIdSet = useMemo(
+    () => new Set(normalizedExpandedRowIds),
+    [normalizedExpandedRowIds],
+  );
+  const toggleRowDetail = (rowId: CominsRowId, expandable: boolean) => {
+    if (!rowDetailEnabled || !expandable || !onChangeExpandedRowIds) {
+      return;
+    }
+
+    onChangeExpandedRowIds(
+      expandedRowIdSet.has(rowId)
+        ? normalizedExpandedRowIds.filter((current) => current !== rowId)
+        : [...normalizedExpandedRowIds, rowId],
+    );
+  };
   const clearActivePointerGesture = () => {
     const cleanup = activePointerGestureCleanupRef.current;
 
@@ -1150,14 +1516,20 @@ function CominsTableInner<TData>(
     activePointerGestureCleanupRef.current = cleanup;
   };
 
+  useLayoutEffect(() => {
+    onLazyLoadRef.current = onLazyLoad;
+  }, [onLazyLoad]);
+
   const requestLazyLoad = (reason: CominsLazyLoadReason) => {
-    if (!lazyLoad || lazyLoadMode !== "append" || !onLazyLoad || lazyLoadingReasonRef.current) {
+    const lazyLoadHandler = onLazyLoadRef.current;
+
+    if (!lazyLoad || lazyLoadMode !== "append" || !lazyLoadHandler || lazyLoadingReasonRef.current) {
       return;
     }
 
     const currentRowsLength = stateRef.current.rows.length;
 
-    if (reason === "scroll" && lazyTotalRowsRef.current !== undefined && currentRowsLength >= lazyTotalRowsRef.current) {
+    if (reason === "scroll" && (!hasMoreRows || loading || loadingMore)) {
       return;
     }
 
@@ -1176,26 +1548,22 @@ function CominsTableInner<TData>(
         containerRef.current.scrollTop = 0;
       }
     }
-    setLazyLoadingReason(reason);
+    let result: Promise<void> | void;
 
-    void onLazyLoad({
-      limit: resolvedLazyLoadBatchSize,
-      offset,
-      reason,
-      signal: controller.signal,
-    })
-      .then((result) => {
-        if (controller.signal.aborted || lazyRequestIdRef.current !== requestId) {
-          return;
-        }
+    try {
+      result = lazyLoadHandler({
+        limit: resolvedLazyLoadBatchSize,
+        offset,
+        reason,
+        signal: controller.signal,
+      });
+    } catch {
+      lazyLoadingReasonRef.current = null;
+      lazyAbortControllerRef.current = null;
+      return;
+    }
 
-        const nextRows = reason === "scroll" ? [...lazyRowsRef.current, ...result.rows] : [...result.rows];
-
-        lazyRowsRef.current = nextRows;
-        lazyTotalRowsRef.current = result.total;
-        setLazyRows(nextRows);
-        setLazyTotalRows(result.total);
-      })
+    void Promise.resolve(result)
       .catch(() => {
         // Error and retry UI are intentionally left to the consumer in this API pass.
       })
@@ -1206,31 +1574,11 @@ function CominsTableInner<TData>(
 
         lazyLoadingReasonRef.current = null;
         lazyAbortControllerRef.current = null;
-        setLazyLoadingReason(null);
       });
   };
 
   useEffect(() => {
-    lazyRowsRef.current = lazyRows;
-  }, [lazyRows]);
-
-  useEffect(() => {
-    lazyTotalRowsRef.current = lazyTotalRows;
-  }, [lazyTotalRows]);
-
-  useEffect(() => {
-    if (lazyLoad) {
-      return;
-    }
-
-    lazyRowsRef.current = data;
-    setLazyRows(data);
-    lazyTotalRowsRef.current = undefined;
-    setLazyTotalRows(undefined);
-  }, [data, lazyLoad]);
-
-  useEffect(() => {
-    if (!lazyLoad || !onLazyLoad) {
+    if (!lazyLoad || !hasLazyLoadHandler) {
       return undefined;
     }
 
@@ -1242,7 +1590,7 @@ function CominsTableInner<TData>(
       lazyAbortControllerRef.current?.abort();
       lazyAbortControllerRef.current = null;
     };
-  }, [lazyLoad, onLazyLoad, resolvedLazyLoadBatchSize]);
+  }, [hasLazyLoadHandler, lazyLoad, resolvedLazyLoadBatchSize]);
 
   useEffect(() => {
     const previousInput = stateInputRef.current;
@@ -1274,6 +1622,18 @@ function CominsTableInner<TData>(
     const next = canPreserveSelection(current, nextState)
       ? { ...nextState, selection: current.selection }
       : nextState;
+
+    if (previousInput.getRowId !== getRowId) {
+      const previousRowById = new Map(
+        current.rowIds.map((rowId, index) => [rowId, current.rows[index]]),
+      );
+
+      next.rowIds.forEach((rowId, index) => {
+        if (previousRowById.has(rowId) && previousRowById.get(rowId) !== next.rows[index]) {
+          detailMeasurementsRef.current.delete(rowId);
+        }
+      });
+    }
 
     stateRef.current = next;
     setState(next);
@@ -1329,6 +1689,218 @@ function CominsTableInner<TData>(
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    reconcileCominsDetailMeasurements(
+      detailMeasurementsRef.current,
+      new Set(state.rowIds),
+    );
+  }, [state.rowIds]);
+
+  const updateMixedProjectionDetailHeight = (
+    snapshot: CominsCommittedDetailObserverSnapshot<TData>,
+    rowId: CominsRowId,
+    height: number,
+    width: number,
+  ) => {
+    const projection = snapshot.projection;
+
+    if (!projection || width !== snapshot.contentWidth) {
+      return false;
+    }
+
+    const slotIndex = projection.slotIndexByRowId.get(rowId);
+    const slot = slotIndex === undefined ? undefined : projection.slots[slotIndex];
+
+    if (slotIndex === undefined || slot?.detail?.mode !== "auto") {
+      return false;
+    }
+
+    const nextSlotHeight =
+      projection.heightIndex.getHeight(slotIndex) - slot.detail.height + height;
+    const delta = projection.heightIndex.updateHeight(slotIndex, nextSlotHeight);
+
+    slot.detail.estimated = false;
+    slot.detail.height = height;
+    return delta !== 0;
+  };
+
+  const applyDetailMeasurementUpdates = (
+    updates: ReadonlyArray<{
+      height: number;
+      rowId: CominsRowId;
+      width: number;
+    }>,
+  ) => {
+    const snapshot = committedDetailObserverSnapshotRef.current;
+
+    if (!snapshot) {
+      return;
+    }
+
+    const accepted = updates.filter(({ height, rowId, width }) => {
+      const current = detailMeasurementsRef.current.get(rowId);
+
+      return (
+        !current ||
+        current.width !== width ||
+        Math.abs(current.height - height) >= 0.5
+      );
+    });
+
+    if (accepted.length === 0) {
+      return;
+    }
+
+    const projection = snapshot.projection;
+    const viewport = containerRef.current;
+    const viewportHeight = viewport?.clientHeight || snapshot.viewportHeight;
+    const currentPendingDetailAnchor = pendingDetailAnchorRef.current;
+    const pendingAnchor =
+      currentPendingDetailAnchor?.status === "pending"
+        ? currentPendingDetailAnchor
+        : !currentPendingDetailAnchor && projection && viewport
+        ? captureCominsVirtualAnchor({
+            logicalScrollTop:
+              logicalAnchorTransactionRef.current &&
+              Math.abs(
+                viewport.scrollTop -
+                  logicalAnchorTransactionRef.current.actualPhysical,
+              ) <= 0.5
+                ? logicalAnchorTransactionRef.current.targetLogical
+                : undefined,
+            physicalScrollTop: viewport.scrollTop,
+            projection: {
+              heightIndex: projection.heightIndex,
+              keys: projection.keys,
+              mixed: true,
+            },
+            viewportHeight,
+          })
+        : undefined;
+    let updatedActiveIndex = false;
+
+    for (const update of accepted) {
+      detailMeasurementsRef.current.set(update.rowId, {
+        height: update.height,
+        width: update.width,
+      });
+      updatedActiveIndex =
+        updateMixedProjectionDetailHeight(
+          snapshot,
+          update.rowId,
+          update.height,
+          update.width,
+        ) || updatedActiveIndex;
+    }
+
+    if (
+      pendingAnchor &&
+      updatedActiveIndex &&
+      currentPendingDetailAnchor?.status !== "pending"
+    ) {
+      const revision = anchorRevisionRef.current + 1;
+
+      anchorRevisionRef.current = revision;
+      pendingDetailAnchorRef.current = {
+        ...pendingAnchor,
+        revision,
+        status: "pending",
+      };
+    }
+
+    if (updatedActiveIndex || !projection) {
+      setDetailLayoutVersion((current) => current + 1);
+    }
+  };
+
+  const createDetailObserver = () => {
+    if (typeof ResizeObserver === "undefined") {
+      return null;
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const updates: Array<{
+        height: number;
+        rowId: CominsRowId;
+        width: number;
+      }> = [];
+
+      for (const entry of entries) {
+        const observed = detailElementsRef.current.get(entry.target);
+
+        if (!observed) {
+          continue;
+        }
+
+        const borderBox = Array.isArray(entry.borderBoxSize)
+          ? entry.borderBoxSize[0]
+          : entry.borderBoxSize;
+        const height =
+          borderBox?.blockSize ??
+          (entry.target as HTMLElement).getBoundingClientRect().height;
+        const width = Math.round(
+          (entry.target as HTMLElement).getBoundingClientRect().width,
+        );
+
+        if (Number.isFinite(height) && height > 0) {
+          updates.push({ height, rowId: observed.rowId, width });
+        }
+      }
+
+      applyDetailMeasurementUpdates(updates);
+    });
+
+    detailObserverRef.current = observer;
+
+    for (const observed of detailElementsRef.current.values()) {
+      detailObserverTargetsRef.current.add(observed.element);
+      observer.observe(observed.element);
+    }
+
+    return observer;
+  };
+
+  useLayoutEffect(() => {
+    return () => {
+      detailObserverRef.current?.disconnect();
+      detailObserverRef.current = null;
+      detailObserverTargetsRef.current.clear();
+      detailElementsRef.current.clear();
+      fallbackMeasuredDetailElementsRef.current.clear();
+      committedDetailObserverSnapshotRef.current = null;
+    };
+  }, []);
+
+  const disconnectDetailObserverIfIdle = () => {
+    if (detailElementsRef.current.size === 0) {
+      detailObserverRef.current?.disconnect();
+      detailObserverRef.current = null;
+      detailObserverTargetsRef.current.clear();
+    }
+  };
+
+  const registerDetailElement = (
+    rowId: CominsRowId,
+    mode: "auto" | "fixed",
+    element: HTMLDivElement | null,
+  ) => {
+    for (const [currentElement, observed] of detailElementsRef.current) {
+      if (observed.rowId === rowId && currentElement !== element) {
+        detailObserverRef.current?.unobserve(currentElement);
+        detailObserverTargetsRef.current.delete(currentElement);
+        detailElementsRef.current.delete(currentElement);
+        fallbackMeasuredDetailElementsRef.current.delete(currentElement);
+      }
+    }
+
+    if (!element || mode === "fixed") {
+      disconnectDetailObserverIfIdle();
+      return;
+    }
+
+    detailElementsRef.current.set(element, { element, rowId });
+  };
+
   const notifyChanges = (
     current: CominsTableState<TData>,
     next: CominsTableState<TData>,
@@ -1368,6 +1940,81 @@ function CominsTableInner<TData>(
   };
 
   const visibleColumns = useMemo(() => getCominsVisibleColumns(state), [state]);
+  const renderedHeaderRendererBodies = new Map<string, { body: React.ReactNode; renderer: unknown }>();
+
+  useEffect(() => {
+    headerRendererBodyRef.current = renderedHeaderRendererBodies;
+  });
+
+  const columnWidths = useMemo(() => {
+    const columnCount = visibleColumns.length;
+
+    if (columnCount === 0) {
+      return [];
+    }
+
+    const configuredWidths = visibleColumns.map((column) => state.columnState[column.id]?.width ?? column.width);
+
+    if (containerWidth <= 0) {
+      const fallbackWidth = `${100 / columnCount}%`;
+
+      return configuredWidths.map((width, index) => {
+        if (width === undefined) {
+          return fallbackWidth;
+        }
+
+        const column = visibleColumns[index]!;
+
+        return clampColumnWidth(
+          width,
+          getEffectiveColumnMinWidth(column),
+          getEffectiveColumnMaxWidth(column),
+        );
+      });
+    }
+
+    let fixedTotal = 0;
+
+    for (const width of configuredWidths) {
+      fixedTotal += width ?? 0;
+    }
+
+    const flexibleColumns = visibleColumns.filter((_column, index) => configuredWidths[index] === undefined);
+    const flexibleWidth =
+      flexibleColumns.length > 0 ? Math.max(0, (containerWidth - fixedTotal) / flexibleColumns.length) : 0;
+
+    return visibleColumns.map((column, index) => {
+      const width = configuredWidths[index] ?? flexibleWidth;
+      const minWidth = getEffectiveColumnMinWidth(column);
+      const maxWidth = column.maxWidth ?? Number.POSITIVE_INFINITY;
+
+      return Math.min(maxWidth, Math.max(minWidth, width));
+    });
+  }, [containerWidth, state.columnState, visibleColumns]);
+  const columnWidthTotal = useMemo(() => {
+    let totalWidth = 0;
+
+    for (const width of columnWidths) {
+      if (typeof width !== "number") {
+        return undefined;
+      }
+
+      totalWidth += width;
+    }
+
+    return totalWidth;
+  }, [columnWidths]);
+  const tableWidth = useMemo(() => {
+    if (typeof columnWidthTotal !== "number") {
+      return undefined;
+    }
+
+    return Math.max(containerWidth, columnWidthTotal);
+  }, [columnWidthTotal, containerWidth]);
+  const detailContentWidth =
+    typeof tableWidth === "number" && Number.isFinite(tableWidth)
+      ? Math.round(tableWidth)
+      : 0;
   const headerRows = useMemo(() => getCominsHeaderRows(state), [state]);
   const summaryValues = useMemo(
     () => (summary ? getCominsSummaryValues(treeContext?.summaryRows ?? state.rows, visibleColumns, summary) : null),
@@ -1415,12 +2062,233 @@ function CominsTableInner<TData>(
     () => (treeContext || state.sortModel.length === 0 ? null : getCominsSortedRowIndexes(state)),
     [state, treeContext],
   );
-  const visibleRowCount = sortedRowIndexes?.length ?? state.rows.length;
-  const pageStartIndex = Math.max(0, state.pagination.pageIndex) * Math.max(1, state.pagination.pageSize);
-  const rowWindow = useMemo(() => {
+  const projectedDataIndexes = useMemo(
+    () => sortedRowIndexes ?? state.rows.map((_row, index) => index),
+    [sortedRowIndexes, state.rows],
+  );
+  const visibleRowCount = projectedDataIndexes.length;
+  const pageSize = Math.max(1, state.pagination.pageSize);
+  const pageStartIndex = Math.max(0, state.pagination.pageIndex) * pageSize;
+  const effectiveExpandedRowIdSet = useMemo(() => {
+    if (!rowDetailEnabled) {
+      return new Set<CominsRowId>();
+    }
+
+    const next = new Set<CominsRowId>();
+    const startIndex = virtualized ? 0 : pageStartIndex;
+    const endIndex = virtualized
+      ? projectedDataIndexes.length
+      : Math.min(projectedDataIndexes.length, pageStartIndex + pageSize);
+
+    for (let visibleIndex = startIndex; visibleIndex < endIndex; visibleIndex += 1) {
+      const dataIndex = projectedDataIndexes[visibleIndex];
+
+      if (dataIndex === undefined) {
+        continue;
+      }
+
+      const row = state.rows[dataIndex];
+      const rowId = state.rowIds[dataIndex];
+
+      if (
+        row === undefined ||
+        rowId === undefined ||
+        !expandedRowIdSet.has(rowId)
+      ) {
+        continue;
+      }
+
+      const entry = { dataIndex, row, rowId, visibleIndex };
+      const params = { row: createEventRow(entry) };
+
+      if (isRowExpandable?.(params) !== false) {
+        next.add(rowId);
+      }
+    }
+
+    return next;
+  }, [
+    expandedRowIdSet,
+    isRowExpandable,
+    pageSize,
+    pageStartIndex,
+    projectedDataIndexes,
+    rowDetailEnabled,
+    state.rowIds,
+    state.rows,
+    virtualized,
+  ]);
+  const mixedProjection = useMemo<CominsMixedVirtualProjection<TData> | null>(() => {
+    if (!virtualized || effectiveExpandedRowIdSet.size === 0) {
+      return null;
+    }
+
+    const safeRowHeight = Math.max(1, rowHeight);
+    const slots = projectedDataIndexes.flatMap<CominsDataVirtualSlot<TData>>(
+      (dataIndex, visibleIndex) => {
+        const row = state.rows[dataIndex];
+        const rowId = state.rowIds[dataIndex];
+
+        if (row === undefined || rowId === undefined) {
+          return [];
+        }
+
+        let detail: CominsDataVirtualSlot<TData>["detail"] | null = null;
+
+        if (effectiveExpandedRowIdSet.has(rowId)) {
+          const params = { row: createEventRow({ dataIndex, row, rowId, visibleIndex }) };
+          const normalized = normalizeCominsDetailHeight(getRowDetailHeight?.(params));
+
+          detail =
+            normalized.mode === "auto"
+              ? {
+                  ...resolveCominsMeasuredDetailHeight(
+                    detailMeasurementsRef.current,
+                    rowId,
+                    detailContentWidth,
+                    normalizeCominsDetailEstimate(estimatedRowDetailHeight, rowHeight),
+                  ),
+                  mode: "auto",
+                }
+              : { estimated: false, height: normalized.height, mode: "fixed" };
+        }
+
+        return [
+          createCominsDataVirtualSlot({
+            dataIndex,
+            detail,
+            row,
+            rowHeight: safeRowHeight,
+            rowId,
+            visibleIndex,
+          }),
+        ];
+      },
+    );
+    const heightIndex = CominsHeightIndex.from(
+      slots.map((slot) => getCominsSlotHeight(slot, safeRowHeight)),
+    );
+    const slotIndexByRowId = new Map<CominsRowId, number>();
+
+    for (let slotIndex = 0; slotIndex < slots.length; slotIndex += 1) {
+      const rowId = slots[slotIndex]?.rowId;
+
+      if (rowId !== undefined && !slotIndexByRowId.has(rowId)) {
+        slotIndexByRowId.set(rowId, slotIndex);
+      }
+    }
+
+    return {
+      heightIndex,
+      keys: slots.map((slot) => slot.key),
+      slotIndexByRowId,
+      slots,
+    };
+  }, [
+    effectiveExpandedRowIdSet,
+    detailContentWidth,
+    estimatedRowDetailHeight,
+    getRowDetailHeight,
+    projectedDataIndexes,
+    rowHeight,
+    state.rowIds,
+    state.rows,
+    virtualized,
+  ]);
+  const detailObserverSnapshotCandidate = useMemo<
+    CominsCommittedDetailObserverSnapshot<TData>
+  >(
+    () => ({
+      contentWidth: detailContentWidth,
+      projection: mixedProjection,
+      viewportHeight:
+        containerHeight || Math.max(1, rowHeight) * 12,
+    }),
+    [containerHeight, detailContentWidth, mixedProjection, rowHeight],
+  );
+
+  useLayoutEffect(() => {
+    committedDetailObserverSnapshotRef.current =
+      detailObserverSnapshotCandidate;
+
+    if (detailElementsRef.current.size === 0) {
+      disconnectDetailObserverIfIdle();
+      return;
+    }
+
+    if (typeof ResizeObserver !== "undefined") {
+      const currentObserver = detailObserverRef.current;
+      const observer = currentObserver ?? createDetailObserver();
+
+      if (currentObserver) {
+        for (const observed of detailElementsRef.current.values()) {
+          if (!detailObserverTargetsRef.current.has(observed.element)) {
+            detailObserverTargetsRef.current.add(observed.element);
+            observer?.observe(observed.element);
+          }
+        }
+      }
+      return;
+    }
+
+    const updates: Array<{
+      height: number;
+      rowId: CominsRowId;
+      width: number;
+    }> = [];
+
+    for (const observed of detailElementsRef.current.values()) {
+      if (fallbackMeasuredDetailElementsRef.current.has(observed.element)) {
+        continue;
+      }
+
+      fallbackMeasuredDetailElementsRef.current.add(observed.element);
+      const rect = observed.element.getBoundingClientRect();
+
+      if (Number.isFinite(rect.height) && rect.height > 0) {
+        updates.push({
+          height: rect.height,
+          rowId: observed.rowId,
+          width: Math.round(rect.width),
+        });
+      }
+    }
+
+    applyDetailMeasurementUpdates(updates);
+  });
+  const rowWindow = useMemo<CominsVirtualWindow<TData>>(() => {
     if (virtualized) {
       const safeRowHeight = Math.max(1, rowHeight);
       const viewportHeight = containerHeight || rowHeight * 12;
+
+      if (mixedProjection) {
+        const activeAnchorTransaction =
+          logicalAnchorTransaction &&
+          Math.abs(
+            scrollTop - logicalAnchorTransaction.actualPhysical,
+          ) <= 0.5
+            ? logicalAnchorTransaction
+            : null;
+        const range = getCominsMixedVirtualRange({
+          heightIndex: mixedProjection.heightIndex,
+          overscan: virtualBufferSize,
+          physicalScrollTop:
+            activeAnchorTransaction?.requestedPhysical ?? scrollTop,
+          viewportHeight,
+        });
+
+        return {
+          mixed: true,
+          renderOffset: activeAnchorTransaction
+            ? activeAnchorTransaction.actualPhysical -
+              (activeAnchorTransaction.targetLogical -
+                range.logicalStartOffset)
+            : range.renderOffset,
+          scrollHeight: range.physicalScrollHeight,
+          slots: mixedProjection.slots.slice(range.startIndex, range.endIndex),
+        };
+      }
+
       const totalHeight = visibleRowCount * safeRowHeight;
       const maxPhysicalTotalHeight = 1_500_000;
       const physicalTotalHeight = Math.min(totalHeight, maxPhysicalTotalHeight);
@@ -1438,38 +2306,258 @@ function CominsTableInner<TData>(
       );
       const logicalTopSpacerHeight = startIndex * safeRowHeight;
       const renderOffset = scrollScale > 0 ? logicalTopSpacerHeight / scrollScale : logicalTopSpacerHeight;
-
-      return {
-        entries: createVisibleRowEntries(sortedRowIndexes, state.rows, state.rowIds, startIndex, endIndex),
-        renderOffset,
-        scrollHeight: physicalTotalHeight,
-      };
-    }
-
-    return {
-      entries: createVisibleRowEntries(
+      const entries = createVisibleRowEntries(
         sortedRowIndexes,
         state.rows,
         state.rowIds,
-        pageStartIndex,
-        pageStartIndex + Math.max(1, state.pagination.pageSize),
-      ),
+        startIndex,
+        endIndex,
+      );
+
+      return {
+        mixed: false,
+        renderOffset,
+        scrollHeight: physicalTotalHeight,
+        slots: entries.map((entry) =>
+          createCominsDataVirtualSlot({
+            ...entry,
+            detail: null,
+            rowHeight: safeRowHeight,
+          }),
+        ),
+      };
+    }
+
+    const entries = createVisibleRowEntries(
+      sortedRowIndexes,
+      state.rows,
+      state.rowIds,
+      pageStartIndex,
+      pageStartIndex + pageSize,
+    );
+
+    return {
+      mixed: false,
       renderOffset: 0,
       scrollHeight: 0,
+      slots: entries.map((entry) => {
+        let detail: CominsDataVirtualSlot<TData>["detail"] | null = null;
+
+        if (effectiveExpandedRowIdSet.has(entry.rowId)) {
+          const params = { row: createEventRow(entry) };
+          const normalized = normalizeCominsDetailHeight(
+            getRowDetailHeight?.(params),
+          );
+
+          detail =
+            normalized.mode === "auto"
+              ? {
+                  ...resolveCominsMeasuredDetailHeight(
+                    detailMeasurementsRef.current,
+                    entry.rowId,
+                    detailContentWidth,
+                    normalizeCominsDetailEstimate(estimatedRowDetailHeight, rowHeight),
+                  ),
+                  mode: "auto",
+                }
+              : {
+                  estimated: false,
+                  height: normalized.height,
+                  mode: "fixed",
+                };
+        }
+
+        return createCominsDataVirtualSlot({
+          ...entry,
+          detail,
+          rowHeight,
+        });
+      }),
     };
   }, [
     containerHeight,
+    detailContentWidth,
+    detailLayoutVersion,
+    effectiveExpandedRowIdSet,
+    estimatedRowDetailHeight,
+    getRowDetailHeight,
+    logicalAnchorTransaction,
+    mixedProjection,
     pageStartIndex,
     rowHeight,
     scrollTop,
+    pageSize,
     sortedRowIndexes,
-    state.pagination.pageSize,
     state.rowIds,
     state.rows,
     virtualBufferSize,
     virtualized,
     visibleRowCount,
   ]);
+  const currentVirtualProjection = useMemo<CominsVirtualProjection | null>(
+    () =>
+      !virtualized
+        ? null
+        : mixedProjection
+          ? {
+              heightIndex: mixedProjection.heightIndex,
+              keys: mixedProjection.keys,
+              mixed: true,
+            }
+          : {
+              mixed: false,
+              projectedDataIndexes,
+              rowHeight: Math.max(1, rowHeight),
+              rowIds: state.rowIds,
+              visibleRowCount,
+            },
+    [
+      mixedProjection,
+      projectedDataIndexes,
+      rowHeight,
+      state.rowIds,
+      virtualized,
+      visibleRowCount,
+    ],
+  );
+  const previousVirtualProjection = previousVirtualProjectionRef.current;
+  const pendingDetailAnchor = pendingDetailAnchorRef.current;
+  const pendingVirtualAnchor =
+    !pendingDetailAnchor &&
+    currentVirtualProjection &&
+    previousVirtualProjection &&
+    currentVirtualProjection !== previousVirtualProjection &&
+    containerRef.current
+      ? captureCominsVirtualAnchor({
+          logicalScrollTop:
+            logicalAnchorTransaction &&
+            Math.abs(
+              containerRef.current.scrollTop -
+                logicalAnchorTransaction.actualPhysical,
+            ) <= 0.5
+              ? logicalAnchorTransaction.targetLogical
+              : undefined,
+          physicalScrollTop: containerRef.current.scrollTop,
+          projection: previousVirtualProjection,
+          viewportHeight:
+            containerRef.current.clientHeight || containerHeight || rowHeight * 12,
+        })
+      : undefined;
+  const pendingAnchorTransaction =
+    pendingDetailAnchor?.status === "pending"
+      ? pendingDetailAnchor
+      : pendingVirtualAnchor;
+  useLayoutEffect(() => {
+    if (!currentVirtualProjection) {
+      previousVirtualProjectionRef.current = null;
+      pendingDetailAnchorRef.current = null;
+      logicalAnchorTransactionRef.current = null;
+      setLogicalAnchorTransaction(null);
+      return;
+    }
+
+    previousVirtualProjectionRef.current = currentVirtualProjection;
+
+    if (pendingDetailAnchor?.status === "cancelled") {
+      const currentPendingDetailAnchor = pendingDetailAnchorRef.current;
+
+      if (
+        currentPendingDetailAnchor?.revision ===
+          pendingDetailAnchor.revision &&
+        currentPendingDetailAnchor.status === "cancelled"
+      ) {
+        pendingDetailAnchorRef.current = null;
+      }
+      return;
+    }
+
+    const viewport = containerRef.current;
+
+    if (!viewport || !pendingAnchorTransaction) {
+      return;
+    }
+
+    const nextKeys = getCominsVirtualProjectionKeys(currentVirtualProjection);
+    const target = resolveCominsAnchorTarget({
+      anchor: pendingAnchorTransaction.anchor,
+      getNextHeight: (index) =>
+        currentVirtualProjection.mixed
+          ? currentVirtualProjection.heightIndex.getHeight(index)
+          : currentVirtualProjection.rowHeight,
+      nextKeys,
+      previousKeys: pendingAnchorTransaction.previousKeys,
+    });
+    const nextLogicalScrollTop = target
+      ? (currentVirtualProjection.mixed
+          ? currentVirtualProjection.heightIndex.getPrefixHeight(target.index)
+          : target.index * currentVirtualProjection.rowHeight) +
+        target.offsetWithinSlot
+      : 0;
+    const nextLogicalTotalHeight = currentVirtualProjection.mixed
+      ? currentVirtualProjection.heightIndex.getTotalHeight()
+      : currentVirtualProjection.visibleRowCount * currentVirtualProjection.rowHeight;
+    const nextPhysicalScrollTop = getCominsPhysicalScrollTop(
+      nextLogicalScrollTop,
+      nextLogicalTotalHeight,
+      viewport.clientHeight || pendingAnchorTransaction.previousViewportHeight,
+    );
+
+    if (pendingDetailAnchor) {
+      const currentPendingDetailAnchor = pendingDetailAnchorRef.current;
+
+      if (
+        currentPendingDetailAnchor?.revision !==
+          pendingDetailAnchor.revision ||
+        currentPendingDetailAnchor.status !== "pending"
+      ) {
+        return;
+      }
+    }
+
+    if (scrollFrameRef.current !== null) {
+      window.cancelAnimationFrame(scrollFrameRef.current);
+      scrollFrameRef.current = null;
+    }
+
+    viewport.scrollTop = nextPhysicalScrollTop;
+
+    if (pendingDetailAnchor) {
+      const currentPendingDetailAnchor = pendingDetailAnchorRef.current;
+
+      if (
+        currentPendingDetailAnchor?.revision !==
+          pendingDetailAnchor.revision ||
+        currentPendingDetailAnchor.status !== "pending"
+      ) {
+        return;
+      }
+    }
+
+    const actualPhysicalScrollTop = viewport.scrollTop;
+    const revision =
+      pendingDetailAnchor?.revision ??
+      anchorRevisionRef.current + 1;
+    const nextAnchorTransaction = currentVirtualProjection.mixed
+      ? {
+          actualPhysical: actualPhysicalScrollTop,
+          requestedPhysical: nextPhysicalScrollTop,
+          revision,
+          targetLogical: nextLogicalScrollTop,
+        }
+      : null;
+
+    anchorRevisionRef.current = Math.max(
+      anchorRevisionRef.current,
+      revision,
+    );
+    if (pendingDetailAnchor) {
+      pendingDetailAnchorRef.current = null;
+    }
+    logicalAnchorTransactionRef.current = nextAnchorTransaction;
+    pendingScrollTopRef.current = actualPhysicalScrollTop;
+    setLogicalAnchorTransaction(nextAnchorTransaction);
+    setScrollTop(actualPhysicalScrollTop);
+  }, [currentVirtualProjection, pendingAnchorTransaction]);
   const currentTheme = theme ?? state.theme;
   const densityClass =
     currentTheme.density === "compact"
@@ -1478,65 +2566,11 @@ function CominsTableInner<TData>(
         ? "text-[13px]"
         : "text-[length:var(--comins-font-size-base,12px)]";
   const selectedRowIdSet = useMemo(() => new Set(state.selection.rowIds), [state.selection.rowIds]);
-  const columnWidths = useMemo(() => {
-    const columnCount = visibleColumns.length;
-
-    if (columnCount === 0) {
-      return [];
-    }
-
-    const configuredWidths = visibleColumns.map((column) => state.columnState[column.id]?.width ?? column.width);
-
-    if (containerWidth <= 0) {
-      const fallbackWidth = `${100 / columnCount}%`;
-
-      return configuredWidths.map((width) => width ?? fallbackWidth);
-    }
-
-    let fixedTotal = 0;
-
-    for (const width of configuredWidths) {
-      fixedTotal += width ?? 0;
-    }
-
-    const flexibleColumns = visibleColumns.filter((_column, index) => configuredWidths[index] === undefined);
-    const flexibleWidth =
-      flexibleColumns.length > 0 ? Math.max(0, (containerWidth - fixedTotal) / flexibleColumns.length) : 0;
-
-    return visibleColumns.map((column, index) => {
-      const width = configuredWidths[index] ?? flexibleWidth;
-      const minWidth = getEffectiveColumnMinWidth(column);
-      const maxWidth = column.maxWidth ?? Number.POSITIVE_INFINITY;
-
-      return Math.min(maxWidth, Math.max(minWidth, width));
-    });
-  }, [containerWidth, state.columnState, visibleColumns]);
-  const columnWidthTotal = useMemo(() => {
-    let totalWidth = 0;
-
-    for (const width of columnWidths) {
-      if (typeof width !== "number") {
-        return undefined;
-      }
-
-      totalWidth += width;
-    }
-
-    return totalWidth;
-  }, [columnWidths]);
-  const tableWidth = useMemo(() => {
-    if (typeof columnWidthTotal !== "number") {
-      return undefined;
-    }
-
-    return Math.max(containerWidth, columnWidthTotal);
-  }, [columnWidthTotal, containerWidth]);
   const hasHorizontalOverflow =
     typeof columnWidthTotal === "number" && containerWidth > 0 ? columnWidthTotal > containerWidth + 1 : false;
-  const lazyHasMoreRows = lazyLoad && (lazyTotalRows === undefined || visibleRowCount < lazyTotalRows);
-  const resolvedHasMoreRows = lazyLoad ? lazyHasMoreRows : hasMoreRows;
-  const resolvedLoading = loading || lazyLoadingReason === "initial" || lazyLoadingReason === "refresh";
-  const resolvedLoadingMore = loadingMore || lazyLoadingReason === "scroll";
+  const resolvedHasMoreRows = hasMoreRows;
+  const resolvedLoading = loading;
+  const resolvedLoadingMore = loadingMore;
   const isEmpty = visibleRowCount === 0;
   const shouldRenderSkeleton = resolvedLoading && isEmpty;
   const shouldRenderEmpty = !resolvedLoading && isEmpty;
@@ -1549,13 +2583,21 @@ function CominsTableInner<TData>(
   const stateRowCount =
     (shouldRenderSkeleton ? resolvedSkeletonRowCount : shouldRenderEmpty ? 1 : 0) +
     (shouldRenderInfiniteLoadingRow ? 1 : 0);
-  const renderedRowsHeight = (rowWindow.entries.length + stateRowCount) * rowHeight;
+  const renderedRowsHeight =
+    rowWindow.slots.reduce(
+      (height, slot) => height + getCominsSlotHeight(slot, rowHeight),
+      0,
+    ) + stateRowCount * rowHeight;
   const emptyFillerHeight = virtualized ? 0 : Math.max(0, containerHeight - renderedRowsHeight);
   const renderedHeaderVisible = state.showHeader && (persistHeaderWhenEmpty || !isEmpty || resolvedLoading);
 
   const isCopyPasteKey = (event: React.KeyboardEvent, key: "c" | "v") =>
     (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === key;
-  const getVisibleEntryByRenderedIndex = (index: number) => rowWindow.entries[index];
+  const getVisibleEntryByRenderedIndex = (index: number) => {
+    const slot = rowWindow.slots[index];
+
+    return slot?.kind === "data" ? slot : undefined;
+  };
   const getVisibleRowIdsBetween = (
     current: CominsTableState<TData>,
     anchorRowId: CominsRowId,
@@ -1672,7 +2714,7 @@ function CominsTableInner<TData>(
     );
   };
 
-  const getColumnMoveTargetId = (clientX: number, clientY: number) => {
+  const getColumnMoveTarget = (clientX: number, clientY: number): CominsColumnMoveHeader | null => {
     const targetHeader = document
       .elementFromPoint(clientX, clientY)
       ?.closest<HTMLElement>("[data-comins-column-id], [data-comins-column-group-id]");
@@ -1681,14 +2723,36 @@ function CominsTableInner<TData>(
       return null;
     }
 
+    const depth = Number(targetHeader.dataset.cominsColumnDepth);
+
+    if (depth !== 0 && depth !== 1) {
+      return null;
+    }
+
     if (targetHeader.dataset.cominsColumnId) {
-      return targetHeader.dataset.cominsColumnId;
+      return {
+        depth,
+        id: targetHeader.dataset.cominsColumnId,
+        kind: "column",
+        parentGroupId: targetHeader.dataset.cominsColumnParentGroupId,
+      };
     }
 
     const groupId = targetHeader.dataset.cominsColumnGroupId;
-    const targetGroup = groupId ? stateRef.current.columnGroups.find((group) => group.id === groupId) : undefined;
 
-    return targetGroup?.children.find((childId) => visibleColumns.some((column) => column.id === childId)) ?? null;
+    return groupId ? { depth, id: groupId, kind: "group" } : null;
+  };
+  const getColumnMoveTargetIndex = (target: CominsColumnMoveHeader) => {
+    const targetColumnId =
+      target.kind === "column"
+        ? target.id
+        : stateRef.current.columnGroups
+            .find((group) => group.id === target.id)
+            ?.children.find((childId) => visibleColumns.some((column) => column.id === childId));
+
+    return targetColumnId
+      ? visibleColumns.findIndex((visibleColumn) => visibleColumn.id === targetColumnId)
+      : -1;
   };
 
   useImperativeHandle(
@@ -1747,7 +2811,7 @@ function CominsTableInner<TData>(
       setSortModel: (sortModel) => commitState((current) => setCominsSortModel(current, sortModel)),
       setSortState: (sort) => commitState((current) => setCominsSortState(current, sort)),
     }),
-    [rowWindow.entries, state, treeContext],
+    [rowWindow.slots, state, treeContext],
   );
 
   const clearColumnPointerInteraction = () => {
@@ -1765,16 +2829,103 @@ function CominsTableInner<TData>(
     setMovingColumnId(null);
     setMovingGroupId(null);
     setColumnMovePointer(null);
-    setColumnMoveTargetId(null);
+    setColumnMoveTarget(null);
   };
 
   useEffect(
     () => () => {
       clearColumnPointerInteraction();
       clearSuppressedSortClick();
+      columnMoveAnimationCleanupRef.current?.();
     },
     [],
   );
+
+  const captureColumnMoveAnimationSnapshot = () => {
+    columnMoveAnimationCleanupRef.current?.();
+    columnMoveAnimationCleanupRef.current = null;
+    columnMoveAnimationSnapshotRef.current = null;
+
+    if (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
+    const elements = [headerRef.current, containerRef.current, footerRef.current].flatMap((root) =>
+      root
+        ? Array.from(
+            root.querySelectorAll<HTMLElement>(
+              "[data-comins-column-id], [data-comins-cell-column-id], [data-comins-summary-column-id]",
+            ),
+          )
+        : [],
+    );
+    const snapshot = new Map<HTMLElement, number>();
+
+    for (const element of elements) {
+      snapshot.set(element, element.getBoundingClientRect().left);
+    }
+
+    columnMoveAnimationSnapshotRef.current = snapshot;
+  };
+
+  useLayoutEffect(() => {
+    const snapshot = columnMoveAnimationSnapshotRef.current;
+    columnMoveAnimationSnapshotRef.current = null;
+
+    if (!snapshot) {
+      return undefined;
+    }
+
+    const animatedElements: HTMLElement[] = [];
+
+    for (const [element, previousLeft] of snapshot) {
+      if (!element.isConnected) {
+        continue;
+      }
+
+      const offset = previousLeft - element.getBoundingClientRect().left;
+
+      if (Math.abs(offset) < 0.5) {
+        continue;
+      }
+
+      element.dataset.columnMoveAnimating = "prepare";
+      element.style.setProperty("--comins-column-move-offset", `${offset}px`);
+      animatedElements.push(element);
+    }
+
+    if (animatedElements.length === 0) {
+      return undefined;
+    }
+
+    void animatedElements[0]?.getBoundingClientRect();
+    let frame = 0;
+    let timeout = 0;
+    const cleanup = () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+
+      for (const element of animatedElements) {
+        delete element.dataset.columnMoveAnimating;
+        element.style.removeProperty("--comins-column-move-offset");
+      }
+
+      if (columnMoveAnimationCleanupRef.current === cleanup) {
+        columnMoveAnimationCleanupRef.current = null;
+      }
+    };
+
+    columnMoveAnimationCleanupRef.current = cleanup;
+    frame = window.requestAnimationFrame(() => {
+      for (const element of animatedElements) {
+        element.dataset.columnMoveAnimating = "true";
+        element.style.setProperty("--comins-column-move-offset", "0px");
+      }
+    });
+    timeout = window.setTimeout(cleanup, 220);
+
+    return cleanup;
+  }, [state.columnOrder]);
 
   const beginColumnPointerInteraction = (options: CominsColumnPointerOptions) => {
     if (options.event.button !== 0) {
@@ -1799,6 +2950,7 @@ function CominsTableInner<TData>(
       current.cancelSort = true;
       suppressPendingSort();
       options.activate(x, y);
+      setColumnMoveTarget({ ...options.source, status: "neutral" });
     };
     const handlePointerMove = (moveEvent: PointerEvent) => {
       const current = columnPointerInteractionRef.current;
@@ -1838,17 +2990,18 @@ function CominsTableInner<TData>(
       if (current.active) {
         moveEvent.preventDefault();
         setColumnMovePointer({ x: moveEvent.clientX, y: moveEvent.clientY });
-        setColumnMoveTargetId(getColumnMoveTargetId(moveEvent.clientX, moveEvent.clientY));
+        const target = getColumnMoveTarget(moveEvent.clientX, moveEvent.clientY);
+        setColumnMoveTarget(target ? { ...target, status: options.resolveTarget(target) } : null);
       }
     };
     const handlePointerUp = (upEvent: PointerEvent) => {
       const current = columnPointerInteractionRef.current;
 
       if (current === interaction && current.active) {
-        const targetId = getColumnMoveTargetId(upEvent.clientX, upEvent.clientY);
+        const target = getColumnMoveTarget(upEvent.clientX, upEvent.clientY);
 
-        if (targetId) {
-          options.commitTarget(targetId);
+        if (target && options.resolveTarget(target) === "valid") {
+          options.commitTarget(target);
         }
       }
 
@@ -1882,9 +3035,9 @@ function CominsTableInner<TData>(
       blocked: false,
       cancelSort: false,
       cleanup: () => {
-        window.removeEventListener("pointermove", handlePointerMove);
-        window.removeEventListener("pointerup", handlePointerUp);
-        window.removeEventListener("pointercancel", handlePointerCancel);
+        window.removeEventListener("pointermove", handlePointerMove, true);
+        window.removeEventListener("pointerup", handlePointerUp, true);
+        window.removeEventListener("pointercancel", handlePointerCancel, true);
         window.removeEventListener("keydown", handleKeyDown);
         window.removeEventListener("blur", handleWindowBlur);
       },
@@ -1910,30 +3063,43 @@ function CominsTableInner<TData>(
     }
 
     columnPointerInteractionRef.current = interaction;
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
-    window.addEventListener("pointercancel", handlePointerCancel);
+    window.addEventListener("pointermove", handlePointerMove, true);
+    window.addEventListener("pointerup", handlePointerUp, true);
+    window.addEventListener("pointercancel", handlePointerCancel, true);
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("blur", handleWindowBlur);
+
+    if (options.activateImmediately) {
+      activateCurrent(interaction.startX, interaction.startY);
+    }
   };
 
   const beginHeaderPointerInteraction = (
-    event: React.PointerEvent<HTMLTableCellElement>,
-    column: CominsTableRuntimeColumn<TData>,
+    event: React.PointerEvent<HTMLElement>,
+    cell: Extract<CominsHeaderCell<TData>, { kind: "column" }>,
+    activateImmediately = false,
   ) => {
+    const column = cell.column;
+
+    if (column.lockPosition) {
+      return;
+    }
+
+    const source: CominsColumnMoveHeader = {
+      depth: cell.groupId ? 1 : 0,
+      id: column.id,
+      kind: "column",
+      parentGroupId: cell.groupId,
+    };
     beginColumnPointerInteraction({
+      activateImmediately,
       activate: (x, y) => {
         setColumnMovePointer({ x, y });
-        setColumnMoveTargetId(column.id);
         setMovingGroupId(null);
         setMovingColumnId(column.id);
       },
-      commitTarget: (targetId) => {
-        if (targetId === column.id) {
-          return;
-        }
-
-        const targetIndex = visibleColumns.findIndex((visibleColumn) => visibleColumn.id === targetId);
+      commitTarget: (target) => {
+        const targetIndex = getColumnMoveTargetIndex(target);
 
         if (targetIndex >= 0) {
           const current = stateRef.current;
@@ -1943,6 +3109,7 @@ function CominsTableInner<TData>(
             next !== current &&
             next.columnOrder.some((columnId, index) => columnId !== current.columnOrder[index])
           ) {
+            captureColumnMoveAnimationSnapshot();
             commitState(next, { columnLayoutChanged: true });
           }
         }
@@ -1950,27 +3117,46 @@ function CominsTableInner<TData>(
       event,
       id: column.id,
       kind: "column",
+      resolveTarget: (target) => {
+        const targetIndex = getColumnMoveTargetIndex(target);
+
+        if (targetIndex < 0) {
+          return "invalid";
+        }
+
+        const current = stateRef.current;
+        const next = moveCominsColumn(current, column.id, targetIndex);
+
+        return getCominsColumnDropStatus(
+          source,
+          target,
+          next.columnOrder.some((columnId, index) => columnId !== current.columnOrder[index]),
+        );
+      },
       sortColumnId: column.id,
+      source,
     });
   };
 
   const beginGroupPointerInteraction = (
-    event: React.PointerEvent<HTMLTableCellElement>,
+    event: React.PointerEvent<HTMLElement>,
     group: CominsTableRuntimeColumnGroup,
+    activateImmediately = false,
   ) => {
+    if (group.lockPosition) {
+      return;
+    }
+
+    const source: CominsColumnMoveHeader = { depth: 0, id: group.id, kind: "group" };
     beginColumnPointerInteraction({
+      activateImmediately,
       activate: (x, y) => {
         setColumnMovePointer({ x, y });
-        setColumnMoveTargetId(group.children[0] ?? null);
         setMovingColumnId(null);
         setMovingGroupId(group.id);
       },
-      commitTarget: (targetId) => {
-        if (group.children.includes(targetId)) {
-          return;
-        }
-
-        const targetIndex = visibleColumns.findIndex((visibleColumn) => visibleColumn.id === targetId);
+      commitTarget: (target) => {
+        const targetIndex = getColumnMoveTargetIndex(target);
 
         if (targetIndex >= 0) {
           const current = stateRef.current;
@@ -1980,6 +3166,7 @@ function CominsTableInner<TData>(
             next !== current &&
             next.columnOrder.some((columnId, index) => columnId !== current.columnOrder[index])
           ) {
+            captureColumnMoveAnimationSnapshot();
             commitState(next, { columnLayoutChanged: true });
           }
         }
@@ -1987,6 +3174,23 @@ function CominsTableInner<TData>(
       event,
       id: group.id,
       kind: "group",
+      resolveTarget: (target) => {
+        const targetIndex = getColumnMoveTargetIndex(target);
+
+        if (targetIndex < 0) {
+          return "invalid";
+        }
+
+        const current = stateRef.current;
+        const next = moveCominsColumnGroup(current, group.id, targetIndex);
+
+        return getCominsColumnDropStatus(
+          source,
+          target,
+          next.columnOrder.some((columnId, index) => columnId !== current.columnOrder[index]),
+        );
+      },
+      source,
     });
   };
 
@@ -2260,21 +3464,40 @@ function CominsTableInner<TData>(
     ? visibleColumns.find((visibleColumn) => visibleColumn.id === movingColumnId)
     : undefined;
   const movingGroup = movingGroupId ? state.columnGroups.find((group) => group.id === movingGroupId) : undefined;
-  const movingHeaderLabel = movingColumn?.label ?? movingGroup?.label;
+  const movingHeaderLabel = movingColumn
+    ? getCominsColumnPlaceholderText(movingColumn.label, movingColumn.id)
+    : movingGroup
+      ? getCominsColumnPlaceholderText(movingGroup.label, movingGroup.id)
+      : undefined;
 
   const renderHeaderCell = (cell: CominsHeaderCell<TData>, fallbackIndex: number) => {
     if (cell.kind === "group") {
+      const isDropTarget = columnMoveTarget?.kind === "group" && columnMoveTarget.id === cell.groupId;
+      const isGroupPlaceholder = movingGroupId === cell.groupId;
+      const groupPositionLocked = cell.group.lockPosition === true;
+      const groupPlaceholderLabel = getCominsColumnPlaceholderText(cell.group.label, cell.groupId);
       return (
         <th
+          aria-label={isGroupPlaceholder ? groupPlaceholderLabel : undefined}
           className={[
             "comins-table__th comins-table__group-th px-3 py-2 text-left font-semibold",
-            movingGroupId === cell.groupId ? "comins-column-moving" : undefined,
+            isGroupPlaceholder ? "comins-column-moving" : undefined,
           ]
             .filter(Boolean)
             .join(" ")}
           colSpan={cell.colSpan}
-          data-column-moving={movingGroupId === cell.groupId ? "true" : undefined}
-          data-column-placeholder={movingGroupId === cell.groupId ? "true" : undefined}
+          data-column-drop-target={isDropTarget ? "true" : undefined}
+          data-column-drop-valid={
+            isDropTarget && columnMoveTarget.status !== "neutral"
+              ? columnMoveTarget.status === "valid"
+                ? "true"
+                : "false"
+              : undefined
+          }
+          data-column-moving={isGroupPlaceholder ? "true" : undefined}
+          data-column-placeholder={isGroupPlaceholder ? "true" : undefined}
+          data-column-position-locked={groupPositionLocked ? "true" : undefined}
+          data-comins-column-depth="0"
           data-comins-column-group-id={cell.groupId}
           data-testid={`header-group-${cell.groupId}`}
           key={`group-${cell.groupId}`}
@@ -2283,9 +3506,38 @@ function CominsTableInner<TData>(
           scope="colgroup"
         >
           <span aria-hidden="true" className="comins-column-drop-marker" />
-          <span className="comins-table__header-content" data-comins-header-body="true">
-            <span className="comins-table__header-label">{cell.group.label}</span>
+          <span
+            {...(isGroupPlaceholder ? COMINS_COLUMN_PLACEHOLDER_INTERACTION_PROPS : {})}
+            aria-hidden={isGroupPlaceholder ? "true" : undefined}
+            className="comins-table__header-content"
+            data-comins-header-body="true"
+            inert={isGroupPlaceholder ? true : undefined}
+            ref={bindCominsColumnPlaceholderNativeBoundary}
+          >
+            {showColumnMoveHandle && !groupPositionLocked ? (
+              <span
+                aria-hidden="true"
+                className="comins-column-move-handle"
+                data-comins-column-move-handle="true"
+                data-testid={`column-group-move-handle-${cell.groupId}`}
+                draggable={false}
+                onClick={(event) => event.stopPropagation()}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  beginGroupPointerInteraction(event, cell.group, true);
+                }}
+              >
+                <CominsTableIcon name="columnMove" />
+              </span>
+            ) : null}
+            <span className="comins-table__header-label">{isGroupPlaceholder ? null : cell.group.label}</span>
           </span>
+          {isGroupPlaceholder ? (
+            <span aria-hidden="true" className="comins-column-placeholder-label">
+              {groupPlaceholderLabel}
+            </span>
+          ) : null}
           <span
             aria-hidden="true"
             className="comins-table__resize"
@@ -2378,6 +3630,7 @@ function CominsTableInner<TData>(
     const showSortPriority = sortRule !== null && state.sortModel.length > 1;
     const isMovingGroupChild = Boolean(movingGroup?.children.includes(column.id));
     const isColumnPlaceholder = movingColumnId === column.id || isMovingGroupChild;
+    const columnPlaceholderLabel = getCominsColumnPlaceholderText(column.label, column.id);
     const headerClassName = [
       "comins-table__th px-3 py-2 text-left font-semibold",
       movingColumnId === column.id ? "comins-column-moving" : undefined,
@@ -2386,7 +3639,22 @@ function CominsTableInner<TData>(
       .filter(Boolean)
       .join(" ");
     const headerPayload = createHeaderComponentPayload(state, column, safeIndex);
-    const headerRendererBody = column.header?.renderer ? column.header.renderer(headerPayload) : null;
+    const headerRenderer = column.header?.renderer;
+    const cachedHeaderRendererBody = headerRenderer ? headerRendererBodyRef.current.get(column.id) : undefined;
+
+    const shouldRefreshHeaderRendererBody =
+      Boolean(headerRenderer) && (!isColumnPlaceholder || cachedHeaderRendererBody?.renderer !== headerRenderer);
+    const headerRendererBody = headerRenderer
+      ? shouldRefreshHeaderRendererBody
+        ? headerRenderer(headerPayload)
+        : cachedHeaderRendererBody?.body
+      : null;
+
+    if (headerRenderer && shouldRefreshHeaderRendererBody) {
+      renderedHeaderRendererBodies.set(column.id, { body: headerRendererBody, renderer: headerRenderer });
+    } else if (headerRenderer && cachedHeaderRendererBody) {
+      renderedHeaderRendererBodies.set(column.id, cachedHeaderRendererBody);
+    }
     const headerLeftSlots = !column.header?.renderer
       ? renderCominsComponentSlots(column.header?.components, headerPayload, "left")
       : [];
@@ -2394,17 +3662,31 @@ function CominsTableInner<TData>(
       ? renderCominsComponentSlots(column.header?.components, headerPayload, "right")
       : [];
     const hasHeaderComponents = headerLeftSlots.length > 0 || headerRightSlots.length > 0;
+    const isDropTarget = columnMoveTarget?.kind === "column" && columnMoveTarget.id === column.id;
+    const columnPositionLocked = column.lockPosition === true;
 
     return (
       <th
         {...headerProps}
+        aria-label={isColumnPlaceholder ? columnPlaceholderLabel : headerProps["aria-label"]}
+        aria-labelledby={isColumnPlaceholder ? undefined : headerProps["aria-labelledby"]}
         className={headerClassName}
         colSpan={cell.colSpan}
-        data-column-drop-target={columnMoveTargetId === column.id ? "true" : undefined}
+        data-column-drop-target={isDropTarget ? "true" : undefined}
+        data-column-drop-valid={
+          isDropTarget && columnMoveTarget.status !== "neutral"
+            ? columnMoveTarget.status === "valid"
+              ? "true"
+              : "false"
+            : undefined
+        }
         data-column-moving={movingColumnId === column.id ? "true" : undefined}
         data-column-placeholder={isColumnPlaceholder ? "true" : undefined}
+        data-column-position-locked={columnPositionLocked ? "true" : undefined}
+        data-comins-column-depth={cell.groupId ? "1" : "0"}
         data-comins-column-id={column.id}
         data-comins-column-index={safeIndex}
+        data-comins-column-parent-group-id={cell.groupId}
         data-sort-count={sortRule ? state.sortModel.length : undefined}
         data-sort-direction={sortRule?.rule.direction}
         data-sort-priority={sortRule?.priority}
@@ -2413,6 +3695,11 @@ function CominsTableInner<TData>(
         aria-sort={column.sort ? getAriaSortState(state.sortModel, column.id) : undefined}
         key={`column-${column.id}`}
         onClick={(event) => {
+          if (isColumnPlaceholder) {
+            event.preventDefault();
+            return;
+          }
+
           headerProps.onClick?.(event);
 
           if (event.defaultPrevented || !column.sort) {
@@ -2426,6 +3713,11 @@ function CominsTableInner<TData>(
           activateHeaderSort(column, event.shiftKey);
         }}
         onKeyDown={(event) => {
+          if (isColumnPlaceholder) {
+            event.preventDefault();
+            return;
+          }
+
           headerProps.onKeyDown?.(event);
 
           if (event.defaultPrevented || !column.sort) {
@@ -2437,24 +3729,45 @@ function CominsTableInner<TData>(
             activateHeaderSort(column, event.shiftKey);
           }
         }}
-        onPointerDown={(event) => beginHeaderPointerInteraction(event, column)}
+        onPointerDown={(event) => beginHeaderPointerInteraction(event, cell)}
         rowSpan={cell.rowSpan}
         scope="col"
         style={{ width: columnState?.width ?? column.width, ...headerProps.style }}
-        tabIndex={column.sort ? 0 : undefined}
+        tabIndex={column.sort && !isColumnPlaceholder ? 0 : undefined}
       >
         <span aria-hidden="true" className="comins-column-drop-marker" />
         <span
+          {...(isColumnPlaceholder ? COMINS_COLUMN_PLACEHOLDER_INTERACTION_PROPS : {})}
+          aria-hidden={isColumnPlaceholder ? "true" : undefined}
           className="comins-table__header-content"
           data-comins-header-body="true"
           data-comins-header-components={hasHeaderComponents ? "true" : undefined}
           data-comins-sort-indicator-visible={sortIndicatorVisible ? "true" : undefined}
+          inert={isColumnPlaceholder ? true : undefined}
+          ref={bindCominsColumnPlaceholderNativeBoundary}
         >
           <span className="comins-table__header-slot" data-comins-header-slot="left">
+            {showColumnMoveHandle && !columnPositionLocked ? (
+              <span
+                aria-hidden="true"
+                className="comins-column-move-handle"
+                data-comins-column-move-handle="true"
+                data-testid={`column-move-handle-${column.id}`}
+                draggable={false}
+                onClick={(event) => event.stopPropagation()}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  beginHeaderPointerInteraction(event, cell, true);
+                }}
+              >
+                <CominsTableIcon name="columnMove" />
+              </span>
+            ) : null}
             {headerLeftSlots}
           </span>
           <span className="comins-table__header-label">
-            {column.header?.renderer ? headerRendererBody : column.label}
+            {column.header?.renderer ? headerRendererBody : isColumnPlaceholder ? null : column.label}
           </span>
           <span className="comins-sort-meta" data-sort-visible={sortIndicatorVisible ? "true" : undefined}>
             <span
@@ -2464,7 +3777,15 @@ function CominsTableInner<TData>(
               data-sort-visible={sortIndicatorVisible ? "true" : undefined}
               data-testid={`sort-indicator-${column.id}`}
             >
-              <span className="comins-sort-icon" />
+              <CominsTableIcon
+                name={
+                  sortIndicatorState === "asc"
+                    ? "sortAscending"
+                    : sortIndicatorState === "desc"
+                      ? "sortDescending"
+                      : "sortUnsorted"
+                }
+              />
             </span>
             {showSortPriority ? (
               <span
@@ -2485,6 +3806,11 @@ function CominsTableInner<TData>(
             {headerRightSlots}
           </span>
         </span>
+        {isColumnPlaceholder ? (
+          <span aria-hidden="true" className="comins-column-placeholder-label">
+            {columnPlaceholderLabel}
+          </span>
+        ) : null}
         <span
           aria-hidden="true"
           className="comins-table__resize"
@@ -2615,8 +3941,33 @@ function CominsTableInner<TData>(
   };
   const handleBodyScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const bodyViewport = event.currentTarget;
+    const activeAnchorTransaction =
+      logicalAnchorTransactionRef.current;
+    const pendingDetailAnchor = pendingDetailAnchorRef.current;
 
     pendingScrollTopRef.current = bodyViewport.scrollTop;
+    if (
+      pendingDetailAnchor?.status === "pending" &&
+      Math.abs(
+        bodyViewport.scrollTop -
+          pendingDetailAnchor.previousPhysicalScrollTop,
+      ) > 0.5
+    ) {
+      pendingDetailAnchorRef.current = {
+        ...pendingDetailAnchor,
+        status: "cancelled",
+      };
+    }
+    if (
+      activeAnchorTransaction &&
+      Math.abs(
+        bodyViewport.scrollTop -
+          activeAnchorTransaction.actualPhysical,
+      ) > 0.5
+    ) {
+      logicalAnchorTransactionRef.current = null;
+      setLogicalAnchorTransaction(null);
+    }
     requestInfiniteLoadIfNeeded(bodyViewport);
 
     if (scrollCommitTimeoutRef.current !== null) {
@@ -2742,12 +4093,41 @@ function CominsTableInner<TData>(
               </td>
             </tr>
           ) : null}
-          {rowWindow.entries.map((entry, entryIndex) => {
+          {rowWindow.slots.map((slot, entryIndex) => {
+            if (slot.kind !== "data") {
+              return null;
+            }
+
+            const entry = slot;
             const rowRuntimeProps = resolveRowProps(rowProps, entry.row, entry.visibleIndex);
             const isRowSelected = selectedRowIdSet.has(entry.rowId);
-            const isViewportEndRow = emptyFillerHeight === 0 && entryIndex === rowWindow.entries.length - 1;
+            const isLastRenderedSlot = entryIndex === rowWindow.slots.length - 1;
+            const isLastLogicalRow = entry.visibleIndex === visibleRowCount - 1;
+            const virtualContentFillsViewport = rowWindow.scrollHeight >= containerHeight - 1;
+            const isViewportEndRow =
+              isLastRenderedSlot &&
+              (virtualized
+                ? isLastLogicalRow && virtualContentFillsViewport
+                : emptyFillerHeight === 0);
             const rowCustomBackground = getRowCustomBackground(rowRuntimeProps.style);
-            const rowRenderKey = virtualized ? `virtual-row-slot-${entryIndex}` : String(entry.rowId);
+            const rowRenderKey =
+              virtualized && rowWindow.mixed
+                ? entry.key
+                : virtualized
+                  ? `virtual-row-slot-${entryIndex}`
+                  : String(entry.rowId);
+            const rowDetailParams: CominsRowDetailParams<TData> = { row: createEventRow(entry) };
+            const rowDetailExpandable = rowDetailEnabled && (isRowExpandable?.(rowDetailParams) ?? true);
+            const rowDetailExpanded = rowDetailExpandable && effectiveExpandedRowIdSet.has(entry.rowId);
+            const rowDetailFixedHeight =
+              rowDetailExpanded && entry.detail?.mode === "fixed"
+                ? entry.detail.height
+                : undefined;
+            const rowDetailMode = entry.detail?.mode ?? "fixed";
+            const rowDetailIdToken = `${typeof entry.rowId}-${encodeURIComponent(String(entry.rowId))}`;
+            const rowDetailId = `comins-row-detail-${encodeURIComponent(rowDetailIdPrefix)}-${rowDetailIdToken}`;
+            const rowDetailContentId = `${rowDetailId}-content`;
+            const rowDetailToggleId = `${rowDetailId}-toggle`;
 
             return (
               <Fragment key={rowRenderKey}>
@@ -2763,7 +4143,7 @@ function CominsTableInner<TData>(
                 aria-selected={isRowSelected}
                 className={[
                   "comins-table__tr",
-                  isViewportEndRow ? "comins-table__tr--viewport-end" : undefined,
+                  isViewportEndRow && !rowDetailExpanded ? "comins-table__tr--viewport-end" : undefined,
                   isRowSelected ? "comins-row-selected" : undefined,
                   rowRuntimeProps.className,
                 ]
@@ -2796,7 +4176,7 @@ function CominsTableInner<TData>(
                     return;
                   }
 
-                  commitState((current) => selectRow(current, entry.rowId));
+                  commitState((current) => selectRowForContextMenu(current, entry.rowId));
                   lastRowAnchorRef.current = entry.rowId;
                   onContextMenuRow?.(createRowPayload(event, entry));
                 }}
@@ -2887,18 +4267,22 @@ function CominsTableInner<TData>(
                   );
                   const tooltip =
                     typeof column.cell?.tooltip === "function" ? column.cell.tooltip(cellPayload) : column.cell?.tooltip;
-                  const treeEntry = columnIndex === 0 ? treeContext?.entriesByRowId.get(entry.rowId) : undefined;
+                  const treeEntry =
+                    column.id === treeContext?.treeColumnId
+                      ? treeContext.entriesByRowId.get(entry.rowId)
+                      : undefined;
                   const renderedCellContent = treeEntry ? (
                     <span
                       className="comins-tree-cell-content"
                       style={{ "--comins-tree-depth": treeEntry.depth } as React.CSSProperties}
                     >
                       {treeEntry.hasChildren ? (
-                        <button
+                        <CominsTableIconButton
                           aria-expanded={treeEntry.expanded}
                           aria-label={`${treeEntry.expanded ? "Collapse" : "Expand"} ${String(entry.rowId)}`}
                           className="comins-tree-expander"
                           data-testid={`tree-expander-${String(entry.rowId)}`}
+                          icon={treeEntry.expanded ? "disclosureExpanded" : "disclosureCollapsed"}
                           onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
@@ -2906,10 +4290,7 @@ function CominsTableInner<TData>(
                           }}
                           onMouseDown={(event) => event.stopPropagation()}
                           onPointerDown={(event) => event.stopPropagation()}
-                          type="button"
-                        >
-                          {treeEntry.expanded ? "▾" : "▸"}
-                        </button>
+                        />
                       ) : (
                         <span aria-hidden="true" className="comins-tree-expander-spacer" />
                       )}
@@ -2924,7 +4305,6 @@ function CominsTableInner<TData>(
                       aria-disabled={cellDisabled ? "true" : undefined}
                       className={[
                         "comins-table__td px-3 py-2",
-                        columnIndex === 0 ? "comins-table__td--with-row-handle" : undefined,
                         isCellInRange ? "comins-cell-range-selected" : undefined,
                         cellClassName,
                       ]
@@ -2996,6 +4376,11 @@ function CominsTableInner<TData>(
                         onClickCell?.(createCellPayload(event, entry, column, columnIndex, rawValue));
                       }}
                       onContextMenu={(event) => {
+                        if ((event.target as Element).closest(".comins-row-detail-expander")) {
+                          event.stopPropagation();
+                          return;
+                        }
+
                         if (cellDisabled) {
                           event.preventDefault();
                           event.stopPropagation();
@@ -3003,7 +4388,7 @@ function CominsTableInner<TData>(
                         }
 
                         commitState((current) => {
-                          const nextRows = selectRow(current, entry.rowId);
+                          const nextRows = selectRowForContextMenu(current, entry.rowId);
 
                           return cellSelection ? selectCell(nextRows, address) : nextRows;
                         });
@@ -3019,6 +4404,11 @@ function CominsTableInner<TData>(
                         }
                       }}
                       onDoubleClick={(event) => {
+                        if ((event.target as Element).closest(".comins-row-detail-expander")) {
+                          event.stopPropagation();
+                          return;
+                        }
+
                         if (onDoubleClickCell) {
                           event.stopPropagation();
                         }
@@ -3055,29 +4445,80 @@ function CominsTableInner<TData>(
                       title={typeof tooltip === "string" ? tooltip : undefined}
                       tabIndex={cellDisabled ? -1 : 0}
                     >
-                      {columnIndex === 0 && rowRuntimeProps.draggable ? (
-                        <span
-                          aria-hidden="true"
-                          className="comins-row-drag-handle"
-                          data-testid={`row-drag-handle-${String(entry.rowId)}`}
-                          draggable={false}
-                          onClick={(event) => event.stopPropagation()}
-                          onMouseDown={(event) => event.stopPropagation()}
-                          onPointerDown={(event) =>
-                            beginRowHandlePointerDrag(
-                              event,
-                              entry,
-                              rowRuntimeProps.disabled,
-                              rowRuntimeProps.draggable,
-                            )
-                          }
-                        />
-                      ) : null}
-                      {renderedCellContent}
+                      {columnIndex === 0 && (rowDetailEnabled || rowRuntimeProps.draggable) ? (
+                        <div className="comins-row-cell-content">
+                          <span className="comins-row-leading-controls">
+                            {rowDetailEnabled ? (
+                              rowDetailExpandable ? (
+                                <CominsRowDetailToggle
+                                  controlsId={rowDetailContentId}
+                                  disabled={!onChangeExpandedRowIds}
+                                  expanded={rowDetailExpanded}
+                                  id={rowDetailToggleId}
+                                  label={`${rowDetailExpanded ? "Collapse" : "Expand"} ${String(entry.rowId)} details`}
+                                  onElement={(element) => {
+                                    if (element) {
+                                      rowDetailToggleElementsRef.current.set(entry.rowId, element);
+                                    } else {
+                                      rowDetailToggleElementsRef.current.delete(entry.rowId);
+                                    }
+                                  }}
+                                  onToggle={() => toggleRowDetail(entry.rowId, rowDetailExpandable)}
+                                  testId={`row-detail-toggle-${String(entry.rowId)}`}
+                                />
+                              ) : (
+                                <span
+                                  aria-hidden="true"
+                                  className="comins-row-detail-expander-spacer"
+                                  data-comins-row-leading-control="disclosure"
+                                />
+                              )
+                            ) : null}
+                            {rowRuntimeProps.draggable ? (
+                              <span
+                                aria-hidden="true"
+                                className="comins-row-drag-handle"
+                                data-comins-row-leading-control="drag"
+                                data-testid={`row-drag-handle-${String(entry.rowId)}`}
+                                draggable={false}
+                                onClick={(event) => event.stopPropagation()}
+                                onMouseDown={(event) => event.stopPropagation()}
+                                onPointerDown={(event) =>
+                                  beginRowHandlePointerDrag(
+                                    event,
+                                    entry,
+                                    rowRuntimeProps.disabled,
+                                    rowRuntimeProps.draggable,
+                                  )
+                                }
+                              />
+                            ) : null}
+                          </span>
+                          <div className="comins-row-cell-content__value">{renderedCellContent}</div>
+                        </div>
+                      ) : (
+                        renderedCellContent
+                      )}
                     </td>
                   );
                 })}
               </tr>
+              {rowDetailExpanded ? (
+                <CominsRowDetailRow
+                  colSpan={visibleColumns.length}
+                  contentId={rowDetailContentId}
+                  fixedHeight={rowDetailFixedHeight}
+                  labelId={rowDetailToggleId}
+                  onContentElement={(element) =>
+                    registerDetailElement(entry.rowId, rowDetailMode, element)
+                  }
+                  ownerId={String(entry.rowId)}
+                  testId={`row-detail-content-${String(entry.rowId)}`}
+                  getToggleElement={() => rowDetailToggleElementsRef.current.get(entry.rowId) ?? null}
+                >
+                  {renderRowDetail?.(rowDetailParams)}
+                </CominsRowDetailRow>
+              ) : null}
               </Fragment>
             );
           })}
@@ -3136,6 +4577,7 @@ function CominsTableInner<TData>(
                   <td
                     className={["comins-table__summary-cell px-3 py-2", cell.className].filter(Boolean).join(" ")}
                     colSpan={cell.colSpan}
+                    data-comins-summary-column-id={cell.column.id}
                     data-testid={`summary-cell-${cell.column.id}`}
                     key={cell.column.id}
                     style={cell.style}
@@ -3155,7 +4597,8 @@ function CominsTableInner<TData>(
           data-testid="column-move-ghost"
           style={{ left: columnMovePointer.x + 12, top: columnMovePointer.y + 12 }}
         >
-          {movingHeaderLabel}
+          <CominsTableIcon name="columnMove" />
+          <span className="comins-column-move-ghost__label">{movingHeaderLabel}</span>
         </div>
       ) : null}
     </div>
@@ -3166,6 +4609,9 @@ function CominsTreeTableInner<TData>(
   {
     data,
     defaultExpandAll = true,
+    estimatedRowDetailHeight: _estimatedRowDetailHeight,
+    expandedRowIds: _expandedRowIds,
+    getRowDetailHeight: _getRowDetailHeight,
     getRowId,
     hasMoreRows: _hasMoreRows,
     infiniteScroll: _infiniteScroll,
@@ -3176,11 +4622,14 @@ function CominsTreeTableInner<TData>(
     lazyLoadThreshold: _lazyLoadThreshold,
     loadingMore: _loadingMore,
     onChangeData,
+    onChangeExpandedRowIds: _onChangeExpandedRowIds,
     onChangeSort,
     onChangeSortModel,
     onLazyLoad: _onLazyLoad,
     onLoadMore: _onLoadMore,
     rowProps,
+    isRowExpandable: _isRowExpandable,
+    renderRowDetail: _renderRowDetail,
     tree: _tree,
     ...props
   }: CominsTreeTableProps<TData>,
@@ -3188,9 +4637,17 @@ function CominsTreeTableInner<TData>(
 ) {
   const initialDefaultExpandAll = useRef(defaultExpandAll).current;
   const [treeSortModel, setTreeSortModel] = useState<CominsSortModel>([]);
+  const treeColumns = useMemo(
+    () =>
+      props.columns.map((column, index) =>
+        index === 0 ? { ...column, lockPosition: true } : column,
+      ),
+    [props.columns],
+  );
+  const treeColumnId = treeColumns[0]?.id ?? treeColumns[0]?.field ?? null;
   const sortedTree = useMemo(
-    () => getSortedCominsTree(data, props.columns, treeSortModel),
-    [data, props.columns, treeSortModel],
+    () => getSortedCominsTree(data, treeColumns, treeSortModel),
+    [data, treeColumns, treeSortModel],
   );
   const visibleTreeRows = useMemo(
     () => flattenCominsTree(sortedTree, getRowId, { defaultExpandAll: initialDefaultExpandAll }),
@@ -3220,8 +4677,9 @@ function CominsTreeTableInner<TData>(
       onToggle: (rowId) =>
         onChangeData?.(toggleCominsTreeNode(data, rowId, getRowId, { defaultExpandAll: initialDefaultExpandAll })),
       summaryRows: getCominsTreeLeafItems(data),
+      treeColumnId,
     }),
-    [data, entriesByRowId, getRowId, initialDefaultExpandAll, onChangeData],
+    [data, entriesByRowId, getRowId, initialDefaultExpandAll, onChangeData, treeColumnId],
   );
   const handleFlatDataChange = (nextRows: TData[]) => {
     let nextTree: readonly CominsTreeNode<TData>[] = data;
@@ -3240,6 +4698,7 @@ function CominsTreeTableInner<TData>(
   };
   const flatProps: CominsTableProps<TData> = {
     ...props,
+    columns: treeColumns,
     data: visibleTreeRows.map((entry) => entry.item),
     getRowId,
     hasMoreRows: false,

@@ -4,16 +4,18 @@ import { CominsTable } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { createBaseColumns } from "../fixtures/columns";
 import { createExampleRows } from "../fixtures/people";
+import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
 export function BasicFeature() {
-  const [rows, setRows] = useState(() => createExampleRows(100));
+  const { text } = usePlaygroundLocale();
+  const [rows, setRows] = useState(() => createExampleRows(30));
 
   return (
     <section className="feature-panel">
       <FeatureSampleSection
-        description="comins-table 기본 예제입니다."
+        description={text(defineLocalizedText("comins-table 기본 예제입니다.", "Basic comins-table example."))}
         id="basic"
-        title="기본"
+        title={text(defineLocalizedText("기본", "Basic"))}
       >
         <CominsTable
           className="example-table"

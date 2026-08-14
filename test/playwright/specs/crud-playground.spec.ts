@@ -21,7 +21,8 @@ test("CRUD example adds every click, updates active row JSON, and deletes select
   await page.goto("/");
   await page.goto("/examples/crud");
 
-  await expect(page.locator("tbody tr[data-testid^='row-']")).toHaveCount(100);
+  await expect(page.getByRole("button", { exact: true, name: "필터링" })).toHaveCount(0);
+  await expect(page.locator("tbody tr[data-testid^='row-']")).toHaveCount(30);
   await page.getByTestId("cell-b-name").click();
   await expect(page.getByTestId("selected-row-state")).toHaveCount(0);
   await expect(page.getByTestId("row-b")).toHaveAttribute("data-selected-row", "true");
@@ -32,7 +33,7 @@ test("CRUD example adds every click, updates active row JSON, and deletes select
 
   await page.getByRole("button", { exact: true, name: "추가" }).click();
   await page.getByRole("button", { exact: true, name: "추가" }).click();
-  await expect(page.locator("tbody tr[data-testid^='row-']")).toHaveCount(102);
+  await expect(page.locator("tbody tr[data-testid^='row-']")).toHaveCount(32);
   await expect(page.getByTestId("row-new-1")).toBeVisible();
   await expect(page.getByTestId("row-new-2")).toBeVisible();
 
@@ -55,6 +56,10 @@ test("CRUD example adds every click, updates active row JSON, and deletes select
   await page.getByTestId("row-c").click({ modifiers: ["Shift"] });
 
   await page.getByTestId("header-age").click();
+  for (const rowId of ["a", "b", "c"]) {
+    await expect(page.getByTestId(`row-${rowId}`)).toHaveAttribute("data-selected-row", "true");
+    await expect(page.getByTestId(`row-${rowId}`)).toHaveCSS("background-color", "rgb(209, 250, 229)");
+  }
   await page.getByRole("button", { exact: true, name: "삭제" }).click();
 
   await expect(page.getByTestId("row-a")).toHaveCount(0);
@@ -64,6 +69,9 @@ test("CRUD example adds every click, updates active row JSON, and deletes select
   await page.getByTestId("header-age").click();
   await expect(page.getByTestId("row-new-1")).toBeVisible();
   await expect(page.getByTestId("row-new-2")).toBeVisible();
+
+  await page.getByRole("button", { exact: true, name: "초기화" }).click();
+  await expect(page.locator("tbody tr[data-testid^='row-']")).toHaveCount(30);
 
   expect(diagnostics).toEqual([]);
 });

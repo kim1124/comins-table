@@ -1,9 +1,13 @@
-import { dataTableOptionGuide } from "../docs/dataTableOptionGuide";
+import { getDataTableOptionGuide } from "../docs/dataTableOptionGuide";
+import { usePlaygroundLocale } from "../i18n/playground-locale";
 
 export function OptionGuideSection() {
+  const { locale } = usePlaygroundLocale();
+  const guide = getDataTableOptionGuide(locale);
+
   return (
     <section className="option-guide" data-testid="option-guide">
-      {dataTableOptionGuide.map((group) => (
+      {guide.map((group) => (
         <article className="option-guide__group" key={group.title}>
           <h2>{group.title}</h2>
           <dl>

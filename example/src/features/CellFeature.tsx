@@ -5,18 +5,20 @@ import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { Button } from "../components/ui/button";
 import { createExampleRows, type PersonRow } from "../fixtures/people";
+import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
 type CellEventState = {
   detail: string;
-  title: string;
+  kind: "blocked" | "click" | "context" | "double" | "idle" | "keydown";
 };
 
 export function CellFeature() {
+  const { text } = usePlaygroundLocale();
   const [eventLog, setEventLog] = useState<CellEventState>({
-    detail: "셀을 클릭, 더블클릭, 우클릭하거나 키보드로 조작하면 마지막 이벤트가 표시됩니다.",
-    title: "셀 이벤트 대기",
+    detail: "",
+    kind: "idle",
   });
-  const [rows, setRows] = useState(() => createExampleRows(100));
+  const [rows, setRows] = useState(() => createExampleRows(30));
   const columns: Array<CominsTableColumn<PersonRow>> = [
     {
       cell: {
@@ -58,7 +60,7 @@ export function CellFeature() {
       cell: {
         renderer: ({ row }) => (
           <span data-testid={`cell-renderer-${String(row.id)}`}>
-            <Button size="default" variant="secondary">renderer:{`Data ${row.index + 1}`}</Button>
+            <Button size="default" variant="secondary">{`renderer:Data ${row.index + 1}`}</Button>
           </span>
         ),
       },
@@ -96,13 +98,28 @@ export function CellFeature() {
   return (
     <section className="feature-panel">
       <FeatureSampleSection
-        description="Td Cell 포맷, 스타일, cell.renderer, onClickCell, onContextMenuCell, 복사/붙여넣기 차단 guard를 확인합니다."
+        description={text(defineLocalizedText(
+          "Td Cell 포맷, 스타일, cell.renderer, onClickCell, onContextMenuCell, 복사/붙여넣기 차단 guard를 확인합니다.",
+          "Inspect Td Cell formatting, styling, cell.renderer, click/context-menu events, and copy/paste guards.",
+        ))}
         id="cell"
-        title="Td Cell 예제"
+        title={text(defineLocalizedText("Td Cell 예제", "Td Cell example"))}
       >
         <Alert data-testid="cell-event-alert">
-          <AlertTitle>{eventLog.title}</AlertTitle>
-          <AlertDescription>{eventLog.detail}</AlertDescription>
+          <AlertTitle>{text({
+            blocked: defineLocalizedText("차단된 셀", "Blocked cell"),
+            click: defineLocalizedText("셀 클릭", "Cell click"),
+            context: defineLocalizedText("셀 우클릭", "Cell context menu"),
+            double: defineLocalizedText("셀 더블클릭", "Cell double click"),
+            idle: defineLocalizedText("셀 이벤트 대기", "Waiting for a cell event"),
+            keydown: defineLocalizedText("셀 키다운", "Cell keydown"),
+          }[eventLog.kind])}</AlertTitle>
+          <AlertDescription>
+            {eventLog.detail || text(defineLocalizedText(
+              "셀을 클릭, 더블클릭, 우클릭하거나 키보드로 조작하면 마지막 이벤트가 표시됩니다.",
+              "Click, double-click, right-click, or use the keyboard on a cell to show the latest event.",
+            ))}
+          </AlertDescription>
         </Alert>
         <CominsTable
           className="example-table cell-style-example-table"
@@ -114,19 +131,19 @@ export function CellFeature() {
           onClickCell={({ column, row }) => {
             setEventLog(
               column.id === "locked" && row.id === "b"
-                ? { detail: `${String(row.id)} / ${column.id}`, title: "차단된 셀" }
-                : { detail: `${String(row.id)} / ${column.id}`, title: "셀 클릭" },
+                ? { detail: `${String(row.id)} / ${column.id}`, kind: "blocked" }
+                : { detail: `${String(row.id)} / ${column.id}`, kind: "click" },
             );
           }}
           onContextMenuCell={({ column, event, row }) => {
             event.preventDefault();
-            setEventLog({ detail: `${String(row.id)} / ${column.id}`, title: "셀 우클릭" });
+            setEventLog({ detail: `${String(row.id)} / ${column.id}`, kind: "context" });
           }}
           onDoubleClickCell={({ column, row }) => {
-            setEventLog({ detail: `${String(row.id)} / ${column.id}`, title: "셀 더블클릭" });
+            setEventLog({ detail: `${String(row.id)} / ${column.id}`, kind: "double" });
           }}
           onKeyDownCell={({ column, event, row }) => {
-            setEventLog({ detail: `${String(row.id)} / ${column.id} / ${event.key}`, title: "셀 키다운" });
+            setEventLog({ detail: `${String(row.id)} / ${column.id} / ${event.key}`, kind: "keydown" });
           }}
           pagination={{ pageIndex: 0, pageSize: 30 }}
           theme={{ density: "compact" }}

@@ -113,6 +113,25 @@ describe("comins-table public API", () => {
     ).toBeTruthy();
   });
 
+  it("accepts controlled flat Row Detail props", () => {
+    const columns = [{ field: "name", label: "Name" }];
+    const data = [{ id: "a", name: "Alpha" }];
+
+    expect(
+      <CominsTable
+        columns={columns}
+        data={data}
+        estimatedRowDetailHeight={180}
+        expandedRowIds={["a"]}
+        getRowDetailHeight={({ row }) => (row.id === "a" ? "auto" : 240)}
+        getRowId={(row) => row.id}
+        isRowExpandable={({ row }) => row.data.name.length > 0}
+        onChangeExpandedRowIds={() => undefined}
+        renderRowDetail={({ row }) => <div>{row.data.name}</div>}
+      />,
+    ).toBeTruthy();
+  });
+
   it("accepts append-mode lazy load props", () => {
     const columns = [{ field: "name", label: "Name" }];
     const data = [{ id: "a", name: "Alpha" }];
@@ -132,8 +151,27 @@ describe("comins-table public API", () => {
           expect(["initial", "scroll", "refresh"]).toContain(reason);
           expect(signal).toBeInstanceOf(AbortSignal);
 
-          return { rows: data, total: 1 };
+          return undefined;
         }}
+      />,
+    ).toBeTruthy();
+  });
+
+  it("accepts Header move handles and position locks", () => {
+    const data = [{ age: 31, id: "a", name: "Alpha" }];
+
+    expect(
+      <CominsTable
+        columnGroups={[
+          { children: ["name", "age"], id: "profile", label: "Profile", lockPosition: true },
+        ]}
+        columns={[
+          { field: "name", label: "Name", lockPosition: true },
+          { field: "age", label: "Age" },
+        ]}
+        data={data}
+        getRowId={(row) => row.id}
+        showColumnMoveHandle={false}
       />,
     ).toBeTruthy();
   });
@@ -188,7 +226,7 @@ describe("comins-table public API", () => {
     ).toBeTruthy();
   });
 
-  it("rejects flat-only pagination, remote loading, and row dragging in Tree Grid", () => {
+  it("rejects flat-only pagination, remote loading, row dragging, and Row Detail in Tree Grid", () => {
     const data: CominsTreeNode<{ id: string; name: string }>[] = [{ item: { id: "root", name: "Root" } }];
     const columns = [{ field: "name", label: "Name" }];
 
@@ -222,7 +260,7 @@ describe("comins-table public API", () => {
         data={data}
         getRowId={(item) => item.id}
         // @ts-expect-error Tree Grid V1 does not support lazy callbacks.
-        onLazyLoad={async () => ({ rows: [], total: 0 })}
+        onLazyLoad={async () => undefined}
         tree
       />,
       <CominsTable
@@ -251,9 +289,41 @@ describe("comins-table public API", () => {
         }}
         tree
       />,
+      <CominsTable
+        columns={columns}
+        data={data}
+        // @ts-expect-error Tree Grid does not accept flat Row Detail controlled ids.
+        expandedRowIds={["root"]}
+        getRowId={(item) => item.id}
+        tree
+      />,
+      <CominsTable
+        columns={columns}
+        data={data}
+        // @ts-expect-error Tree Grid does not accept flat Row Detail height callbacks.
+        getRowDetailHeight={() => 180}
+        getRowId={(item) => item.id}
+        tree
+      />,
+      <CominsTable
+        columns={columns}
+        data={data}
+        getRowId={(item) => item.id}
+        // @ts-expect-error Tree Grid does not accept flat Row Detail change callbacks.
+        onChangeExpandedRowIds={() => undefined}
+        tree
+      />,
+      <CominsTable
+        columns={columns}
+        data={data}
+        getRowId={(item) => item.id}
+        // @ts-expect-error Tree Grid does not accept flat Row Detail renderers.
+        renderRowDetail={({ row }) => <span>{row.data.name}</span>}
+        tree
+      />,
     ];
 
-    expect(rejectedTreeProps).toHaveLength(7);
+    expect(rejectedTreeProps).toHaveLength(11);
   });
 
   it("rejects removed root-level format and props column API", () => {

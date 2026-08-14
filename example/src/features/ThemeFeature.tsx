@@ -5,6 +5,7 @@ import { CominsTable } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { createBaseColumns } from "../fixtures/columns";
 import { createRows } from "../fixtures/people";
+import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
 const themeOptions = [
   { className: "comins-table-theme--basic", label: "Basic", value: "basic" },
@@ -22,6 +23,7 @@ const themeStyle = {
 } as React.CSSProperties;
 
 export function ThemeFeature() {
+  const { text } = usePlaygroundLocale();
   const [activeTheme, setActiveTheme] = useState(themeOptions[0]!);
   const rows = useMemo(() => createRows(1000), []);
   const columns = useMemo(() => createBaseColumns(), []);
@@ -39,20 +41,22 @@ export function ThemeFeature() {
       <FeatureSampleSection
         description={
           <>
-            CSS 변수와 theme class로 색상, 표면, 선택 상태를 즉시 변경합니다. Virtualized table의 행 높이는
-            CSS만 바꾸지 않고 rowHeight prop과 같은 값으로 유지해야 합니다.
+            {text(defineLocalizedText(
+              "CSS 변수와 theme class로 색상, 표면, 선택 상태를 즉시 변경합니다. Virtualized table의 행 높이는 CSS만 바꾸지 않고 rowHeight prop과 같은 값으로 유지해야 합니다.",
+              "Use CSS variables and theme classes to change colors, surfaces, and selection immediately. Keep virtualized row height aligned with the rowHeight prop.",
+            ))}
           </>
         }
         id="theme"
-        title="Theme"
+        title={text(defineLocalizedText("테마", "Theme"))}
       >
         <div className="theme-example">
           <div className="theme-example__controls">
             <label className="theme-example__label" htmlFor="theme-select">
-              Theme
+              {text(defineLocalizedText("테마", "Theme"))}
             </label>
             <select
-              aria-label="테마 선택"
+              aria-label={text(defineLocalizedText("테마 선택", "Select theme"))}
               className="theme-example__select"
               data-testid="theme-select"
               id="theme-select"
@@ -73,8 +77,10 @@ export function ThemeFeature() {
             </select>
           </div>
           <p className="theme-example__note">
-            `rowHeight prop`은 virtualized row window 계산 기준입니다. CSS의 `--comins-table-row-height`를
-            override할 때도 같은 숫자로 맞춰야 스크롤 위치와 실제 행 높이가 어긋나지 않습니다.
+            {text(defineLocalizedText(
+              "`rowHeight prop`은 virtualized row window 계산 기준입니다. CSS의 `--comins-table-row-height`를 override할 때도 같은 숫자로 맞춰야 스크롤 위치와 실제 행 높이가 어긋나지 않습니다.",
+              "The `rowHeight prop` defines the virtualized row window. Keep `--comins-table-row-height` at the same value so scroll positions match rendered rows.",
+            ))}
           </p>
           <div className="theme-example__table-frame">
             <CominsTable

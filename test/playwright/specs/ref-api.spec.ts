@@ -20,6 +20,7 @@ test("ref methods control visible row selection and the ordered sort model", asy
   await page.goto("/api/ref");
 
   await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "ref-api");
+  await expect(page.getByTestId("ref-api-viewport").locator("tbody tr[data-comins-row-data-index]")).toHaveCount(30);
   await page.getByRole("button", { exact: true, name: "Row 2 선택" }).click();
   await expect(page.getByTestId("row-b")).toHaveAttribute("data-selected-row", "true");
   await expect(page.getByTestId("ref-selection-state")).toContainText('"b"');
@@ -67,7 +68,8 @@ test("ref methods save and restore layout and move controlled rows", async ({ pa
     page
       .getByTestId("ref-api-viewport")
       .locator("tbody tr[data-comins-row-data-index]")
-      .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-testid"))),
+      .evaluateAll((elements) => elements.slice(0, 3).map((element) => element.getAttribute("data-testid"))),
   ).resolves.toEqual(["row-b", "row-c", "row-a"]);
+  await expect(page.getByTestId("ref-api-viewport").locator("tbody tr[data-comins-row-data-index]")).toHaveCount(30);
   expect(diagnostics).toEqual([]);
 });

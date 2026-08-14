@@ -5,19 +5,16 @@ import { ActionButton, FeatureControls } from "../components/FeatureControls";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { createBaseColumns } from "../fixtures/columns";
 import { createExampleRows, type PersonRow } from "../fixtures/people";
+import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
 export function BasicCrudFeature() {
-  const [rows, setRows] = useState<PersonRow[]>(() => createExampleRows(100));
-  const [ownersOnly, setOwnersOnly] = useState(false);
+  const { text } = usePlaygroundLocale();
+  const [rows, setRows] = useState<PersonRow[]>(() => createExampleRows(30));
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const [selectedRowJson, setSelectedRowJson] = useState("");
   const [error, setError] = useState("");
   const [nextRowIndex, setNextRowIndex] = useState(1);
-  const visibleRows = useMemo(
-    () => (ownersOnly ? rows.filter((row) => row.role === "Owner") : rows),
-    [ownersOnly, rows],
-  );
   const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(
     () => [
       ...createBaseColumns(),
@@ -63,7 +60,7 @@ export function BasicCrudFeature() {
   };
   const updateActiveRow = () => {
     if (!activeRowId) {
-      setError("수정할 행을 먼저 선택해 주세요.");
+      setError(text(defineLocalizedText("수정할 행을 먼저 선택해 주세요.", "Select a row to update first.")));
       return;
     }
 
@@ -75,12 +72,12 @@ export function BasicCrudFeature() {
       );
       setError("");
     } catch {
-      setError("선택 행 JSON 형식이 올바르지 않습니다.");
+      setError(text(defineLocalizedText("선택 행 JSON 형식이 올바르지 않습니다.", "The selected row JSON is invalid.")));
     }
   };
   const deleteSelectedRows = () => {
     if (selectedRowIds.length === 0) {
-      setError("삭제할 행을 먼저 선택해 주세요.");
+      setError(text(defineLocalizedText("삭제할 행을 먼저 선택해 주세요.", "Select rows to delete first.")));
       return;
     }
 
@@ -100,26 +97,28 @@ export function BasicCrudFeature() {
   return (
     <section className="feature-panel feature-panel--crud">
       <FeatureSampleSection
-        description="data, onChangeSelection, onClickRow를 사용해 추가, 수정, 삭제, 초기화, 필터링을 한 화면에서 검증합니다."
+        description={text(defineLocalizedText(
+          "data, onChangeSelection, onClickRow를 사용해 추가, 수정, 삭제, 초기화를 한 화면에서 검증합니다.",
+          "Use data, onChangeSelection, and onClickRow to verify add, update, delete, and reset in one example.",
+        ))}
         id="basic-crud"
-        title="CRUD 동작"
+        title={text(defineLocalizedText("CRUD 동작", "CRUD actions"))}
       >
         <FeatureControls
           actions={
             <>
               <ActionButton onClick={addRow}>
-                추가
+                {text(defineLocalizedText("추가", "Add"))}
               </ActionButton>
               <ActionButton onClick={updateActiveRow}>
-                수정
+                {text(defineLocalizedText("수정", "Update"))}
               </ActionButton>
               <ActionButton onClick={deleteSelectedRows} tone="danger">
-                삭제
+                {text(defineLocalizedText("삭제", "Delete"))}
               </ActionButton>
               <ActionButton
                 onClick={() => {
-                  setRows(createExampleRows(100));
-                  setOwnersOnly(false);
+                  setRows(createExampleRows(30));
                   setActiveRowId(null);
                   setSelectedRowIds([]);
                   setSelectedRowJson("");
@@ -127,15 +126,7 @@ export function BasicCrudFeature() {
                   setNextRowIndex(1);
                 }}
               >
-                초기화
-              </ActionButton>
-              <ActionButton
-                onClick={() => {
-                  setOwnersOnly((current) => !current);
-                }}
-                tone="filter"
-              >
-                필터링
+                {text(defineLocalizedText("초기화", "Reset"))}
               </ActionButton>
             </>
           }
@@ -143,9 +134,9 @@ export function BasicCrudFeature() {
         <div className="crud-workspace">
           <div className="crud-detail-pane" data-testid="crud-detail-pane">
             <label className="json-editor">
-              <span>선택 행 JSON</span>
+              <span>{text(defineLocalizedText("선택 행 JSON", "Selected row JSON"))}</span>
               <textarea
-                aria-label="선택 행 JSON"
+                aria-label={text(defineLocalizedText("선택 행 JSON", "Selected row JSON"))}
                 onChange={(event) => setSelectedRowJson(event.target.value)}
                 value={selectedRowJson}
               />
@@ -160,7 +151,7 @@ export function BasicCrudFeature() {
             <CominsTable
               className="example-table"
               columns={columns}
-              data={visibleRows}
+              data={rows}
               data-testid="data-table-viewport"
               getRowId={(row) => row.id}
               onChangeSelection={syncSelection}
@@ -168,7 +159,7 @@ export function BasicCrudFeature() {
               onClickRow={({ row }) => {
                 selectActiveRow(row.data, String(row.id));
               }}
-              pagination={{ pageIndex: 0, pageSize: visibleRows.length }}
+              pagination={{ pageIndex: 0, pageSize: rows.length }}
               theme={{ density: "compact" }}
             />
           </div>

@@ -1,19 +1,19 @@
 import { useMemo, useState } from "react";
 
-import { CominsTable, type CominsTableColumn, type CominsVirtualListItem } from "../../../src";
+import {
+  CominsTable,
+  type CominsRowId,
+  type CominsTableColumn,
+  type CominsVirtualListItem,
+} from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { createVirtualRows, type PersonRow } from "../fixtures/people";
+import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
 type ComponentLargeOverride = {
   active?: boolean;
   role?: string;
 };
-
-const roleOptions = [
-  { label: "Owner", value: "Owner" },
-  { label: "Editor", value: "Editor" },
-  { label: "Viewer", value: "Viewer" },
-];
 
 const componentLargeVirtualItems: CominsVirtualListItem[] = Array.from({ length: 1_000 }, (_value, index) => ({
   label: `Item ${index + 1}`,
@@ -21,13 +21,32 @@ const componentLargeVirtualItems: CominsVirtualListItem[] = Array.from({ length:
 }));
 
 export function BodyFeature() {
+  const { locale, text } = usePlaygroundLocale();
+  const roleOptions = useMemo(
+    () => [
+      { label: text(defineLocalizedText("소유자", "Owner")), value: "Owner" },
+      { label: text(defineLocalizedText("편집자", "Editor")), value: "Editor" },
+      { label: text(defineLocalizedText("조회자", "Viewer")), value: "Viewer" },
+    ],
+    [text],
+  );
   const [rows] = useState<PersonRow[]>(() => createVirtualRows(100_000));
   const [componentOverrides, setComponentOverrides] = useState<Record<number, ComponentLargeOverride>>({});
-  const [componentEvent, setComponentEvent] = useState("컴포넌트 대용량 이벤트 대기");
-  const useHeavyRenderer = useMemo(
-    () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("fixture") === "heavy-renderer",
+  const [componentEvent, setComponentEvent] = useState<string | null>(null);
+  const fixture = useMemo(
+    () =>
+      typeof window === "undefined"
+        ? ""
+        : new URLSearchParams(window.location.search).get("fixture") ?? "",
     [],
   );
+  const detailEnabled = fixture === "row-detail-fixed" || fixture === "row-detail-auto";
+  const automaticDetail = fixture === "row-detail-auto";
+  const [expandedRowIds, setExpandedRowIds] = useState<CominsRowId[]>(
+    detailEnabled ? [50_000] : [],
+  );
+  const [detailGrowth, setDetailGrowth] = useState(0);
+  const useHeavyRenderer = fixture === "heavy-renderer";
   const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(
     () => {
       const createCell = (columnNumber: number): CominsTableColumn<PersonRow>["cell"] =>
@@ -35,8 +54,8 @@ export function BodyFeature() {
           ? {
               renderer: ({ row }) => (
                 <span className="body-virtualization-table__heavy-cell" data-testid="virtual-heavy-cell">
-                  <strong>Data {row.index + 1}</strong>
-                  <span>Column {columnNumber}</span>
+                  <strong>{`Data ${row.index + 1}`}</strong>
+                  <span>{`Column ${columnNumber}`}</span>
                 </span>
               ),
             }
@@ -286,35 +305,91 @@ export function BodyFeature() {
         width: 280,
       },
     ],
-    [componentOverrides],
+    [componentOverrides, roleOptions],
   );
 
   return (
     <section className="feature-panel feature-panel--virtualization">
       <FeatureSampleSection
-        description="대용량 데이터 10만 Row를 처음부터 로드하고 virtualized, 안정적인 getRowId, 전체 pageSize 계약으로 렌더링 Row 수가 제한되는지 확인합니다."
+        description={text(defineLocalizedText(
+          "대용량 데이터 10만 Row를 처음부터 로드하고 virtualized, 안정적인 getRowId, 전체 pageSize 계약으로 렌더링 Row 수가 제한되는지 확인합니다.",
+          "Load 100,000 Rows up front and verify that virtualization, stable getRowId, and a full pageSize keep the rendered Row count bounded.",
+        ))}
         id="body"
-        title="대용량 데이터 표시"
+        title={text(defineLocalizedText("대용량 데이터 표시", "Large dataset rendering"))}
       >
         <CominsTable
           className="example-table body-virtualization-table"
           columns={columns}
           data={rows}
           data-testid="data-table-viewport"
+          estimatedRowDetailHeight={detailEnabled ? 180 : undefined}
+          expandedRowIds={detailEnabled ? expandedRowIds : undefined}
+          getRowDetailHeight={detailEnabled ? () => (automaticDetail ? "auto" : 360) : undefined}
           getRowId={(_row, index) => index}
           multiSort
+          onChangeExpandedRowIds={detailEnabled ? setExpandedRowIds : undefined}
           pagination={{ pageIndex: 0, pageSize: rows.length }}
+          renderRowDetail={
+            detailEnabled
+              ? ({ row }) => (
+                  <div
+                    data-testid={`row-detail-perf-${automaticDetail ? "auto" : "fixed"}`}
+                    style={{
+                      display: "grid",
+                      gap: 12,
+                      maxHeight: 640,
+                      overflow: "auto",
+                    }}
+                  >
+                    <strong>
+                      {locale === "ko"
+                        ? `owner ${String(row.id)}의 성능 Detail`
+                        : `Performance Detail for owner ${String(row.id)}`}
+                    </strong>
+                    <span>{text(defineLocalizedText(
+                      "제한된 내용으로 owner Row를 확장하지 않고 mixed-height 가상화를 검증합니다.",
+                      "Bounded content verifies mixed-height virtualization without expanding owner Rows.",
+                    ))}</span>
+                    {automaticDetail ? (
+                      <button
+                        data-testid="row-detail-perf-grow"
+                        disabled={detailGrowth >= 4}
+                        onClick={() => setDetailGrowth((current) => Math.min(4, current + 1))}
+                        type="button"
+                      >
+                        {text(defineLocalizedText("측정형 Detail 늘리기", "Grow measured Detail"))}
+                      </button>
+                    ) : null}
+                    {Array.from({ length: detailGrowth }, (_value, index) => (
+                      <p
+                        data-testid="row-detail-perf-grown-block"
+                        key={index}
+                        style={{ margin: 0, minHeight: 96 }}
+                      >
+                        {locale === "ko"
+                          ? `제한된 측정형 content block ${index + 1}/4.`
+                          : `Bounded measured content block ${index + 1} of 4.`}
+                      </p>
+                    ))}
+                  </div>
+                )
+              : undefined
+          }
           theme={{ density: "compact" }}
           virtualized
         />
       </FeatureSampleSection>
       <FeatureSampleSection
-        description="컴포넌트 Cell이 포함된 10만 Row를 기본 buffer-size 10 기준으로 렌더링하고, 작은 override state로 상호작용 비용을 제한합니다."
+        description={text(defineLocalizedText(
+          "컴포넌트 Cell이 포함된 10만 Row를 기본 buffer-size 10 기준으로 렌더링하고, 작은 override state로 상호작용 비용을 제한합니다.",
+          "Render 100,000 Rows with Component Cells using the default buffer-size of 10 and keep interaction cost bounded with small override state.",
+        ))}
         id="component-large-virtualization"
-        title="컴포넌트 기반 10만 행 가상 스크롤"
+        title={text(defineLocalizedText("컴포넌트 기반 10만 행 가상 스크롤", "100,000-Row Component virtualization"))}
       >
         <p className="body-virtualization-table__event" data-testid="component-large-event">
-          {componentEvent}
+          {componentEvent ?? text(defineLocalizedText("컴포넌트 대용량 이벤트 대기", "Waiting for a large Component event"))}
         </p>
         <CominsTable
           className="example-table body-virtualization-table component-large-virtualization-table"

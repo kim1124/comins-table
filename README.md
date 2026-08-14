@@ -1,6 +1,6 @@
 # Comins Table
 
-Comins Table is a controlled React data table for data-heavy application screens, with virtualized rendering, precise selection, movable headers, Summary Row aggregation, Tree Grid data, built-in component cells, and framework-independent core helpers.
+Comins Table is a controlled React data table for data-heavy application screens, with virtualized rendering, precise selection, movable headers, controlled Row Expand Details, Summary Row aggregation, Tree Grid data, built-in component cells, and framework-independent core helpers.
 
 [![npm version](https://img.shields.io/npm/v/comins-table)](https://www.npmjs.com/package/comins-table)
 [![TypeScript declarations](https://img.shields.io/npm/types/comins-table)](https://www.npmjs.com/package/comins-table)
@@ -16,7 +16,7 @@ Comins Table is a controlled React data table for data-heavy application screens
 | Controlled data | Application-owned `data`, CRUD helpers, `onChangeData`, pagination, sorting, and layout callbacks |
 | Rendering and scale | Fixed-height virtualization with a tested 100,000-row route, infinite scroll, append-mode lazy loading, loading, and empty states |
 | Interaction | Accessible single and opt-in multi-column Header sorting, resize, 6-pixel horizontal column reorder with source placeholder, Row and Cell selection, ranges, clipboard, and context menu callbacks |
-| Data structure | Summary Row count/sum/avg/min/max/custom aggregation, `colSpan`, `format`, style/class hooks, and controlled Tree Grid expand/fold |
+| Data structure | Controlled flat Row Expand Details, Summary Row aggregation, and controlled Tree Grid expand/fold |
 | Custom UI | Cell/Header renderers, built-in button/input/checkbox/radio/select/toggle/progress/menu/Virtual List components, and CSS-variable themes |
 
 Comins Table is standalone and does not wrap another table or grid implementation.
@@ -97,7 +97,7 @@ export function UsersTable() {
 
 Comins Table is a CSR-focused controlled component for application-owned data. The application owns the `data` array.
 
-Only `onChangeData` requires application write-back. It emits the next flat Row array or Tree Grid node array after table-owned mutations; pass that array back through `data` to retain the change.
+For table-owned data mutations, `onChangeData` emits the next flat Row array or Tree Grid node array; pass that array back through `data` to retain the mutation. Other controlled models use their matching callback and value prop rather than `onChangeData`.
 
 Selection, column layout, and sort are internal view state. `onChangeSelection`, `onChangeColumnLayout`, `onChangeSort`, and `onChangeSortModel` observe those changes so an application can coordinate or persist them externally; the table updates the corresponding view state even when a callback is omitted.
 
@@ -141,6 +141,28 @@ Use `getColumnLayout()` and `setColumnLayout()` through the Ref API, or `seriali
 Rows expose click, double-click, keyboard, and context-menu callbacks. Cells expose the corresponding Cell callbacks plus `format`, `renderer`, and props hooks.
 
 A normal Row interaction selects one Row, `Ctrl`/`Cmd` toggles a Row, and `Shift` extends the visible Row range from the selection anchor. Cell selection supports a single Cell, `Ctrl`/`Cmd` multi-selection, and `Shift` or pointer-drag ranges. Built-in component interactions remain isolated from `onClickCell` and `onClickRow` callback payloads so component actions do not also trigger the owning Cell or Row action.
+
+### Row Expand
+
+See the [Row Expand guide](https://github.com/kim1124/comins-table/blob/main/docs/user/19-row-expand.md) and run the [`/examples/row-expand`](http://127.0.0.1:4002/examples/row-expand) Playground route.
+
+```tsx
+const [expandedRowIds, setExpandedRowIds] = useState<readonly string[]>([]);
+
+<CominsTable
+  columns={columns}
+  data={data}
+  expandedRowIds={expandedRowIds}
+  getRowDetailHeight={() => "auto"}
+  getRowId={(row) => row.id}
+  onChangeExpandedRowIds={setExpandedRowIds}
+  renderRowDetail={({ row }) => <Detail row={row.data} />}
+/>;
+```
+
+Row Expand is controlled by stable owner business Row IDs. An interactive disclosure requires the application to feed the next value from `onChangeExpandedRowIds` back into `expandedRowIds`; when that callback is omitted, the disclosure is disabled and read-only. A finite positive CSS pixel height is fixed and retains its inline height. Missing values, invalid numeric values, and `"auto"` use measured automatic height with no inline height. Before an automatic Detail has a matching-width measurement, a valid finite positive `estimatedRowDetailHeight` is used; otherwise the resolved `rowHeight` is the estimate. Details render as semantic owner-following Rows, stay outside selection and clipboard addressing, and preserve dormant IDs across sorting and pagination.
+
+Tree Grid Row Details, general automatic height for owner data Rows, and nested Details managed by Comins Table remain unsupported.
 
 ## Virtualization And Loading
 
@@ -212,17 +234,17 @@ tableRef.current?.fold(); // all Tree Grid branches
 npm run dev
 ```
 
-The local Playground starts at [`/docs/getting-started`](http://127.0.0.1:4002/docs/getting-started). Key routes include [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard), [`/examples/summary-row`](http://127.0.0.1:4002/examples/summary-row), [`/examples/tree-grid`](http://127.0.0.1:4002/examples/tree-grid), [`/examples/component`](http://127.0.0.1:4002/examples/component), and [`/performance/virtualization`](http://127.0.0.1:4002/performance/virtualization).
+The local Playground starts at [`/docs/getting-started`](http://127.0.0.1:4002/docs/getting-started). Key routes include [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard), [`/examples/row-expand`](http://127.0.0.1:4002/examples/row-expand), [`/examples/summary-row`](http://127.0.0.1:4002/examples/summary-row), [`/examples/tree-grid`](http://127.0.0.1:4002/examples/tree-grid), [`/examples/component`](http://127.0.0.1:4002/examples/component), and [`/performance/virtualization`](http://127.0.0.1:4002/performance/virtualization).
 
 ## Documentation
 
-Start with the [English Quick Start](https://github.com/kim1124/comins-table/blob/main/docs/user/01-quick-start.md), then browse [all English feature guides](https://github.com/kim1124/comins-table/tree/main/docs/user). The detailed [Tree Grid](https://github.com/kim1124/comins-table/blob/main/docs/user/17-tree-grid.md) and [Summary Row](https://github.com/kim1124/comins-table/blob/main/docs/user/18-summary-row.md) contracts include runnable examples and edge cases. [Korean guides](https://github.com/kim1124/comins-table/tree/main/docs/ko) are retained as secondary documentation.
+Start with the [English Quick Start](https://github.com/kim1124/comins-table/blob/main/docs/user/01-quick-start.md), then browse [all English feature guides](https://github.com/kim1124/comins-table/tree/main/docs/user). The detailed [Tree Grid](https://github.com/kim1124/comins-table/blob/main/docs/user/17-tree-grid.md), [Summary Row](https://github.com/kim1124/comins-table/blob/main/docs/user/18-summary-row.md), and [Row Expand](https://github.com/kim1124/comins-table/blob/main/docs/user/19-row-expand.md) contracts include runnable examples and edge cases. [Korean guides](https://github.com/kim1124/comins-table/tree/main/docs/ko) are retained as secondary documentation.
 
 Use the [source repository](https://github.com/kim1124/comins-table) for development context, review the [changelog](https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md) for version history, and follow the [security policy](https://github.com/kim1124/comins-table/blob/main/SECURITY.md) for vulnerability reporting.
 
 ## Current Boundaries
 
-Comins Table currently ships a CSR controlled data model. Server-side Row models, Row grouping, pivoting, charts, AI assistance, remote Tree loading, hierarchy pagination, Tree Row drag, Tree Row copy/paste, Firefox, Safari, and SSR are not shipped or supported. Flat Row Expand details and master/detail layouts also remain outside the current package contract.
+Comins Table currently ships a CSR controlled data model. Server-side Row models, Row grouping, pivoting, charts, AI assistance, remote Tree loading, hierarchy pagination, Tree Row drag, Tree Row copy/paste, Tree Grid Row Details, general automatic owner Row height, nested managed Details, Firefox, Safari, and SSR are not shipped or supported.
 
 The visual fill handle is not shipped or supported. `fillCominsCellRange` remains available as a core helper without a drag-handle UI.
 

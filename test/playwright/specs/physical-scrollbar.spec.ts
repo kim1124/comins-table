@@ -198,14 +198,16 @@ async function dragViewportScrollbarWithMouse(page: Page, direction: "down" | "u
   }
 }
 
-test("playground releases devtools counters after physical scrollbar drag and return to basic @perf", async ({ page }) => {
+test("playground releases devtools counters after physical scrollbar drag and return to basic @perf", async ({
+  page,
+}, testInfo) => {
   test.setTimeout(60_000);
 
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
   const basicBaseline = await readDevtoolsMemorySnapshot(page);
 
-  await page.goto("/performance/virtualization");
+  await page.goto("/performance/virtualization?fixture=row-detail-fixed");
   await page.addStyleTag({
     content: `
       [data-testid="data-table-viewport"]::-webkit-scrollbar {
@@ -226,6 +228,11 @@ test("playground releases devtools counters after physical scrollbar drag and re
   await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
   const viewport = page.getByTestId("data-table-viewport");
   await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
+  await viewport.evaluate((element) => {
+    element.scrollTop = Math.floor(element.scrollHeight / 2);
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+  await expect(page.getByTestId("row-detail-content-50000")).toBeVisible();
   const postLoad = await readDevtoolsMemorySnapshot(page);
   await page.mouse.wheel(0, 2400);
   await dragViewportScrollbarWithMouse(page, "down");
@@ -243,6 +250,15 @@ test("playground releases devtools counters after physical scrollbar drag and re
       }),
     )
     .toBeGreaterThan(99_900);
+  const bottomIndex = await viewport.evaluate((element) => {
+    const rows = Array.from(
+      element.querySelectorAll<HTMLTableRowElement>(
+        ".comins-table__body-table tbody tr[data-comins-row-data-index]",
+      ),
+    );
+
+    return Number(rows.at(-1)?.getAttribute("data-comins-row-data-index") ?? "-1");
+  });
 
   await page.mouse.wheel(0, -2400);
   await dragViewportScrollbarWithMouse(page, "up");
@@ -266,6 +282,13 @@ test("playground releases devtools counters after physical scrollbar drag and re
   const afterBasic = await readDevtoolsMemorySnapshot(page);
   const failureContext = JSON.stringify({ afterBasic, basicBaseline, postLoad }, null, 2);
 
+  await testInfo.attach("row-detail-fixed-physical-memory", {
+    body: failureContext,
+    contentType: "application/json",
+  });
+  console.info(
+    `[row-detail-fixed-physical] ${JSON.stringify({ afterBasic, basicBaseline, bottomIndex, postLoad })}`,
+  );
   expect(afterBasic.nodes, failureContext).toBeLessThanOrEqual(Math.ceil(basicBaseline.nodes * 1.25));
   expect(afterBasic.jsEventListeners, failureContext).toBeLessThanOrEqual(
     Math.ceil(basicBaseline.jsEventListeners * 1.25),
@@ -274,11 +297,11 @@ test("playground releases devtools counters after physical scrollbar drag and re
   expect(diagnostics).toEqual([]);
 });
 
-test("playground keeps wheel row updates responsive after physical scrollbar drag @perf", async ({ page }) => {
+test("playground keeps wheel row updates responsive after physical scrollbar drag @perf", async ({ page }, testInfo) => {
   test.setTimeout(45_000);
 
   const diagnostics = collectBrowserDiagnostics(page);
-  await page.goto("/performance/virtualization");
+  await page.goto("/performance/virtualization?fixture=row-detail-fixed");
   await page.addStyleTag({
     content: `
       [data-testid="data-table-viewport"]::-webkit-scrollbar {
@@ -299,6 +322,15 @@ test("playground keeps wheel row updates responsive after physical scrollbar dra
 
   const viewport = page.getByTestId("data-table-viewport");
   await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
+  await viewport.evaluate((element) => {
+    element.scrollTop = Math.floor(element.scrollHeight / 2);
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+  await expect(page.getByTestId("row-detail-content-50000")).toBeVisible();
+  await viewport.evaluate((element) => {
+    element.scrollTop = 0;
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
   await viewport.hover();
 
   const baseline = await measureWheelRowUpdateLatency(page, 180);
@@ -307,6 +339,11 @@ test("playground keeps wheel row updates responsive after physical scrollbar dra
   const afterDrag = await measureWheelRowUpdateLatency(page, -180);
   const failureContext = JSON.stringify({ afterDrag, baseline }, null, 2);
 
+  await testInfo.attach("row-detail-fixed-wheel-latency", {
+    body: failureContext,
+    contentType: "application/json",
+  });
+  console.info(`[row-detail-fixed-wheel] ${JSON.stringify({ afterDrag, baseline })}`);
   expect(afterDrag.timeoutCount, failureContext).toBe(0);
   expect(afterDrag.average, failureContext).toBeLessThanOrEqual(Math.max(48, baseline.average * 1.35));
   expect(afterDrag.p95, failureContext).toBeLessThanOrEqual(Math.max(72, baseline.p95 * 1.35));

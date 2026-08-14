@@ -1,5 +1,7 @@
 import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
 
+import { initializePlaygroundLocale } from "../helpers/playground-locale";
+
 function collectBrowserDiagnostics(page: Page) {
   const diagnostics: Array<{ text: string; type: ReturnType<ConsoleMessage["type"]> | "pageerror" }> = [];
 
@@ -18,7 +20,7 @@ function collectBrowserDiagnostics(page: Page) {
 
 const featurePages = [
   ["/docs/getting-started", "comins-table 기본 예제입니다."],
-  ["/examples/crud", "추가, 수정, 삭제, 초기화, 필터링"],
+  ["/examples/crud", "추가, 수정, 삭제, 초기화"],
   ["/examples/size", "300px 고정 높이와 부모 컨테이너 500px"],
   ["/examples/theme", "CSS 변수와 theme class"],
   ["/examples/header", "6px 이상 드래그하면 placeholder"],
@@ -37,6 +39,7 @@ const featurePages = [
 
 test("feature pages render docs in the main content area", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
+  await initializePlaygroundLocale(page, "ko");
   await page.goto("/");
 
   for (const [route, descriptionText] of featurePages) {
@@ -51,6 +54,7 @@ test("feature pages render docs in the main content area", async ({ page }) => {
 
 test("virtualization page explains the 100000-row performance contract", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
+  await initializePlaygroundLocale(page, "en");
   await page.goto("/performance/virtualization");
 
   const main = page.locator("main");
@@ -66,6 +70,7 @@ test("virtualization page explains the 100000-row performance contract", async (
 
 test("ref api page documents ref type and visible-index semantics", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
+  await initializePlaygroundLocale(page, "en");
   await page.goto("/api/ref");
 
   const main = page.locator("main");

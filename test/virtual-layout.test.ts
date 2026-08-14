@@ -1,0 +1,241 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  COMINS_MAX_PHYSICAL_TOTAL_HEIGHT,
+  CominsHeightIndex,
+  captureCominsScrollAnchor,
+  createCominsDataVirtualSlot,
+  getCominsMixedVirtualRange,
+  getCominsPhysicalScrollTop,
+  getCominsSlotHeight,
+  normalizeCominsDetailEstimate,
+  normalizeCominsDetailHeight,
+  reconcileCominsDetailMeasurements,
+  resolveCominsAnchorLogicalScrollTop,
+  resolveCominsAnchorTarget,
+  resolveCominsMeasuredDetailHeight,
+} from "../src/virtual-layout";
+
+describe("virtual layout", () => {
+  it("normalizes fixed, automatic, and invalid detail heights", () => {
+    expect(normalizeCominsDetailHeight(240)).toEqual({ height: 240, mode: "fixed" });
+    expect(normalizeCominsDetailHeight("auto")).toEqual({ mode: "auto" });
+    expect(normalizeCominsDetailHeight(undefined)).toEqual({ mode: "auto" });
+    expect(normalizeCominsDetailHeight(0)).toEqual({ mode: "auto" });
+    expect(normalizeCominsDetailHeight(Number.POSITIVE_INFINITY)).toEqual({ mode: "auto" });
+    expect(normalizeCominsDetailEstimate(undefined, 36)).toBe(36);
+    expect(normalizeCominsDetailEstimate(180, 36)).toBe(180);
+    expect(normalizeCominsDetailEstimate(-1, 42)).toBe(42);
+  });
+
+  it("supports prefix, total, lower-bound, and logarithmic updates", () => {
+    const index = CominsHeightIndex.from([36, 336, 72, 36]);
+
+    expect(index.getTotalHeight()).toBe(480);
+    expect(index.getPrefixHeight(0)).toBe(0);
+    expect(index.getPrefixHeight(2)).toBe(372);
+    expect(index.findIndexAtOffset(0)).toBe(0);
+    expect(index.findIndexAtOffset(35)).toBe(0);
+    expect(index.findIndexAtOffset(36)).toBe(1);
+    expect(index.findIndexAtOffset(479)).toBe(3);
+    expect(index.updateHeight(1, 436)).toBe(100);
+    expect(index.getTotalHeight()).toBe(580);
+    expect(index.getPrefixHeight(2)).toBe(472);
+  });
+
+  it("maps a mixed logical range into the bounded physical scrollbar", () => {
+    const index = CominsHeightIndex.from([36, 2_000_000, 36]);
+    const range = getCominsMixedVirtualRange({
+      heightIndex: index,
+      overscan: 1,
+      physicalScrollTop: 750_000,
+      viewportHeight: 600,
+    });
+
+    expect(range.physicalScrollHeight).toBe(COMINS_MAX_PHYSICAL_TOTAL_HEIGHT);
+    expect(range.scrollScale).toBeGreaterThan(1);
+    expect(range.startIndex).toBe(0);
+    expect(range.endIndex).toBe(3);
+    expect(Number.isFinite(range.renderOffset)).toBe(true);
+  });
+
+  it("maps exact mixed bounds and render offset from hand-derived slot heights", () => {
+    const range = getCominsMixedVirtualRange({
+      heightIndex: CominsHeightIndex.from([36, 336, 36, 36]),
+      overscan: 0,
+      physicalScrollTop: 100,
+      viewportHeight: 100,
+    });
+
+    expect(range).toEqual({
+      endIndex: 2,
+      logicalScrollTop: 100,
+      logicalStartOffset: 36,
+      physicalScrollHeight: 444,
+      renderOffset: 36,
+      scrollScale: 1,
+      startIndex: 1,
+    });
+  });
+
+  it("clamps mixed rendering to the virtual sizer when the DOM reports overflow beyond it", () => {
+    const heightIndex = CominsHeightIndex.from([36, 336, 36, 36]);
+    const atVirtualBottom = getCominsMixedVirtualRange({
+      heightIndex,
+      overscan: 0,
+      physicalScrollTop: 344,
+      viewportHeight: 100,
+    });
+    const beyondVirtualBottom = getCominsMixedVirtualRange({
+      heightIndex,
+      overscan: 0,
+      physicalScrollTop: 500,
+      viewportHeight: 100,
+    });
+
+    expect(beyondVirtualBottom).toEqual(atVirtualBottom);
+  });
+
+  it("uses a width-matched automatic measurement and evicts removed row ids", () => {
+    const cache = new Map([
+      ["a", { height: 420, width: 800 }],
+      ["stale", { height: 100, width: 800 }],
+    ]);
+
+    expect(resolveCominsMeasuredDetailHeight(cache, "a", 800, 300)).toEqual({
+      estimated: false,
+      height: 420,
+    });
+    expect(resolveCominsMeasuredDetailHeight(cache, "a", 640, 300)).toEqual({
+      estimated: true,
+      height: 300,
+    });
+    reconcileCominsDetailMeasurements(cache, new Set(["a"]));
+    expect([...cache.keys()]).toEqual(["a"]);
+  });
+
+  it("falls back to the nearest surviving slot when an anchor disappears", () => {
+    const previousKeys = ["data:a", "data:b", "data:c"];
+    const nextKeys = ["data:a", "data:c"];
+    const anchor = { key: "data:b", offsetWithinSlot: 12, previousIndex: 1 };
+    const nextIndex = CominsHeightIndex.from([36, 72]);
+
+    expect(
+      resolveCominsAnchorLogicalScrollTop({
+        anchor,
+        nextHeightIndex: nextIndex,
+        nextKeys,
+        previousKeys,
+      }),
+    ).toBe(12);
+  });
+
+  it("captures the first visible slot and preserves a clamped offset for its key", () => {
+    const index = CominsHeightIndex.from([36, 72]);
+
+    expect(
+      captureCominsScrollAnchor({
+        heightIndex: index,
+        keys: ["data:a", "data:b"],
+        logicalScrollTop: 50,
+      }),
+    ).toEqual({ key: "data:b", offsetWithinSlot: 14, previousIndex: 1 });
+    expect(
+      resolveCominsAnchorLogicalScrollTop({
+        anchor: { key: "data:b", offsetWithinSlot: 100, previousIndex: 1 },
+        nextHeightIndex: index,
+        nextKeys: ["data:a", "data:b"],
+        previousKeys: ["data:a", "data:b"],
+      }),
+    ).toBe(108);
+  });
+
+  it("chooses the nearest next slot before returning zero and reverses scroll scaling", () => {
+    const nextIndex = CominsHeightIndex.from([36, 72]);
+
+    expect(
+      resolveCominsAnchorLogicalScrollTop({
+        anchor: { key: "data:b", offsetWithinSlot: 12, previousIndex: 1 },
+        nextHeightIndex: nextIndex,
+        nextKeys: ["group:x", "data:c"],
+        previousKeys: ["data:a", "data:b", "data:c"],
+      }),
+    ).toBe(48);
+    expect(
+      resolveCominsAnchorLogicalScrollTop({
+        anchor: { key: "data:b", offsetWithinSlot: 12, previousIndex: 1 },
+        nextHeightIndex: nextIndex,
+        nextKeys: ["group:x", "group:y"],
+        previousKeys: ["data:a", "data:b", "data:c"],
+      }),
+    ).toBe(0);
+    expect(getCominsPhysicalScrollTop(750_000, 1_500_600, 600)).toBe(749_700);
+  });
+
+  it("resolves removed anchors through the real previous order before the next order", () => {
+    expect(
+      resolveCominsAnchorTarget({
+        anchor: { key: "data:c", offsetWithinSlot: 50, previousIndex: 2 },
+        getNextHeight: () => 36,
+        nextKeys: ["data:a", "data:b", "data:d"],
+        previousKeys: ["data:a", "data:b", "data:c", "data:d"],
+      }),
+    ).toEqual({ index: 1, offsetWithinSlot: 36 });
+    expect(
+      resolveCominsAnchorTarget({
+        anchor: { key: "data:c", offsetWithinSlot: 12, previousIndex: 2 },
+        getNextHeight: () => 36,
+        nextKeys: ["data:d"],
+        previousKeys: ["data:a", "data:b", "data:c", "data:d"],
+      }),
+    ).toEqual({ index: 0, offsetWithinSlot: 12 });
+  });
+
+  it("adds detail heights to data slots while group slots use their own height", () => {
+    expect(
+      getCominsSlotHeight(
+        {
+          dataIndex: 0,
+          detail: { estimated: true, height: 300, mode: "auto" },
+          key: "data:a",
+          kind: "data",
+          row: { id: "a" },
+          rowId: "a",
+          visibleIndex: 0,
+        },
+        36,
+      ),
+    ).toBe(336);
+    expect(
+      getCominsSlotHeight(
+        { groupId: "region:seoul", height: 42, key: "group:seoul", kind: "group" },
+        36,
+      ),
+    ).toBe(42);
+  });
+
+  it("keeps numeric and string Row ids as distinct Slot layout identities", () => {
+    const collapsed = createCominsDataVirtualSlot({
+      dataIndex: 0,
+      detail: null,
+      row: { id: 1 },
+      rowHeight: 36,
+      rowId: 1,
+      visibleIndex: 0,
+    });
+    const expanded = createCominsDataVirtualSlot({
+      dataIndex: 1,
+      detail: { estimated: false, height: 300, mode: "fixed" },
+      row: { id: "1" },
+      rowHeight: 36,
+      rowId: "1",
+      visibleIndex: 1,
+    });
+
+    expect(getCominsSlotHeight(collapsed, 36)).toBe(36);
+    expect(getCominsSlotHeight(expanded, 36)).toBe(336);
+    expect(collapsed.key).toBe("data:number:1");
+    expect(expanded.key).toBe("data:string:1");
+    expect(collapsed.key).not.toBe(expanded.key);
+  });
+});

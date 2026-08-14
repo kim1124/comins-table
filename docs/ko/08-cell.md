@@ -33,6 +33,10 @@ Cell 값은 `field`로 읽고, `cell.format`, `cell.components`, `cell.renderer`
 
 `column.cell.props.disabled`는 해당 cell의 click, context menu, keydown, selection, clipboard 동작을 차단한다.
 
+## Selection 상태 합성
+
+Cell range를 확장해도 해당 Row selection은 해제하지 않는다. 선택된 Row의 Cell은 Row selection 배경을 유지하면서 range Cell에 inset outline을 추가해 두 상태를 동시에 표현한다. Application이 지정한 custom Row 배경의 기존 우선순위도 유지한다.
+
 `cell.renderer`는 사용자 커스텀 컴포넌트를 직접 렌더링한다.
 
 ```tsx

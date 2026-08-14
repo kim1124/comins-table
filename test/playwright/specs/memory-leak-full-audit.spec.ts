@@ -3,7 +3,11 @@ import path from "node:path";
 
 import { expect, test, type ConsoleMessage, type Page, type TestInfo } from "@playwright/test";
 
+import { initializePlaygroundLocale } from "../helpers/playground-locale";
+
 test.describe.configure({ mode: "serial" });
+
+test.beforeEach(async ({ page }) => initializePlaygroundLocale(page, "en"));
 
 type DevtoolsAuditSnapshot = {
   documents: number;
@@ -11,9 +15,15 @@ type DevtoolsAuditSnapshot = {
   jsHeapUsedSize: number;
   liveElementCount: number;
   nodes: number;
+  observedDetailTargets: number;
   renderedRows: number;
   step: string;
   timestamp: string;
+};
+
+type MemoryScenarioEvidence = {
+  final?: DevtoolsAuditSnapshot;
+  intermediate?: DevtoolsAuditSnapshot[];
 };
 
 function collectBrowserDiagnostics(page: Page) {
@@ -49,6 +59,9 @@ async function readDevtoolsAuditSnapshot(page: Page, step: string): Promise<Devt
   const values = new Map(metrics.metrics.map((metric) => [metric.name, metric.value]));
   const domMetrics = await page.evaluate(() => ({
     liveElementCount: document.querySelectorAll("*").length,
+    observedDetailTargets:
+      (window as typeof window & { __cominsObservedDetailTargets?: number })
+        .__cominsObservedDetailTargets ?? 0,
     renderedRows: document.querySelectorAll(".comins-table__body-table tbody tr[data-comins-row-data-index]").length,
     timestamp: new Date().toISOString(),
   }));
@@ -59,6 +72,7 @@ async function readDevtoolsAuditSnapshot(page: Page, step: string): Promise<Devt
     jsHeapUsedSize: values.get("JSHeapUsedSize") ?? 0,
     liveElementCount: domMetrics.liveElementCount,
     nodes,
+    observedDetailTargets: domMetrics.observedDetailTargets,
     renderedRows: domMetrics.renderedRows,
     step,
     timestamp: domMetrics.timestamp,
@@ -120,6 +134,9 @@ function assertRecoveredWithinTenPercent(
   );
   expect(afterBasic.jsHeapUsedSize, failureContext).toBeLessThanOrEqual(Math.ceil(baseline.jsHeapUsedSize * 1.1));
   expect(afterBasic.documents, failureContext).toBe(baseline.documents);
+  expect(afterBasic.observedDetailTargets, failureContext).toBe(
+    baseline.observedDetailTargets,
+  );
 }
 
 async function writeAuditArtifact(
@@ -127,6 +144,7 @@ async function writeAuditArtifact(
   scenario: string,
   baseline: DevtoolsAuditSnapshot,
   afterBasic: DevtoolsAuditSnapshot,
+  evidence?: MemoryScenarioEvidence,
 ) {
   const artifactsDir = path.join(process.cwd(), "reports", "artifacts");
   const safeScenario = scenario.replace(/[^a-z0-9-]+/giu, "-").replace(/^-|-$/gu, "");
@@ -134,6 +152,7 @@ async function writeAuditArtifact(
   const payload = {
     afterBasic,
     baseline,
+    ...evidence,
     scenario,
     testTitle: testInfo.title,
     threshold: {
@@ -141,6 +160,7 @@ async function writeAuditArtifact(
       jsEventListeners: Math.ceil(baseline.jsEventListeners * 1.1),
       jsHeapUsedSize: Math.ceil(baseline.jsHeapUsedSize * 1.1),
       nodes: Math.ceil(baseline.nodes * 1.1),
+      observedDetailTargets: baseline.observedDetailTargets,
     },
   };
 
@@ -152,20 +172,21 @@ async function runMemoryScenario(
   page: Page,
   testInfo: TestInfo,
   scenario: string,
-  exercise: (page: Page) => Promise<void>,
+  exercise: (page: Page) => Promise<MemoryScenarioEvidence | void>,
+  timeout = 90_000,
 ) {
-  test.setTimeout(90_000);
+  test.setTimeout(timeout);
   const diagnostics = collectBrowserDiagnostics(page);
 
   await openBasicPage(page);
   await warmMemoryBaseline(page);
   const baseline = await readDevtoolsAuditSnapshot(page, `${scenario}:initial-basic`);
 
-  await exercise(page);
+  const evidence = await exercise(page);
   await returnToBasic(page);
   const afterBasic = await readDevtoolsAuditSnapshot(page, `${scenario}:after-basic`);
 
-  await writeAuditArtifact(testInfo, scenario, baseline, afterBasic);
+  await writeAuditArtifact(testInfo, scenario, baseline, afterBasic, evidence);
   assertRecoveredWithinTenPercent(scenario, baseline, afterBasic);
   expect(diagnostics).toEqual([]);
 }
@@ -234,6 +255,157 @@ test("full audit keeps 100000 row virtual scroll counters within 10 percent @per
   });
 });
 
+test("full audit releases Row Expand Detail observers and counters within 10 percent @perf", async ({
+  page,
+}, testInfo) => {
+  await page.addInitScript(() => {
+    const NativeResizeObserver = window.ResizeObserver;
+    const observedDetailTargets = new Set<Element>();
+    const updateCount = () => {
+      (
+        window as typeof window & {
+          __cominsObservedDetailTargets?: number;
+        }
+      ).__cominsObservedDetailTargets = observedDetailTargets.size;
+    };
+
+    window.ResizeObserver = class extends NativeResizeObserver {
+      readonly detailTargets = new Set<Element>();
+
+      override disconnect() {
+        for (const target of this.detailTargets) {
+          observedDetailTargets.delete(target);
+        }
+        this.detailTargets.clear();
+        updateCount();
+        super.disconnect();
+      }
+
+      override observe(target: Element, options?: ResizeObserverOptions) {
+        if (target.classList.contains("comins-table__detail-content")) {
+          this.detailTargets.add(target);
+          observedDetailTargets.add(target);
+          updateCount();
+        }
+        super.observe(target, options);
+      }
+
+      override unobserve(target: Element) {
+        this.detailTargets.delete(target);
+        observedDetailTargets.delete(target);
+        updateCount();
+        super.unobserve(target);
+      }
+    };
+    updateCount();
+  });
+
+  await runMemoryScenario(page, testInfo, "row-expand-detail-lifecycle", async (currentPage) => {
+    await openFeature(currentPage, "Row Expand", "row-expand");
+    const documentToken = await currentPage.evaluate(() => {
+      const scope = window as typeof window & {
+        __cominsRowExpandAuditDocumentToken?: string;
+      };
+
+      scope.__cominsRowExpandAuditDocumentToken ??= crypto.randomUUID();
+      return scope.__cominsRowExpandAuditDocumentToken;
+    });
+    const intermediate: DevtoolsAuditSnapshot[] = [];
+
+    for (let cycle = 0; cycle < 10; cycle += 1) {
+      expect(
+        await currentPage.evaluate(
+          () =>
+            (
+              window as typeof window & {
+                __cominsRowExpandAuditDocumentToken?: string;
+              }
+            ).__cominsRowExpandAuditDocumentToken ?? null,
+        ),
+      ).toBe(documentToken);
+
+      const fixed = currentPage.getByTestId("row-expand-example-fixed");
+      const automaticCard = currentPage.locator(
+        "[data-feature-option='row-expand-auto']",
+      );
+      const automatic = currentPage.getByTestId("row-expand-example-auto");
+
+      await fixed.getByTestId("row-detail-toggle-fixed-1").click();
+      await expect(fixed.locator("[data-detail-for='fixed-1']")).toBeVisible();
+
+      await automatic.scrollIntoViewIfNeeded();
+      await automatic.getByTestId("row-detail-toggle-auto-1").click();
+      await expect(
+        automatic.locator("[data-detail-for='auto-1']"),
+      ).toBeVisible();
+      const grow = automatic.getByTestId("auto-detail-grow-auto-1");
+
+      if (await grow.isEnabled()) {
+        await grow.click();
+      }
+      await expect(
+        automatic.getByTestId("auto-detail-grown-content"),
+      ).toBeVisible();
+
+      const detail = automatic.getByTestId("row-detail-content-auto-1");
+      const detailWidthBefore = (await detail.boundingBox())!.width;
+      const resize = automaticCard.getByTestId("resize-name");
+      const resizeBox = await resize.boundingBox();
+      const resizeDelta = cycle % 2 === 0 ? 40 : -40;
+
+      expect(resizeBox).not.toBeNull();
+      await currentPage.mouse.move(
+        resizeBox!.x + resizeBox!.width / 2,
+        resizeBox!.y + resizeBox!.height / 2,
+      );
+      await currentPage.mouse.down();
+      await currentPage.mouse.move(
+        resizeBox!.x + resizeBox!.width / 2 + resizeDelta,
+        resizeBox!.y + resizeBox!.height / 2,
+      );
+      await currentPage.mouse.up();
+      await expect
+        .poll(async () =>
+          Math.abs(((await detail.boundingBox())?.width ?? 0) - detailWidthBefore),
+        )
+        .toBeGreaterThan(20);
+
+      await automatic.getByTestId("row-detail-toggle-auto-1").click();
+      await fixed.getByTestId("row-detail-toggle-fixed-1").click();
+      await expect(automatic.locator("[data-detail-for]")).toHaveCount(0);
+      await expect(fixed.locator("[data-detail-for]")).toHaveCount(0);
+      await expect
+        .poll(() =>
+          currentPage.evaluate(
+            () =>
+              (
+                window as typeof window & {
+                  __cominsObservedDetailTargets?: number;
+                }
+              ).__cominsObservedDetailTargets ?? 0,
+          ),
+        )
+        .toBe(0);
+
+      const snapshot = await readDevtoolsAuditSnapshot(
+        currentPage,
+        `row-expand-detail-lifecycle:cycle-${cycle + 1}`,
+      );
+
+      expect(snapshot.observedDetailTargets).toBe(0);
+      intermediate.push(snapshot);
+    }
+
+    const final = await readDevtoolsAuditSnapshot(
+      currentPage,
+      "row-expand-detail-lifecycle:final-row-expand",
+    );
+
+    expect(final.observedDetailTargets).toBe(0);
+    return { final, intermediate };
+  }, 120_000);
+});
+
 test("full audit keeps component column counters within 10 percent @perf", async ({ page }, testInfo) => {
   await runMemoryScenario(page, testInfo, "component-columns", async (currentPage) => {
     await openFeature(currentPage, "Components", "component");
@@ -256,7 +428,7 @@ test("full audit keeps component column counters within 10 percent @perf", async
     await menuTrigger.scrollIntoViewIfNeeded();
     await menuTrigger.click();
     await expect(currentPage.getByRole("menu", { name: "Header menu" })).toBeVisible();
-    await currentPage.getByRole("menuitem", { name: "상태 확인" }).click();
+    await currentPage.getByRole("menuitem", { name: "Check status" }).click();
     await expect(currentPage.getByRole("menu", { name: "Header menu" })).toHaveCount(0);
 
     const moreList = currentPage.getByTestId("virtual-list-virtual-list-more-a-virtual-list-more-component");
@@ -282,13 +454,13 @@ test("full audit keeps context menu counters within 10 percent @perf", async ({ 
     await openFeature(currentPage, "Context Menu", "context-menu");
 
     await currentPage.getByTestId("row-a").click({ button: "right" });
-    await expect(currentPage.getByRole("menu", { name: "데이터 테이블 컨텍스트 메뉴" })).toBeVisible();
-    await currentPage.getByRole("menuitem", { name: "행 데이터 보기" }).click();
+    await expect(currentPage.getByRole("menu", { name: "Data table context menu" })).toBeVisible();
+    await currentPage.getByRole("menuitem", { name: "View" }).click();
     await currentPage.getByTestId("cell-a-name").click({ button: "right" });
-    await expect(currentPage.getByRole("menuitem", { name: "셀 데이터 보기" })).toBeVisible();
-    await currentPage.getByRole("menuitem", { name: "셀 데이터 보기" }).click();
+    await expect(currentPage.getByRole("menuitem", { name: "View" })).toBeVisible();
+    await currentPage.getByRole("menuitem", { name: "View" }).click();
     await currentPage.getByTestId("cell-b-name").click({ button: "right" });
-    await expect(currentPage.getByRole("menuitem", { name: "셀 데이터 보기" })).toBeVisible();
+    await expect(currentPage.getByRole("menuitem", { name: "View" })).toBeVisible();
   });
 });
 

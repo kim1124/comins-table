@@ -1,26 +1,30 @@
 import type * as React from "react";
 
+import { resolveLocalizedText } from "../i18n/playground-locale";
+import type { LocalizedText, PlaygroundLocale } from "../i18n/types";
+
 export type FeatureId =
   | "basic"
   | "basic-crud"
-  | "body"
-  | "cell"
-  | "column-groups"
-  | "component"
-  | "context-menu"
-  | "export"
+  | "size"
+  | "theme"
+  | "loading"
   | "header"
+  | "column-groups"
+  | "pagination"
+  | "body"
   | "infinite-scroll"
   | "lazy-load"
-  | "loading"
-  | "pagination"
-  | "row"
-  | "ref-api"
+  | "cell"
   | "selection-clipboard"
-  | "size"
+  | "component"
+  | "row"
+  | "row-expand"
   | "summary-row"
   | "tree-grid"
-  | "theme";
+  | "context-menu"
+  | "export"
+  | "ref-api";
 
 export type FeatureOption = {
   description: string;
@@ -36,3 +40,30 @@ export type FeatureDefinition = {
   options: FeatureOption[];
   summary: string;
 };
+
+export type FeatureOptionSource = Omit<FeatureOption, "description"> & {
+  description: LocalizedText;
+};
+
+export type FeatureDefinitionSource = Omit<FeatureDefinition, "description" | "label" | "options" | "summary"> & {
+  description: LocalizedText;
+  label: LocalizedText;
+  options: FeatureOptionSource[];
+  summary: LocalizedText;
+};
+
+export function resolveFeatureDefinition(
+  feature: FeatureDefinitionSource,
+  locale: PlaygroundLocale,
+): FeatureDefinition {
+  return {
+    ...feature,
+    description: resolveLocalizedText(feature.description, locale),
+    label: resolveLocalizedText(feature.label, locale),
+    options: feature.options.map((option) => ({
+      ...option,
+      description: resolveLocalizedText(option.description, locale),
+    })),
+    summary: resolveLocalizedText(feature.summary, locale),
+  };
+}

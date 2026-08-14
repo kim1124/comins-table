@@ -1,7 +1,13 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, isAbsolute, resolve } from 'node:path';
+import {
+  isImportDeclaration,
+  isNamedImports,
+  isStringLiteral,
+} from 'typescript/unstable/ast';
+import { API } from 'typescript/unstable/sync';
 
 const STRUCTURAL_FAILURE = 'license-check: failed\n';
 const AUTOMATIC_LICENSES = new Set([
@@ -70,6 +76,49 @@ const RESERVED_FONT_NAMES = [
   'Spoqa Han Sans JP',
   'Spoqa Han Sans Neo',
 ];
+const RADIX_ICONS = Object.freeze({
+  copyright: 'Copyright (c) 2022 WorkOS',
+  integrity: 'sha512-fyQIhGDhzfc9pK2kH6Pl9c4BDJGfMkPqkyIgYDthyNYoNg3wVhoJMMh19WS4Up/1KMPFVpNsT2q3WmXn2N1m6g==',
+  license: 'MIT',
+  name: '@radix-ui/react-icons',
+  revision: 'bde33b13aa5848555f5512ac12155930fb4beb7d',
+  source: 'https://github.com/radix-ui/icons',
+  version: '1.3.2',
+});
+const RADIX_LICENSE_TEXT = `MIT License
+
+Copyright (c) 2022 WorkOS
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.`;
+const RADIX_ICON_EXPORT_ALLOWLIST = new Set([
+  'CaretSortIcon',
+  'ChevronLeftIcon',
+  'ChevronRightIcon',
+  'DoubleArrowLeftIcon',
+  'DoubleArrowRightIcon',
+  'DragHandleDots2Icon',
+  'MagnifyingGlassIcon',
+  'ThickArrowDownIcon',
+  'ThickArrowUpIcon',
+]);
+const RADIX_NOTICE_START = '<!-- radix-icons-used-exports:start -->';
+const RADIX_NOTICE_END = '<!-- radix-icons-used-exports:end -->';
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -390,6 +439,138 @@ function approvalMatches(approval, component) {
     && approval.distributed === component.distributed;
 }
 
+function collectSourceFiles(directory) {
+  if (!existsSync(directory)) return [];
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = resolve(directory, entry.name);
+    if (entry.isDirectory()) return collectSourceFiles(path);
+    return /\.[cm]?[jt]sx?$/.test(entry.name) ? [path] : [];
+  });
+}
+
+function collectRadixImports(root) {
+  const sourceRoot = resolve(root, 'src');
+  const exampleRoot = resolve(root, 'example', 'src');
+  const files = [
+    ...collectSourceFiles(sourceRoot),
+    ...collectSourceFiles(exampleRoot),
+  ];
+  if (files.length === 0) throw new Error('missing source inventory');
+
+  const api = new API();
+  const snapshot = api.updateSnapshot({ openFiles: files });
+  const imports = new Set();
+
+  try {
+    for (const file of files) {
+      const sourceFile = snapshot.getDefaultProjectForFile(file)?.program.getSourceFile(file);
+      if (!sourceFile) throw new Error('missing source file');
+
+      for (const statement of sourceFile.statements) {
+        if (!isImportDeclaration(statement) || !isStringLiteral(statement.moduleSpecifier)) continue;
+        const specifier = statement.moduleSpecifier.text;
+        if (file.startsWith(exampleRoot) && /(?:^|\/)table-icons(?:\.[jt]sx?)?$/.test(specifier)) {
+          throw new Error('private icon boundary');
+        }
+        if (!specifier.startsWith(RADIX_ICONS.name)) continue;
+        if (specifier !== RADIX_ICONS.name) throw new Error('invalid Radix module specifier');
+
+        const clause = statement.importClause;
+        const bindings = clause?.namedBindings;
+        if (clause?.name || !bindings || !isNamedImports(bindings)) {
+          throw new Error('invalid Radix import style');
+        }
+        for (const element of bindings.elements) {
+          const name = element.propertyName?.text ?? element.name.text;
+          if (!RADIX_ICON_EXPORT_ALLOWLIST.has(name)) throw new Error('unapproved Radix export');
+          imports.add(name);
+        }
+      }
+    }
+  } finally {
+    snapshot.dispose();
+    api.close();
+  }
+
+  if (imports.size === 0) throw new Error('empty Radix inventory');
+  return [...imports].sort();
+}
+
+function parseRadixNoticeInventory(notice) {
+  const start = notice.indexOf(RADIX_NOTICE_START);
+  const end = notice.indexOf(RADIX_NOTICE_END);
+  if (start < 0 || end <= start || notice.indexOf(RADIX_NOTICE_START, start + 1) >= 0) {
+    throw new Error('invalid notice markers');
+  }
+  const block = notice.slice(start + RADIX_NOTICE_START.length, end).trim();
+  const entries = block ? block.split('\n').map((line) => {
+    const match = /^- `([A-Za-z][A-Za-z0-9]*)`$/.exec(line.trim());
+    if (!match || !RADIX_ICON_EXPORT_ALLOWLIST.has(match[1])) {
+      throw new Error('invalid notice inventory');
+    }
+    return match[1];
+  }) : [];
+  if (entries.length === 0 || new Set(entries).size !== entries.length) {
+    throw new Error('invalid notice inventory');
+  }
+  return entries.sort();
+}
+
+function inspectRadixIcons(root, manifest, lockfile) {
+  const dependencySections = ['dependencies', 'optionalDependencies', 'peerDependencies', 'devDependencies'];
+  const declaredSections = dependencySections.filter((section) =>
+    Object.hasOwn(manifest[section] ?? {}, RADIX_ICONS.name));
+  const mustInspect = manifest.name === 'comins-table' || declaredSections.length > 0;
+  if (!mustInspect) return;
+
+  if (
+    declaredSections.length !== 1
+    || declaredSections[0] !== 'dependencies'
+    || manifest.dependencies[RADIX_ICONS.name] !== RADIX_ICONS.version
+    || lockfile.packages['']?.dependencies?.[RADIX_ICONS.name] !== RADIX_ICONS.version
+  ) {
+    throw new Error('invalid Radix dependency boundary');
+  }
+
+  const locked = lockfile.packages[`node_modules/${RADIX_ICONS.name}`];
+  if (
+    !locked
+    || locked.version !== RADIX_ICONS.version
+    || locked.license !== RADIX_ICONS.license
+    || locked.integrity !== RADIX_ICONS.integrity
+  ) {
+    throw new Error('invalid Radix lock evidence');
+  }
+
+  const upstreamLicensePath = resolve(root, 'node_modules', RADIX_ICONS.name, 'LICENSE');
+  if (!existsSync(upstreamLicensePath)) throw new Error('missing Radix license');
+  const upstreamLicense = readFileSync(upstreamLicensePath, 'utf8').replace(/\r\n/g, '\n').trimEnd();
+  if (upstreamLicense !== RADIX_LICENSE_TEXT) throw new Error('invalid Radix license');
+
+  const noticePath = resolve(root, 'THIRD_PARTY_NOTICES.md');
+  if (!existsSync(noticePath)) throw new Error('missing Radix notice');
+  const notice = readFileSync(noticePath, 'utf8').replace(/\r\n/g, '\n');
+  for (const evidence of [
+    `Component: ${RADIX_ICONS.name}`,
+    `Version: ${RADIX_ICONS.version}`,
+    `Revision: ${RADIX_ICONS.revision}`,
+    `Source: ${RADIX_ICONS.source}`,
+    `License: ${RADIX_ICONS.license}`,
+    RADIX_ICONS.copyright,
+    'Use surface: external runtime dependency; may be bundled by downstream applications',
+    'Modified or copied by Comins: no',
+    RADIX_LICENSE_TEXT,
+  ]) {
+    if (!notice.includes(evidence)) throw new Error('incomplete Radix notice');
+  }
+
+  const sourceImports = collectRadixImports(root);
+  const noticeImports = parseRadixNoticeInventory(notice);
+  if (JSON.stringify(sourceImports) !== JSON.stringify(noticeImports)) {
+    throw new Error('Radix inventory drift');
+  }
+}
+
 function inspectDependencies(root) {
   const manifest = readJson(resolve(root, 'package.json'));
   const lockfile = readJson(resolve(root, 'package-lock.json'));
@@ -430,6 +611,7 @@ function inspectDependencies(root) {
   }
 
   inspectAssets(root, manifest);
+  inspectRadixIcons(root, manifest, lockfile);
   const approvals = loadApprovals(root);
   const review = [];
   for (const [path, entry] of Object.entries(lockfile.packages)) {

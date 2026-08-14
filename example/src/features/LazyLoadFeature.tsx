@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CominsTable, type CominsTableColumn, type CominsLazyLoadRequest } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Button } from "../components/ui/button";
 import type { PersonRow } from "../fixtures/people";
+import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
 type DummyUser = {
   age: number;
@@ -47,8 +48,13 @@ function buildLazyLoadUrl(request: CominsLazyLoadRequest) {
 }
 
 export function LazyLoadFeature() {
-  const [refreshVersion, setRefreshVersion] = useState(0);
-  const [status, setStatus] = useState({ loaded: 0, total: 0 });
+  const { locale, text } = usePlaygroundLocale();
+  const activeRequestRef = useRef<AbortController | null>(null);
+  const requestVersionRef = useRef(0);
+  const [rows, setRows] = useState<PersonRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(
     () => [
       { field: "name", label: "Column1", minWidth: 100, width: 180 },
@@ -60,49 +66,112 @@ export function LazyLoadFeature() {
   );
   const loadRows = useCallback(
     async (request: CominsLazyLoadRequest) => {
-      const response = await fetch(buildLazyLoadUrl(request), { signal: request.signal });
-      const result = (await response.json()) as DummyUsersResponse;
-      const rows = result.users.map(toPersonRow);
-      const loaded = request.reason === "scroll" ? request.offset + rows.length : rows.length;
+      activeRequestRef.current?.abort();
+      const controller = new AbortController();
+      const requestVersion = requestVersionRef.current + 1;
+      const abortFromTable = () => controller.abort();
 
-      setStatus({ loaded, total: result.total });
+      requestVersionRef.current = requestVersion;
+      activeRequestRef.current = controller;
+      if (request.signal.aborted) {
+        controller.abort();
+      } else {
+        request.signal.addEventListener("abort", abortFromTable, { once: true });
+      }
+      if (request.reason === "scroll") {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
 
-      return { rows, total: result.total };
+      try {
+        const response = await fetch(buildLazyLoadUrl(request), { signal: controller.signal });
+        const result = (await response.json()) as DummyUsersResponse;
+
+        if (controller.signal.aborted || requestVersionRef.current !== requestVersion) {
+          return;
+        }
+
+        const nextRows = result.users.map(toPersonRow);
+        setRows((current) => request.reason === "scroll" ? [...current, ...nextRows] : nextRows);
+        setTotal(result.total);
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          // The consumer owns retry/error presentation; the Playground keeps the last successful rows.
+        }
+      } finally {
+        request.signal.removeEventListener("abort", abortFromTable);
+
+        if (requestVersionRef.current === requestVersion) {
+          activeRequestRef.current = null;
+          if (request.reason === "scroll") {
+            setLoadingMore(false);
+          } else {
+            setLoading(false);
+          }
+        }
+      }
     },
-    [refreshVersion],
+    [],
+  );
+
+  useEffect(
+    () => () => {
+      requestVersionRef.current += 1;
+      activeRequestRef.current?.abort();
+      activeRequestRef.current = null;
+    },
+    [],
   );
 
   const refreshRows = () => {
-    setStatus({ loaded: 0, total: 0 });
-    setRefreshVersion((current) => current + 1);
+    const controller = new AbortController();
+
+    setRows([]);
+    setTotal(0);
+    void loadRows({
+      limit: BATCH_SIZE,
+      offset: 0,
+      reason: "refresh",
+      signal: controller.signal,
+    });
   };
 
   return (
     <section className="feature-panel">
       <FeatureSampleSection
-        description="Lazy Load는 onLazyLoad가 offset, limit, AbortSignal을 받아 외부 datasource에서 Row를 가져오는 append-mode public API입니다."
+        description={text(defineLocalizedText(
+          "Lazy Load는 request 시점을 전달하고 application이 controlled Row 배열과 loading 상태를 갱신하는 append-mode public API입니다.",
+          "Lazy Load is an append-mode public API that emits request timing while the application updates controlled rows and loading state.",
+        ))}
         id="lazy-load"
-        title="Lazy Load"
+        title={text(defineLocalizedText("지연 로딩", "Lazy Load"))}
       >
         <div className="table-toolbar">
-          <Button aria-label="새로고침" onClick={refreshRows} variant="outline">
-            새로고침
+          <Button aria-label={text(defineLocalizedText("새로고침", "Refresh"))} onClick={refreshRows} variant="outline">
+            {text(defineLocalizedText("새로고침", "Refresh"))}
           </Button>
           <span className="table-toolbar__state" data-testid="lazy-load-state">
-            Loaded {status.loaded} / {status.total}
+            {locale === "ko" ? `불러옴 ${rows.length} / ${total}` : `Loaded ${rows.length} / ${total}`}
           </span>
         </div>
         <CominsTable
           className="example-table"
           columns={columns}
-          data={[]}
+          data={rows}
           data-testid="lazy-load-viewport"
-          emptyComponent={<span>표시할 데이터가 없습니다.</span>}
+          emptyComponent={<span>{text(defineLocalizedText("표시할 데이터가 없습니다.", "No data to display."))}</span>}
           getRowId={(row) => row.id}
+          hasMoreRows={rows.length < total}
           lazyLoad
           lazyLoadBatchSize={BATCH_SIZE}
           lazyLoadThreshold={140}
-          loadingComponent={<span>원격 데이터를 다시 불러오는 중입니다.</span>}
+          loadingComponent={<span>{text(defineLocalizedText(
+            "원격 데이터를 다시 불러오는 중입니다.",
+            "Reloading remote data.",
+          ))}</span>}
+          loading={loading}
+          loadingMore={loadingMore}
           onLazyLoad={loadRows}
           pagination={{ pageIndex: 0, pageSize: BATCH_SIZE * 3 }}
           persistHeaderWhenEmpty

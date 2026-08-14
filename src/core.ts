@@ -297,6 +297,7 @@ export type CominsTableColumn<TData, TValue = unknown> = {
   hidden?: boolean;
   id?: string;
   label: React.ReactNode;
+  lockPosition?: boolean;
   maxWidth?: number;
   minWidth?: number;
   sort?: boolean | ((left: TValue, right: TValue, leftRow: TData, rightRow: TData) => number);
@@ -308,6 +309,7 @@ export type CominsTableColumnGroup = {
   hidden?: boolean;
   id: string;
   label: React.ReactNode;
+  lockPosition?: boolean;
 };
 
 export type CominsTableRuntimeColumn<TData, TValue = unknown> = Omit<
@@ -503,7 +505,7 @@ export type CominsFillCellRangeOptions = {
   target: CominsCellRange;
 };
 
-const COMINS_MIN_COLUMN_WIDTH = 50;
+const COMINS_MIN_COLUMN_WIDTH = 88;
 
 function defaultGetRowId<TData>(_row: TData, index: number) {
   return index;
@@ -617,41 +619,160 @@ function normalizeColumnOrder<TData>(
   const ordered = (layout?.order ?? []).filter((id) => knownIds.has(id));
   const missing = columns.map((column) => column.id).filter((id) => !ordered.includes(id));
   const flatOrder = [...ordered, ...missing];
-
-  if (columnGroups.length === 0) {
-    return flatOrder;
-  }
-
+  const columnById = new Map(columns.map((column) => [column.id, column]));
   const groupIdByColumnId = getColumnGroupIdMap(columnGroups);
   const groupById = new Map(columnGroups.map((group) => [group.id, group]));
-  const emittedGroups = new Set<string>();
-  const nextOrder: string[] = [];
+  type ColumnOrderEntity = {
+    columnIds: string[];
+    key: string;
+    locked: boolean;
+  };
+  const createEntities = (order: readonly string[]) => {
+    const emittedGroups = new Set<string>();
+    const entities: ColumnOrderEntity[] = [];
 
-  for (const columnId of flatOrder) {
-    const groupId = groupIdByColumnId.get(columnId);
+    for (const columnId of order) {
+      const groupId = groupIdByColumnId.get(columnId);
 
-    if (!groupId) {
-      nextOrder.push(columnId);
-      continue;
+      if (!groupId) {
+        entities.push({
+          columnIds: [columnId],
+          key: `column:${columnId}`,
+          locked: columnById.get(columnId)?.lockPosition === true,
+        });
+        continue;
+      }
+
+      if (emittedGroups.has(groupId)) {
+        continue;
+      }
+
+      const group = groupById.get(groupId);
+
+      if (!group) {
+        entities.push({
+          columnIds: [columnId],
+          key: `column:${columnId}`,
+          locked: columnById.get(columnId)?.lockPosition === true,
+        });
+        continue;
+      }
+
+      const groupChildrenInOrder = order.filter((currentId) => group.children.includes(currentId));
+      entities.push({
+        columnIds: groupChildrenInOrder,
+        key: `group:${groupId}`,
+        locked:
+          group.lockPosition ||
+          groupChildrenInOrder.some((currentId) => columnById.get(currentId)?.lockPosition === true),
+      });
+      emittedGroups.add(groupId);
     }
 
-    if (emittedGroups.has(groupId)) {
-      continue;
+    return entities;
+  };
+  const declaredEntities = createEntities(columns.map((column) => column.id));
+  const proposedEntities = createEntities(flatOrder);
+  const declaredEntityByKey = new Map(declaredEntities.map((entity) => [entity.key, entity]));
+  const declaredSegmentByKey = new Map<string, number>();
+  let segmentCount = 0;
+
+  for (const entity of declaredEntities) {
+    declaredSegmentByKey.set(entity.key, segmentCount);
+
+    if (entity.locked) {
+      segmentCount += 1;
     }
-
-    const group = groupById.get(groupId);
-
-    if (!group) {
-      nextOrder.push(columnId);
-      continue;
-    }
-
-    const groupChildrenInOrder = flatOrder.filter((currentId) => group.children.includes(currentId));
-    nextOrder.push(...groupChildrenInOrder);
-    emittedGroups.add(groupId);
   }
 
-  return nextOrder;
+  const movableEntitiesBySegment = Array.from(
+    { length: segmentCount + 1 },
+    () => [] as ColumnOrderEntity[],
+  );
+  const proposedEntityByKey = new Map(proposedEntities.map((entity) => [entity.key, entity]));
+
+  for (const entity of proposedEntities) {
+    const declaredEntity = declaredEntityByKey.get(entity.key);
+
+    if (!declaredEntity || declaredEntity.locked) {
+      continue;
+    }
+
+    const segment = declaredSegmentByKey.get(entity.key) ?? 0;
+    movableEntitiesBySegment[segment]?.push(entity);
+  }
+
+  const normalizedEntities: ColumnOrderEntity[] = [];
+  let currentSegment = 0;
+
+  for (const entity of declaredEntities) {
+    if (!entity.locked) {
+      continue;
+    }
+
+    normalizedEntities.push(...(movableEntitiesBySegment[currentSegment] ?? []));
+    normalizedEntities.push(proposedEntityByKey.get(entity.key) ?? entity);
+    currentSegment += 1;
+  }
+
+  normalizedEntities.push(...(movableEntitiesBySegment[currentSegment] ?? []));
+
+  return normalizedEntities.flatMap((entity) => {
+    const declaredEntity = declaredEntityByKey.get(entity.key);
+
+    if (!declaredEntity || entity.columnIds.length === 1) {
+      return entity.columnIds;
+    }
+
+    const lockedChildIds = new Set(
+      declaredEntity.columnIds.filter((columnId) => columnById.get(columnId)?.lockPosition),
+    );
+
+    if (lockedChildIds.size === 0) {
+      return entity.columnIds;
+    }
+
+    const declaredChildSegmentById = new Map<string, number>();
+    let childSegmentCount = 0;
+
+    for (const columnId of declaredEntity.columnIds) {
+      declaredChildSegmentById.set(columnId, childSegmentCount);
+
+      if (lockedChildIds.has(columnId)) {
+        childSegmentCount += 1;
+      }
+    }
+
+    const movableChildrenBySegment = Array.from(
+      { length: childSegmentCount + 1 },
+      () => [] as string[],
+    );
+
+    for (const columnId of entity.columnIds) {
+      if (lockedChildIds.has(columnId)) {
+        continue;
+      }
+
+      const segment = declaredChildSegmentById.get(columnId) ?? 0;
+      movableChildrenBySegment[segment]?.push(columnId);
+    }
+
+    const normalizedChildren: string[] = [];
+    let currentChildSegment = 0;
+
+    for (const columnId of declaredEntity.columnIds) {
+      if (!lockedChildIds.has(columnId)) {
+        continue;
+      }
+
+      normalizedChildren.push(...(movableChildrenBySegment[currentChildSegment] ?? []));
+      normalizedChildren.push(columnId);
+      currentChildSegment += 1;
+    }
+
+    normalizedChildren.push(...(movableChildrenBySegment[currentChildSegment] ?? []));
+    return normalizedChildren;
+  });
 }
 
 function createEmptySelection(): CominsSelectionState {
@@ -1198,11 +1319,62 @@ export function setCominsColumnGroupWidth<TData>(
   };
 }
 
+function doesColumnMoveChangeLockedPositions<TData>(
+  state: CominsTableState<TData>,
+  nextOrder: readonly string[],
+) {
+  const currentIndexByColumnId = new Map(
+    state.columnOrder.map((columnId, index) => [columnId, index] as const),
+  );
+  const nextIndexByColumnId = new Map(
+    nextOrder.map((columnId, index) => [columnId, index] as const),
+  );
+
+  for (const column of state.columns) {
+    if (
+      column.lockPosition &&
+      currentIndexByColumnId.get(column.id) !== nextIndexByColumnId.get(column.id)
+    ) {
+      return true;
+    }
+  }
+
+  for (const group of state.columnGroups) {
+    if (!group.lockPosition) {
+      continue;
+    }
+
+    const currentPositions = group.children
+      .map((columnId) => currentIndexByColumnId.get(columnId))
+      .filter((index): index is number => index !== undefined)
+      .sort((left, right) => left - right);
+    const nextPositions = group.children
+      .map((columnId) => nextIndexByColumnId.get(columnId))
+      .filter((index): index is number => index !== undefined)
+      .sort((left, right) => left - right);
+
+    if (
+      currentPositions.length !== nextPositions.length ||
+      currentPositions.some((index, position) => index !== nextPositions[position])
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export function moveCominsColumn<TData>(
   state: CominsTableState<TData>,
   columnId: string,
   targetIndex: number,
 ) {
+  const sourceColumn = findColumn(state, columnId);
+
+  if (!sourceColumn || sourceColumn.lockPosition) {
+    return state;
+  }
+
   const groupIdByColumnId = getColumnGroupIdMap(state.columnGroups);
   const sourceGroupId = groupIdByColumnId.get(columnId);
 
@@ -1247,6 +1419,14 @@ export function moveCominsColumn<TData>(
 
   current.splice(nextIndex, 0, columnId);
 
+  if (doesColumnMoveChangeLockedPositions(state, current)) {
+    return state;
+  }
+
+  if (current.every((id, index) => id === state.columnOrder[index])) {
+    return state;
+  }
+
   return { ...state, columnOrder: current };
 }
 
@@ -1257,7 +1437,7 @@ export function moveCominsColumnGroup<TData>(
 ) {
   const group = findColumnGroupById(state.columnGroups, groupId);
 
-  if (!group) {
+  if (!group || group.lockPosition) {
     return state;
   }
 
@@ -1270,6 +1450,14 @@ export function moveCominsColumnGroup<TData>(
   const current = state.columnOrder.filter((id) => !group.children.includes(id));
   const nextIndex = Math.max(0, Math.min(targetIndex, current.length));
   const nextOrder = [...current.slice(0, nextIndex), ...groupChildren, ...current.slice(nextIndex)];
+
+  if (doesColumnMoveChangeLockedPositions(state, nextOrder)) {
+    return state;
+  }
+
+  if (nextOrder.every((id, index) => id === state.columnOrder[index])) {
+    return state;
+  }
 
   return { ...state, columnOrder: nextOrder };
 }

@@ -1,33 +1,36 @@
 # Lazy Load
 
-`lazyLoad`는 DataTable이 네트워크 구현을 직접 소유하지 않고, `onLazyLoad` callback으로 datasource 요청만 위임하는 append-mode API다.
+`lazyLoad`는 request 시점을 Comins Table에 위임하고, application이 Row 배열과 원격 상태를 소유하는 controlled API다.
 
 ```tsx
-async function loadRows({ offset, limit, reason, signal }) {
-  const params = new URLSearchParams({
-    delay: "700",
-    limit: String(limit),
-    select: "id,firstName,lastName,age,email,role",
-    skip: String(offset),
-  });
-  const response = await fetch(`https://dummyjson.com/users?${params}`, { signal });
-  const result = await response.json();
+const [rows, setRows] = useState<PersonRow[]>([]);
+const [total, setTotal] = useState(0);
+const [loading, setLoading] = useState(false);
+const [loadingMore, setLoadingMore] = useState(false);
 
-  return {
-    rows: result.users.map(toPersonRow),
-    total: result.total,
-  };
-}
+const loadRows = useCallback(async ({ offset, limit, reason, signal }) => {
+  reason === "scroll" ? setLoadingMore(true) : setLoading(true);
+
+  try {
+    const response = await fetch(`/api/rows?offset=${offset}&limit=${limit}`, { signal });
+    const result = await response.json();
+    setRows((current) => reason === "scroll" ? [...current, ...result.rows] : result.rows);
+    setTotal(result.total);
+  } finally {
+    reason === "scroll" ? setLoadingMore(false) : setLoading(false);
+  }
+}, []);
 
 <CominsTable
   columns={columns}
-  data={[]}
-  emptyComponent={<span>표시할 데이터가 없습니다.</span>}
-  getRowId={(row) => row.id}
+  data={rows}
+  hasMoreRows={rows.length < total}
   lazyLoad
   lazyLoadBatchSize={30}
   lazyLoadMode="append"
   lazyLoadThreshold={140}
+  loading={loading}
+  loadingMore={loadingMore}
   onLazyLoad={loadRows}
   pagination={{ pageIndex: 0, pageSize: 90 }}
   skeletonRowCount={5}
@@ -39,22 +42,20 @@ async function loadRows({ offset, limit, reason, signal }) {
 
 | Prop | 의미 |
 | --- | --- |
-| `lazyLoad` | append-mode datasource loading을 활성화한다. |
-| `lazyLoadBatchSize` | 한 번에 요청할 row 수다. 기본값은 `30`이다. |
+| `lazyLoad` | append-mode request trigger를 활성화한다. |
+| `lazyLoadBatchSize` | 한 번에 요청할 Row 수다. 기본값은 `30`이다. |
 | `lazyLoadMode` | 현재 지원 mode는 `"append"`다. |
-| `lazyLoadThreshold` | body viewport 하단에서 몇 px 이내에 들어왔을 때 append 요청을 보낼지 지정한다. |
-| `onLazyLoad` | `{ offset, limit, reason, signal }`을 받아 `{ rows, total }`을 반환하는 async datasource callback이다. |
+| `lazyLoadThreshold` | body viewport 하단에서 몇 px 이내에 들어왔을 때 scroll 요청을 보낼지 지정한다. |
+| `onLazyLoad` | `{ offset, limit, reason, signal }`을 받고 application state를 갱신하는 `void | Promise<void>` callback이다. |
+| `data` | application이 소유하고 Table이 렌더링하는 controlled Row 배열이다. |
+| `hasMoreRows` | `false`이면 추가 scroll 요청을 중단한다. |
+| `loading` | Row가 없으면 skeleton, 기존 Row가 있으면 overlay를 표시한다. |
+| `loadingMore` | 중복 scroll 요청을 막고 하단 loading Row를 표시한다. |
 
-`reason`은 `"initial"`, `"scroll"`, `"refresh"` 중 하나다. 현재 built-in 자동 trigger는 initial과 scroll append이며, refresh UI는 소비자가 버튼이나 route state로 구성한다.
+`reason`은 `"initial"`, `"scroll"`, `"refresh"` 중 하나다. Table의 자동 trigger는 initial과 scroll이며, scroll offset은 현재 `data.length`다. Refresh 버튼은 Row 배열을 먼저 비우고 application loader를 `offset: 0`, `reason: "refresh"`로 직접 호출한다.
 
-## Loading And Empty Integration
+Comins Table은 callback 반환값을 저장하지 않는다. Callback이 fetch 결과를 replace/append하고 `total` 기반 `hasMoreRows`, `loading`, `loadingMore`를 갱신해야 한다.
 
-초기 lazy request 중 row가 없으면 기존 `loading` skeleton과 같은 형태가 출력된다. datasource가 빈 배열과 `total: 0`을 반환하면 `emptyComponent`가 출력된다.
+## Abort 및 오류 계약
 
-기존 row가 있는 상태에서 소비자가 `loading={true}`를 전달하면 row는 유지되고 overlay spinner가 표시된다. append 요청 중에는 하단 loading row가 표시된다.
-
-## Abort Contract
-
-`onLazyLoad`는 `AbortSignal`을 받는다. route 이동, unmount, superseded request 상황에서 signal이 abort되면 stale 결과는 table rows에 반영되지 않는다.
-
-자동화 테스트에서는 외부 API를 직접 호출하지 말고 Playwright route mock으로 응답을 고정한다.
+전달된 `AbortSignal`, refresh, unmount 시 application fetch를 취소한다. 늦게 도착한 응답이 더 최신 controlled Row를 덮어쓰지 않도록 application이 stale request를 차단한다. 오류, retry와 빈 결과 UI도 application이 소유한다.

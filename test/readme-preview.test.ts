@@ -33,11 +33,13 @@ describe("README preview contract", () => {
     expect(dependencyGateIndex).toBeLessThan(checkoutIndex);
   });
 
-  it("separates controlled data write-back from observable internal view state", () => {
+  it("separates controlled data mutations and Row Expand write-back from internal view state", () => {
     const readme = readFileSync("README.md", "utf8");
     const controlledModel = getReadmeSection(readme, "Controlled Model");
+    const rowsAndCells = getReadmeSection(readme, "Rows, Cells, And Selection");
 
-    expect(controlledModel).toContain("Only `onChangeData` requires application write-back");
+    expect(controlledModel).toContain("For table-owned data mutations, `onChangeData` emits");
+    expect(controlledModel).toContain("Other controlled models use their matching callback and value prop");
     expect(controlledModel).toContain("internal view state");
     expect(controlledModel).toContain("observe those changes");
     expect(controlledModel).toContain("supported Ref API");
@@ -45,6 +47,10 @@ describe("README preview contract", () => {
     expect(controlledModel).toContain("`setColumnLayout`");
     expect(controlledModel).toContain("`setSortState` and `clearSort`");
     expect(controlledModel).not.toContain("Apply each callback payload to the owning state");
+    expect(rowsAndCells).toContain(
+      "feed the next value from `onChangeExpandedRowIds` back into `expandedRowIds`",
+    );
+    expect(rowsAndCells).toContain("the disclosure is disabled and read-only");
   });
 
   it("describes the Ref API as current Header view state access", () => {

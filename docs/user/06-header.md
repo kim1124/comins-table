@@ -36,8 +36,7 @@ tableRef.current?.setSortModel([
 - A normal click or `Enter`/`Space` keeps the existing single-column `none -> asc -> desc -> none` cycle.
 - `Shift` plus click or `Enter`/`Space` appends a new ascending rule, updates an existing rule in place, or removes its descending rule.
 - Header badges show the 1-based comparison priority. Removing a rule compacts the remaining priorities.
-- The sort indicator is drawn with module-owned CSS and rotates or fades for
-  `asc`, `desc`, and unsorted states.
+- The sort indicator uses state-specific decorative Radix SVG icons (`aria-hidden="true"`) for `asc`, `desc`, and unsorted states. The Header keeps the existing click and `Enter`/`Space` keyboard cycle and continues to expose `aria-sort`.
 - `getSortModel()` and `setSortModel(model)` read and restore the full ordered model. `getSortState()` and `setSortState(rule)` remain available for one-rule compatibility; `setSortState` replaces the full model.
 - `clearSort()` clears every rule. `onChangeSort` continues to observe the first rule, while `onChangeSortModel` observes the complete model.
 - Hidden sortable Columns keep their rules. Removed or non-sortable Columns are removed from the model.
@@ -52,11 +51,15 @@ The live [`/api/ref`](http://127.0.0.1:4002/api/ref) example applies `setSortMod
 
 - A left-button mouse interaction activates column reorder at a 6-pixel horizontal drag threshold. Horizontal movement must be greater than vertical movement.
 - Pointer Up below the threshold preserves the normal click and sort behavior. Vertical intent cancels both the pending reorder and sort.
-- After activation, the source header becomes a source placeholder while a ghost and target marker show the pending move.
+- After activation, the source Header becomes a darker dashed source placeholder that keeps its plain Column or Group name visible while a ghost and target marker show the pending move. This presentation-only source label does not invoke custom Header renderers.
+- A 24px move handle with a 15px decorative Radix SVG icon (`aria-hidden="true"`) appears at the left by default and activates immediately. The whole Header retains the 6-pixel gesture. Set `showColumnMoveHandle={false}` to hide handles without removing that existing gesture.
+- Set `lockPosition: true` on a Column or Group to keep its position fixed. A locked Header has no handle, cannot be moved, and prevents another move from crossing or shifting its position.
+- A valid same-depth target uses a blue two-pixel border, blue marker, and low-alpha blue background. A different-depth, cross-parent, or position-locked target uses the corresponding red treatment with a `not-allowed` cursor and cannot commit. Content opacity is unchanged.
+- A committed move animates Header, rendered body cells, and Summary cells to their new horizontal positions. `prefers-reduced-motion: reduce` disables the transition.
+- The built-in Header control contract uses an 88px default minimum Column width. Labels may truncate; custom Header content that needs more room should set a larger `minWidth`.
 - A move commits only on Pointer Up over a valid target. Pointer cancellation, `Escape`, or window blur cancels it without changing the layout.
 - For non-mouse pointer input, one-second long-press compatibility is retained.
 - Parent groups use the same interaction and move all child columns as one block.
-- A dedicated drag handle remains a future alternative; it is not a shipped API.
 
 Two-level headers use `columnGroups`.
 
@@ -64,10 +67,16 @@ Two-level headers use `columnGroups`.
 <CominsTable
   columns={columns}
   columnGroups={[
-    { id: "profile", label: "Profile", children: ["name", "age"] },
+    { id: "profile", label: "Profile", children: ["name", "age"], lockPosition: true },
   ]}
   data={data}
 />
 ```
 
 Parent groups resize their child columns proportionally and move as a block. Nested groups are not part of the first public release.
+
+## Future Column Filter
+
+Column Filter is not shipped: there is no Filter prop, callback, button, import, or runtime state in this release. When it is introduced, its control belongs at the Header's right edge after sort metadata and before resize. The control must isolate pointer, click, and double-click events from Header sort, resize, and move interactions; provide an accessible name and keyboard operation; and keep Filter value and open state application-owned through controlled state.
+
+In the Playground, parent Group visibility uses independent Checkboxes while child Column visibility uses the MultiSelect. Turning a parent off hides all of its children without deleting the child selection; turning it on restores the previously selected children.
