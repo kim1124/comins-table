@@ -1,41 +1,45 @@
-<!-- comins-reference:managed-start contract=v1.2 -->
+<!-- comins-reference:managed-start contract=v1.6 -->
 # Comins Module AGENTS.md
 
 ## Scope
 
-- This repository is one independent Comins module and Git change boundary.
-- Read this file and only the closer `AGENTS.md` files that apply to the target path. Read Governance policy explicitly only for public API, security, release, licensing, or common-policy work.
-- Do not use KMSF workspace commands, source synchronization, or release flows without a migration-history request. Keep `AGENTS.override.md` temporary and uncommitted.
+- Keep the module Git boundary; use
+  [Governance](https://github.com/kim1124/comins-governance) for common rules.
+
+## Required Order
+
+- Resolve the Git root and instructions. Follow Contract v1.6: license compliance; security and sensitive data; Comins common rules;
+  module rules; smallest change and affected checks; Git, pull request, and CI; release checks only when publishing.
 
 ## Work Routing
 
-- **Inspection or research:** inspect relevant sources and report evidence; do not edit, create a work report, or run product gates by default.
-- **Documentation, guidance, or configuration:** make the scoped change directly; run diff, reference, instruction, and parse checks without product TDD or browser gates.
-- **Clear local behavior:** define acceptance or reproduce the defect, add the smallest regression test first when it materially improves confidence, implement, run focused checks, then run the module baseline once.
-- **Complex or high-risk behavior:** research material unknowns, close decisions, use an approved design or plan when needed, test incrementally, and run the applicable broad gate once after the meaningful change.
-- **Security, release, external, or destructive work:** follow the canonical Governance policy and obtain the approval required for the affected operation.
+- **Inspection or research:** report evidence only.
+- **Documentation or configuration:** direct edit and matching checks.
+- **Product behavior:** acceptance, smallest change, affected checks.
+- Plan only for high-risk ambiguity.
+- General-purpose skills and historical plans must not expand the selected route
+  or trigger unrelated checks.
+- Subagents require explicit maintainer delegation or approved independent
+  parallel work. Never pass full history; use bounded briefs and paths.
+- Run final review or a broad gate only when the selected route requires it.
+- On failure, preserve same-commit evidence and successful checks; classify and
+  rerun only affected jobs or tests. A retry does not restart prior work.
 
-## Change Boundaries
+## Common Boundaries
 
-- Preserve documented APIs, types, and package-local conventions unless the request explicitly expands them.
-- Namespace CSS and custom properties, avoid global resets, and keep external engines behind module-owned adapters.
-- Do not publish, tag, create a GitHub Release, or push a remote branch without an explicit maintainer command.
-
-## Sensitive Data
-
-- Adopt Comins Contract v1.2 and the governance `SENSITIVE_DATA_STANDARD.md`.
-- Never track personal names, personal email addresses, local account paths, credentials, tokens, secrets, or value-derived fingerprints.
-- Use only an approved public handle, GitHub noreply identity, service identity, explicit placeholder, or repository-relative path; run the required local Gitleaks hook and security CI, and when a package boundary exists run the exact package-artifact gate.
-- Redact detector output, fail closed when a required scanner is unavailable, and handle legacy remediation through a separate audit.
+- Preserve public APIs and types; keep CSS and external engines module-scoped.
+- Apply Governance `OSS_LICENSE_POLICY.md` and `SENSITIVE_DATA_STANDARD.md`; the
+  module owns its checker commands and CI implementation.
+- Remote writes, publishing, tags, Releases, policy exceptions, and destructive
+  operations require explicit approval.
+- Name new Codex development branches `codex-<short-feature-name>`; append `-2`,
+  `-3`, and so on for additional work under the same feature.
+  Existing and provider-managed branches are exempt.
 
 ## Verification
 
-- Select checks by change type, report failed or unrun required checks, and run the unchanged broad gate only once unless new evidence or changed state justifies a retry.
-- Classify failures as product behavior, test contract, or execution environment before changing code or repeating a gate.
-
-## Reporting
-
-- Update the repository's work report only for meaningful behavior, public API, configuration, security, release, or test-contract changes when that repository has a report convention.
+- Run affected checks only. A failed required gate blocks the workflow;
+  unrelated gates are not substitutes.
 <!-- comins-reference:managed-end -->
 
 ## Module Guidance
