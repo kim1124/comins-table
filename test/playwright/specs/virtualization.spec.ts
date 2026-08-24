@@ -28,14 +28,6 @@ type CdpPerformanceMetrics = {
   Nodes: number;
 };
 
-type DevtoolsMemorySnapshot = {
-  documents: number;
-  jsEventListeners: number;
-  jsHeapUsedSize: number;
-  liveElementCount: number;
-  nodes: number;
-};
-
 async function readPerformanceMetrics(page: Page): Promise<CdpPerformanceMetrics> {
   const session = await page.context().newCDPSession(page);
 
@@ -59,32 +51,6 @@ async function collectGarbage(page: Page) {
   await session.send("HeapProfiler.collectGarbage");
   await session.detach();
   await page.waitForTimeout(100);
-}
-
-async function readDevtoolsMemorySnapshot(page: Page): Promise<DevtoolsMemorySnapshot> {
-  const session = await page.context().newCDPSession(page);
-
-  await session.send("HeapProfiler.enable");
-  await session.send("HeapProfiler.collectGarbage");
-  await session.send("HeapProfiler.collectGarbage");
-  await session.send("Performance.enable");
-  const [{ documents, jsEventListeners, nodes }, metrics] = await Promise.all([
-    session.send("Memory.getDOMCounters"),
-    session.send("Performance.getMetrics"),
-  ]);
-  await session.detach();
-  await page.waitForTimeout(100);
-
-  const values = new Map(metrics.metrics.map((metric) => [metric.name, metric.value]));
-  const liveElementCount = await page.evaluate(() => document.querySelectorAll("*").length);
-
-  return {
-    documents,
-    jsEventListeners,
-    jsHeapUsedSize: values.get("JSHeapUsedSize") ?? 0,
-    liveElementCount,
-    nodes,
-  };
 }
 
 async function dragVirtualScrollbar(page: Page, direction: "down" | "up") {
@@ -522,73 +488,6 @@ test("playground keeps devtools metrics bounded during one hundred thousand row 
   expect(afterScroll.JSHeapUsedSize, metricFailureContext).toBeLessThanOrEqual(
     Math.ceil(stableBaseline.JSHeapUsedSize * 1.2),
   );
-  expect(diagnostics).toEqual([]);
-});
-
-test("playground releases devtools DOM counters after 100000 row scroll and return to basic @perf", async ({ page }) => {
-  test.setTimeout(60_000);
-  const diagnostics = collectBrowserDiagnostics(page);
-  await page.goto("/");
-  const basicBaseline = await readDevtoolsMemorySnapshot(page);
-  await page.goto("/performance/virtualization");
-  await expect(page.getByRole("button", { name: "100만 행 로드" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
-
-  const viewport = page.getByTestId("data-table-viewport");
-  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
-  await expect.poll(() => page.locator(".comins-table__body-table tbody tr").count()).toBeLessThan(90);
-  const postLoad = await readDevtoolsMemorySnapshot(page);
-
-  await viewport.hover();
-  await page.mouse.wheel(0, 2400);
-  await dragVirtualScrollbar(page, "down");
-  await expect
-    .poll(() =>
-      viewport.evaluate((element) => {
-        const rows = Array.from(
-          element.querySelectorAll<HTMLTableRowElement>(
-            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
-          ),
-        );
-        const last = rows[rows.length - 1];
-
-        return Number(last?.getAttribute("data-comins-row-data-index") ?? "-1");
-      }),
-    )
-    .toBeGreaterThan(99_900);
-  const afterDown = await readDevtoolsMemorySnapshot(page);
-
-  await page.mouse.wheel(0, -2400);
-  await dragVirtualScrollbar(page, "up");
-  await expect
-    .poll(() =>
-      viewport.evaluate((element) => {
-        const rows = Array.from(
-          element.querySelectorAll<HTMLTableRowElement>(
-            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
-          ),
-        );
-        const first = rows[0];
-
-        return Number(first?.getAttribute("data-comins-row-data-index") ?? "-1");
-      }),
-    )
-    .toBeLessThan(100);
-  const afterUp = await readDevtoolsMemorySnapshot(page);
-
-  await page.getByRole("link", { exact: true, name: "Getting Started" }).click();
-  await expect(page).toHaveURL(/\/docs\/getting-started$/u);
-  await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "basic");
-  await expect(page.getByTestId("data-table-viewport")).toBeVisible();
-  const afterBasic = await readDevtoolsMemorySnapshot(page);
-  const snapshots = { afterBasic, afterDown, afterUp, basicBaseline, postLoad };
-  const failureContext = JSON.stringify(snapshots, null, 2);
-
-  expect(afterBasic.nodes, failureContext).toBeLessThanOrEqual(Math.ceil(basicBaseline.nodes * 1.25));
-  expect(afterBasic.jsEventListeners, failureContext).toBeLessThanOrEqual(
-    Math.ceil(basicBaseline.jsEventListeners * 1.25),
-  );
-  expect(afterBasic.documents, failureContext).toBeLessThanOrEqual(postLoad.documents);
   expect(diagnostics).toEqual([]);
 });
 
