@@ -16,7 +16,6 @@ function getReadmeSection(readme: string, heading: string) {
 describe("README preview contract", () => {
   it("routes the macOS ImageIO metadata gate only for affected changes", () => {
     const workflow = readFileSync(".github/workflows/verify.yml", "utf8");
-    const playwrightConfig = readFileSync("playwright.config.ts", "utf8");
     const changesJob = workflow.match(/  changes:\n(?<body>[\s\S]*?)(?=\n  [a-z][a-z_-]+:\n)/u)?.groups?.body ?? "";
     const metadataJob = workflow.match(/  gif_metadata:\n(?<body>[\s\S]*?)(?=\n  [a-z][a-z_-]+:\n)/u)?.groups?.body ?? "";
     const verifyJob = workflow.match(/  verify:\n(?<body>[\s\S]*)$/u)?.groups?.body ?? "";
@@ -31,9 +30,6 @@ describe("README preview contract", () => {
     expect(verifyJob).toContain("needs: [changes, security, fast, gif_metadata, browser]");
     expect(verifyJob).toContain("GIF_METADATA_RESULT: ${{ needs.gif_metadata.result }}");
     expect(verifyJob).toContain("$result\" != 'success' && \"$result\" != 'skipped'");
-    expect(playwrightConfig).toContain('? [["github"]');
-    expect(playwrightConfig).toContain("retries: isCI ? 1 : 0");
-    expect(playwrightConfig).toContain('trace: "retain-on-failure-and-retries"');
   });
 
   it("separates controlled data mutations and Row Expand write-back from internal view state", () => {

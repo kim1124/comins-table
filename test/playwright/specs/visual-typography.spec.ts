@@ -1,9 +1,4 @@
-import { mkdir } from "node:fs/promises";
-import { join } from "node:path";
-
 import { expect, test, type Page } from "@playwright/test";
-
-const artifactDir = join(process.cwd(), "reports/artifacts/visual-typography");
 
 async function expectBaseTypography(page: Page) {
   await expect(page.locator("body")).toHaveCSS("font-size", "12px");
@@ -22,7 +17,7 @@ async function expectNoRootHorizontalOverflow(page: Page) {
   expect(overflowX).toBeLessThanOrEqual(2);
 }
 
-test("captures data-table example visual typography screenshots", async ({ page }) => {
+test("keeps data-table typography and root width at desktop and mobile sizes", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
   await page.waitForLoadState("networkidle");
@@ -30,28 +25,13 @@ test("captures data-table example visual typography screenshots", async ({ page 
   await expectBaseTypography(page);
   await expectNoRootHorizontalOverflow(page);
 
-  await mkdir(artifactDir, { recursive: true });
-  await page.screenshot({
-    animations: "disabled",
-    fullPage: true,
-    path: join(artifactDir, "data-table-desktop.png"),
-  });
-
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.waitForTimeout(100);
   await expect(page.getByRole("main")).toBeVisible();
   await expectBaseTypography(page);
   await expectNoRootHorizontalOverflow(page);
-  await page.screenshot({
-    animations: "disabled",
-    fullPage: true,
-    path: join(artifactDir, "data-table-mobile.png"),
-  });
 });
 
-test("captures Selection and Ref API consumer examples without root overflow", async ({ page }) => {
-  await mkdir(artifactDir, { recursive: true });
-
+test("keeps Selection and Ref API consumer examples within the root width", async ({ page }) => {
   for (const example of [
     { name: "selection-clipboard", route: "/examples/selection-clipboard" },
     { name: "ref-api", route: "/api/ref" },
@@ -68,17 +48,6 @@ test("captures Selection and Ref API consumer examples without root overflow", a
       await expect(consumerCard).toBeVisible();
       await expectBaseTypography(page);
       await expectNoRootHorizontalOverflow(page);
-      const sidebar = page.locator(".docs-sidebar");
-      await sidebar.evaluate((element) => {
-        element.style.visibility = "hidden";
-      });
-      await consumerCard.screenshot({
-        animations: "disabled",
-        path: join(artifactDir, `${example.name}-${viewport.name}.png`),
-      });
-      await sidebar.evaluate((element) => {
-        element.style.visibility = "";
-      });
     }
   }
 });
