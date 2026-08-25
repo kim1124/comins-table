@@ -45,6 +45,13 @@ import { getCominsColumnMouseIntent } from "./column-pointer";
 import { renderCominsBuiltInComponent, type CominsBuiltInComponentInteraction } from "./component-renderer";
 import { CominsRowDetailRow, CominsRowDetailToggle } from "./row-detail";
 import { CominsTableIcon, CominsTableIconButton } from "./table-icons";
+import {
+  createCominsGroupTree,
+  getCominsAggregateValue,
+  normalizeCominsRowGrouping,
+  orderCominsGroupTree,
+  projectCominsGroupTree,
+} from "./grouping";
 import { getCominsSummaryValues } from "./summary";
 import {
   flattenCominsTree,
@@ -76,9 +83,23 @@ import {
 export * from "./core";
 export * from "./summary";
 export * from "./tree";
+export type {
+  CominsRowGroupAggregation,
+  CominsRowGroupKey,
+  CominsRowGroupingConfig,
+  CominsRowGroupingCriterion,
+  CominsRowGroupingCriterionInput,
+  CominsRowGroupingLabelParams,
+  CominsRowGroupingSourceRow,
+  CominsRowGroupingValueParams,
+} from "./grouping";
 
 import type { CominsTableSummaryConfig } from "./summary";
 import type { CominsTreeNode, CominsVisibleTreeRow } from "./tree";
+import type {
+  CominsGroupingProjectionEntry,
+  CominsRowGroupingConfig,
+} from "./grouping";
 
 import type {
   CominsCellAddress,
@@ -251,7 +272,7 @@ export type CominsLazyLoadRequest = {
   signal: AbortSignal;
 };
 
-type CominsTableFlatProps<TData> = {
+type CominsFlatTableBaseProps<TData> = {
   "buffer-size"?: number;
   cellSelection?: boolean;
   className?: string;
@@ -301,10 +322,47 @@ type CominsTableFlatProps<TData> = {
   virtualized?: boolean;
 };
 
-export type CominsTableProps<TData> = CominsTableFlatProps<TData> & CominsRowDetailProps<TData>;
+type CominsUngroupedTableProps<TData> = CominsFlatTableBaseProps<TData> & {
+  rowGrouping?: undefined;
+};
+
+type CominsGroupedTableProps<TData> = Omit<
+  CominsFlatTableBaseProps<TData>,
+  | "hasMoreRows"
+  | "infiniteScroll"
+  | "infiniteScrollThreshold"
+  | "lazyLoad"
+  | "lazyLoadBatchSize"
+  | "lazyLoadMode"
+  | "lazyLoadThreshold"
+  | "loadingMore"
+  | "onLazyLoad"
+  | "onLoadMore"
+  | "pagination"
+  | "rowProps"
+> & {
+  hasMoreRows?: never;
+  infiniteScroll?: never;
+  infiniteScrollThreshold?: never;
+  lazyLoad?: never;
+  lazyLoadBatchSize?: never;
+  lazyLoadMode?: never;
+  lazyLoadThreshold?: never;
+  loadingMore?: never;
+  onLazyLoad?: never;
+  onLoadMore?: never;
+  pagination?: never;
+  rowGrouping: CominsRowGroupingConfig<TData>;
+  rowProps?: Omit<CominsTableRowProps<TData>, "draggable"> & { draggable?: never };
+};
+
+export type CominsTableProps<TData> = (
+  | CominsGroupedTableProps<TData>
+  | CominsUngroupedTableProps<TData>
+) & CominsRowDetailProps<TData>;
 
 export type CominsTreeTableProps<TData> = Omit<
-  CominsTableProps<TData>,
+  CominsFlatTableBaseProps<TData>,
   | "data"
   | "getRowId"
   | "hasMoreRows"
@@ -320,6 +378,7 @@ export type CominsTreeTableProps<TData> = Omit<
   | "onLoadMore"
   | "pagination"
   | "rowProps"
+  | "rowGrouping"
   | "estimatedRowDetailHeight"
   | "expandedRowIds"
   | "getRowDetailHeight"
@@ -350,6 +409,7 @@ export type CominsTreeTableProps<TData> = Omit<
   isRowExpandable?: never;
   onChangeExpandedRowIds?: never;
   renderRowDetail?: never;
+  rowGrouping?: never;
   tree: true;
 };
 
@@ -371,7 +431,7 @@ type CominsMixedVirtualProjection<TData> = {
   heightIndex: CominsHeightIndex;
   keys: string[];
   slotIndexByRowId: Map<CominsRowId, number>;
-  slots: Array<CominsDataVirtualSlot<TData>>;
+  slots: Array<CominsVirtualSlot<TData>>;
 };
 
 type CominsCommittedDetailObserverSnapshot<TData> = Readonly<{
@@ -381,10 +441,9 @@ type CominsCommittedDetailObserverSnapshot<TData> = Readonly<{
 }>;
 
 type CominsVirtualProjection = {
+  keys: readonly string[];
   mixed: false;
-  projectedDataIndexes: readonly number[];
   rowHeight: number;
-  rowIds: readonly CominsRowId[];
   visibleRowCount: number;
 } | {
   heightIndex: CominsHeightIndex;
@@ -426,45 +485,17 @@ type CominsTreeRenderContext<TData> = {
   treeColumnId: string | null;
 };
 
-type CominsTableInnerProps<TData> = CominsTableProps<TData> & {
+type CominsTableInnerProps<TData> = CominsFlatTableBaseProps<TData> & CominsRowDetailProps<TData> & {
+  rowGrouping?: CominsRowGroupingConfig<TData>;
   treeContext?: CominsTreeRenderContext<TData>;
 };
-
-function createVisibleRowEntries<TData>(
-  sortedRowIndexes: number[] | null,
-  rows: TData[],
-  rowIds: CominsRowId[],
-  startIndex: number,
-  endIndex: number,
-) {
-  const safeStartIndex = Math.max(0, startIndex);
-  const visibleRowCount = sortedRowIndexes?.length ?? rows.length;
-  const safeEndIndex = Math.min(visibleRowCount, Math.max(safeStartIndex, endIndex));
-  const entries: Array<VisibleRowEntry<TData>> = [];
-
-  for (let visibleIndex = safeStartIndex; visibleIndex < safeEndIndex; visibleIndex += 1) {
-    const dataIndex = sortedRowIndexes?.[visibleIndex] ?? visibleIndex;
-    const row = rows[dataIndex];
-    const rowId = rowIds[dataIndex];
-
-    if (row !== undefined && rowId !== undefined) {
-      entries.push({ dataIndex, row, rowId, visibleIndex });
-    }
-  }
-
-  return entries;
-}
 
 function getCominsVirtualProjectionKeys(projection: CominsVirtualProjection) {
   if (projection.mixed) {
     return projection.keys;
   }
 
-  return projection.projectedDataIndexes.flatMap((dataIndex) => {
-    const rowId = projection.rowIds[dataIndex];
-
-    return rowId === undefined ? [] : [getCominsDataSlotKey(rowId)];
-  });
+  return projection.keys;
 }
 
 function captureCominsVirtualAnchor(input: {
@@ -1389,6 +1420,7 @@ function CominsTableInner<TData>(
     pagination,
     persistHeaderWhenEmpty = true,
     rowHeight = 36,
+    rowGrouping,
     rowProps,
     isRowExpandable,
     renderRowDetail,
@@ -1438,6 +1470,9 @@ function CominsTableInner<TData>(
   const rangeDragLastAddressRef = useRef<CominsCellAddress | null>(null);
   const rangeDragMovedRef = useRef(false);
   const rowMoveStateRef = useRef<CominsRowMoveState | null>(null);
+  const groupDisclosureElementsRef = useRef(new Map<string, HTMLButtonElement>());
+  const focusedLeafDataIndexRef = useRef<number | null>(null);
+  const previousGroupedDataIndexesRef = useRef<ReadonlySet<number> | null>(null);
   const anchorRevisionRef = useRef(0);
   const logicalAnchorTransactionRef = useRef<CominsLogicalAnchorTransaction | null>(null);
   const pendingDetailAnchorRef = useRef<CominsPendingDetailAnchor | null>(null);
@@ -1460,19 +1495,36 @@ function CominsTableInner<TData>(
   const [scrollTop, setScrollTop] = useState(0);
   const rowDetailIdPrefix = useId();
   const effectiveData = data;
+  const groupingRequested =
+    !treeContext &&
+    rowGrouping !== null &&
+    typeof rowGrouping === "object" &&
+    rowGrouping !== undefined &&
+    Array.isArray(rowGrouping.criteria) &&
+    rowGrouping.criteria.length > 0;
+  const effectivePagination = useMemo(
+    () => groupingRequested
+      ? { pageIndex: 0, pageSize: Math.max(1, effectiveData.length) }
+      : pagination,
+    [effectiveData.length, groupingRequested, pagination],
+  );
+  const effectiveRowProps = useMemo<CominsTableRowProps<TData> | undefined>(
+    () => groupingRequested ? { ...rowProps, draggable: false } : rowProps,
+    [groupingRequested, rowProps],
+  );
   const [state, setState] = useState(() =>
     createCominsTableState({
       columnGroups,
       columns,
       getRowId,
-      pagination,
+      pagination: effectivePagination,
       rows: effectiveData,
       showHeader,
       theme,
     }),
   );
   const stateRef = useRef(state);
-  const stateInputRef = useRef({ columnGroups, columns, data: effectiveData, getRowId, pagination, showHeader });
+  const stateInputRef = useRef({ columnGroups, columns, data: effectiveData, getRowId, pagination: effectivePagination, showHeader });
   const virtualBufferSize = Math.max(0, Math.floor(Number.isFinite(bufferSize) ? Number(bufferSize) : 10));
   const resolvedLazyLoadBatchSize = Math.max(1, Math.floor(lazyLoadBatchSize));
   const resolvedLazyLoadThreshold = Math.max(0, Math.floor(lazyLoadThreshold ?? infiniteScrollThreshold));
@@ -1523,7 +1575,7 @@ function CominsTableInner<TData>(
   const requestLazyLoad = (reason: CominsLazyLoadReason) => {
     const lazyLoadHandler = onLazyLoadRef.current;
 
-    if (!lazyLoad || lazyLoadMode !== "append" || !lazyLoadHandler || lazyLoadingReasonRef.current) {
+    if (groupingRequested || !lazyLoad || lazyLoadMode !== "append" || !lazyLoadHandler || lazyLoadingReasonRef.current) {
       return;
     }
 
@@ -1578,7 +1630,7 @@ function CominsTableInner<TData>(
   };
 
   useEffect(() => {
-    if (!lazyLoad || !hasLazyLoadHandler) {
+    if (groupingRequested || !lazyLoad || !hasLazyLoadHandler) {
       return undefined;
     }
 
@@ -1590,7 +1642,7 @@ function CominsTableInner<TData>(
       lazyAbortControllerRef.current?.abort();
       lazyAbortControllerRef.current = null;
     };
-  }, [hasLazyLoadHandler, lazyLoad, resolvedLazyLoadBatchSize]);
+  }, [groupingRequested, hasLazyLoadHandler, lazyLoad, resolvedLazyLoadBatchSize]);
 
   useEffect(() => {
     const previousInput = stateInputRef.current;
@@ -1600,20 +1652,20 @@ function CominsTableInner<TData>(
       previousInput.columnGroups === columnGroups &&
       previousInput.data === effectiveData &&
       previousInput.getRowId === getRowId &&
-      previousInput.pagination === pagination &&
+      previousInput.pagination === effectivePagination &&
       previousInput.showHeader === showHeader
     ) {
       return;
     }
 
-    stateInputRef.current = { columnGroups, columns, data: effectiveData, getRowId, pagination, showHeader };
+    stateInputRef.current = { columnGroups, columns, data: effectiveData, getRowId, pagination: effectivePagination, showHeader };
     const current = stateRef.current;
     const nextState = createCominsTableState({
       columnLayout: serializeCominsColumnLayout(current),
       columnGroups,
       columns,
       getRowId,
-      pagination: pagination ?? current.pagination,
+      pagination: effectivePagination ?? current.pagination,
       rows: effectiveData,
       showHeader,
       sortModel: current.sortModel,
@@ -1645,7 +1697,7 @@ function CominsTableInner<TData>(
     if (!areSortModelsEqual(next.sortModel, current.sortModel)) {
       onChangeSortModel?.(next.sortModel);
     }
-  }, [columnGroups, columns, effectiveData, getRowId, pagination, showHeader]);
+  }, [columnGroups, columns, effectiveData, effectivePagination, getRowId, showHeader]);
 
   useEffect(() => {
     stateRef.current = state;
@@ -1711,7 +1763,7 @@ function CominsTableInner<TData>(
     const slotIndex = projection.slotIndexByRowId.get(rowId);
     const slot = slotIndex === undefined ? undefined : projection.slots[slotIndex];
 
-    if (slotIndex === undefined || slot?.detail?.mode !== "auto") {
+    if (slotIndex === undefined || slot?.kind !== "data" || slot.detail?.mode !== "auto") {
       return false;
     }
 
@@ -2058,26 +2110,190 @@ function CominsTableInner<TData>(
 
     return cells;
   }, [summary, summaryValues, visibleColumns]);
+  const groupingCriteria = groupingRequested ? rowGrouping?.criteria : undefined;
+  const groupingAggregations = groupingRequested ? rowGrouping?.aggregations : undefined;
+  const normalizedGrouping = useMemo(
+    () => groupingCriteria
+      ? normalizeCominsRowGrouping({
+          columns: state.columns,
+          config: { aggregations: groupingAggregations, criteria: groupingCriteria },
+        })
+      : null,
+    [groupingAggregations, groupingCriteria, state.columns],
+  );
+  const groupTree = useMemo(
+    () => normalizedGrouping && normalizedGrouping.criteria.length > 0
+      ? createCominsGroupTree({
+          ...normalizedGrouping,
+          rows: state.rows.map((data, dataIndex) => ({
+            data,
+            dataIndex,
+            id: state.rowIds[dataIndex]!,
+          })),
+        })
+      : null,
+    [normalizedGrouping, state.rowIds, state.rows],
+  );
+  const orderedGroupTree = useMemo(
+    () => groupTree
+      ? orderCominsGroupTree({
+          columns: state.columns,
+          rows: state.rows,
+          sortModel: state.sortModel,
+          tree: groupTree,
+        })
+      : null,
+    [groupTree, state.columns, state.rows, state.sortModel],
+  );
+  const normalizedExpandedGroupIds = useMemo(() => {
+    const seen = new Set<string>();
+    const suppliedGroupIds = Array.isArray(rowGrouping?.expandedGroupIds)
+      ? rowGrouping.expandedGroupIds
+      : [];
+
+    return suppliedGroupIds.filter((groupId): groupId is string => {
+      if (typeof groupId !== "string") {
+        return false;
+      }
+
+      if (!orderedGroupTree?.nodesById.has(groupId) || seen.has(groupId)) {
+        return false;
+      }
+
+      seen.add(groupId);
+      return true;
+    });
+  }, [orderedGroupTree, rowGrouping?.expandedGroupIds]);
+  const expandedGroupIdSet = useMemo(
+    () => new Set(normalizedExpandedGroupIds),
+    [normalizedExpandedGroupIds],
+  );
+  const toggleRowGroup = (groupId: string) => {
+    const onChangeExpandedGroupIds = rowGrouping?.onChangeExpandedGroupIds;
+
+    if (typeof onChangeExpandedGroupIds !== "function" || !orderedGroupTree?.nodesById.has(groupId)) {
+      return;
+    }
+
+    onChangeExpandedGroupIds(
+      expandedGroupIdSet.has(groupId)
+        ? normalizedExpandedGroupIds.filter((current) => current !== groupId)
+        : [...normalizedExpandedGroupIds, groupId],
+    );
+  };
+  const groupingProjection = useMemo(
+    () => orderedGroupTree
+      ? projectCominsGroupTree({
+          expandedGroupIds: normalizedExpandedGroupIds,
+          rowIds: state.rowIds,
+          tree: orderedGroupTree,
+        })
+      : null,
+    [normalizedExpandedGroupIds, orderedGroupTree, state.rowIds],
+  );
+  const groupingActive = groupingProjection !== null;
+  useLayoutEffect(() => {
+    if (!groupingProjection || !orderedGroupTree) {
+      previousGroupedDataIndexesRef.current = null;
+      return;
+    }
+
+    const nextDataIndexes = new Set(
+      groupingProjection.entries.flatMap((entry) =>
+        entry.kind === "data" ? [entry.dataIndex] : [],
+      ),
+    );
+    const previousDataIndexes = previousGroupedDataIndexesRef.current;
+    const focusedDataIndex = focusedLeafDataIndexRef.current;
+
+    previousGroupedDataIndexesRef.current = nextDataIndexes;
+
+    if (
+      focusedDataIndex === null ||
+      !previousDataIndexes?.has(focusedDataIndex) ||
+      nextDataIndexes.has(focusedDataIndex)
+    ) {
+      return;
+    }
+
+    const activeElement = document.activeElement;
+    const focusWasInTable = activeElement
+      ? containerRef.current?.contains(activeElement) || activeElement === document.body
+      : false;
+
+    if (!focusWasInTable) {
+      return;
+    }
+
+    const leafGroup = [...orderedGroupTree.nodesById.values()].find((node) =>
+      node.leafSourceIndexes?.includes(focusedDataIndex),
+    );
+    let fallbackGroupId = leafGroup?.groupId ?? null;
+
+    while (fallbackGroupId && expandedGroupIdSet.has(fallbackGroupId)) {
+      fallbackGroupId = orderedGroupTree.nodesById.get(fallbackGroupId)?.parentGroupId ?? null;
+    }
+
+    if (fallbackGroupId) {
+      groupDisclosureElementsRef.current.get(fallbackGroupId)?.focus();
+    }
+  }, [expandedGroupIdSet, groupingProjection, orderedGroupTree]);
   const sortedRowIndexes = useMemo(
-    () => (treeContext || state.sortModel.length === 0 ? null : getCominsSortedRowIndexes(state)),
-    [state, treeContext],
+    () => (treeContext || groupingActive || state.sortModel.length === 0 ? null : getCominsSortedRowIndexes(state)),
+    [groupingActive, state, treeContext],
   );
   const projectedDataIndexes = useMemo(
-    () => sortedRowIndexes ?? state.rows.map((_row, index) => index),
-    [sortedRowIndexes, state.rows],
+    () => groupingProjection
+      ? groupingProjection.entries.flatMap((entry) => entry.kind === "data" ? [entry.dataIndex] : [])
+      : sortedRowIndexes ?? state.rows.map((_row, index) => index),
+    [groupingProjection, sortedRowIndexes, state.rows],
   );
   const visibleRowCount = projectedDataIndexes.length;
+  const visibleSlotCount = groupingProjection?.entries.length ?? visibleRowCount;
   const pageSize = Math.max(1, state.pagination.pageSize);
   const pageStartIndex = Math.max(0, state.pagination.pageIndex) * pageSize;
+  useEffect(() => {
+    if (!groupingProjection) {
+      return;
+    }
+
+    const visibleRowIds = new Set(groupingProjection.visibleLeafRowIds);
+    const current = stateRef.current;
+    const cellHidden = current.selection.cell !== null && !visibleRowIds.has(current.selection.cell.rowId);
+    const rangeHidden = current.selection.range !== null && (
+      !visibleRowIds.has(current.selection.range.anchor.rowId) ||
+      !visibleRowIds.has(current.selection.range.focus.rowId)
+    );
+
+    if (!cellHidden && !rangeHidden) {
+      return;
+    }
+
+    if (cellHidden) {
+      lastCellAnchorRef.current = null;
+    }
+    rangeDragAnchorRef.current = null;
+    rangeDragLastAddressRef.current = null;
+    commitState({
+      ...current,
+      selection: {
+        ...current.selection,
+        cell: cellHidden ? null : current.selection.cell,
+        range: rangeHidden || cellHidden ? null : current.selection.range,
+      },
+    });
+  }, [groupingProjection]);
   const effectiveExpandedRowIdSet = useMemo(() => {
     if (!rowDetailEnabled) {
       return new Set<CominsRowId>();
     }
 
     const next = new Set<CominsRowId>();
-    const startIndex = virtualized ? 0 : pageStartIndex;
+    const startIndex = virtualized || groupingActive ? 0 : pageStartIndex;
     const endIndex = virtualized
       ? projectedDataIndexes.length
+      : groupingActive
+        ? projectedDataIndexes.length
       : Math.min(projectedDataIndexes.length, pageStartIndex + pageSize);
 
     for (let visibleIndex = startIndex; visibleIndex < endIndex; visibleIndex += 1) {
@@ -2109,6 +2325,7 @@ function CominsTableInner<TData>(
     return next;
   }, [
     expandedRowIdSet,
+    groupingActive,
     isRowExpandable,
     pageSize,
     pageStartIndex,
@@ -2118,16 +2335,36 @@ function CominsTableInner<TData>(
     state.rows,
     virtualized,
   ]);
-  const mixedProjection = useMemo<CominsMixedVirtualProjection<TData> | null>(() => {
-    if (!virtualized || effectiveExpandedRowIdSet.size === 0) {
-      return null;
-    }
-
+  const fullProjectionSlots = useMemo<Array<CominsVirtualSlot<TData>>>(() => {
     const safeRowHeight = Math.max(1, rowHeight);
-    const slots = projectedDataIndexes.flatMap<CominsDataVirtualSlot<TData>>(
-      (dataIndex, visibleIndex) => {
-        const row = state.rows[dataIndex];
+    const entries: readonly CominsGroupingProjectionEntry[] = groupingProjection?.entries ?? projectedDataIndexes.map(
+      (dataIndex, visibleLeafIndex) => {
         const rowId = state.rowIds[dataIndex];
+
+        return rowId === undefined
+          ? null
+          : {
+              dataIndex,
+              key: getCominsDataSlotKey(rowId),
+              kind: "data" as const,
+              rowId,
+              visibleLeafIndex,
+            };
+      },
+    ).filter((entry): entry is Extract<CominsGroupingProjectionEntry, { kind: "data" }> => entry !== null);
+
+    return entries.flatMap<CominsVirtualSlot<TData>>((projectionEntry) => {
+      if (projectionEntry.kind === "group") {
+        return [{
+          groupId: projectionEntry.groupId,
+          height: safeRowHeight,
+          key: projectionEntry.key,
+          kind: "group",
+        }];
+      }
+
+      const { dataIndex, rowId, visibleLeafIndex: visibleIndex } = projectionEntry;
+        const row = state.rows[dataIndex];
 
         if (row === undefined || rowId === undefined) {
           return [];
@@ -2163,15 +2400,34 @@ function CominsTableInner<TData>(
             visibleIndex,
           }),
         ];
-      },
-    );
+    });
+  }, [
+    detailContentWidth,
+    virtualized ? 0 : detailLayoutVersion,
+    effectiveExpandedRowIdSet,
+    estimatedRowDetailHeight,
+    getRowDetailHeight,
+    groupingProjection,
+    projectedDataIndexes,
+    rowHeight,
+    state.rowIds,
+    state.rows,
+  ]);
+  const mixedProjection = useMemo<CominsMixedVirtualProjection<TData> | null>(() => {
+    if (!virtualized || effectiveExpandedRowIdSet.size === 0) {
+      return null;
+    }
+
+    const safeRowHeight = Math.max(1, rowHeight);
+    const slots = fullProjectionSlots;
     const heightIndex = CominsHeightIndex.from(
       slots.map((slot) => getCominsSlotHeight(slot, safeRowHeight)),
     );
     const slotIndexByRowId = new Map<CominsRowId, number>();
 
     for (let slotIndex = 0; slotIndex < slots.length; slotIndex += 1) {
-      const rowId = slots[slotIndex]?.rowId;
+      const slot = slots[slotIndex];
+      const rowId = slot?.kind === "data" ? slot.rowId : undefined;
 
       if (rowId !== undefined && !slotIndexByRowId.has(rowId)) {
         slotIndexByRowId.set(rowId, slotIndex);
@@ -2186,13 +2442,8 @@ function CominsTableInner<TData>(
     };
   }, [
     effectiveExpandedRowIdSet,
-    detailContentWidth,
-    estimatedRowDetailHeight,
-    getRowDetailHeight,
-    projectedDataIndexes,
+    fullProjectionSlots,
     rowHeight,
-    state.rowIds,
-    state.rows,
     virtualized,
   ]);
   const detailObserverSnapshotCandidate = useMemo<
@@ -2289,7 +2540,7 @@ function CominsTableInner<TData>(
         };
       }
 
-      const totalHeight = visibleRowCount * safeRowHeight;
+      const totalHeight = visibleSlotCount * safeRowHeight;
       const maxPhysicalTotalHeight = 1_500_000;
       const physicalTotalHeight = Math.min(totalHeight, maxPhysicalTotalHeight);
       const logicalScrollableHeight = Math.max(0, totalHeight - viewportHeight);
@@ -2301,98 +2552,42 @@ function CominsTableInner<TData>(
       const logicalScrollTop = Math.min(logicalScrollableHeight, Math.max(0, scrollTop) * scrollScale);
       const startIndex = Math.max(0, Math.floor(logicalScrollTop / safeRowHeight) - virtualBufferSize);
       const endIndex = Math.min(
-        visibleRowCount,
+        visibleSlotCount,
         Math.ceil((logicalScrollTop + Math.max(0, viewportHeight)) / safeRowHeight) + virtualBufferSize,
       );
       const logicalTopSpacerHeight = startIndex * safeRowHeight;
       const renderOffset = scrollScale > 0 ? logicalTopSpacerHeight / scrollScale : logicalTopSpacerHeight;
-      const entries = createVisibleRowEntries(
-        sortedRowIndexes,
-        state.rows,
-        state.rowIds,
-        startIndex,
-        endIndex,
-      );
 
       return {
         mixed: false,
         renderOffset,
         scrollHeight: physicalTotalHeight,
-        slots: entries.map((entry) =>
-          createCominsDataVirtualSlot({
-            ...entry,
-            detail: null,
-            rowHeight: safeRowHeight,
-          }),
-        ),
+        slots: fullProjectionSlots.slice(startIndex, endIndex),
       };
     }
-
-    const entries = createVisibleRowEntries(
-      sortedRowIndexes,
-      state.rows,
-      state.rowIds,
-      pageStartIndex,
-      pageStartIndex + pageSize,
-    );
 
     return {
       mixed: false,
       renderOffset: 0,
       scrollHeight: 0,
-      slots: entries.map((entry) => {
-        let detail: CominsDataVirtualSlot<TData>["detail"] | null = null;
-
-        if (effectiveExpandedRowIdSet.has(entry.rowId)) {
-          const params = { row: createEventRow(entry) };
-          const normalized = normalizeCominsDetailHeight(
-            getRowDetailHeight?.(params),
-          );
-
-          detail =
-            normalized.mode === "auto"
-              ? {
-                  ...resolveCominsMeasuredDetailHeight(
-                    detailMeasurementsRef.current,
-                    entry.rowId,
-                    detailContentWidth,
-                    normalizeCominsDetailEstimate(estimatedRowDetailHeight, rowHeight),
-                  ),
-                  mode: "auto",
-                }
-              : {
-                  estimated: false,
-                  height: normalized.height,
-                  mode: "fixed",
-                };
-        }
-
-        return createCominsDataVirtualSlot({
-          ...entry,
-          detail,
-          rowHeight,
-        });
-      }),
+      slots: groupingActive
+        ? fullProjectionSlots
+        : fullProjectionSlots.slice(pageStartIndex, pageStartIndex + pageSize),
     };
   }, [
     containerHeight,
-    detailContentWidth,
     detailLayoutVersion,
-    effectiveExpandedRowIdSet,
-    estimatedRowDetailHeight,
-    getRowDetailHeight,
+    fullProjectionSlots,
+    groupingActive,
     logicalAnchorTransaction,
     mixedProjection,
     pageStartIndex,
     rowHeight,
     scrollTop,
     pageSize,
-    sortedRowIndexes,
-    state.rowIds,
-    state.rows,
     virtualBufferSize,
     virtualized,
-    visibleRowCount,
+    visibleSlotCount,
   ]);
   const currentVirtualProjection = useMemo<CominsVirtualProjection | null>(
     () =>
@@ -2405,19 +2600,17 @@ function CominsTableInner<TData>(
               mixed: true,
             }
           : {
+              keys: fullProjectionSlots.map((slot) => slot.key),
               mixed: false,
-              projectedDataIndexes,
               rowHeight: Math.max(1, rowHeight),
-              rowIds: state.rowIds,
-              visibleRowCount,
+              visibleRowCount: visibleSlotCount,
             },
     [
       mixedProjection,
-      projectedDataIndexes,
+      fullProjectionSlots,
       rowHeight,
-      state.rowIds,
       virtualized,
-      visibleRowCount,
+      visibleSlotCount,
     ],
   );
   const previousVirtualProjection = previousVirtualProjectionRef.current;
@@ -2568,14 +2761,18 @@ function CominsTableInner<TData>(
   const selectedRowIdSet = useMemo(() => new Set(state.selection.rowIds), [state.selection.rowIds]);
   const hasHorizontalOverflow =
     typeof columnWidthTotal === "number" && containerWidth > 0 ? columnWidthTotal > containerWidth + 1 : false;
-  const resolvedHasMoreRows = hasMoreRows;
+  const resolvedHasMoreRows = groupingRequested ? false : hasMoreRows;
   const resolvedLoading = loading;
-  const resolvedLoadingMore = loadingMore;
-  const isEmpty = visibleRowCount === 0;
+  const resolvedLoadingMore = groupingRequested ? false : loadingMore;
+  const isEmpty = visibleSlotCount === 0;
   const shouldRenderSkeleton = resolvedLoading && isEmpty;
   const shouldRenderEmpty = !resolvedLoading && isEmpty;
   const shouldRenderInfiniteLoadingRow =
-    (infiniteScroll || lazyLoad) && resolvedLoadingMore && resolvedHasMoreRows && !isEmpty;
+    !groupingRequested &&
+    (infiniteScroll || lazyLoad) &&
+    resolvedLoadingMore &&
+    resolvedHasMoreRows &&
+    !isEmpty;
   const resolvedSkeletonRowCount = Math.max(
     1,
     Math.floor(skeletonRowCount ?? Math.min(Math.max(1, state.pagination.pageSize), 5)),
@@ -2603,6 +2800,20 @@ function CominsTableInner<TData>(
     anchorRowId: CominsRowId,
     focusRowId: CominsRowId,
   ) => {
+    if (groupingProjection) {
+      const anchorIndex = groupingProjection.visibleLeafRowIds.indexOf(anchorRowId);
+      const focusIndex = groupingProjection.visibleLeafRowIds.indexOf(focusRowId);
+
+      if (anchorIndex < 0 || focusIndex < 0) {
+        return [focusRowId];
+      }
+
+      const start = Math.min(anchorIndex, focusIndex);
+      const end = Math.max(anchorIndex, focusIndex);
+
+      return groupingProjection.visibleLeafRowIds.slice(start, end + 1);
+    }
+
     const visibleRowIndexes = treeContext ? current.rows.map((_row, index) => index) : getCominsSortedRowIndexes(current);
     const visibleEntries = visibleRowIndexes.flatMap<VisibleRowEntry<TData>>((dataIndex, visibleIndex) => {
         const row = current.rows[dataIndex];
@@ -2628,6 +2839,12 @@ function CominsTableInner<TData>(
   const selectRowsByVisibleIndexes = (indexes: readonly number[]) => {
     commitState((current) => {
       const rowIds = indexes.flatMap((index) => {
+        if (groupingProjection) {
+          const rowId = groupingProjection.visibleLeafRowIds[index];
+
+          return rowId === undefined ? [] : [rowId];
+        }
+
         const entry = getVisibleEntryByRenderedIndex(index);
 
         return entry ? [entry.rowId] : [];
@@ -2768,7 +2985,7 @@ function CominsTableInner<TData>(
         commitState((current) => applyCominsColumnLayout(current, layout), { columnLayoutChanged: true }),
       setMoveTargetRow: (targetIdx, sourceIdx) =>
         commitState((current) => {
-          if (treeContext) {
+          if (treeContext || groupingRequested) {
             return current;
           }
 
@@ -2811,7 +3028,7 @@ function CominsTableInner<TData>(
       setSortModel: (sortModel) => commitState((current) => setCominsSortModel(current, sortModel)),
       setSortState: (sort) => commitState((current) => setCominsSortState(current, sort)),
     }),
-    [rowWindow.slots, state, treeContext],
+    [groupingProjection, groupingRequested, rowWindow.slots, state, treeContext],
   );
 
   const clearColumnPointerInteraction = () => {
@@ -3273,7 +3490,13 @@ function CominsTableInner<TData>(
     if (isCopyPasteKey(event, "c")) {
       event.preventDefault();
       event.stopPropagation();
-      copiedRangeRef.current = state.selection.range ? copyCominsCellRange(state) : null;
+      copiedRangeRef.current = state.selection.range
+        ? copyCominsCellRange(
+            state,
+            state.selection.range,
+            groupingProjection?.visibleLeafRowIds ?? state.rowIds,
+          )
+        : null;
       copiedCellRef.current = copiedRangeRef.current ? null : copyCominsCell(state, address);
       return;
     }
@@ -3283,7 +3506,12 @@ function CominsTableInner<TData>(
       event.stopPropagation();
       commitState((current) =>
         copiedRangeRef.current
-          ? pasteCominsCellRange(current, address, copiedRangeRef.current)
+          ? pasteCominsCellRange(
+              current,
+              address,
+              copiedRangeRef.current,
+              groupingProjection?.visibleLeafRowIds ?? current.rowIds,
+            )
           : pasteCominsCell(current, address, copiedCellRef.current),
       );
     }
@@ -3905,6 +4133,10 @@ function CominsTableInner<TData>(
     });
   };
   const requestInfiniteLoadIfNeeded = (bodyViewport: HTMLDivElement) => {
+    if (groupingRequested) {
+      return;
+    }
+
     if (lazyLoad) {
       if (!onLazyLoad || lazyLoadingReasonRef.current) {
         return;
@@ -4034,6 +4266,12 @@ function CominsTableInner<TData>(
         data-horizontal-overflow={hasHorizontalOverflow ? "true" : undefined}
         data-virtualized={virtualized ? "true" : undefined}
         data-testid={dataTestId}
+        onFocusCapture={(event) => {
+          const row = (event.target as Element).closest<HTMLElement>("[data-comins-row-data-index]");
+          const dataIndex = row ? Number(row.dataset.cominsRowDataIndex) : Number.NaN;
+
+          focusedLeafDataIndexRef.current = Number.isInteger(dataIndex) ? dataIndex : null;
+        }}
         onScroll={handleBodyScroll}
         ref={containerRef}
       >
@@ -4094,15 +4332,107 @@ function CominsTableInner<TData>(
             </tr>
           ) : null}
           {rowWindow.slots.map((slot, entryIndex) => {
-            if (slot.kind !== "data") {
-              return null;
+            if (slot.kind === "group") {
+              const node = orderedGroupTree?.nodesById.get(slot.groupId);
+
+              if (!node) {
+                return null;
+              }
+
+              const expanded = expandedGroupIdSet.has(slot.groupId);
+              const isLastRenderedSlot = entryIndex === rowWindow.slots.length - 1;
+              const isLastLogicalSlot = fullProjectionSlots.at(-1)?.key === slot.key;
+              const virtualContentFillsViewport = rowWindow.scrollHeight >= containerHeight - 1;
+              const isViewportEndRow =
+                isLastRenderedSlot &&
+                (virtualized
+                  ? isLastLogicalSlot && virtualContentFillsViewport
+                  : emptyFillerHeight === 0);
+              const groupingColumn = state.columns.find((column) => column.id === node.columnId);
+
+              return (
+                <tr
+                  className={[
+                    "comins-table__tr comins-table__group-row",
+                    isViewportEndRow ? "comins-table__tr--viewport-end" : undefined,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  data-comins-group-depth={node.depth}
+                  data-comins-group-id={slot.groupId}
+                  data-comins-group-row="true"
+                  data-testid={`group-row-${encodeURIComponent(slot.groupId)}`}
+                  key={slot.key}
+                  style={{ height: rowHeight }}
+                >
+                  {visibleColumns.map((column, columnIndex) => {
+                    const aggregateState = node.aggregationState.get(column.id);
+                    const aggregateValue = aggregateState
+                      ? getCominsAggregateValue(aggregateState)
+                      : null;
+                    const className = "comins-table__td comins-table__group-cell px-3 py-2";
+                    const content = columnIndex === 0 ? (
+                      <span
+                        className="comins-row-group-cell-content"
+                        style={{ "--comins-row-group-depth": node.depth } as React.CSSProperties}
+                      >
+                        <CominsTableIconButton
+                          aria-expanded={expanded}
+                          aria-label={`${expanded ? "Collapse" : "Expand"} ${String(node.label)} group`}
+                          className="comins-row-group-expander"
+                          data-testid={`group-toggle-${encodeURIComponent(slot.groupId)}`}
+                          disabled={typeof rowGrouping?.onChangeExpandedGroupIds !== "function"}
+                          icon={expanded ? "disclosureExpanded" : "disclosureCollapsed"}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            toggleRowGroup(slot.groupId);
+                          }}
+                          ref={(element) => {
+                            if (element) {
+                              groupDisclosureElementsRef.current.set(slot.groupId, element);
+                            } else {
+                              groupDisclosureElementsRef.current.delete(slot.groupId);
+                            }
+                          }}
+                        />
+                        <span className="comins-row-group-label">
+                          <span className="comins-row-group-column-label">{groupingColumn?.label}: </span>
+                          {node.label}
+                        </span>
+                      </span>
+                    ) : aggregateValue === null ? null : String(aggregateValue);
+
+                    return columnIndex === 0 ? (
+                      <th
+                        className={className}
+                        data-comins-group-column-id={column.id}
+                        key={column.id}
+                        scope="row"
+                        style={{ height: rowHeight }}
+                      >
+                        {content}
+                      </th>
+                    ) : (
+                      <td
+                        className={className}
+                        data-comins-group-column-id={column.id}
+                        key={column.id}
+                        style={{ height: rowHeight }}
+                      >
+                        {content}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
             }
 
             const entry = slot;
-            const rowRuntimeProps = resolveRowProps(rowProps, entry.row, entry.visibleIndex);
+            const rowRuntimeProps = resolveRowProps(effectiveRowProps, entry.row, entry.visibleIndex);
             const isRowSelected = selectedRowIdSet.has(entry.rowId);
             const isLastRenderedSlot = entryIndex === rowWindow.slots.length - 1;
-            const isLastLogicalRow = entry.visibleIndex === visibleRowCount - 1;
+            const isLastLogicalRow = fullProjectionSlots.at(-1)?.key === entry.key;
             const virtualContentFillsViewport = rowWindow.scrollHeight >= containerHeight - 1;
             const isViewportEndRow =
               isLastRenderedSlot &&
@@ -4195,7 +4525,11 @@ function CominsTableInner<TData>(
                 {visibleColumns.map((column, columnIndex) => {
                   const rawValue = getCominsCellValue(state, entry.row, column.id);
                   const address = { columnId: column.id, rowId: entry.rowId };
-                  const isCellInRange = cellSelection && isCominsCellInSelectedRange(state, address);
+                  const isCellInRange = cellSelection && isCominsCellInSelectedRange(
+                    state,
+                    address,
+                    groupingProjection?.visibleLeafRowIds ?? state.rowIds,
+                  );
                   const isCellSelected =
                     cellSelection &&
                     state.selection.cell?.rowId === entry.rowId &&
@@ -4627,6 +4961,7 @@ function CominsTreeTableInner<TData>(
     onChangeSortModel,
     onLazyLoad: _onLazyLoad,
     onLoadMore: _onLoadMore,
+    rowGrouping: _rowGrouping,
     rowProps,
     isRowExpandable: _isRowExpandable,
     renderRowDetail: _renderRowDetail,

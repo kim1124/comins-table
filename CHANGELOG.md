@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added controlled client-side flat Row Grouping with deterministic typed group IDs, single and multi-criterion hierarchy, built-in descendant aggregation, hierarchy-first sorting, fixed/mixed virtualization, leaf-only selection and Clipboard semantics, grouped Row Detail, runtime/type exclusions, and matching Korean/English Playground documentation.
+
 ## 0.1.6 - 2026-08-14
 
 - Updated automatic Row Detail measurement to apply each accepted Detail delta through the virtual height index in O(log N), preserving coalesced scroll-anchor correction; observer reads now use one atomically committed `{ projection, contentWidth, viewportHeight }` snapshot, including concurrent Suspense and StrictMode coverage.

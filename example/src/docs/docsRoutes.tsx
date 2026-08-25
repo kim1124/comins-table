@@ -18,6 +18,7 @@ import {
   paginationSamples,
   refApiSamples,
   rowExpandSamples,
+  rowGroupingSamples,
   rowSamples,
   selectionClipboardSamples,
   sizeSamples,
@@ -236,6 +237,18 @@ const englishDocsPages: DocsPage[] = [
     codeSamples: rowExpandSamples,
     featureId: "row-expand",
     path: "/examples/row-expand",
+  }),
+  featurePage({
+    body: paragraphs([
+      "Row Grouping builds a client-side hierarchy from flat application-owned rows without creating synthetic business data.",
+      "The application owns expandedGroupIds and writes onChangeExpandedGroupIds back to the same controlled state. Without the callback, disclosure is disabled and read-only.",
+      "Grouping-column sort rules order sibling groups; remaining rules order leaves. Built-in count, sum, avg, min, and max aggregate every descendant leaf.",
+      "Group rows stay outside selection, clipboard, Row Detail, ordinary row/cell callbacks, renderers, and drag. Pagination, infinite loading, lazy loading, Tree Grid, and draggable rows cannot be combined with Row Grouping.",
+    ]),
+    category: "Row / Context",
+    codeSamples: rowGroupingSamples,
+    featureId: "row-grouping",
+    path: "/examples/row-grouping",
   }),
   featurePage({
     body: paragraphs([
@@ -483,6 +496,18 @@ const koreanDocsCopy: Record<string, KoreanDocsCopy> = {
     label: "Row Expand",
     summary: "고정 및 자동 측정 Detail 높이를 사용하는 controlled Row Expand를 확인합니다.",
     title: "Row Expand",
+  },
+  "/examples/row-grouping": {
+    body: [
+      "Row Grouping은 application-owned flat Row에서 synthetic business data 없이 client-side hierarchy를 만듭니다.",
+      "Application은 `expandedGroupIds`를 소유하고 `onChangeExpandedGroupIds` 결과를 같은 controlled state에 반영합니다. Callback이 없으면 disclosure는 disabled read-only입니다.",
+      "Grouping Column sort rule은 sibling Group을 정렬하고 나머지 rule은 leaf를 정렬합니다. count, sum, avg, min, max는 모든 descendant leaf를 집계합니다.",
+      "Group Row는 selection, Clipboard, Row Detail, 일반 Row/Cell callback, renderer와 drag 대상이 아닙니다. Pagination, Infinite/Lazy Loading, Tree Grid와 draggable Row는 Row Grouping과 결합할 수 없습니다.",
+    ],
+    category: "Row / Context",
+    label: "Row Grouping",
+    summary: "Controlled flat Row Grouping, hierarchy sort, 집계, Row Detail과 가상화를 확인합니다.",
+    title: "Row Grouping",
   },
   "/examples/selection-clipboard": {
     body: [

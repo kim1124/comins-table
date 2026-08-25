@@ -20,6 +20,7 @@ export type FeatureId =
   | "component"
   | "row"
   | "row-expand"
+  | "row-grouping"
   | "summary-row"
   | "tree-grid"
   | "context-menu"

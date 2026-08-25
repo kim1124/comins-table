@@ -13,6 +13,7 @@ const codeSampleTitles = {
   "Controlled CRUD state": defineLocalizedText("Controlled CRUD 상태", "Controlled CRUD state"),
   "Controlled Flat Table ref usage": defineLocalizedText("Controlled Flat Table ref 사용", "Controlled Flat Table ref usage"),
   "Controlled Row Expand": defineLocalizedText("Controlled Row Expand", "Controlled Row Expand"),
+  "Controlled Row Grouping": defineLocalizedText("Controlled Row Grouping", "Controlled Row Grouping"),
   "Controlled Tree Grid": defineLocalizedText("Controlled Tree Grid", "Controlled Tree Grid"),
   "Controlled remote infinite scroll": defineLocalizedText("Controlled 원격 Infinite Scroll", "Controlled remote infinite scroll"),
   "Controlled selection and clipboard": defineLocalizedText("Controlled 선택과 Clipboard", "Controlled selection and clipboard"),
@@ -547,6 +548,28 @@ export const rowExpandSamples: DocsCodeSample[] = [
 />;`,
     language: "tsx",
     title: "Controlled Row Expand",
+  },
+];
+
+export const rowGroupingSamples: DocsCodeSample[] = [
+  {
+    code: `const [expandedGroupIds, setExpandedGroupIds] = useState<string[]>([]);
+
+<CominsTable
+  columns={columns}
+  data={rows}
+  getRowId={(row) => row.id}
+  multiSort
+  rowGrouping={{
+    aggregations: { amount: "sum", id: "count" },
+    criteria: ["region", "team"],
+    expandedGroupIds,
+    onChangeExpandedGroupIds: setExpandedGroupIds,
+  }}
+  virtualized
+/>;`,
+    language: "tsx",
+    title: "Controlled Row Grouping",
   },
 ];
 

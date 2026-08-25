@@ -57,6 +57,7 @@ test("keeps every Sidebar group and route name in English for both locales", asy
     "Selection & Clipboard",
     "Rows",
     "Row Expand",
+    "Row Grouping",
     "Summary Row",
     "Tree Grid",
     "Context Menu",

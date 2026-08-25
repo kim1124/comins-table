@@ -14,6 +14,7 @@ import { PaginationFeature } from "./PaginationFeature";
 import { RefApiFeature } from "./RefApiFeature";
 import { RowFeature } from "./RowFeature";
 import { RowExpandFeature } from "./RowExpandFeature";
+import { RowGroupingFeature } from "./RowGroupingFeature";
 import { SelectionClipboardFeature } from "./SelectionClipboardFeature";
 import { SizeFeature } from "./SizeFeature";
 import { SummaryRowFeature } from "./SummaryRowFeature";
@@ -249,6 +250,22 @@ export const featureRegistry: FeatureDefinitionSource[] = [
       },
     ],
     summary: defineLocalizedText("고정 높이와 측정 기반 자동 Detail 높이를 사용하는 controlled Row Expand 예제입니다.", "Controlled Row Expand with fixed and measured automatic Detail height."),
+  },
+  {
+    Component: RowGroupingFeature,
+    description: defineLocalizedText(
+      "Controlled client-side Row Grouping, 내장 집계, hierarchy 정렬, Row Detail과 가상화 예제입니다.",
+      "Controlled client-side Row Grouping with built-in aggregation, hierarchy sorting, Row Detail, and virtualization.",
+    ),
+    id: "row-grouping",
+    label: defineLocalizedText("Row Grouping", "Row Grouping"),
+    options: [
+      { description: defineLocalizedText("하나 이상의 Column ID를 hierarchy 순서로 지정합니다.", "Lists one or more column IDs in hierarchy order."), example: "criteria: ['region', 'team']", name: "rowGrouping.criteria" },
+      { description: defineLocalizedText("현재 열린 opaque Group ID를 application state로 제어합니다.", "Controls the currently open opaque group IDs in application state."), example: "expandedGroupIds", name: "rowGrouping.expandedGroupIds" },
+      { description: defineLocalizedText("다음 controlled Group ID 배열을 전달합니다. 생략하면 disclosure가 read-only입니다.", "Receives the next controlled group ID array. Omit it for read-only disclosure."), example: "onChangeExpandedGroupIds={setExpandedGroupIds}", name: "rowGrouping.onChangeExpandedGroupIds" },
+      { description: defineLocalizedText("전체 descendant leaf에 count, sum, avg, min 또는 max를 계산합니다.", "Computes count, sum, avg, min, or max across every descendant leaf."), example: "aggregations: { amount: 'sum' }", name: "rowGrouping.aggregations" },
+    ],
+    summary: defineLocalizedText("단일·다중 Group, hidden criterion, 집계, Row Detail과 100000 Row 가상화 예제입니다.", "Single and nested groups, hidden criteria, aggregation, Row Detail, and 100000-row virtualization."),
   },
   {
     Component: SummaryRowFeature,

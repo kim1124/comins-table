@@ -99,6 +99,30 @@ describe("comins-table clipboard core", () => {
     ]);
   });
 
+  it("copies and pastes ranges in an explicit grouped leaf order", () => {
+    let state = createState();
+
+    state = selectCellRange(state, {
+      anchor: { columnId: "name", rowId: "c" },
+      focus: { columnId: "age", rowId: "a" },
+    });
+
+    const copied = copyCominsCellRange(state, state.selection.range, ["c", "a"]);
+    state = pasteCominsCellRange(
+      state,
+      { columnId: "name", rowId: "b" },
+      copied,
+      ["b", "c", "a"],
+    );
+
+    expect(copied?.text).toBe("Gamma\t27\nAlpha\t31");
+    expect(queryCominsRows(state).map(({ age, name }) => ({ age, name }))).toEqual([
+      { age: 31, name: "Alpha" },
+      { age: 27, name: "Gamma" },
+      { age: 31, name: "Alpha" },
+    ]);
+  });
+
   it("skips guarded cells when pasting a range or filling a target range", () => {
     let state = createState();
 

@@ -29,6 +29,10 @@ const rows: PersonRow[] = [
   { age: 42, id: "b", name: "Beta" },
 ];
 
+function getPersonRowId(row: PersonRow) {
+  return row.id;
+}
+
 const apiColumns = [
   { field: "name", label: "Name" },
   { field: "profile.age", label: "Profile Age" },
@@ -60,6 +64,256 @@ afterEach(() => {
   container?.remove();
   root = undefined;
   container = undefined;
+});
+
+describe("row grouping interaction contract", () => {
+  it("renders synthetic group rows without routing them through ordinary Row callbacks", () => {
+    const onClickRow = vi.fn();
+    const view = renderTable({
+      onClickRow,
+      rowGrouping: {
+        criteria: ["age"],
+        expandedGroupIds: [],
+        onChangeExpandedGroupIds: () => undefined,
+      },
+    } as unknown as Partial<CominsTableProps<PersonRow>>);
+    const groupRows = view.querySelectorAll("[data-comins-group-row]");
+
+    expect(groupRows).toHaveLength(2);
+    act(() => {
+      groupRows[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onClickRow).not.toHaveBeenCalled();
+  });
+
+  it("keeps disclosure controlled and preserves leaf callback indexes and Detail ownership", () => {
+    const onChangeExpandedGroupIds = vi.fn();
+    const onClickRow = vi.fn();
+    const renderGrouped = (expandedGroupIds: readonly string[]) => (
+      <CominsTable
+        columns={columns}
+        data={rows}
+        expandedRowIds={["a"]}
+        getRowId={(row) => row.id}
+        onClickRow={onClickRow}
+        renderRowDetail={({ row }) => <span>{row.data.name} detail</span>}
+        rowGrouping={{
+          aggregations: { age: "sum" },
+          criteria: ["age"],
+          expandedGroupIds,
+          onChangeExpandedGroupIds,
+        }}
+      />
+    );
+    const view = renderTableElement(renderGrouped([]));
+    const firstToggle = view.querySelector<HTMLButtonElement>("[data-testid^='group-toggle-']")!;
+
+    act(() => firstToggle.click());
+    const firstGroupId = onChangeExpandedGroupIds.mock.calls[0]?.[0]?.[0] as string;
+
+    expect(firstGroupId).toMatch(/^comins-group:/u);
+    expect(view.querySelector("[data-testid='row-a']")).toBeNull();
+
+    act(() => {
+      root?.render(renderGrouped([firstGroupId]));
+    });
+
+    const leaf = view.querySelector<HTMLElement>("[data-testid='row-a']")!;
+    const group = [...view.querySelectorAll<HTMLElement>("[data-comins-group-id]")]
+      .find((candidate) => candidate.dataset.cominsGroupId === firstGroupId)!;
+
+    expect(group.querySelector("[data-comins-group-column-id='age']")?.textContent).toBe("31");
+    expect(view.querySelector("[data-testid='row-detail-content-a']")?.textContent).toContain("Alpha detail");
+
+    act(() => leaf.click());
+    expect(onClickRow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        index: 0,
+        row: expect.objectContaining({ dataIndex: 0, id: "a", index: 0 }),
+      }),
+    );
+  });
+
+  it("keeps read-only disclosure disabled when the controlled callback is absent", () => {
+    const view = renderTable({
+      rowGrouping: { criteria: ["age"], expandedGroupIds: [] },
+    } as unknown as Partial<CominsTableProps<PersonRow>>);
+
+    expect(view.querySelector<HTMLButtonElement>("[data-testid^='group-toggle-']")?.disabled).toBe(true);
+  });
+
+  it("does not invoke leaf Cell formatters, renderers, or tooltips for synthetic group rows", () => {
+    const format = vi.fn(({ value }: { value: unknown }) => String(value));
+    const renderer = vi.fn(() => <span>leaf renderer</span>);
+    const tooltip = vi.fn(() => "leaf tooltip");
+
+    renderTableElement(
+      <CominsTable
+        columns={[
+          { field: "name", label: "Name" },
+          { cell: { format, renderer, tooltip }, field: "age", label: "Age" },
+        ]}
+        data={rows}
+        getRowId={(row) => row.id}
+        rowGrouping={{ aggregations: { age: "sum" }, criteria: ["age"], expandedGroupIds: [] }}
+      />,
+    );
+
+    expect(format).not.toHaveBeenCalled();
+    expect(renderer).not.toHaveBeenCalled();
+    expect(tooltip).not.toHaveBeenCalled();
+  });
+
+  it("does not rebuild membership when only controlled expansion changes", () => {
+    const getKey = vi.fn(({ value }: { value: unknown }) => value as number);
+    const criteria = [{ columnId: "age", getKey }] as const;
+
+    function StableMembershipFixture() {
+      const [expandedGroupIds, setExpandedGroupIds] = useState<string[]>([]);
+
+      return (
+        <CominsTable
+          columns={columns}
+          data={rows}
+          getRowId={getPersonRowId}
+          rowGrouping={{
+            criteria,
+            expandedGroupIds,
+            onChangeExpandedGroupIds: setExpandedGroupIds,
+          }}
+        />
+      );
+    }
+
+    const view = renderTableElement(<StableMembershipFixture />);
+    expect(getKey).toHaveBeenCalledTimes(2);
+
+    act(() => view.querySelector<HTMLButtonElement>("[data-testid^='group-toggle-']")?.click());
+    expect(getKey).toHaveBeenCalledTimes(2);
+  });
+
+  it("clears a hidden Cell once, preserves Row selection, and moves focus to the collapsed ancestor", () => {
+    const onChangeExpandedGroupIds = vi.fn();
+    const onChangeSelection = vi.fn();
+    const renderGrouped = (expandedGroupIds: readonly string[]) => (
+      <CominsTable
+        columns={columns}
+        data={rows}
+        getRowId={(row) => row.id}
+        onChangeSelection={onChangeSelection}
+        rowGrouping={{
+          criteria: ["age"],
+          expandedGroupIds,
+          onChangeExpandedGroupIds,
+        }}
+      />
+    );
+    const view = renderTableElement(renderGrouped([]));
+    const firstToggle = view.querySelector<HTMLButtonElement>("[data-testid^='group-toggle-']")!;
+
+    act(() => firstToggle.click());
+    const firstGroupId = onChangeExpandedGroupIds.mock.calls[0]?.[0]?.[0] as string;
+
+    act(() => {
+      root?.render(renderGrouped([firstGroupId]));
+    });
+
+    const cell = view.querySelector<HTMLElement>("[data-testid='cell-a-age']")!;
+    act(() => {
+      cell.focus();
+      cell.click();
+    });
+    onChangeSelection.mockClear();
+
+    act(() => {
+      root?.render(renderGrouped([]));
+    });
+
+    const collapsedGroup = [...view.querySelectorAll<HTMLElement>("[data-comins-group-id]")]
+      .find((candidate) => candidate.dataset.cominsGroupId === firstGroupId)!;
+    const collapsedToggle = collapsedGroup.querySelector<HTMLButtonElement>("[data-testid^='group-toggle-']")!;
+    const latestSelection = onChangeSelection.mock.calls.at(-1)?.[0];
+
+    expect(document.activeElement).toBe(collapsedToggle);
+    expect(latestSelection).toMatchObject({ cell: null, range: null, rowIds: ["a"] });
+    expect(onChangeSelection).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps pagination, loading, drag, and imperative movement inert for untyped grouped input", () => {
+    const onChangeData = vi.fn();
+    const onLazyLoad = vi.fn();
+    const onLoadMore = vi.fn();
+    const ref = createRef<CominsTableRef<PersonRow>>();
+
+    function RuntimeGuardFixture() {
+      const [expandedGroupIds, setExpandedGroupIds] = useState<string[]>([]);
+      const runtimeProps = {
+        columns,
+        data: rows,
+        getRowId: (row: PersonRow) => row.id,
+        hasMoreRows: true,
+        infiniteScroll: true,
+        lazyLoad: true,
+        loadingMore: true,
+        onChangeData,
+        onLazyLoad,
+        onLoadMore,
+        pagination: { pageIndex: 0, pageSize: 1 },
+        ref,
+        rowGrouping: {
+          criteria: ["age"],
+          expandedGroupIds,
+          onChangeExpandedGroupIds: setExpandedGroupIds,
+        },
+        rowProps: { draggable: true },
+      } as unknown as CominsTableProps<PersonRow> & React.RefAttributes<CominsTableRef<PersonRow>>;
+
+      return <CominsTable {...runtimeProps} />;
+    }
+
+    const view = renderTableElement(<RuntimeGuardFixture />);
+    const expandCollapsedGroups = () => {
+      const toggle = [...view.querySelectorAll<HTMLButtonElement>("[data-testid^='group-toggle-']")]
+        .find((candidate) => candidate.getAttribute("aria-expanded") === "false");
+
+      if (toggle) {
+        act(() => toggle.click());
+      }
+    };
+
+    expandCollapsedGroups();
+    expandCollapsedGroups();
+
+    expect(view.querySelectorAll("[data-testid^='row-']")).toHaveLength(2);
+    expect(view.querySelectorAll("[data-row-draggable='true']")).toHaveLength(0);
+    expect(onLazyLoad).not.toHaveBeenCalled();
+    expect(onLoadMore).not.toHaveBeenCalled();
+
+    act(() => ref.current?.setMoveTargetRow(1, 0));
+    expect(onChangeData).not.toHaveBeenCalled();
+  });
+
+  it("fails closed for malformed untyped grouping control values", () => {
+    const ordinary = renderTable({ rowGrouping: null } as unknown as Partial<CominsTableProps<PersonRow>>);
+
+    expect(ordinary.querySelectorAll("tr[data-comins-row-data-index]")).toHaveLength(2);
+
+    act(() => root?.unmount());
+    root = undefined;
+    ordinary.remove();
+    container = undefined;
+
+    const grouped = renderTable({
+      rowGrouping: {
+        criteria: ["age"],
+        expandedGroupIds: "invalid",
+        onChangeExpandedGroupIds: true,
+      },
+    } as unknown as Partial<CominsTableProps<PersonRow>>);
+
+    expect(grouped.querySelectorAll("[data-comins-group-row]")).toHaveLength(2);
+    expect(grouped.querySelector<HTMLButtonElement>("[data-testid^='group-toggle-']")?.disabled).toBe(true);
+  });
 });
 
 function renderTable(props: Partial<CominsTableProps<PersonRow>> = {}) {

@@ -73,6 +73,7 @@ describe("README preview contract", () => {
       "## Package Entry Points",
       "## Header And Layout",
       "## Rows, Cells, And Selection",
+      "## Row Grouping",
       "## Virtualization And Loading",
       "## Summary Row",
       "## Tree Grid",
@@ -109,7 +110,7 @@ describe("README preview contract", () => {
     expect(support).toContain("| Runtime network behavior | No package-owned requests, remote assets, telemetry, or error reporting |");
 
     const boundaries = getReadmeSection(readme, "Current Boundaries");
-    for (const boundary of ["Server-side Row models", "Row grouping", "pivoting", "charts", "AI assistance", "remote Tree loading", "hierarchy pagination", "Tree Row drag", "Tree Row copy/paste", "visual fill handle", "Firefox", "Safari", "SSR"]) {
+    for (const boundary of ["Server-side Row models", "pivoting", "charts", "AI assistance", "remote Tree loading", "hierarchy pagination", "Tree Row drag", "Tree Row copy/paste", "visual fill handle", "Firefox", "Safari", "SSR"]) {
       expect(boundaries).toContain(boundary);
     }
 

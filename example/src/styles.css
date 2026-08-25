@@ -1507,6 +1507,35 @@ body {
   min-height: 580px;
 }
 
+.feature-panel--row-grouping {
+  flex: 0 0 auto;
+  height: auto;
+  overflow: visible;
+}
+
+.feature-panel--row-grouping .feature-option-sample {
+  height: 520px;
+  min-height: 520px;
+}
+
+.feature-panel--row-grouping .feature-option-sample__inner {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.feature-panel--row-grouping .feature-option-sample__inner > .example-table.comins-table {
+  flex: 1 1 0;
+  height: auto;
+  max-height: 100%;
+  min-height: 0;
+}
+
+.feature-panel--row-grouping [data-feature-option="row-grouping-virtual"] .feature-option-sample {
+  height: 620px;
+  min-height: 620px;
+}
+
 .feature-panel--header {
   flex: 0 0 auto;
   height: auto;
