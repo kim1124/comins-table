@@ -36,6 +36,7 @@ const featurePages = [
   { feature: "selection-clipboard", label: "Selection & Clipboard", route: "/examples/selection-clipboard" },
   { feature: "component", label: "Components", route: "/examples/component" },
   { feature: "row", label: "Rows", route: "/examples/row" },
+  { feature: "row-grouping", label: "Row Grouping", route: "/examples/row-grouping" },
   { feature: "summary-row", label: "Summary Row", route: "/examples/summary-row" },
   { feature: "tree-grid", label: "Tree Grid", route: "/examples/tree-grid" },
   { feature: "context-menu", label: "Context Menu", route: "/examples/context-menu" },

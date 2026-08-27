@@ -947,10 +947,14 @@ function resolveCellProps<TData>(
   return typeof props === "function" ? props(params) : props;
 }
 
-function getCellRangeBounds<TData>(state: CominsTableState<TData>, range: CominsCellRange) {
+function getCellRangeBounds<TData>(
+  state: CominsTableState<TData>,
+  range: CominsCellRange,
+  rowIds: readonly CominsRowId[] = state.rowIds,
+) {
   const visibleColumns = getCominsVisibleColumns(state);
-  const anchorRowIndex = findRowIndex(state, range.anchor.rowId);
-  const focusRowIndex = findRowIndex(state, range.focus.rowId);
+  const anchorRowIndex = rowIds.indexOf(range.anchor.rowId);
+  const focusRowIndex = rowIds.indexOf(range.focus.rowId);
   const anchorColumnIndex = visibleColumns.findIndex((column) => column.id === range.anchor.columnId);
   const focusColumnIndex = visibleColumns.findIndex((column) => column.id === range.focus.columnId);
 
@@ -962,6 +966,7 @@ function getCellRangeBounds<TData>(state: CominsTableState<TData>, range: Comins
     columnEnd: Math.max(anchorColumnIndex, focusColumnIndex),
     columnStart: Math.min(anchorColumnIndex, focusColumnIndex),
     rowEnd: Math.max(anchorRowIndex, focusRowIndex),
+    rowIds,
     rowStart: Math.min(anchorRowIndex, focusRowIndex),
     visibleColumns,
   };
@@ -1570,13 +1575,14 @@ export function isCominsCellSelected<TData>(state: CominsTableState<TData>, cell
 export function getCominsSelectedCellRange<TData>(
   state: CominsTableState<TData>,
   range: CominsCellRange | null = state.selection.range,
+  rowIds: readonly CominsRowId[] = state.rowIds,
 ) {
   if (!range) {
     return [];
   }
 
   const visibleColumns = getCominsVisibleColumns(state);
-  const bounds = getCellRangeBounds(state, range);
+  const bounds = getCellRangeBounds(state, range, rowIds);
 
   if (!bounds) {
     return [];
@@ -1585,7 +1591,7 @@ export function getCominsSelectedCellRange<TData>(
   const cells: CominsCellAddress[] = [];
 
   for (let rowIndex = bounds.rowStart; rowIndex <= bounds.rowEnd; rowIndex += 1) {
-    const rowId = state.rowIds[rowIndex];
+    const rowId = bounds.rowIds[rowIndex];
 
     if (rowId === undefined) {
       continue;
@@ -1603,8 +1609,12 @@ export function getCominsSelectedCellRange<TData>(
   return cells;
 }
 
-export function isCominsCellInSelectedRange<TData>(state: CominsTableState<TData>, cell: CominsCellAddress) {
-  return getCominsSelectedCellRange(state).some(
+export function isCominsCellInSelectedRange<TData>(
+  state: CominsTableState<TData>,
+  cell: CominsCellAddress,
+  rowIds: readonly CominsRowId[] = state.rowIds,
+) {
+  return getCominsSelectedCellRange(state, state.selection.range, rowIds).some(
     (selected) => selected.rowId === cell.rowId && selected.columnId === cell.columnId,
   );
 }
@@ -1816,6 +1826,90 @@ export function moveCominsRow<TData>(
   return withRows(state, rows);
 }
 
+export type CominsRowGroupMoveOptions<TData> = {
+  getRowGroupId: (row: TData, dataIndex: number) => CominsRowId;
+  setRowGroupId?: (params: {
+    fromGroupId: CominsRowId;
+    row: TData;
+    rowId: CominsRowId;
+    toGroupId: CominsRowId;
+  }) => TData;
+  sourceRowId: CominsRowId;
+  targetGroupId: CominsRowId;
+  targetRowId?: CominsRowId;
+};
+
+export function moveCominsRowToGroup<TData>(
+  state: CominsTableState<TData>,
+  options: CominsRowGroupMoveOptions<TData>,
+) {
+  const sourceIndex = findRowIndex(state, options.sourceRowId);
+  const targetRowIndex = options.targetRowId === undefined
+    ? -1
+    : findRowIndex(state, options.targetRowId);
+
+  if (
+    sourceIndex < 0 ||
+    options.targetRowId === options.sourceRowId ||
+    (options.targetRowId !== undefined && targetRowIndex < 0)
+  ) {
+    return state;
+  }
+
+  const sourceRow = state.rows[sourceIndex];
+
+  if (sourceRow === undefined) {
+    return state;
+  }
+
+  const fromGroupId = options.getRowGroupId(sourceRow, sourceIndex);
+  const membershipChanged = fromGroupId !== options.targetGroupId;
+
+  if (membershipChanged && typeof options.setRowGroupId !== "function") {
+    return state;
+  }
+
+  if (targetRowIndex >= 0) {
+    const targetRow = state.rows[targetRowIndex];
+
+    if (
+      targetRow === undefined ||
+      options.getRowGroupId(targetRow, targetRowIndex) !== options.targetGroupId
+    ) {
+      return state;
+    }
+  }
+
+  const movedRow = membershipChanged
+    ? options.setRowGroupId!({
+        fromGroupId,
+        row: sourceRow,
+        rowId: options.sourceRowId,
+        toGroupId: options.targetGroupId,
+      })
+    : sourceRow;
+  const rows = [...state.rows];
+  rows.splice(sourceIndex, 1);
+  let targetIndex: number;
+
+  if (options.targetRowId !== undefined) {
+    targetIndex = Math.max(0, Math.min(targetRowIndex, rows.length));
+  } else {
+    let lastTargetIndex = -1;
+
+    rows.forEach((row, index) => {
+      if (options.getRowGroupId(row, index) === options.targetGroupId) {
+        lastTargetIndex = index;
+      }
+    });
+    targetIndex = lastTargetIndex < 0 ? rows.length : lastTargetIndex + 1;
+  }
+
+  rows.splice(targetIndex, 0, movedRow);
+
+  return withRows(state, rows);
+}
+
 export function getCominsCellValue<TData>(
   state: CominsTableState<TData>,
   row: TData,
@@ -1969,12 +2063,13 @@ export function pasteCominsCell<TData>(
 export function copyCominsCellRange<TData>(
   state: CominsTableState<TData>,
   range: CominsCellRange | null = state.selection.range,
+  rowIds: readonly CominsRowId[] = state.rowIds,
 ): CominsCopiedCellRange | null {
   if (!range) {
     return null;
   }
 
-  const bounds = getCellRangeBounds(state, range);
+  const bounds = getCellRangeBounds(state, range, rowIds);
 
   if (!bounds) {
     return null;
@@ -1983,8 +2078,9 @@ export function copyCominsCellRange<TData>(
   const copiedRows: CominsCopiedCellRangeCell[][] = [];
 
   for (let rowIndex = bounds.rowStart; rowIndex <= bounds.rowEnd; rowIndex += 1) {
-    const row = state.rows[rowIndex];
-    const rowId = state.rowIds[rowIndex];
+    const rowId = bounds.rowIds[rowIndex];
+    const dataIndex = rowId === undefined ? -1 : findRowIndex(state, rowId);
+    const row = state.rows[dataIndex];
     const copiedCells: CominsCopiedCellRangeCell[] = [];
 
     for (let columnIndex = bounds.columnStart; columnIndex <= bounds.columnEnd; columnIndex += 1) {
@@ -2017,13 +2113,14 @@ export function pasteCominsCellRange<TData>(
   state: CominsTableState<TData>,
   target: CominsCellAddress,
   copied: CominsCopiedCellRange | null,
+  rowIds: readonly CominsRowId[] = state.rowIds,
 ) {
   if (!copied) {
     return state;
   }
 
   const visibleColumns = getCominsVisibleColumns(state);
-  const targetRowIndex = findRowIndex(state, target.rowId);
+  const targetRowIndex = rowIds.indexOf(target.rowId);
   const targetColumnIndex = visibleColumns.findIndex((column) => column.id === target.columnId);
   const rows = [...state.rows];
 
@@ -2034,9 +2131,9 @@ export function pasteCominsCellRange<TData>(
   let changed = false;
 
   copied.rows.forEach((copiedRow, rowOffset) => {
-    const rowIndex = targetRowIndex + rowOffset;
+    const rowId = rowIds[targetRowIndex + rowOffset];
+    const rowIndex = rowId === undefined ? -1 : findRowIndex(state, rowId);
     const row = rows[rowIndex];
-    const rowId = state.rowIds[rowIndex];
 
     if (row === undefined || rowId === undefined) {
       return;

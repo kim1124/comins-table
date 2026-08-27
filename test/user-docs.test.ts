@@ -25,6 +25,7 @@ const userDocs = [
   "17-tree-grid.md",
   "18-summary-row.md",
   "19-row-expand.md",
+  "20-row-grouping.md",
 ];
 
 const implementedTerms = [
@@ -91,6 +92,16 @@ const implementedTerms = [
   "getRowDetailHeight",
   "estimatedRowDetailHeight",
   "renderRowDetail",
+  "rowGrouping",
+  "CominsRowGroupingConfig",
+  "CominsRowGroupRenderParams",
+  "CominsRowGroupMoveOptions",
+  "moveCominsRowGroup",
+  "moveCominsRowToGroup",
+  "expandGroups",
+  "foldGroups",
+  "expandedGroupIds",
+  "onChangeExpandedGroupIds",
 ];
 
 function readWorkspaceFile(path: string) {
@@ -164,10 +175,12 @@ describe("comins-table user documentation contract", () => {
     expect(readme).toContain("/examples/summary-row");
     expect(readme).toContain("/examples/tree-grid");
     expect(readme).toContain("/examples/row-expand");
+    expect(readme).toContain("/examples/row-grouping");
     expect(readme).toContain("/examples/selection-clipboard");
     expect(readme).toContain("docs/user/17-tree-grid.md");
     expect(readme).toContain("docs/user/18-summary-row.md");
     expect(readme).toContain("docs/user/19-row-expand.md");
+    expect(readme).toContain("docs/user/20-row-grouping.md");
     expect(readme).not.toContain("does not currently ship a browser example server");
   });
 
@@ -201,7 +214,40 @@ describe("comins-table user documentation contract", () => {
     expect(unavailableList).not.toContain("multi-cell clipboard");
     expect(unavailableList).not.toContain("집계");
     expect(unavailableList).not.toContain("트리 데이터");
+    expect(unavailableList).not.toContain("Row Grouping");
     expect(advancedFeature).toContain("시각적 Fill Handle UI");
+  });
+
+  it("documents and demonstrates controlled Row Grouping", () => {
+    const englishDocs = readWorkspaceFile("docs/user/20-row-grouping.md");
+    const koreanDocs = readWorkspaceFile("docs/ko/20-row-grouping.md");
+    const playground = readWorkspaceFile("example/src/features/RowGroupingFeature.tsx");
+
+    for (const term of [
+      "rowGrouping",
+      "groups",
+      "getGroupId",
+      "getGroupRowProps",
+      "getRowGroupId",
+      "onChangeGroups",
+      "renderGroupContent",
+      "groupDraggable",
+      "aggregations",
+      "expandedGroupIds",
+      "onChangeExpandedGroupIds",
+      "virtualized",
+      "renderRowDetail",
+    ]) {
+      expect(englishDocs).toContain(term);
+      expect(koreanDocs).toContain(term);
+      expect(playground).toContain(term);
+    }
+
+    expect(englishDocs).toContain("Column Pinning");
+    expect(englishDocs).toContain("--comins-table-group-row-background");
+    expect(koreanDocs).toContain("--comins-table-group-row-background");
+    expect(englishDocs).toContain("Visual Fill Handle UI");
+    expect(playground).toContain("100_000");
   });
 
   it("documents the 100000-row virtualization performance contract", () => {

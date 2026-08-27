@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added controlled client-side single-depth Row Grouping with application-owned ordered Groups and persistent empty Groups, Group CRUD ownership, Group/Row Drag including cross-Group Row moves, full-width custom-renderable Group Rows, typed per-Group Row `className`/`style`, neutral-gray theme tokens, expand/fold Ref methods, per-Group Row sorting, built-in aggregation, fixed/mixed virtualization, leaf-only selection and Clipboard semantics, grouped Row Detail, runtime/type exclusions, and matching Korean/English Playground documentation.
+- Corrected the Row Grouping Playground layout so every Table fills its example container without clipping or unused fixed-height space, and demonstrated custom Group content and Group Row styling together.
+
 ## 0.1.6 - 2026-08-14
 
 - Updated automatic Row Detail measurement to apply each accepted Detail delta through the virtual height index in O(log N), preserving coalesced scroll-anchor correction; observer reads now use one atomically committed `{ projection, contentWidth, viewportHeight }` snapshot, including concurrent Suspense and StrictMode coverage.

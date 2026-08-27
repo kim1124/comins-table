@@ -14,6 +14,7 @@ import { PaginationFeature } from "./PaginationFeature";
 import { RefApiFeature } from "./RefApiFeature";
 import { RowFeature } from "./RowFeature";
 import { RowExpandFeature } from "./RowExpandFeature";
+import { RowGroupingFeature } from "./RowGroupingFeature";
 import { SelectionClipboardFeature } from "./SelectionClipboardFeature";
 import { SizeFeature } from "./SizeFeature";
 import { SummaryRowFeature } from "./SummaryRowFeature";
@@ -249,6 +250,26 @@ export const featureRegistry: FeatureDefinitionSource[] = [
       },
     ],
     summary: defineLocalizedText("고정 높이와 측정 기반 자동 Detail 높이를 사용하는 controlled Row Expand 예제입니다.", "Controlled Row Expand with fixed and measured automatic Detail height."),
+  },
+  {
+    Component: RowGroupingFeature,
+    description: defineLocalizedText(
+      "Application-owned 단일 Depth Group 모델, Group/Row Drag, custom Group content/style, Row Detail과 가상화 예제입니다.",
+      "Application-owned single-depth Groups with Group/Row Drag, custom Group content/style, Row Detail, and virtualization.",
+    ),
+    id: "row-grouping",
+    label: defineLocalizedText("Row Grouping", "Row Grouping"),
+    options: [
+      { description: defineLocalizedText("빈 Group을 포함한 application-owned Group 배열이며 배열 순서가 실제 화면 순서입니다.", "Application-owned Group array, including empty Groups, whose array order is the actual display order."), example: "groups", name: "rowGrouping.groups" },
+      { description: defineLocalizedText("Group과 Row의 stable Group ID를 각각 반환합니다.", "Resolves stable Group IDs for Group objects and Rows."), example: "getGroupId / getRowGroupId", name: "rowGrouping.getGroupId / getRowGroupId" },
+      { description: defineLocalizedText("현재 열린 Group ID를 application state로 제어합니다.", "Controls the currently open Group IDs in application state."), example: "expandedGroupIds", name: "rowGrouping.expandedGroupIds" },
+      { description: defineLocalizedText("다음 controlled Group ID 배열을 전달합니다. 생략하면 disclosure가 read-only입니다.", "Receives the next controlled group ID array. Omit it for read-only disclosure."), example: "onChangeExpandedGroupIds={setExpandedGroupIds}", name: "rowGrouping.onChangeExpandedGroupIds" },
+      { description: defineLocalizedText("Group Drag 결과인 다음 Group 배열을 application state에 반영합니다.", "Writes the next Group array from Group Drag to application state."), example: "onChangeGroups={setGroups}", name: "rowGrouping.onChangeGroups" },
+      { description: defineLocalizedText("각 Group Row에 typed className과 style을 적용합니다.", "Applies a typed className and style to each Group Row."), example: "getGroupRowProps={({ group }) => ({ className, style })}", name: "rowGrouping.getGroupRowProps" },
+      { description: defineLocalizedText("Group Row의 내부 label, count, aggregate와 action content를 교체합니다.", "Replaces the inner label, count, aggregate, and action content of a Group Row."), example: "renderGroupContent={(params) => ...}", name: "rowGrouping.renderGroupContent" },
+      { description: defineLocalizedText("전체 descendant leaf에 count, sum, avg, min 또는 max를 계산합니다.", "Computes count, sum, avg, min, or max across every descendant leaf."), example: "aggregations: { amount: 'sum' }", name: "rowGrouping.aggregations" },
+    ],
+    summary: defineLocalizedText("빈 Group CRUD, Group/Row Drag, custom content/style, Group별 정렬, Row Detail과 100000 Row 가상화 예제입니다.", "Empty-Group CRUD, Group/Row Drag, custom content/style, per-Group sorting, Row Detail, and 100000-row virtualization."),
   },
   {
     Component: SummaryRowFeature,

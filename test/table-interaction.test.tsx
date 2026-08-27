@@ -5,7 +5,12 @@ import { act, createRef, startTransition, StrictMode, Suspense, useState } from 
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CominsTable, type CominsTableProps, type CominsTableRef } from "../src";
+import {
+  CominsTable,
+  type CominsRowGroupingConfig,
+  type CominsTableProps,
+  type CominsTableRef,
+} from "../src";
 import { CominsHeightIndex } from "../src/virtual-layout";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -28,6 +33,45 @@ const rows: PersonRow[] = [
   { age: 31, id: "a", name: "Alpha" },
   { age: 42, id: "b", name: "Beta" },
 ];
+
+function getPersonRowId(row: PersonRow) {
+  return row.id;
+}
+
+type PersonGroup = {
+  id: number;
+  label: string;
+};
+
+const personGroups: PersonGroup[] = [
+  { id: 31, label: "Age 31" },
+  { id: 99, label: "Empty" },
+  { id: 42, label: "Age 42" },
+];
+
+function getPersonGroupId(group: PersonGroup) {
+  return group.id;
+}
+
+function getPersonGroupLabel(group: PersonGroup) {
+  return group.label;
+}
+
+function getPersonRowGroupId(row: PersonRow) {
+  return row.age;
+}
+
+function createPersonGrouping(
+  overrides: Partial<CominsRowGroupingConfig<PersonRow, PersonGroup>> = {},
+): CominsRowGroupingConfig<PersonRow, PersonGroup> {
+  return {
+    getGroupId: getPersonGroupId,
+    getGroupLabel: getPersonGroupLabel,
+    getRowGroupId: getPersonRowGroupId,
+    groups: personGroups,
+    ...overrides,
+  };
+}
 
 const apiColumns = [
   { field: "name", label: "Name" },
@@ -60,6 +104,520 @@ afterEach(() => {
   container?.remove();
   root = undefined;
   container = undefined;
+});
+
+describe("row grouping interaction contract", () => {
+  it("renders synthetic group rows without routing them through ordinary Row callbacks", () => {
+    const onClickRow = vi.fn();
+    const view = renderTable({
+      onClickRow,
+      rowGrouping: createPersonGrouping({
+        expandedGroupIds: [],
+        onChangeExpandedGroupIds: () => undefined,
+      }),
+    } as unknown as Partial<CominsTableProps<PersonRow>>);
+    const groupRows = view.querySelectorAll("[data-comins-group-row]");
+
+    expect(groupRows).toHaveLength(3);
+    act(() => {
+      groupRows[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onClickRow).not.toHaveBeenCalled();
+  });
+
+  it("keeps disclosure controlled and preserves leaf callback indexes and Detail ownership", () => {
+    const onChangeExpandedGroupIds = vi.fn();
+    const onClickRow = vi.fn();
+    const renderGrouped = (expandedGroupIds: readonly (string | number)[]) => (
+      <CominsTable
+        columns={columns}
+        data={rows}
+        expandedRowIds={["a"]}
+        getRowId={(row) => row.id}
+        onClickRow={onClickRow}
+        renderRowDetail={({ row }) => <span>{row.data.name} detail</span>}
+        rowGrouping={createPersonGrouping({
+          aggregations: { age: "sum" },
+          expandedGroupIds,
+          onChangeExpandedGroupIds,
+        })}
+      />
+    );
+    const view = renderTableElement(renderGrouped([]));
+    const firstToggle = view.querySelector<HTMLButtonElement>("[data-testid^='group-toggle-']")!;
+
+    act(() => firstToggle.click());
+    const firstGroupId = onChangeExpandedGroupIds.mock.calls[0]?.[0]?.[0] as number;
+
+    expect(firstGroupId).toBe(31);
+    expect(view.querySelector("[data-testid='row-a']")).toBeNull();
+
+    act(() => {
+      root?.render(renderGrouped([firstGroupId]));
+    });
+
+    const leaf = view.querySelector<HTMLElement>("[data-testid='row-a']")!;
+    const group = [...view.querySelectorAll<HTMLElement>("[data-comins-group-id]")]
+      .find((candidate) => candidate.dataset.cominsGroupId === String(firstGroupId))!;
+
+    expect(group.querySelectorAll(":scope > th, :scope > td")).toHaveLength(1);
+    expect(group.textContent).toContain("Age: 31");
+    expect(view.querySelector("[data-testid='row-detail-content-a']")?.textContent).toContain("Alpha detail");
+
+    act(() => leaf.click());
+    expect(onClickRow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        index: 0,
+        row: expect.objectContaining({ dataIndex: 0, id: "a", index: 0 }),
+      }),
+    );
+  });
+
+  it("keeps read-only disclosure disabled when the controlled callback is absent", () => {
+    const view = renderTable({
+      rowGrouping: createPersonGrouping({ expandedGroupIds: [] }),
+    } as unknown as Partial<CominsTableProps<PersonRow>>);
+
+    expect(view.querySelector<HTMLButtonElement>("[data-testid^='group-toggle-']")?.disabled).toBe(true);
+  });
+
+  it("does not invoke leaf Cell formatters, renderers, or tooltips for synthetic group rows", () => {
+    const format = vi.fn(({ value }: { value: unknown }) => String(value));
+    const renderer = vi.fn(() => <span>leaf renderer</span>);
+    const tooltip = vi.fn(() => "leaf tooltip");
+
+    renderTableElement(
+      <CominsTable
+        columns={[
+          { field: "name", label: "Name" },
+          { cell: { format, renderer, tooltip }, field: "age", label: "Age" },
+        ]}
+        data={rows}
+        getRowId={(row) => row.id}
+        rowGrouping={createPersonGrouping({ aggregations: { age: "sum" }, expandedGroupIds: [] })}
+      />,
+    );
+
+    expect(format).not.toHaveBeenCalled();
+    expect(renderer).not.toHaveBeenCalled();
+    expect(tooltip).not.toHaveBeenCalled();
+  });
+
+  it("does not rebuild membership when only controlled expansion changes", () => {
+    const getRowGroupId = vi.fn(getPersonRowGroupId);
+
+    function StableMembershipFixture() {
+      const [expandedGroupIds, setExpandedGroupIds] = useState<string[]>([]);
+
+      return (
+        <CominsTable
+          columns={columns}
+          data={rows}
+          getRowId={getPersonRowId}
+          rowGrouping={createPersonGrouping({
+            expandedGroupIds,
+            getRowGroupId,
+            onChangeExpandedGroupIds: setExpandedGroupIds,
+          })}
+        />
+      );
+    }
+
+    const view = renderTableElement(<StableMembershipFixture />);
+    expect(getRowGroupId).toHaveBeenCalledTimes(2);
+
+    act(() => view.querySelector<HTMLButtonElement>("[data-testid^='group-toggle-']")?.click());
+    expect(getRowGroupId).toHaveBeenCalledTimes(2);
+  });
+
+  it("clears a hidden Cell once, preserves Row selection, and moves focus to the collapsed ancestor", () => {
+    const onChangeExpandedGroupIds = vi.fn();
+    const onChangeSelection = vi.fn();
+    const renderGrouped = (expandedGroupIds: readonly (string | number)[]) => (
+      <CominsTable
+        columns={columns}
+        data={rows}
+        getRowId={(row) => row.id}
+        onChangeSelection={onChangeSelection}
+        rowGrouping={createPersonGrouping({
+          expandedGroupIds,
+          onChangeExpandedGroupIds,
+        })}
+      />
+    );
+    const view = renderTableElement(renderGrouped([]));
+    const firstToggle = view.querySelector<HTMLButtonElement>("[data-testid^='group-toggle-']")!;
+
+    act(() => firstToggle.click());
+    const firstGroupId = onChangeExpandedGroupIds.mock.calls[0]?.[0]?.[0] as number;
+
+    act(() => {
+      root?.render(renderGrouped([firstGroupId]));
+    });
+
+    const cell = view.querySelector<HTMLElement>("[data-testid='cell-a-age']")!;
+    act(() => {
+      cell.focus();
+      cell.click();
+    });
+    onChangeSelection.mockClear();
+
+    act(() => {
+      root?.render(renderGrouped([]));
+    });
+
+    const collapsedGroup = [...view.querySelectorAll<HTMLElement>("[data-comins-group-id]")]
+      .find((candidate) => candidate.dataset.cominsGroupId === String(firstGroupId))!;
+    const collapsedToggle = collapsedGroup.querySelector<HTMLButtonElement>("[data-testid^='group-toggle-']")!;
+    const latestSelection = onChangeSelection.mock.calls.at(-1)?.[0];
+
+    expect(document.activeElement).toBe(collapsedToggle);
+    expect(latestSelection).toMatchObject({ cell: null, range: null, rowIds: ["a"] });
+    expect(onChangeSelection).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps pagination and loading inert while allowing the existing Row drag contract", () => {
+    const onChangeData = vi.fn();
+    const onLazyLoad = vi.fn();
+    const onLoadMore = vi.fn();
+    const ref = createRef<CominsTableRef<PersonRow>>();
+
+    function RuntimeGuardFixture() {
+      const [expandedGroupIds, setExpandedGroupIds] = useState<(string | number)[]>([]);
+      const runtimeProps = {
+        columns,
+        data: rows,
+        getRowId: (row: PersonRow) => row.id,
+        hasMoreRows: true,
+        infiniteScroll: true,
+        lazyLoad: true,
+        loadingMore: true,
+        onChangeData,
+        onLazyLoad,
+        onLoadMore,
+        pagination: { pageIndex: 0, pageSize: 1 },
+        ref,
+        rowGrouping: createPersonGrouping({
+          expandedGroupIds,
+          onChangeExpandedGroupIds: setExpandedGroupIds,
+        }),
+        rowProps: { draggable: true },
+      } as unknown as CominsTableProps<PersonRow> & React.RefAttributes<CominsTableRef<PersonRow>>;
+
+      return <CominsTable {...runtimeProps} />;
+    }
+
+    const view = renderTableElement(<RuntimeGuardFixture />);
+    const expandCollapsedGroups = () => {
+      const toggle = [...view.querySelectorAll<HTMLButtonElement>("[data-testid^='group-toggle-']")]
+        .find((candidate) => candidate.getAttribute("aria-expanded") === "false");
+
+      if (toggle) {
+        act(() => toggle.click());
+      }
+    };
+
+    expandCollapsedGroups();
+    expandCollapsedGroups();
+    expandCollapsedGroups();
+
+    expect(view.querySelectorAll("tr[data-comins-row-data-index]")).toHaveLength(2);
+    expect(view.querySelectorAll("[data-row-draggable='true']")).toHaveLength(2);
+    expect(onLazyLoad).not.toHaveBeenCalled();
+    expect(onLoadMore).not.toHaveBeenCalled();
+
+    act(() => ref.current?.setMoveTargetRow(1, 0));
+    expect(onChangeData).not.toHaveBeenCalled();
+  });
+
+  it("renders one colspan Group Cell and delegates only its content to the custom renderer", () => {
+    const onChangeExpandedGroupIds = vi.fn();
+    const getGroupRowProps = vi.fn(({ group, isEmpty }) => ({
+      className: isEmpty ? "empty-group-row" : undefined,
+      style: { backgroundColor: group.id === 31 ? "rgb(209, 213, 219)" : undefined },
+    }));
+    const renderGroupContent = vi.fn(({ group, groupIndex, isEmpty, rowCount }) => (
+      <button data-testid={`custom-group-${group.id}`}>
+        {`${groupIndex}:${group.label}:${isEmpty}:${rowCount}`}
+      </button>
+    ));
+    const view = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={rows}
+        getRowId={getPersonRowId}
+        rowGrouping={createPersonGrouping({
+          expandedGroupIds: [],
+          getGroupRowProps,
+          onChangeExpandedGroupIds,
+          renderGroupContent,
+        })}
+      />,
+    );
+    const groupRows = view.querySelectorAll<HTMLElement>("[data-comins-group-row]");
+
+    expect(groupRows).toHaveLength(3);
+    groupRows.forEach((groupRow) => {
+      expect(groupRow.querySelectorAll(":scope > th, :scope > td")).toHaveLength(1);
+      expect(groupRow.querySelector("th")?.getAttribute("colspan")).toBe("2");
+      expect(groupRow.querySelector("th")?.getAttribute("scope")).toBe("rowgroup");
+    });
+    expect(view.querySelector("[data-testid='custom-group-99']")?.textContent).toBe("1:Empty:true:0");
+    expect(view.querySelector<HTMLElement>("[data-testid='group-row-31']")?.style.backgroundColor).toBe(
+      "rgb(209, 213, 219)",
+    );
+    expect(view.querySelector("[data-testid='group-row-99']")?.classList).toContain("empty-group-row");
+
+    act(() => {
+      view.querySelector<HTMLButtonElement>("[data-testid='custom-group-31']")?.click();
+    });
+    expect(onChangeExpandedGroupIds).not.toHaveBeenCalled();
+    expect(getGroupRowProps).toHaveBeenCalledTimes(3);
+    expect(renderGroupContent).toHaveBeenCalledTimes(3);
+  });
+
+  it("expands and folds all explicit Groups through dedicated Ref methods", () => {
+    const ref = createRef<CominsTableRef<PersonRow>>();
+
+    function GroupRefFixture() {
+      const [expandedGroupIds, setExpandedGroupIds] = useState<(string | number)[]>([]);
+
+      return (
+        <CominsTable
+          columns={columns}
+          data={rows}
+          getRowId={getPersonRowId}
+          ref={ref}
+          rowGrouping={createPersonGrouping({
+            expandedGroupIds,
+            onChangeExpandedGroupIds: setExpandedGroupIds,
+          })}
+        />
+      );
+    }
+
+    const view = renderTableElement(<GroupRefFixture />);
+
+    act(() => ref.current?.expandGroups());
+    expect(view.querySelectorAll("tr[data-comins-row-data-index]")).toHaveLength(2);
+
+    act(() => ref.current?.foldGroups([31]));
+    expect(view.querySelector("[data-testid='row-a']")).toBeNull();
+    expect(view.querySelector("[data-testid='row-b']")).not.toBeNull();
+
+    act(() => ref.current?.foldGroups());
+    expect(view.querySelectorAll("tr[data-comins-row-data-index]")).toHaveLength(0);
+  });
+
+  it("keeps Group model order while Header sorting each Group's Rows", () => {
+    type SortGroup = { id: string; label: string };
+    type SortRow = { groupId: string; id: string; name: string };
+    const sortGroups: SortGroup[] = [
+      { id: "b", label: "Group B" },
+      { id: "a", label: "Group A" },
+    ];
+    const sortRows: SortRow[] = [
+      { groupId: "b", id: "b-zeta", name: "Zeta" },
+      { groupId: "a", id: "a-beta", name: "Beta" },
+      { groupId: "b", id: "b-alpha", name: "Alpha" },
+    ];
+    const view = renderTableElement(
+      <CominsTable
+        columns={[{ field: "name", label: "Name", sort: true }]}
+        data={sortRows}
+        getRowId={(row) => row.id}
+        rowGrouping={{
+          expandedGroupIds: ["b", "a"],
+          getGroupId: (group: SortGroup) => group.id,
+          getGroupLabel: (group) => group.label,
+          getRowGroupId: (row: SortRow) => row.groupId,
+          groups: sortGroups,
+        }}
+      />,
+    );
+    const getOrder = () => [...view.querySelectorAll("tbody > tr")].map(
+      (row) => row.getAttribute("data-testid"),
+    );
+
+    act(() => {
+      view.querySelector("[data-testid='header-name']")?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true }),
+      );
+    });
+
+    expect(getOrder()).toEqual([
+      "group-row-b",
+      "row-b-alpha",
+      "row-b-zeta",
+      "group-row-a",
+      "row-a-beta",
+    ]);
+
+    act(() => {
+      view.querySelector("[data-testid='header-name']")?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true }),
+      );
+    });
+
+    expect(getOrder()).toEqual([
+      "group-row-b",
+      "row-b-zeta",
+      "row-b-alpha",
+      "group-row-a",
+      "row-a-beta",
+    ]);
+  });
+
+  it("moves explicit Groups by stable ID and reports model indexes", () => {
+    const onChangeGroups = vi.fn();
+    const view = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={rows}
+        getRowId={getPersonRowId}
+        rowGrouping={createPersonGrouping({
+          groupDraggable: true,
+          onChangeGroups,
+        })}
+      />,
+    );
+    const source = view.querySelector<HTMLElement>("[data-testid='group-drag-handle-31']")!;
+    const target = view.querySelector<HTMLElement>("[data-testid='group-row-42']")!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    vi.spyOn(target, "getBoundingClientRect").mockReturnValue({
+      bottom: 40,
+      height: 40,
+      left: 0,
+      right: 200,
+      top: 0,
+      width: 200,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => target),
+    });
+
+    try {
+      act(() => {
+        source.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointermove", { bubbles: true, buttons: 1, clientX: 10, clientY: 30 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointerup", { bubbles: true, button: 0, clientX: 10, clientY: 30 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    expect(onChangeGroups).toHaveBeenCalledWith(
+      [personGroups[1], personGroups[2], personGroups[0]],
+      {
+        fromIndex: 0,
+        groupId: 31,
+        reason: "move",
+        targetGroupId: 42,
+        toIndex: 2,
+      },
+    );
+  });
+
+  it("moves an existing draggable Row into a collapsed Group and restores disclosure focus", () => {
+    const onChangeData = vi.fn();
+
+    function CrossGroupRowDragFixture() {
+      const [data, setData] = useState(rows);
+
+      return (
+        <CominsTable
+          columns={columns}
+          data={data}
+          getRowId={getPersonRowId}
+          onChangeData={(nextData) => {
+            onChangeData(nextData);
+            setData(nextData);
+          }}
+          rowGrouping={createPersonGrouping({
+            expandedGroupIds: [31],
+            onChangeExpandedGroupIds: () => undefined,
+            setRowGroupId: ({ row, toGroupId }) => ({ ...row, age: Number(toGroupId) }),
+          })}
+          rowProps={{ draggable: true }}
+        />
+      );
+    }
+
+    const view = renderTableElement(<CrossGroupRowDragFixture />);
+    const source = view.querySelector<HTMLElement>("[data-testid='row-drag-handle-a']")!;
+    const sourceRow = source.closest<HTMLElement>("tr")!;
+    const target = view.querySelector<HTMLElement>("[data-testid='group-row-99']")!;
+    const targetDisclosure = target.querySelector<HTMLButtonElement>("[data-testid='group-toggle-99']")!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => target),
+    });
+
+    try {
+      act(() => {
+        sourceRow.focus();
+        source.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointerup", { bubbles: true, button: 0, clientX: 10, clientY: 20 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    expect(onChangeData).toHaveBeenCalledTimes(1);
+    expect(onChangeData).toHaveBeenCalledWith([
+      rows[1],
+      { ...rows[0], age: 99 },
+    ]);
+    expect(view.querySelectorAll("tr[data-comins-row-data-index]")).toHaveLength(0);
+    expect(document.activeElement).toBe(targetDisclosure);
+  });
+
+  it("fails closed for malformed untyped grouping control values", () => {
+    const ordinary = renderTable({ rowGrouping: null } as unknown as Partial<CominsTableProps<PersonRow>>);
+
+    expect(ordinary.querySelectorAll("tr[data-comins-row-data-index]")).toHaveLength(2);
+
+    act(() => root?.unmount());
+    root = undefined;
+    ordinary.remove();
+    container = undefined;
+
+    const grouped = renderTable({
+      rowGrouping: {
+        getGroupId: getPersonGroupId,
+        getRowGroupId: getPersonRowGroupId,
+        groups: personGroups,
+        expandedGroupIds: "invalid",
+        onChangeExpandedGroupIds: true,
+      },
+    } as unknown as Partial<CominsTableProps<PersonRow>>);
+
+    expect(grouped.querySelectorAll("[data-comins-group-row]")).toHaveLength(3);
+    expect(grouped.querySelector<HTMLButtonElement>("[data-testid^='group-toggle-']")?.disabled).toBe(true);
+  });
 });
 
 function renderTable(props: Partial<CominsTableProps<PersonRow>> = {}) {

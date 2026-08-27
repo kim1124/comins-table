@@ -7,7 +7,6 @@ const unavailable = [
   "시각적 Fill Handle UI",
   "server-side row model",
   "viewport datasource model",
-  "Row Grouping",
   "피벗",
   "charts integration",
   "AI assistant",

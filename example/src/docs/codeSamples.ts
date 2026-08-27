@@ -13,6 +13,7 @@ const codeSampleTitles = {
   "Controlled CRUD state": defineLocalizedText("Controlled CRUD 상태", "Controlled CRUD state"),
   "Controlled Flat Table ref usage": defineLocalizedText("Controlled Flat Table ref 사용", "Controlled Flat Table ref usage"),
   "Controlled Row Expand": defineLocalizedText("Controlled Row Expand", "Controlled Row Expand"),
+  "Controlled Row Grouping": defineLocalizedText("Controlled Row Grouping", "Controlled Row Grouping"),
   "Controlled Tree Grid": defineLocalizedText("Controlled Tree Grid", "Controlled Tree Grid"),
   "Controlled remote infinite scroll": defineLocalizedText("Controlled 원격 Infinite Scroll", "Controlled remote infinite scroll"),
   "Controlled selection and clipboard": defineLocalizedText("Controlled 선택과 Clipboard", "Controlled selection and clipboard"),
@@ -547,6 +548,47 @@ export const rowExpandSamples: DocsCodeSample[] = [
 />;`,
     language: "tsx",
     title: "Controlled Row Expand",
+  },
+];
+
+export const rowGroupingSamples: DocsCodeSample[] = [
+  {
+    code: `const [groups, setGroups] = useState([
+  { id: "east", label: "East" },
+  { id: "empty", label: "Empty" },
+  { id: "west", label: "West" },
+]);
+const [expandedGroupIds, setExpandedGroupIds] = useState<CominsRowId[]>([]);
+
+<CominsTable
+  columns={columns}
+  data={rows}
+  getRowId={(row) => row.id}
+  multiSort
+  onChangeData={setRows}
+  rowGrouping={{
+    aggregations: { amount: "sum", id: "count" },
+    expandedGroupIds,
+    getGroupId: (group) => group.id,
+    getGroupLabel: (group) => group.label,
+    getGroupRowProps: ({ isEmpty }) => ({
+      className: isEmpty ? "empty-group-row" : undefined,
+      style: {
+        "--comins-table-group-row-background": isEmpty ? "#e2e8f0" : "#d1d5db",
+      } as React.CSSProperties,
+    }),
+    getRowGroupId: (row) => row.groupId,
+    groupDraggable: true,
+    groups,
+    onChangeExpandedGroupIds: setExpandedGroupIds,
+    onChangeGroups: setGroups,
+    setRowGroupId: ({ row, toGroupId }) => ({ ...row, groupId: String(toGroupId) }),
+  }}
+  rowProps={{ draggable: true }}
+  virtualized
+/>;`,
+    language: "tsx",
+    title: "Controlled Row Grouping",
   },
 ];
 

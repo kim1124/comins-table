@@ -75,4 +75,21 @@ describe("comins-table range selection core", () => {
     expect(state.selection.range).toBeNull();
     expect(getCominsSelectedCellRange(state)).toEqual([]);
   });
+
+  it("expands and tests ranges in an explicit grouped leaf order", () => {
+    let state = createState();
+
+    state = selectCellRange(state, {
+      anchor: { columnId: "name", rowId: "c" },
+      focus: { columnId: "age", rowId: "a" },
+    });
+
+    expect(
+      getCominsSelectedCellRange(state, state.selection.range, ["c", "a"])
+        .map((cell) => `${String(cell.rowId)}:${cell.columnId}`),
+    ).toEqual(["c:name", "c:age", "a:name", "a:age"]);
+    expect(
+      isCominsCellInSelectedRange(state, { columnId: "age", rowId: "b" }, ["c", "a"]),
+    ).toBe(false);
+  });
 });
