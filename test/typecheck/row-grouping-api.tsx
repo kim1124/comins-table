@@ -1,11 +1,20 @@
 import {
   CominsTable,
+  createCominsTableState,
+  moveCominsRowToGroup,
+  type CominsRowGroupMoveOptions,
   type CominsRowGroupingConfig,
   type CominsTableProps,
 } from "../../src";
 
+type Group = {
+  id: string;
+  name: string;
+};
+
 type Row = {
   amount: number | null;
+  groupId: string;
   id: string;
   region: string;
 };
@@ -15,22 +24,48 @@ const columns = [
   { field: "amount", label: "Amount", sort: true },
 ];
 
+const groups: Group[] = [
+  { id: "east", name: "East" },
+  { id: "empty", name: "Empty" },
+];
+
 const grouping = {
   aggregations: {
     amount: "sum",
     id: "count",
   },
-  criteria: [
-    "region",
-    {
-      columnId: "amount",
-      getKey: ({ value }) =>
-        typeof value === "number" && value >= 100 ? "high" : "low",
-    },
-  ],
-  expandedGroupIds: [],
+  expandedGroupIds: ["east"],
+  getGroupId: (group: Group) => group.id,
+  getGroupLabel: (group) => group.name,
+  getGroupRowProps: ({ group, isEmpty }) => ({
+    className: isEmpty ? "empty-group" : undefined,
+    style: { color: group.id === "east" ? "#111827" : undefined },
+  }),
+  getRowGroupId: (row: Row) => row.groupId,
+  groupDraggable: true,
+  groups,
   onChangeExpandedGroupIds: (_ids) => undefined,
-} satisfies CominsRowGroupingConfig<Row>;
+  onChangeGroups: (_groups, details) => {
+    details.fromIndex satisfies number;
+    details.toIndex satisfies number;
+  },
+  renderGroupContent: ({ group, groupIndex, rowCount }) =>
+    `${groupIndex}:${group.name}:${rowCount}`,
+  setRowGroupId: ({ row, toGroupId }) => ({
+    ...row,
+    groupId: String(toGroupId),
+  }),
+} satisfies CominsRowGroupingConfig<Row, Group>;
+
+const rowMoveOptions = {
+  getRowGroupId: (row: Row) => row.groupId,
+  setRowGroupId: ({ row, toGroupId }) => ({ ...row, groupId: String(toGroupId) }),
+  sourceRowId: "row-a",
+  targetGroupId: "empty",
+} satisfies CominsRowGroupMoveOptions<Row>;
+const rowMoveState = createCominsTableState({ columns, rows: [] as Row[] });
+
+moveCominsRowToGroup(rowMoveState, rowMoveOptions);
 
 const ordinary = {
   columns,
@@ -47,33 +82,33 @@ void <CominsTable {...ordinary} />;
 void (
   <CominsTable
     columns={columns}
-    data={[]}
+    data={[] as Row[]}
     getRowId={(row) => row.id}
     isRowExpandable={() => true}
     renderRowDetail={({ row }) => row.data.region}
     rowGrouping={grouping}
+    rowProps={{ draggable: true }}
   />
 );
 
 // @ts-expect-error Grouped tables do not accept pagination.
-void <CominsTable columns={columns} data={[]} pagination={{ pageSize: 10 }} rowGrouping={grouping} />;
+void <CominsTable columns={columns} data={[] as Row[]} pagination={{ pageSize: 10 }} rowGrouping={grouping} />;
 
 // @ts-expect-error Grouped tables do not accept infinite loading.
-void <CominsTable columns={columns} data={[]} infiniteScroll onLoadMore={() => undefined} rowGrouping={grouping} />;
+void <CominsTable columns={columns} data={[] as Row[]} infiniteScroll onLoadMore={() => undefined} rowGrouping={grouping} />;
 
 // @ts-expect-error Grouped tables do not accept lazy loading.
-void <CominsTable columns={columns} data={[]} lazyLoad onLazyLoad={() => undefined} rowGrouping={grouping} />;
-
-// @ts-expect-error Grouped tables do not accept draggable Row props.
-void <CominsTable columns={columns} data={[]} rowGrouping={grouping} rowProps={{ draggable: true }} />;
+void <CominsTable columns={columns} data={[] as Row[]} lazyLoad onLazyLoad={() => undefined} rowGrouping={grouping} />;
 
 // @ts-expect-error Tree tables do not accept Row Grouping.
-void <CominsTable columns={columns} data={[]} getRowId={(row) => row.id} rowGrouping={grouping} tree />;
+void <CominsTable columns={columns} data={[] as Row[]} getRowId={(row) => row.id} rowGrouping={grouping} tree />;
 
-const invalidGrouping: CominsRowGroupingConfig<Row> = {
+const invalidGrouping: CominsRowGroupingConfig<Row, Group> = {
   // @ts-expect-error Custom reducer names are not supported.
   aggregations: { amount: "median" },
-  criteria: ["region"],
+  getGroupId: (group) => group.id,
+  getRowGroupId: (row) => row.groupId,
+  groups,
 };
 
 void invalidGrouping;

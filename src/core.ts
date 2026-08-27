@@ -1826,6 +1826,90 @@ export function moveCominsRow<TData>(
   return withRows(state, rows);
 }
 
+export type CominsRowGroupMoveOptions<TData> = {
+  getRowGroupId: (row: TData, dataIndex: number) => CominsRowId;
+  setRowGroupId?: (params: {
+    fromGroupId: CominsRowId;
+    row: TData;
+    rowId: CominsRowId;
+    toGroupId: CominsRowId;
+  }) => TData;
+  sourceRowId: CominsRowId;
+  targetGroupId: CominsRowId;
+  targetRowId?: CominsRowId;
+};
+
+export function moveCominsRowToGroup<TData>(
+  state: CominsTableState<TData>,
+  options: CominsRowGroupMoveOptions<TData>,
+) {
+  const sourceIndex = findRowIndex(state, options.sourceRowId);
+  const targetRowIndex = options.targetRowId === undefined
+    ? -1
+    : findRowIndex(state, options.targetRowId);
+
+  if (
+    sourceIndex < 0 ||
+    options.targetRowId === options.sourceRowId ||
+    (options.targetRowId !== undefined && targetRowIndex < 0)
+  ) {
+    return state;
+  }
+
+  const sourceRow = state.rows[sourceIndex];
+
+  if (sourceRow === undefined) {
+    return state;
+  }
+
+  const fromGroupId = options.getRowGroupId(sourceRow, sourceIndex);
+  const membershipChanged = fromGroupId !== options.targetGroupId;
+
+  if (membershipChanged && typeof options.setRowGroupId !== "function") {
+    return state;
+  }
+
+  if (targetRowIndex >= 0) {
+    const targetRow = state.rows[targetRowIndex];
+
+    if (
+      targetRow === undefined ||
+      options.getRowGroupId(targetRow, targetRowIndex) !== options.targetGroupId
+    ) {
+      return state;
+    }
+  }
+
+  const movedRow = membershipChanged
+    ? options.setRowGroupId!({
+        fromGroupId,
+        row: sourceRow,
+        rowId: options.sourceRowId,
+        toGroupId: options.targetGroupId,
+      })
+    : sourceRow;
+  const rows = [...state.rows];
+  rows.splice(sourceIndex, 1);
+  let targetIndex: number;
+
+  if (options.targetRowId !== undefined) {
+    targetIndex = Math.max(0, Math.min(targetRowIndex, rows.length));
+  } else {
+    let lastTargetIndex = -1;
+
+    rows.forEach((row, index) => {
+      if (options.getRowGroupId(row, index) === options.targetGroupId) {
+        lastTargetIndex = index;
+      }
+    });
+    targetIndex = lastTargetIndex < 0 ? rows.length : lastTargetIndex + 1;
+  }
+
+  rows.splice(targetIndex, 0, movedRow);
+
+  return withRows(state, rows);
+}
+
 export function getCominsCellValue<TData>(
   state: CominsTableState<TData>,
   row: TData,

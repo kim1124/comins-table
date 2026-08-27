@@ -450,7 +450,7 @@ body {
   min-height: 300px;
 }
 
-.docs-live .feature-panel:not(.feature-panel--size):not(.feature-panel--header):not(.feature-panel--components)
+.docs-live .feature-panel:not(.feature-panel--size):not(.feature-panel--header):not(.feature-panel--components):not(.feature-panel--row-grouping)
   .example-table.comins-table {
   flex: 0 0 auto;
   height: 300px;
@@ -1529,6 +1529,10 @@ body {
   height: auto;
   max-height: 100%;
   min-height: 0;
+}
+
+.row-grouping-custom-group-row > .comins-table__group-cell {
+  border-bottom-color: #94a3b8;
 }
 
 .feature-panel--row-grouping [data-feature-option="row-grouping-virtual"] .feature-option-sample {

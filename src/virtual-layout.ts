@@ -17,7 +17,7 @@ export type CominsDataVirtualSlot<TData> = {
 };
 
 export type CominsGroupVirtualSlot = {
-  groupId: string;
+  groupId: CominsRowId;
   height: number;
   key: string;
   kind: "group";

@@ -94,8 +94,12 @@ const implementedTerms = [
   "renderRowDetail",
   "rowGrouping",
   "CominsRowGroupingConfig",
-  "CominsRowGroupingCriterion",
-  "CominsRowGroupKey",
+  "CominsRowGroupRenderParams",
+  "CominsRowGroupMoveOptions",
+  "moveCominsRowGroup",
+  "moveCominsRowToGroup",
+  "expandGroups",
+  "foldGroups",
   "expandedGroupIds",
   "onChangeExpandedGroupIds",
 ];
@@ -221,7 +225,13 @@ describe("comins-table user documentation contract", () => {
 
     for (const term of [
       "rowGrouping",
-      "criteria",
+      "groups",
+      "getGroupId",
+      "getGroupRowProps",
+      "getRowGroupId",
+      "onChangeGroups",
+      "renderGroupContent",
+      "groupDraggable",
       "aggregations",
       "expandedGroupIds",
       "onChangeExpandedGroupIds",
@@ -234,6 +244,8 @@ describe("comins-table user documentation contract", () => {
     }
 
     expect(englishDocs).toContain("Column Pinning");
+    expect(englishDocs).toContain("--comins-table-group-row-background");
+    expect(koreanDocs).toContain("--comins-table-group-row-background");
     expect(englishDocs).toContain("Visual Fill Handle UI");
     expect(playground).toContain("100_000");
   });

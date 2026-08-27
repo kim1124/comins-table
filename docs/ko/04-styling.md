@@ -90,6 +90,8 @@ Table 전체 스타일은 `className`, `style`, `theme`로 제어한다. Row 스
 - `--comins-table-border`
 - `--comins-table-cell-border`
 - `--comins-table-foreground`
+- `--comins-table-group-row-background`
+- `--comins-table-group-row-color`
 - `--comins-table-header-background`
 - `--comins-table-header-border`
 - `--comins-table-header-color`

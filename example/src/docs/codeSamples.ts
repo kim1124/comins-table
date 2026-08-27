@@ -553,19 +553,38 @@ export const rowExpandSamples: DocsCodeSample[] = [
 
 export const rowGroupingSamples: DocsCodeSample[] = [
   {
-    code: `const [expandedGroupIds, setExpandedGroupIds] = useState<string[]>([]);
+    code: `const [groups, setGroups] = useState([
+  { id: "east", label: "East" },
+  { id: "empty", label: "Empty" },
+  { id: "west", label: "West" },
+]);
+const [expandedGroupIds, setExpandedGroupIds] = useState<CominsRowId[]>([]);
 
 <CominsTable
   columns={columns}
   data={rows}
   getRowId={(row) => row.id}
   multiSort
+  onChangeData={setRows}
   rowGrouping={{
     aggregations: { amount: "sum", id: "count" },
-    criteria: ["region", "team"],
     expandedGroupIds,
+    getGroupId: (group) => group.id,
+    getGroupLabel: (group) => group.label,
+    getGroupRowProps: ({ isEmpty }) => ({
+      className: isEmpty ? "empty-group-row" : undefined,
+      style: {
+        "--comins-table-group-row-background": isEmpty ? "#e2e8f0" : "#d1d5db",
+      } as React.CSSProperties,
+    }),
+    getRowGroupId: (row) => row.groupId,
+    groupDraggable: true,
+    groups,
     onChangeExpandedGroupIds: setExpandedGroupIds,
+    onChangeGroups: setGroups,
+    setRowGroupId: ({ row, toGroupId }) => ({ ...row, groupId: String(toGroupId) }),
   }}
+  rowProps={{ draggable: true }}
   virtualized
 />;`,
     language: "tsx",

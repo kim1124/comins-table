@@ -1,49 +1,56 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { createCominsTableState } from "../src";
+import { createCominsTableState } from "../src/core";
 import {
-  createCominsGroupTree,
-  encodeCominsGroupPath,
+  createCominsGroupModel,
   getCominsAggregateValue,
-  normalizeCominsGroupKey,
+  moveCominsRowGroup,
   normalizeCominsRowGrouping,
-  orderCominsGroupTree,
-  projectCominsGroupTree,
+  orderCominsGroupModel,
+  projectCominsGroups,
 } from "../src/grouping";
+
+type Group = {
+  id: string | number;
+  name: string;
+};
 
 type Row = {
   amount: unknown;
   city: string;
-  hiddenCode?: string;
+  groupId: string | number;
   id: string;
-  region: unknown;
 };
 
 const columns = [
-  { field: "region", label: "Region", sort: true },
   { field: "city", label: "City", sort: true },
   { field: "amount", label: "Amount", sort: true },
-  { field: "hiddenCode", hidden: true, label: "Hidden code" },
   { field: "id", label: "ID" },
 ] as const;
 
-const data: Row[] = [
-  { amount: 3, city: "Seoul", hiddenCode: "a", id: "a", region: "West" },
-  { amount: 1, city: "Busan", hiddenCode: "b", id: "b", region: "East" },
-  { amount: 2, city: "Busan", hiddenCode: "b", id: "c", region: "East" },
-  { amount: null, city: "Seoul", hiddenCode: "a", id: "d", region: "West" },
+const groups: Group[] = [
+  { id: "west", name: "West" },
+  { id: "empty", name: "Empty" },
+  { id: 1, name: "East" },
 ];
 
-function createFixture() {
+const data: Row[] = [
+  { amount: 3, city: "Seoul", groupId: "west", id: "a" },
+  { amount: 1, city: "Busan", groupId: 1, id: "b" },
+  { amount: 2, city: "Daegu", groupId: 1, id: "c" },
+  { amount: null, city: "Busan", groupId: "west", id: "d" },
+];
+
+function createFixture(rows: readonly Row[] = data) {
   return createCominsTableState({
     columns,
     getRowId: (row: Row) => row.id,
-    rows: data,
+    rows,
   });
 }
 
-function createSourceRows() {
-  const state = createFixture();
+function createSourceRows(rows: readonly Row[] = data) {
+  const state = createFixture(rows);
 
   return state.rows.map((row, dataIndex) => ({
     data: row,
@@ -52,200 +59,105 @@ function createSourceRows() {
   }));
 }
 
-describe("row grouping pure model", () => {
-  it("keeps the first valid criterion, allows hidden criteria, and ignores invalid aggregations", () => {
-    const state = createFixture();
-    const normalized = normalizeCominsRowGrouping({
-      columns: state.columns,
-      config: {
-        aggregations: {
-          amount: "sum",
-          missing: "count",
-          region: "median" as never,
-        },
-        criteria: ["region", "unknown", "region", "hiddenCode"],
-      },
-    });
-
-    expect(normalized.criteria.map(({ column }) => column.id)).toEqual([
-      "region",
-      "hiddenCode",
-    ]);
-    expect([...normalized.aggregations]).toEqual([["amount", "sum"]]);
+function createModel(rows: readonly Row[] = data) {
+  const state = createFixture(rows);
+  const normalized = normalizeCominsRowGrouping({
+    columns: state.columns,
+    config: {
+      aggregations: { amount: "sum", id: "count" },
+      getGroupId: (group: Group) => group.id,
+      getGroupLabel: (group) => group.name,
+      getRowGroupId: (row: Row) => row.groupId,
+      groups,
+    },
   });
 
-  it("uses typed length-prefixed group IDs for supported, empty, and unsupported keys", () => {
-    const variants = [
-      null,
-      undefined,
-      0,
-      -0,
-      1,
-      "1",
-      true,
-      new Date(1),
-      Number.NaN,
-      Number.POSITIVE_INFINITY,
-      new Date(Number.NaN),
-      {},
-    ];
-    const encoded = variants.map((value) =>
-      encodeCominsGroupPath([
-        { columnId: "segment:one", key: normalizeCominsGroupKey(value) },
-      ]),
-    );
-
-    expect(encoded.every((id) => id.startsWith("comins-group:"))).toBe(true);
-    expect(encoded[0]).toBe(encoded[1]);
-    expect(encoded[2]).toBe(encoded[3]);
-    expect(new Set(encoded.slice(4, 8)).size).toBe(4);
-    expect(new Set(encoded.slice(8)).size).toBe(1);
-    expect(
-      encodeCominsGroupPath([
-        { columnId: "a:1", key: normalizeCominsGroupKey("b") },
-      ]),
-    ).not.toBe(
-      encodeCominsGroupPath([
-        { columnId: "a", key: normalizeCominsGroupKey("1:b") },
-      ]),
-    );
-  });
-
-  it("builds one-pass nested membership without copying source rows and aggregates every descendant", () => {
-    const state = createFixture();
-    const normalized = normalizeCominsRowGrouping({
-      columns: state.columns,
-      config: {
-        aggregations: { amount: "sum", id: "count" },
-        criteria: ["region", "city"],
-      },
-    });
-    const tree = createCominsGroupTree({
+  return {
+    model: createCominsGroupModel({
       ...normalized,
-      rows: createSourceRows(),
+      getRowGroupId: (row: Row) => row.groupId,
+      rows: createSourceRows(rows),
+    }),
+    state,
+  };
+}
+
+describe("row grouping explicit model", () => {
+  it("keeps controlled Group order, empty Groups, and first duplicate IDs", () => {
+    const state = createFixture();
+    const duplicate = { id: "west", name: "Duplicate" };
+    const normalized = normalizeCominsRowGrouping({
+      columns: state.columns,
+      config: {
+        getGroupId: (group: Group) => group.id,
+        getGroupLabel: (group) => group.name,
+        getRowGroupId: (row: Row) => row.groupId,
+        groups: [...groups, duplicate],
+      },
     });
 
-    expect(tree.rootGroupIds).toHaveLength(2);
-    const west = tree.nodesById.get(tree.rootGroupIds[0]!)!;
-    const east = tree.nodesById.get(tree.rootGroupIds[1]!)!;
+    expect(normalized.groupIds).toEqual(["west", "empty", 1]);
+    expect(normalized.groupsById.get("west")?.group).toBe(groups[0]);
+    expect(normalized.groupsById.get("empty")?.groupIndex).toBe(1);
+    expect(normalized.groupsById.get(1)?.label).toBe("East");
+  });
 
-    expect(west.label).toBe("West");
-    expect(east.label).toBe("East");
-    expect(west.firstSourceIndex).toBe(0);
-    expect(west.leafSourceIndexes).toBeUndefined();
-    expect(west.childGroupIds).toHaveLength(1);
+  it("builds membership and aggregates without copying source Rows", () => {
+    const { model } = createModel();
+    const west = model.groupsById.get("west")!;
+    const empty = model.groupsById.get("empty")!;
+
+    expect(west.leafSourceIndexes).toEqual([0, 3]);
     expect(getCominsAggregateValue(west.aggregationState.get("amount")!)).toBe(3);
     expect(getCominsAggregateValue(west.aggregationState.get("id")!)).toBe(2);
-
-    const westSeoul = tree.nodesById.get(west.childGroupIds[0]!)!;
-    expect(westSeoul.leafSourceIndexes).toEqual([0, 3]);
-    expect(Object.values(westSeoul)).not.toContain(data[0]);
+    expect(empty.leafSourceIndexes).toEqual([]);
+    expect(getCominsAggregateValue(empty.aggregationState.get("amount")!)).toBeNull();
+    expect(getCominsAggregateValue(empty.aggregationState.get("id")!)).toBe(0);
+    expect(Object.values(west)).not.toContain(data[0]);
   });
 
-  it("applies empty and unsupported labels without exposing unsupported values to getLabel", () => {
-    const getLabel = vi.fn(({ key }) => (key === null ? "No region" : `Region ${String(key)}`));
-    const state = createCominsTableState<Row>({
-      columns,
-      getRowId: (row) => row.id,
-      rows: [
-        { amount: 1, city: "A", id: "empty", region: undefined },
-        { amount: 2, city: "B", id: "unsupported", region: {} },
-      ],
-    });
-    const normalized = normalizeCominsRowGrouping({
+  it("keeps Group order while sorting Rows independently inside each Group", () => {
+    const { model, state } = createModel();
+    const ordered = orderCominsGroupModel({
       columns: state.columns,
-      config: { criteria: [{ columnId: "region", getLabel }] },
-    });
-    const tree = createCominsGroupTree({
-      ...normalized,
-      rows: state.rows.map((row, dataIndex) => ({ data: row, dataIndex, id: state.rowIds[dataIndex]! })),
-    });
-    const groups = tree.rootGroupIds.map((groupId) => tree.nodesById.get(groupId)!);
-
-    expect(groups.map(({ label }) => label)).toEqual(["No region", "(unsupported)"]);
-    expect(getLabel).toHaveBeenCalledTimes(1);
-    expect(getLabel).toHaveBeenCalledWith(expect.objectContaining({ depth: 0, key: null }));
-  });
-
-  it("sorts hierarchy rules separately from leaf rules and projects visible leaf indexes", () => {
-    const state = createFixture();
-    const normalized = normalizeCominsRowGrouping({
-      columns: state.columns,
-      config: { criteria: ["region", "city"] },
-    });
-    const tree = createCominsGroupTree({ ...normalized, rows: createSourceRows() });
-    const ordered = orderCominsGroupTree({
-      columns: state.columns,
+      model,
       rows: state.rows,
       sortModel: [
-        { columnId: "region", direction: "asc" },
-        { columnId: "city", direction: "desc" },
+        { columnId: "city", direction: "asc" },
         { columnId: "amount", direction: "desc" },
       ],
-      tree,
-    });
-    const eastId = ordered.orderedRootGroupIds[0]!;
-    const eastCityId = ordered.orderedChildGroupIdsById.get(eastId)?.[0]!;
-    const projection = projectCominsGroupTree({
-      expandedGroupIds: [eastId, eastCityId],
-      rowIds: state.rowIds,
-      tree: ordered,
     });
 
-    expect(ordered.nodesById.get(eastId)?.label).toBe("East");
+    expect(ordered.groupIds).toEqual(["west", "empty", 1]);
+    expect(ordered.orderedLeafSourceIndexesById.get("west")).toEqual([3, 0]);
+    expect(ordered.orderedLeafSourceIndexesById.get(1)).toEqual([1, 2]);
+  });
+
+  it("projects every Group and only expanded member Rows", () => {
+    const { model, state } = createModel();
+    const ordered = orderCominsGroupModel({
+      columns: state.columns,
+      model,
+      rows: state.rows,
+      sortModel: [{ columnId: "amount", direction: "desc" }],
+    });
+    const projection = projectCominsGroups({
+      expandedGroupIds: ["west", 1],
+      model: ordered,
+      rowIds: state.rowIds,
+    });
+
     expect(
-      ordered.orderedLeafSourceIndexesById.get(eastCityId),
-    ).toEqual([2, 1]);
-    expect(projection.entries.map((entry) => entry.kind)).toEqual([
-      "group",
-      "group",
-      "data",
-      "data",
-      "group",
-    ]);
-    expect(projection.visibleLeafRowIds).toEqual(["c", "b"]);
+      projection.entries
+        .filter((entry) => entry.kind === "group")
+        .map((entry) => entry.groupId),
+    ).toEqual(["west", "empty", 1]);
+    expect(projection.visibleLeafRowIds).toEqual(["a", "d", "c", "b"]);
     expect(
       projection.entries
         .filter((entry) => entry.kind === "data")
         .map((entry) => entry.visibleLeafIndex),
-    ).toEqual([0, 1]);
-  });
-
-  it("applies the fixed mixed-key total order and reverses it for descending groups", () => {
-    const mixedRows: Row[] = [
-      { amount: 1, city: "A", id: "string", region: "1" },
-      { amount: 1, city: "A", id: "number", region: 1 },
-      { amount: 1, city: "A", id: "boolean", region: false },
-      { amount: 1, city: "A", id: "empty", region: null },
-      { amount: 1, city: "A", id: "unsupported", region: {} },
-      { amount: 1, city: "A", id: "date", region: new Date(1) },
-    ];
-    const state = createCominsTableState({
-      columns,
-      getRowId: (row: Row) => row.id,
-      rows: mixedRows,
-    });
-    const normalized = normalizeCominsRowGrouping({
-      columns: state.columns,
-      config: { criteria: ["region"] },
-    });
-    const tree = createCominsGroupTree({
-      ...normalized,
-      rows: state.rows.map((row, dataIndex) => ({ data: row, dataIndex, id: state.rowIds[dataIndex]! })),
-    });
-    const getKinds = (direction: "asc" | "desc") => {
-      const ordered = orderCominsGroupTree({
-        columns: state.columns,
-        rows: state.rows,
-        sortModel: [{ columnId: "region", direction }],
-        tree,
-      });
-
-      return ordered.orderedRootGroupIds.map((groupId) => ordered.nodesById.get(groupId)?.key.kind);
-    };
-
-    expect(getKinds("asc")).toEqual(["empty", "unsupported", "boolean", "number", "date", "string"]);
-    expect(getKinds("desc")).toEqual(["string", "date", "number", "boolean", "unsupported", "empty"]);
+    ).toEqual([0, 1, 2, 3]);
   });
 
   it.each([
@@ -254,43 +166,62 @@ describe("row grouping pure model", () => {
     ["avg", 1.5],
     ["min", 1],
     ["max", 2],
-  ] as const)("computes %s from every descendant with finite numeric rules", (aggregation, expected) => {
+  ] as const)("computes %s with finite numeric rules", (aggregation, expected) => {
     const aggregateRows: Row[] = [1, 2, null, Number.NaN, "x", Number.POSITIVE_INFINITY].map(
-      (amount, index) => ({ amount, city: "A", id: `aggregate-${index}`, region: "All" }),
+      (amount, index) => ({ amount, city: "A", groupId: "west", id: `aggregate-${index}` }),
     );
-    const state = createCominsTableState({
-      columns,
-      getRowId: (row: Row) => row.id,
-      rows: aggregateRows,
-    });
+    const state = createFixture(aggregateRows);
     const normalized = normalizeCominsRowGrouping({
       columns: state.columns,
-      config: { aggregations: { amount: aggregation }, criteria: ["region"] },
+      config: {
+        aggregations: { amount: aggregation },
+        getGroupId: (group: Group) => group.id,
+        getRowGroupId: (row: Row) => row.groupId,
+        groups,
+      },
     });
-    const tree = createCominsGroupTree({
+    const model = createCominsGroupModel({
       ...normalized,
-      rows: state.rows.map((row, dataIndex) => ({ data: row, dataIndex, id: state.rowIds[dataIndex]! })),
+      getRowGroupId: (row: Row) => row.groupId,
+      rows: createSourceRows(aggregateRows),
     });
-    const node = tree.nodesById.get(tree.rootGroupIds[0]!)!;
 
-    expect(getCominsAggregateValue(node.aggregationState.get("amount")!)).toBe(expected);
+    expect(getCominsAggregateValue(model.groupsById.get("west")!.aggregationState.get("amount")!)).toBe(expected);
   });
 
-  it("returns an empty numeric aggregate when no finite number exists", () => {
-    const state = createCominsTableState<Row>({
-      columns,
-      getRowId: (row) => row.id,
-      rows: [{ amount: null, city: "A", id: "empty-number", region: "All" }],
+  it("moves Groups before and after by stable ID without mutating input", () => {
+    const movedAfter = moveCominsRowGroup({
+      getGroupId: (group: Group) => group.id,
+      groups,
+      position: "after",
+      sourceGroupId: "west",
+      targetGroupId: 1,
     });
-    const normalized = normalizeCominsRowGrouping({
-      columns: state.columns,
-      config: { aggregations: { amount: "sum" }, criteria: ["region"] },
-    });
-    const tree = createCominsGroupTree({
-      ...normalized,
-      rows: [{ data: state.rows[0]!, dataIndex: 0, id: state.rowIds[0]! }],
+    const movedBefore = moveCominsRowGroup({
+      getGroupId: (group: Group) => group.id,
+      groups: movedAfter,
+      position: "before",
+      sourceGroupId: 1,
+      targetGroupId: "empty",
     });
 
-    expect(getCominsAggregateValue(tree.nodesById.get(tree.rootGroupIds[0]!)!.aggregationState.get("amount")!)).toBeNull();
+    expect(groups.map((group) => group.id)).toEqual(["west", "empty", 1]);
+    expect(movedAfter.map((group) => group.id)).toEqual(["empty", 1, "west"]);
+    expect(movedBefore.map((group) => group.id)).toEqual([1, "empty", "west"]);
+  });
+
+  it("returns the same order for missing, self, and already-adjacent moves", () => {
+    const move = (sourceGroupId: string | number, targetGroupId: string | number) =>
+      moveCominsRowGroup({
+        getGroupId: (group: Group) => group.id,
+        groups,
+        position: "before",
+        sourceGroupId,
+        targetGroupId,
+      });
+
+    expect(move("missing", "west")).toEqual(groups);
+    expect(move("west", "west")).toEqual(groups);
+    expect(move("west", "empty")).toEqual(groups);
   });
 });

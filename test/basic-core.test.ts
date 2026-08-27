@@ -16,6 +16,7 @@ import {
   moveCominsColumn,
   moveCominsColumnGroup,
   moveCominsRow,
+  moveCominsRowToGroup,
   pasteCominsCell,
   pasteCominsRow,
   queryCominsRows,
@@ -514,6 +515,66 @@ describe("comins-table basic core", () => {
       name: "Alpha",
       profile: { score: 8 },
     });
+  });
+
+  it("moves a Row within and across explicit Groups without internal membership state", () => {
+    type GroupedRow = PersonRow & { groupId: string };
+    const groupedRows: GroupedRow[] = [
+      { age: 31, groupId: "a", id: "a-1", name: "A1" },
+      { age: 32, groupId: "a", id: "a-2", name: "A2" },
+      { age: 41, groupId: "b", id: "b-1", name: "B1" },
+    ];
+    const state = createCominsTableState<GroupedRow>({
+      columns,
+      getRowId: (row) => row.id,
+      rows: groupedRows,
+    });
+    const movedWithin = moveCominsRowToGroup(state, {
+      getRowGroupId: (row) => row.groupId,
+      sourceRowId: "a-1",
+      targetGroupId: "a",
+      targetRowId: "a-2",
+    });
+    const movedAcross = moveCominsRowToGroup(movedWithin, {
+      getRowGroupId: (row) => row.groupId,
+      setRowGroupId: ({ row, toGroupId }) => ({ ...row, groupId: String(toGroupId) }),
+      sourceRowId: "a-1",
+      targetGroupId: "b",
+    });
+
+    expect(movedWithin.rows.map((row) => row.id)).toEqual(["a-2", "a-1", "b-1"]);
+    expect(movedAcross.rows.map((row) => [row.id, row.groupId])).toEqual([
+      ["a-2", "a"],
+      ["b-1", "b"],
+      ["a-1", "b"],
+    ]);
+    expect(state.rows).toBe(groupedRows);
+
+    let membershipChangeCalls = 0;
+    const invalidTarget = moveCominsRowToGroup(state, {
+      getRowGroupId: (row) => row.groupId,
+      setRowGroupId: ({ row }) => {
+        membershipChangeCalls += 1;
+        return row;
+      },
+      sourceRowId: "a-1",
+      targetGroupId: "b",
+      targetRowId: "missing",
+    });
+    const mismatchedTarget = moveCominsRowToGroup(state, {
+      getRowGroupId: (row) => row.groupId,
+      setRowGroupId: ({ row }) => {
+        membershipChangeCalls += 1;
+        return row;
+      },
+      sourceRowId: "a-1",
+      targetGroupId: "b",
+      targetRowId: "a-2",
+    });
+
+    expect(invalidTarget).toBe(state);
+    expect(mismatchedTarget).toBe(state);
+    expect(membershipChangeCalls).toBe(0);
   });
 
   it("formats cells and sorts rows by a single column", () => {

@@ -168,9 +168,11 @@ Tree Grid Row Details, general automatic height for owner data Rows, and nested 
 
 See the [Row Grouping guide](https://github.com/kim1124/comins-table/blob/main/docs/user/20-row-grouping.md) and run the [`/examples/row-grouping`](http://127.0.0.1:4002/examples/row-grouping) Playground route.
 
-`rowGrouping.criteria` creates a client-side hierarchy from flat application-owned Rows. The application owns opaque `expandedGroupIds` and writes `onChangeExpandedGroupIds` results back to the same state. Built-in `count`, `sum`, `avg`, `min`, and `max` aggregations read every descendant leaf. Grouping-column sort rules order sibling groups; remaining rules order visible leaves.
+`rowGrouping.groups` is an application-owned single-depth Group model whose array order remains the actual display order, including empty Groups. Stable Group IDs control expansion, Group Drag reorders the `groups` model, and existing Row Drag can reorder within a Group or use `setRowGroupId` to move across Groups. Applications own Group CRUD and write `onChangeGroups`, `onChangeData`, and expansion callbacks back to their controlled state. Pure `moveCominsRowGroup` and `moveCominsRowToGroup` helpers provide the corresponding JavaScript model transitions.
 
-Synthetic group Rows never masquerade as `TData`: ordinary Row/Cell callbacks, selection, Clipboard, Row Detail, renderers, formatters, and drag remain leaf-only. Row Grouping supports fixed-height virtualization and grouped leaf Row Detail, but cannot be combined with pagination, infinite/lazy loading, Tree Grid, draggable Rows, or imperative Row movement.
+Each synthetic Group Row is one full-width colspan Cell with a distinct neutral-gray background. Use `getGroupRowProps` for a typed per-Group `className` or `style`, and override `--comins-table-group-row-background` and `--comins-table-group-row-color` for theme-level styling. The Table owns disclosure and Drag controls while `renderGroupContent` can replace its inner label, count, aggregate, badge, or business-action content. Header sorting never reorders Groups; the existing Row sort policy runs independently inside every Group. Built-in `count`, `sum`, `avg`, `min`, and `max` aggregations remain available.
+
+Synthetic Group Rows never masquerade as `TData`: ordinary Row/Cell callbacks, selection, Clipboard, Cell renderers, formatters, and Row Detail remain leaf-only. Row Grouping supports fixed-height virtualization and grouped leaf Row Detail, but cannot be combined with pagination, infinite/lazy loading, or Tree Grid. Multi-depth grouping remains deferred.
 
 ## Virtualization And Loading
 
@@ -208,7 +210,7 @@ Use `exportCominsRowsToCsv` and `exportCominsRowsToJson` with the exact rows and
 
 The package stylesheet exposes module-local `--comins-table-*` CSS variables and does not apply a global reset. The six shipped theme classes are `comins-table-theme--basic`, `comins-table-theme--dark`, `comins-table-theme--skyblue`, `comins-table-theme--mint`, `comins-table-theme--gray`, and `comins-table-theme--orange`.
 
-Use `theme.className`, `theme.style`, Row class/style hooks, Cell props, and renderer output for application-specific presentation. Keep virtualized `rowHeight` aligned with `--comins-table-row-height` when overriding height tokens.
+Use `theme.className`, `theme.style`, Row and Group Row class/style hooks, Cell props, and renderer output for application-specific presentation. Keep virtualized `rowHeight` aligned with `--comins-table-row-height` when overriding height tokens.
 
 ## Ref API
 

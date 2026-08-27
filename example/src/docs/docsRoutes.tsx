@@ -240,10 +240,11 @@ const englishDocsPages: DocsPage[] = [
   }),
   featurePage({
     body: paragraphs([
-      "Row Grouping builds a client-side hierarchy from flat application-owned rows without creating synthetic business data.",
-      "The application owns expandedGroupIds and writes onChangeExpandedGroupIds back to the same controlled state. Without the callback, disclosure is disabled and read-only.",
-      "Grouping-column sort rules order sibling groups; remaining rules order leaves. Built-in count, sum, avg, min, and max aggregate every descendant leaf.",
-      "Group rows stay outside selection, clipboard, Row Detail, ordinary row/cell callbacks, renderers, and drag. Pagination, infinite loading, lazy loading, Tree Grid, and draggable rows cannot be combined with Row Grouping.",
+      "Row Grouping renders flat application-owned rows inside an application-owned, ordered single-depth Group model, including persistent empty Groups.",
+      "The application owns Group CRUD and controlled expansion. Group Drag reorders the Group model, while existing Row Drag can reorder within a Group or move a Row across Groups.",
+      "Header sorting leaves Group positions unchanged and applies the existing Row sort policy independently inside each Group. Built-in count, sum, avg, min, and max aggregate Group members.",
+      "Each full-width Group Row has a distinct customizable background. getGroupRowProps customizes its class and style, while renderGroupContent replaces the inner label, count, aggregate, badge, or action content.",
+      "Group Rows stay outside selection, clipboard, Row Detail, and ordinary row/cell callbacks. Pagination, infinite loading, lazy loading, Tree Grid, and multi-depth Group trees remain unsupported.",
     ]),
     category: "Row / Context",
     codeSamples: rowGroupingSamples,

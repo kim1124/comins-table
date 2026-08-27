@@ -1,94 +1,152 @@
 # Row Grouping
 
-Comins Table groups application-owned flat `data` on the client. Synthetic group rows describe hierarchy and aggregate values; they are never exposed as `TData`, business Row IDs, or ordinary Row/Cell callback payloads.
+Comins Table renders application-owned flat `data` inside an application-owned, single-depth `groups` model. The order of the `groups` array is the actual Group order, including empty Groups. Synthetic Group Rows never become `TData` or business Row IDs.
 
-Run the [`/examples/row-grouping`](http://127.0.0.1:4002/examples/row-grouping) Playground route for single-level, nested, hidden-criterion, Row Detail, aggregation, and 100000-leaf virtualization examples.
+Run the [`/examples/row-grouping`](http://127.0.0.1:4002/examples/row-grouping) Playground route for explicit Group CRUD, Group and Row Drag, custom Group content and styling, Row Detail, aggregation, sorting, and 100000-leaf virtualization.
 
-## Controlled configuration
+## Controlled Group model
+
+`CominsRowGroupingConfig<TData, TGroup>` preserves the application Row and Group types. Custom content receives `CominsRowGroupRenderParams<TData, TGroup>` so `group`, aggregates, expansion, and the current `groupIndex` remain typed.
 
 ```tsx
-const [expandedGroupIds, setExpandedGroupIds] = useState<string[]>([]);
+type Group = { id: string; label: string };
+type Row = { amount: number; groupId: string; id: string; name: string };
+
+const [groups, setGroups] = useState<Group[]>([
+  { id: "east", label: "East" },
+  { id: "empty", label: "Empty" },
+  { id: "west", label: "West" },
+]);
+const [rows, setRows] = useState<Row[]>(initialRows);
+const [expandedGroupIds, setExpandedGroupIds] = useState<CominsRowId[]>([]);
 
 <CominsTable
   columns={columns}
   data={rows}
   getRowId={(row) => row.id}
-  multiSort
+  onChangeData={setRows}
   rowGrouping={{
-    aggregations: {
-      amount: "sum",
-      id: "count",
-    },
-    criteria: ["region", "team"],
+    aggregations: { amount: "sum", id: "count" },
     expandedGroupIds,
+    getGroupId: (group) => group.id,
+    getGroupLabel: (group) => group.label,
+    getRowGroupId: (row) => row.groupId,
+    groupDraggable: true,
+    groups,
     onChangeExpandedGroupIds: setExpandedGroupIds,
+    onChangeGroups: setGroups,
+    setRowGroupId: ({ row, toGroupId }) => ({
+      ...row,
+      groupId: String(toGroupId),
+    }),
   }}
+  rowProps={{ draggable: true }}
   virtualized
 />;
 ```
 
-The `rowGrouping` prop accepts `CominsRowGroupingConfig<TData>`. Its `criteria` array accepts a Column ID or a `CominsRowGroupingCriterion`. Missing Columns and duplicate Column IDs after the first valid occurrence are ignored. A criterion remains valid when its source Column is hidden; source Columns otherwise remain visible.
+`groups` is the only Group order source of truth. Do not duplicate that position in an `index` or `order` field. `getGroupId` must return a stable string or number that is not changed by renaming or moving the Group. Duplicate IDs after the first occurrence are ignored.
 
-Use `getKey` when the raw field value needs a supported grouping key:
+`getRowGroupId` must return an ID present in `groups`. Before deleting a non-empty Group, the application must reassign or delete its Rows. Comins Table does not mutate Rows when application CRUD removes a Group.
+
+Applications own Group add, update, and delete controls. Keeping a Group object in `groups` keeps its Group Row visible even when it has no Rows.
+
+## Group and Row Drag
+
+Set `groupDraggable` and provide `onChangeGroups` to enable the library-owned Group Drag handle. A successful drop reorders `groups` and reports stable IDs plus `fromIndex` and `toIndex`. The application must write the next array back to controlled state.
+
+Use the exported pure `moveCominsRowGroup` helper to produce the same before/after result from application JavaScript without pointer interaction.
+
+Grouped `rowProps.draggable` uses the existing Row Drag handle. A same-Group drop reorders `data`. A cross-Group drop also calls `setRowGroupId`; it is valid only when `setRowGroupId` and `onChangeData` are both available. Dropping on a Group Row appends to that Group, so empty and collapsed Groups remain usable targets.
+
+Application JavaScript can call the root/core-exported `moveCominsRowToGroup` transition with `CominsRowGroupMoveOptions<TData>`. Pass `targetRowId` to use the same leaf-target placement or omit it to append to `targetGroupId`; a cross-Group move requires `setRowGroupId`. Missing or mismatched targets return the original state without calling the membership setter.
+
+`setRowGroupId` must preserve the business Row ID returned by `getRowId`. Changing it during membership movement breaks the identity used by selection, Row Detail, and focus restoration.
+
+Group Drag never changes `data`. Row Drag never changes the `groups` order.
+
+## Expansion Ref methods
+
+`expandedGroupIds` is the only expansion source of truth. Disclosure buttons are disabled when `onChangeExpandedGroupIds` is omitted.
+
+```tsx
+const tableRef = useRef<CominsTableRef<Row>>(null);
+
+tableRef.current?.expandGroups();
+tableRef.current?.foldGroups();
+tableRef.current?.expandGroups(["east"]);
+tableRef.current?.foldGroups(["west"]);
+```
+
+Omitting IDs targets all current Groups. An empty ID array is a no-op and unknown IDs are ignored. Tree Grid continues to use the separate `expand` and `fold` methods.
+
+## Group Row and custom content
+
+Each Group Row contains one native `<th scope="rowgroup">` whose `colSpan` equals the current visible Column count. It has a distinct theme-aware background and the same fixed `rowHeight` used by leaf Rows.
+
+The Table owns the outer Row and Cell, ARIA, disclosure, Group Drag handle, drop feedback, focus, and virtualization height. `getGroupRowProps` adds a typed `className` and `style` to the outer Group Row, while `renderGroupContent` replaces only the inner default label/count/aggregate content.
 
 ```tsx
 rowGrouping={{
-  criteria: [
-    "region",
-    {
-      columnId: "amount",
-      getKey: ({ value }) =>
-        typeof value === "number" && value >= 100 ? "high" : "low",
-      getLabel: ({ key }) => key === "high" ? "High value" : "Standard value",
-    },
-  ],
+  // controlled Group fields omitted
+  getGroupRowProps: ({ group, isEmpty }) => ({
+    className: isEmpty ? "empty-group-row" : undefined,
+    style: {
+      "--comins-table-group-row-background": isEmpty ? "#e2e8f0" : "#d1d5db",
+      "--comins-table-group-row-color": "#111827",
+    } as React.CSSProperties,
+  }),
+  renderGroupContent: ({
+    aggregateValues,
+    expanded,
+    group,
+    groupIndex,
+    isEmpty,
+    rowCount,
+  }) => (
+    <GroupContent
+      amount={aggregateValues.amount}
+      expanded={expanded}
+      group={group}
+      index={groupIndex}
+      isEmpty={isEmpty}
+      rowCount={rowCount}
+    />
+  ),
 }}
 ```
 
-`CominsRowGroupKey` supports strings, finite numbers, booleans, valid `Date` objects, and `null`. `null` and `undefined` share the `(empty)` group. Invalid Dates, non-finite numbers, objects, arrays, functions, and symbols share `(unsupported)`. Applications grouping object-valued fields should return a supported key from `getKey`.
+Both callbacks receive `aggregateValues`, `expanded`, `group`, `groupId`, `groupIndex`, `isEmpty`, and `rowCount`. `groupIndex` is the zero-based current `groups` array position, not a virtual slot or visible leaf index. The default tokens are `--comins-table-group-row-background` and `--comins-table-group-row-color`; a custom class can target the stable `.comins-table__group-row > .comins-table__group-cell` structure when Cell-level borders or decoration are required.
 
-Group IDs are opaque deterministic strings derived from the typed criterion path. Labels, sorting, and expansion do not change them. Treat IDs received by `onChangeExpandedGroupIds` as opaque values and feed them back through `expandedGroupIds`.
+Custom content and styles remain fixed-height. `getGroupRowProps.style.height` cannot override `rowHeight`, and multiline or variable-height Group Rows are not supported.
 
-`expandedGroupIds` is the only expansion source of truth. When `onChangeExpandedGroupIds` is omitted, disclosure buttons are disabled and read-only.
+Normal Column Cell renderers, formatters, components, tooltips, Row/Cell callbacks, selection, Clipboard, and Row Detail do not run for Group Rows.
 
 ## Aggregation and sorting
 
 `rowGrouping.aggregations` maps an output Column ID to `count`, `sum`, `avg`, `min`, or `max`.
 
-- `count` includes every descendant leaf, including empty values.
+- `count` includes every Group member, including empty values.
 - Numeric reducers use finite numbers only.
-- `sum`, `avg`, `min`, and `max` render empty when the group has no finite numeric value.
-- Aggregation reads raw fields and does not invoke Cell renderers or formatters.
+- `sum`, `avg`, `min`, and `max` return empty when the Group has no finite numeric value.
+- An empty Group has `count = 0`.
 - Expansion does not change aggregate input.
 
-Sorting is hierarchy-first. A sort rule for an active grouping Column orders sibling groups at that depth. That rule is consumed by group ordering. Remaining sort rules order leaves inside the lowest-level group with existing Column comparators and stable source-order ties. Without a grouping sort rule, sibling groups keep first source occurrence order.
+Header sorting never reorders Group Rows. The same existing `sortModel` and Column comparators are applied independently to the member Rows of every Group. Group Drag order therefore remains visible across ascending, descending, and multi-column Row sorting.
 
-## Leaf-only interaction
+Membership uses one `O(N + G)` pass. Per-Group sorting costs `O(sum(nᵢ log nᵢ))`, with the same `O(N log N)` worst case as flat Row sorting. The implementation does not filter all data once per Group.
 
-Each group row renders one Cell per current visible Column. The first visible Cell is a native `<th scope="row">` with disclosure, indentation, criterion label, and group label. Other Cells display configured aggregates. Group rows do not call Cell renderers, formatters, tooltips, ordinary Row/Cell callbacks, selection, Clipboard, Row Detail, or drag behavior.
+## Leaf interaction and boundaries
 
-Visible leaf callbacks retain their existing contract:
+Visible leaf callbacks preserve the existing contract:
 
 - `row.data` is the original `TData`.
 - `row.dataIndex` is the source `data` index.
 - `row.id` is the business Row ID.
-- `row.index` is the visible leaf index; group rows do not increment it.
+- `row.index` is the visible leaf index; Group Rows do not increment it.
 
-`expandedRowIds`, `onChangeExpandedRowIds`, and `renderRowDetail` continue to target visible business leaves. A collapsed group keeps selected Row IDs and expanded Detail IDs dormant. A Cell or range hidden by collapse is cleared once. If an externally controlled collapse removes the focused leaf while focus belongs to the table, focus moves to the nearest collapsed ancestor disclosure.
+Collapsed Groups keep selected Row IDs and expanded Detail IDs dormant. Cell ranges, copy, and paste follow the current grouped leaf order and never include Group Rows.
 
-Cell range highlighting, copy, and paste follow current grouped leaf order and never include synthetic group rows.
+Column Pinning continues to apply to ordinary leaf Cells and Headers; the single spanning Group Cell itself is not pinned. Visual Fill Handle UI remains outside this release. Existing leaf-only selection and Clipboard behavior is unchanged.
 
-## Virtualization and boundaries
-
-Fixed-height group and leaf rows share the arithmetic virtualization path. An expanded fixed or automatic Row Detail adds height only to its owner data slot and switches that projection to the mixed-height index. Group slots never receive business Row IDs or source data indexes.
-
-Row Grouping is a client-side flat-table feature. It cannot be combined with:
-
-- `pagination`
-- `infiniteScroll`, `hasMoreRows`, `loadingMore`, or `onLoadMore`
-- `lazyLoad` or `onLazyLoad`
-- `tree`
-- `rowProps.draggable`
-- imperative `setMoveTargetRow`
-
-The public TypeScript props reject these combinations. Runtime guards keep the paths inert for untyped callers. Column Pinning, Visual Fill Handle UI, server-side grouping, pivoting, custom reducers, aggregate sorting, and group selection are not part of this Row Grouping release.
+Row Grouping remains a client-side flat-table feature and cannot be combined with pagination, infinite/lazy loading, or Tree Grid. It supports fixed-height virtualization and grouped leaf Row Detail through the existing `renderRowDetail` contract. Multi-depth Group trees, Group selection, variable-height Group Rows, server grouping, Pivot, custom reducers, and aggregate sorting are outside this release.
