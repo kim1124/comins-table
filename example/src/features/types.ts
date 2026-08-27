@@ -21,6 +21,7 @@ export type FeatureId =
   | "row"
   | "row-expand"
   | "row-grouping"
+  | "column-filtering"
   | "summary-row"
   | "tree-grid"
   | "context-menu"

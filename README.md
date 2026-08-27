@@ -1,6 +1,6 @@
 # Comins Table
 
-Comins Table is a controlled React data table for data-heavy application screens, with virtualized rendering, precise selection, movable headers, controlled Row Grouping and Row Expand Details, Summary Row aggregation, Tree Grid data, built-in component cells, and framework-independent core helpers.
+Comins Table is a controlled React data table for data-heavy application screens, with virtualized rendering, precise selection, movable headers, controlled Column Filtering, Row Grouping and Row Expand Details, Summary Row aggregation, Tree Grid data, built-in component cells, and framework-independent core helpers.
 
 [![npm version](https://img.shields.io/npm/v/comins-table)](https://www.npmjs.com/package/comins-table)
 [![TypeScript declarations](https://img.shields.io/npm/types/comins-table)](https://www.npmjs.com/package/comins-table)
@@ -15,7 +15,7 @@ Comins Table is a controlled React data table for data-heavy application screens
 | --- | --- |
 | Controlled data | Application-owned `data`, CRUD helpers, `onChangeData`, pagination, sorting, and layout callbacks |
 | Rendering and scale | Fixed-height virtualization with a tested 100,000-row route, infinite scroll, append-mode lazy loading, loading, and empty states |
-| Interaction | Accessible single and opt-in multi-column Header sorting, resize, 6-pixel horizontal column reorder with source placeholder, Row and Cell selection, ranges, clipboard, and context menu callbacks |
+| Interaction | Accessible single and opt-in multi-column Header sorting, controlled Column Filtering, resize, 6-pixel horizontal column reorder with source placeholder, Row and Cell selection, ranges, clipboard, and context menu callbacks |
 | Data structure | Controlled client-side flat Row Grouping, flat Row Expand Details, Summary Row aggregation, and controlled Tree Grid expand/fold |
 | Custom UI | Cell/Header renderers, built-in button/input/checkbox/radio/select/toggle/progress/menu/Virtual List components, and CSS-variable themes |
 
@@ -174,6 +174,16 @@ Each synthetic Group Row is one full-width colspan Cell with a distinct neutral-
 
 Synthetic Group Rows never masquerade as `TData`: ordinary Row/Cell callbacks, selection, Clipboard, Cell renderers, formatters, and Row Detail remain leaf-only. Row Grouping supports fixed-height virtualization and grouped leaf Row Detail, but cannot be combined with pagination, infinite/lazy loading, or Tree Grid. Multi-depth grouping remains deferred.
 
+## Column Filtering
+
+See the [Column Filtering guide](https://github.com/kim1124/comins-table/blob/main/docs/user/21-column-filtering.md) and run the [`/examples/column-filtering`](http://127.0.0.1:4002/examples/column-filtering) Playground route.
+
+Each Column opts into `text`, `number`, UTC calendar-day `date`, or `boolean` filtering through `columns[].filter`. The application owns the complete `columnFiltering.model` and the currently open Header Filter popover. Rules across Columns use AND; invalid rules are ignored, text comparison is case-insensitive by default, and `between` uses an inclusive normalized range.
+
+Filtering runs before Row Grouping membership, sorting, flat pagination, virtualization, and Summary aggregation. Explicit Group positions and empty Groups remain visible while counts and aggregates use filtered leaf Rows. Header sorting does not change the Filter model. Selected Row and expanded Detail IDs remain dormant when hidden, while invalid hidden Cell/range addresses are cleared.
+
+Column Filtering cannot be combined with Tree Grid, Infinite/Lazy Loading, `loadingMore`, or Row Drag. Group Drag remains available in the supported Row Grouping combination because it changes only the explicit Group model.
+
 ## Virtualization And Loading
 
 Set `virtualized`, `rowHeight`, and `"buffer-size"` for fixed-height windowed rendering. The performance Playground includes a tested 100,000-row route while keeping only the current window and buffer mounted.
@@ -244,17 +254,17 @@ tableRef.current?.fold(); // all Tree Grid branches
 npm run dev
 ```
 
-The local Playground starts at [`/docs/getting-started`](http://127.0.0.1:4002/docs/getting-started). Key routes include [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard), [`/examples/row-expand`](http://127.0.0.1:4002/examples/row-expand), [`/examples/row-grouping`](http://127.0.0.1:4002/examples/row-grouping), [`/examples/summary-row`](http://127.0.0.1:4002/examples/summary-row), [`/examples/tree-grid`](http://127.0.0.1:4002/examples/tree-grid), [`/examples/component`](http://127.0.0.1:4002/examples/component), and [`/performance/virtualization`](http://127.0.0.1:4002/performance/virtualization).
+The local Playground starts at [`/docs/getting-started`](http://127.0.0.1:4002/docs/getting-started). Key routes include [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard), [`/examples/row-expand`](http://127.0.0.1:4002/examples/row-expand), [`/examples/row-grouping`](http://127.0.0.1:4002/examples/row-grouping), [`/examples/column-filtering`](http://127.0.0.1:4002/examples/column-filtering), [`/examples/summary-row`](http://127.0.0.1:4002/examples/summary-row), [`/examples/tree-grid`](http://127.0.0.1:4002/examples/tree-grid), [`/examples/component`](http://127.0.0.1:4002/examples/component), and [`/performance/virtualization`](http://127.0.0.1:4002/performance/virtualization).
 
 ## Documentation
 
-Start with the [English Quick Start](https://github.com/kim1124/comins-table/blob/main/docs/user/01-quick-start.md), then browse [all English feature guides](https://github.com/kim1124/comins-table/tree/main/docs/user). The detailed [Tree Grid](https://github.com/kim1124/comins-table/blob/main/docs/user/17-tree-grid.md), [Summary Row](https://github.com/kim1124/comins-table/blob/main/docs/user/18-summary-row.md), [Row Expand](https://github.com/kim1124/comins-table/blob/main/docs/user/19-row-expand.md), and [Row Grouping](https://github.com/kim1124/comins-table/blob/main/docs/user/20-row-grouping.md) contracts include runnable examples and edge cases. [Korean guides](https://github.com/kim1124/comins-table/tree/main/docs/ko) are retained as secondary documentation.
+Start with the [English Quick Start](https://github.com/kim1124/comins-table/blob/main/docs/user/01-quick-start.md), then browse [all English feature guides](https://github.com/kim1124/comins-table/tree/main/docs/user). The detailed [Tree Grid](https://github.com/kim1124/comins-table/blob/main/docs/user/17-tree-grid.md), [Summary Row](https://github.com/kim1124/comins-table/blob/main/docs/user/18-summary-row.md), [Row Expand](https://github.com/kim1124/comins-table/blob/main/docs/user/19-row-expand.md), [Row Grouping](https://github.com/kim1124/comins-table/blob/main/docs/user/20-row-grouping.md), and [Column Filtering](https://github.com/kim1124/comins-table/blob/main/docs/user/21-column-filtering.md) contracts include runnable examples and edge cases. [Korean guides](https://github.com/kim1124/comins-table/tree/main/docs/ko) are retained as secondary documentation.
 
 Use the [source repository](https://github.com/kim1124/comins-table) for development context, review the [changelog](https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md) for version history, and follow the [security policy](https://github.com/kim1124/comins-table/blob/main/SECURITY.md) for vulnerability reporting.
 
 ## Current Boundaries
 
-Comins Table currently ships a CSR controlled data model. Server-side Row models, pivoting, charts, AI assistance, remote Tree loading, hierarchy pagination, Tree Row drag, Tree Row copy/paste, Tree Grid Row Details, general automatic owner Row height, nested managed Details, Firefox, Safari, and SSR are not shipped or supported.
+Comins Table currently ships a CSR controlled data model. Server-side Row models and filtering, custom Filter editor renderers, Tree filtering, pivoting, charts, AI assistance, remote Tree loading, hierarchy pagination, Tree Row drag, Tree Row copy/paste, Tree Grid Row Details, general automatic owner Row height, nested managed Details, Firefox, Safari, and SSR are not shipped or supported.
 
 The visual fill handle is not shipped or supported. `fillCominsCellRange` remains available as a core helper without a drag-handle UI.
 

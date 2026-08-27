@@ -3,6 +3,7 @@ import { BasicFeature } from "./BasicFeature";
 import { BodyFeature } from "./BodyFeature";
 import { CellFeature } from "./CellFeature";
 import { ColumnGroupFeature } from "./ColumnGroupFeature";
+import { ColumnFilteringFeature } from "./ColumnFilteringFeature";
 import { ComponentFeature } from "./ComponentFeature";
 import { ContextMenuFeature } from "./ContextMenuFeature";
 import { ExportFeature } from "./ExportFeature";
@@ -270,6 +271,24 @@ export const featureRegistry: FeatureDefinitionSource[] = [
       { description: defineLocalizedText("전체 descendant leaf에 count, sum, avg, min 또는 max를 계산합니다.", "Computes count, sum, avg, min, or max across every descendant leaf."), example: "aggregations: { amount: 'sum' }", name: "rowGrouping.aggregations" },
     ],
     summary: defineLocalizedText("빈 Group CRUD, Group/Row Drag, custom content/style, Group별 정렬, Row Detail과 100000 Row 가상화 예제입니다.", "Empty-Group CRUD, Group/Row Drag, custom content/style, per-Group sorting, Row Detail, and 100000-row virtualization."),
+  },
+  {
+    Component: ColumnFilteringFeature,
+    description: defineLocalizedText(
+      "Application-owned Filter model, controlled Header popover와 Row Grouping 결합 예제입니다.",
+      "Application-owned Filter models, controlled Header popovers, and Row Grouping integration.",
+    ),
+    id: "column-filtering",
+    label: defineLocalizedText("Column Filtering", "Column Filtering"),
+    options: [
+      { description: defineLocalizedText("Column 값의 Filter type과 optional custom value resolver를 정의합니다.", "Defines the Column value kind and an optional custom value resolver."), example: "filter: { kind: 'text' }", name: "columns.filter" },
+      { description: defineLocalizedText("Application이 소유하는 Column별 조건 배열입니다.", "Application-owned array of per-Column rules."), example: "model", name: "columnFiltering.model" },
+      { description: defineLocalizedText("Editor 변경 결과인 다음 Filter model을 전달합니다.", "Receives the next Filter model produced by the editor."), example: "onChangeModel={setModel}", name: "columnFiltering.onChangeModel" },
+      { description: defineLocalizedText("현재 열린 Header Filter popover의 Column ID를 제어합니다.", "Controls the Column ID of the currently open Header Filter popover."), example: "openColumnId", name: "columnFiltering.openColumnId" },
+      { description: defineLocalizedText("Filter popover의 열기, 닫기와 다른 Column 전환을 전달합니다.", "Receives Filter popover open, close, and Column-switch changes."), example: "onChangeOpenColumnId={setOpenColumnId}", name: "columnFiltering.onChangeOpenColumnId" },
+      { description: defineLocalizedText("Text, number, UTC date와 boolean별 지원 operator를 선택합니다.", "Selects an operator supported by text, number, UTC date, or boolean values."), example: "{ columnId, operator, value, valueTo }", name: "CominsColumnFilterRule" },
+    ],
+    summary: defineLocalizedText("Text, number, UTC 날짜, boolean Filter와 Grouping 결합 예제입니다.", "Text, number, UTC date, and boolean Filters with Grouping integration."),
   },
   {
     Component: SummaryRowFeature,

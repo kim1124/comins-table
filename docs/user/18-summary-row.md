@@ -80,3 +80,5 @@ summary={{
 With flat `infiniteScroll` or `lazyLoad`, Summary Row aggregates the rows currently present in controlled `data`; it does not imply an unloaded remote total. In Tree Grid, it aggregates all leaf `item` rows, including leaves below folded parents, and excludes parent values to avoid double counting.
 
 Run `npm run dev`, then open `/examples/summary-row` for built-in, `colSpan`, `format`, and styling examples.
+
+With controlled Column Filtering, Summary Row aggregates filtered leaf Rows before flat pagination. In the Row Grouping combination, both Summary and Group aggregates use the same filtered membership input while every explicit Group remains visible.

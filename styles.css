@@ -786,6 +786,94 @@
   margin-left: 6px;
 }
 
+.comins-column-filter {
+  display: inline-flex;
+  flex: 0 0 24px;
+  overflow: visible;
+  position: relative;
+}
+
+.comins-column-filter__trigger {
+  border-radius: 4px;
+  color: var(--comins-table-header-color);
+  opacity: 0.72;
+}
+
+.comins-column-filter__trigger:hover,
+.comins-column-filter__trigger:focus-visible,
+.comins-column-filter__trigger[data-active="true"] {
+  background: color-mix(in srgb, var(--comins-table-header-color) 18%, transparent);
+  opacity: 1;
+}
+
+.comins-column-filter__popover {
+  background: var(--comins-table-component-surface);
+  border: 1px solid var(--comins-table-component-border);
+  border-radius: 6px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
+  color: var(--comins-table-component-foreground);
+  display: grid;
+  font-size: 12px;
+  font-weight: 400;
+  gap: 10px;
+  min-width: 260px;
+  padding: 12px;
+  position: fixed;
+  text-align: left;
+  z-index: 9999;
+}
+
+.comins-column-filter__title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.comins-column-filter__field {
+  color: var(--comins-table-component-muted);
+  display: grid;
+  gap: 4px;
+}
+
+.comins-column-filter__field > input,
+.comins-column-filter__field > select {
+  background: var(--comins-table-component-surface);
+  border: 1px solid var(--comins-table-component-border);
+  border-radius: 4px;
+  color: var(--comins-table-component-foreground);
+  font: inherit;
+  min-height: 30px;
+  padding: 4px 8px;
+  width: 100%;
+}
+
+.comins-column-filter__field > input:focus-visible,
+.comins-column-filter__field > select:focus-visible {
+  box-shadow: 0 0 0 3px var(--comins-table-component-focus);
+  outline: none;
+}
+
+.comins-column-filter__clear {
+  background: var(--comins-table-component-surface-muted);
+  border: 1px solid var(--comins-table-component-border);
+  border-radius: 4px;
+  color: var(--comins-table-component-button-foreground);
+  cursor: pointer;
+  font: inherit;
+  min-height: 30px;
+  padding: 4px 10px;
+}
+
+.comins-column-filter__clear:hover,
+.comins-column-filter__clear:focus-visible {
+  background: var(--comins-table-component-accent-soft);
+  outline: none;
+}
+
+.comins-column-filter__clear:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .comins-table__header-components {
   align-items: center;
   display: inline-flex;

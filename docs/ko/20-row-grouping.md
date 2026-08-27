@@ -150,3 +150,5 @@ Visible leaf callback은 기존 계약을 유지합니다.
 Column Pinning은 일반 leaf Cell과 Header에 계속 적용되며 하나의 spanning Group Cell 자체는 pinning하지 않습니다. Visual Fill Handle UI는 이번 release 범위 밖입니다. 기존 leaf-only selection과 Clipboard 동작은 유지합니다.
 
 Row Grouping은 client-side flat-table 기능이며 pagination, infinite/lazy loading, Tree Grid와 결합할 수 없습니다. Fixed-height virtualization과 기존 `renderRowDetail` 계약을 통한 grouped leaf Row Detail은 지원합니다. 다중 Depth Group tree, Group selection, variable-height Group Row, server grouping, Pivot, custom reducer와 aggregate sorting은 이번 범위가 아닙니다.
+
+Controlled [Column Filtering](https://github.com/kim1124/comins-table/blob/main/docs/ko/21-column-filtering.md)은 Group membership보다 먼저 실행할 수 있습니다. 모든 explicit Group은 application-owned 위치를 유지하고 count, aggregate와 member 정렬은 filtered leaf Row를 사용합니다. 이 결합에서 Row Drag는 비활성화하지만 Group Drag는 explicit Group model을 계속 재배치할 수 있습니다.

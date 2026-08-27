@@ -80,3 +80,5 @@ summary={{
 Flat `infiniteScroll` 또는 `lazyLoad`에서는 controlled `data`에 현재 적재된 Row만 집계하며 아직 로드하지 않은 원격 total을 의미하지 않는다. Tree Grid에서는 접힌 부모 아래의 leaf를 포함한 모든 leaf `item`을 집계하고 중복 계산을 방지하기 위해 부모 값을 제외한다.
 
 `npm run dev` 실행 후 `/examples/summary-row`에서 기본 집계, `colSpan`, `format`, 스타일 예제를 확인할 수 있다.
+
+Controlled Column Filtering에서는 flat pagination 전에 filtered leaf Row를 Summary Row 집계에 사용한다. Row Grouping 결합에서는 Summary와 Group aggregate가 같은 filtered membership input을 사용하고 모든 explicit Group은 계속 표시된다.

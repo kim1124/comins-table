@@ -75,8 +75,10 @@ Two-level headers use `columnGroups`.
 
 Parent groups resize their child columns proportionally and move as a block. Nested groups are not part of the first public release.
 
-## Future Column Filter
+## Column Filter
 
-Column Filter is not shipped: there is no Filter prop, callback, button, import, or runtime state in this release. When it is introduced, its control belongs at the Header's right edge after sort metadata and before resize. The control must isolate pointer, click, and double-click events from Header sort, resize, and move interactions; provide an accessible name and keyboard operation; and keep Filter value and open state application-owned through controlled state.
+Set `columns[].filter` and provide controlled `columnFiltering` state to render the Filter control at the Header's right edge after sort metadata and before resize. The semantic button and fixed popover isolate pointer, click, double-click, and keyboard events from Header sort, resize, and move interactions. The application owns both the complete Filter model and the currently open Column ID.
+
+See the [Column Filtering guide](https://github.com/kim1124/comins-table/blob/main/docs/user/21-column-filtering.md) and run the [`/examples/column-filtering`](http://127.0.0.1:4002/examples/column-filtering) Playground route for supported operators, read-only behavior, sorting, Summary, and Row Grouping integration.
 
 In the Playground, parent Group visibility uses independent Checkboxes while child Column visibility uses the MultiSelect. Turning a parent off hides all of its children without deleting the child selection; turning it on restores the previously selected children.

@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   CominsTable,
+  type CominsColumnFilterModel,
   type CominsRowGroupingConfig,
   type CominsTableProps,
   type CominsTableRef,
@@ -793,6 +794,244 @@ function createMousePointerEvent(
 
   return event;
 }
+
+describe("column filtering interaction contract", () => {
+  const filterColumns = [
+    { field: "name", filter: { kind: "text" as const }, label: "Name", sort: true },
+    { field: "age", filter: { kind: "number" as const }, label: "Age", sort: true },
+  ];
+
+  function ControlledFilteringTable({
+    onChangeSortModel,
+  }: {
+    onChangeSortModel?: CominsTableProps<PersonRow>["onChangeSortModel"];
+  }) {
+    const [model, setModel] = useState<CominsColumnFilterModel>([]);
+    const [openColumnId, setOpenColumnId] = useState<string | null>(null);
+
+    return (
+      <CominsTable
+        columnFiltering={{
+          model,
+          onChangeModel: setModel,
+          onChangeOpenColumnId: setOpenColumnId,
+          openColumnId,
+        }}
+        columns={filterColumns}
+        data={rows}
+        getRowId={getPersonRowId}
+        onChangeSortModel={onChangeSortModel}
+      />
+    );
+  }
+
+  it("keeps the Header control fully controlled and isolated from sorting", () => {
+    const onChangeSortModel = vi.fn();
+    const view = renderTableElement(<ControlledFilteringTable onChangeSortModel={onChangeSortModel} />);
+    const trigger = view.querySelector<HTMLButtonElement>("[data-testid='column-filter-trigger-name']")!;
+
+    act(() => trigger.click());
+
+    const input = view.querySelector<HTMLInputElement>("[data-testid='column-filter-value-name']")!;
+
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(view.querySelector("[data-testid='column-filter-popover-name']")).not.toBeNull();
+    expect(onChangeSortModel).not.toHaveBeenCalled();
+
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(input, "beta");
+      input.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText" }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(view.querySelector("[data-testid='row-a']")).toBeNull();
+    expect(view.querySelector("[data-testid='row-b']")).not.toBeNull();
+    expect(trigger.dataset.active).toBe("true");
+    expect(onChangeSortModel).not.toHaveBeenCalled();
+
+    act(() => {
+      view.querySelector<HTMLButtonElement>("[data-testid='column-filter-clear-name']")?.click();
+    });
+
+    expect(view.querySelector("[data-testid='row-a']")).not.toBeNull();
+    expect(view.querySelector("[data-testid='row-b']")).not.toBeNull();
+    expect(trigger.dataset.active).toBeUndefined();
+  });
+
+  it("closes on Escape and outside pointer input, returning focus on Escape", () => {
+    const view = renderTableElement(<ControlledFilteringTable />);
+    const trigger = view.querySelector<HTMLButtonElement>("[data-testid='column-filter-trigger-name']")!;
+
+    act(() => trigger.click());
+    act(() => window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" })));
+
+    expect(view.querySelector("[data-testid='column-filter-popover-name']")).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+
+    act(() => trigger.click());
+    act(() => document.body.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true })));
+
+    expect(view.querySelector("[data-testid='column-filter-popover-name']")).toBeNull();
+  });
+
+  it("exposes active read-only filters without opening an editable popover", () => {
+    const view = renderTableElement(
+      <CominsTable
+        columnFiltering={{ model: [{ columnId: "name", operator: "contains", value: "alpha" }] }}
+        columns={filterColumns}
+        data={rows}
+        getRowId={getPersonRowId}
+      />,
+    );
+    const trigger = view.querySelector<HTMLButtonElement>("[data-testid='column-filter-trigger-name']")!;
+
+    expect(trigger.disabled).toBe(true);
+    expect(trigger.dataset.active).toBe("true");
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("keeps an active comparison while a between range draft is incomplete", () => {
+    function ActiveRangeFilteringTable() {
+      const [model, setModel] = useState<CominsColumnFilterModel>([
+        { columnId: "age", operator: "equals", value: 31 },
+      ]);
+
+      return (
+        <>
+          <output data-testid="active-range-model">{JSON.stringify(model)}</output>
+          <CominsTable
+            columnFiltering={{
+              model,
+              onChangeModel: setModel,
+              onChangeOpenColumnId: () => undefined,
+              openColumnId: "age",
+            }}
+            columns={filterColumns}
+            data={rows}
+            getRowId={getPersonRowId}
+          />
+        </>
+      );
+    }
+
+    const view = renderTableElement(<ActiveRangeFilteringTable />);
+    const operator = view.querySelector<HTMLSelectElement>("[data-testid='column-filter-operator-age']")!;
+
+    expect(view.querySelector("[data-testid='row-a']")).not.toBeNull();
+    expect(view.querySelector("[data-testid='row-b']")).toBeNull();
+
+    act(() => {
+      operator.value = "between";
+      operator.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(operator.value).toBe("between");
+    expect(view.querySelector("[data-testid='column-filter-value-to-age']")).not.toBeNull();
+    expect(view.querySelector("[data-testid='active-range-model']")?.textContent).toContain('"operator":"equals"');
+
+    const valueTo = view.querySelector<HTMLInputElement>("[data-testid='column-filter-value-to-age']")!;
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(valueTo, "42");
+      valueTo.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText" }));
+      valueTo.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(view.querySelector("[data-testid='active-range-model']")?.textContent).toContain('"operator":"between"');
+    expect(view.querySelector("[data-testid='row-a']")).not.toBeNull();
+    expect(view.querySelector("[data-testid='row-b']")).not.toBeNull();
+  });
+
+  it("derives visible Rows and Summary from the controlled filter model", () => {
+    const renderFiltered = (value: string) => (
+      <CominsTable
+        columnFiltering={{ model: [{ columnId: "name", operator: "contains", value }] }}
+        columns={filterColumns}
+        data={rows}
+        getRowId={getPersonRowId}
+        summary={{ columns: { age: "sum" } }}
+      />
+    );
+    const view = renderTableElement(renderFiltered("alp"));
+
+    expect(view.querySelectorAll("tr[data-comins-row-data-index]")).toHaveLength(1);
+    expect(view.querySelector("[data-testid='row-a']")).not.toBeNull();
+    expect(view.querySelector("[data-testid='row-b']")).toBeNull();
+    expect(view.querySelector("[data-testid='summary-cell-age']")?.textContent).toBe("31");
+
+    act(() => root?.render(renderFiltered("beta")));
+
+    expect(view.querySelector("[data-testid='row-a']")).toBeNull();
+    expect(view.querySelector("[data-testid='row-b']")).not.toBeNull();
+    expect(view.querySelector("[data-testid='summary-cell-age']")?.textContent).toBe("42");
+  });
+
+  it("keeps every explicit Group while filtering membership, counts, and aggregates", () => {
+    const view = renderTableElement(
+      <CominsTable
+        columnFiltering={{ model: [{ columnId: "name", operator: "contains", value: "alpha" }] }}
+        columns={filterColumns}
+        data={rows}
+        getRowId={getPersonRowId}
+        rowGrouping={createPersonGrouping({
+          aggregations: { age: "sum" },
+          expandedGroupIds: [31, 42, 99],
+        })}
+      />,
+    );
+
+    expect(view.querySelectorAll("[data-comins-group-row]")).toHaveLength(3);
+    expect(view.querySelector("[data-testid='group-row-31']")?.textContent).toContain("1 Rows");
+    expect(view.querySelector("[data-testid='group-row-31']")?.textContent).toContain("31");
+    expect(view.querySelector("[data-testid='group-row-42']")?.textContent).toContain("0 Rows");
+    expect(view.querySelector("[data-testid='group-row-99']")?.textContent).toContain("0 Rows");
+    expect(view.querySelectorAll("tr[data-comins-row-data-index]")).toHaveLength(1);
+    expect(view.querySelector("[data-testid='row-a']")).not.toBeNull();
+  });
+
+  it("clamps an out-of-range filtered page to the final effective page", () => {
+    const view = renderTableElement(
+      <CominsTable
+        columnFiltering={{ model: [{ columnId: "name", operator: "contains", value: "a" }] }}
+        columns={filterColumns}
+        data={rows}
+        getRowId={getPersonRowId}
+        pagination={{ pageIndex: 99, pageSize: 1 }}
+      />,
+    );
+
+    expect(view.querySelectorAll("tr[data-comins-row-data-index]")).toHaveLength(1);
+    expect(view.querySelector("[data-testid='row-b']")).not.toBeNull();
+  });
+
+  it("keeps loading and Row movement inert for malformed untyped filtered input", () => {
+    const onLazyLoad = vi.fn();
+    const onLoadMore = vi.fn();
+    const ref = createRef<CominsTableRef<PersonRow>>();
+    const view = renderTableElement(
+      <CominsTable
+        {...({
+          columnFiltering: { model: [] },
+          columns: filterColumns,
+          data: rows,
+          getRowId: getPersonRowId,
+          hasMoreRows: true,
+          infiniteScroll: true,
+          lazyLoad: true,
+          onLazyLoad,
+          onLoadMore,
+          ref,
+          rowProps: { draggable: true },
+        } as unknown as CominsTableProps<PersonRow> & React.RefAttributes<CominsTableRef<PersonRow>>)}
+      />,
+    );
+
+    expect(view.querySelectorAll("[data-row-draggable='true']")).toHaveLength(0);
+    expect(onLazyLoad).not.toHaveBeenCalled();
+    expect(onLoadMore).not.toHaveBeenCalled();
+    act(() => ref.current?.setMoveTargetRow(1, 0));
+    expect(view.querySelector("[data-testid='row-a']")).not.toBeNull();
+  });
+});
 
 describe("comins-table keyboard interaction", () => {
   it("renders summary values from all controlled rows before pagination", () => {

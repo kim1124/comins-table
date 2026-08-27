@@ -72,3 +72,5 @@ Tree Grid V1은 현재의 고정 `rowHeight` virtualized layout을 사용한다.
 Tree expand는 Flat Row Expand 및 Row Grouping과 다른 기능이다. Row Expand는 하나의 flat source Row 아래에 Detail 영역을 출력한다. Row Grouping은 flat Row 값을 기준으로 hierarchy를 파생하고 별도의 controlled group expansion state를 사용하며 Tree Grid prop branch와 결합할 수 없다.
 
 `npm run dev` 실행 후 `/examples/tree-grid`에서 동작 예제를 확인할 수 있다.
+
+Column Filtering도 flat-data projection이므로 Tree Grid prop branch와 결합할 수 없다. Tree filtering이 필요한 application은 자체 controlled nested data를 생성해야 한다.

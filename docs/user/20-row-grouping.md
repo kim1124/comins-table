@@ -150,3 +150,5 @@ Collapsed Groups keep selected Row IDs and expanded Detail IDs dormant. Cell ran
 Column Pinning continues to apply to ordinary leaf Cells and Headers; the single spanning Group Cell itself is not pinned. Visual Fill Handle UI remains outside this release. Existing leaf-only selection and Clipboard behavior is unchanged.
 
 Row Grouping remains a client-side flat-table feature and cannot be combined with pagination, infinite/lazy loading, or Tree Grid. It supports fixed-height virtualization and grouped leaf Row Detail through the existing `renderRowDetail` contract. Multi-depth Group trees, Group selection, variable-height Group Rows, server grouping, Pivot, custom reducers, and aggregate sorting are outside this release.
+
+Controlled [Column Filtering](https://github.com/kim1124/comins-table/blob/main/docs/user/21-column-filtering.md) may run before Group membership. Every explicit Group remains in its application-owned position, while counts, aggregates, and member sorting use filtered leaf Rows. Row Drag is disabled for this combination, but Group Drag may continue to reorder the explicit Group model.

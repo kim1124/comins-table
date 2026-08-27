@@ -41,3 +41,5 @@ index를 사용한다.
 - 100000 rows 예제에서 마우스 휠 스크롤과 scrollbar drag를 모두 수행한다.
 - 스크롤 후 기본 예제 페이지로 이동하고 GC 이후 DOM Node와 listener가 10% 이내 수준으로 회수되는지 확인한다.
 - `rowHeight`와 `--comins-table-row-height`, `--comins-table-cell-height` 값이 불일치하면 virtual range 계산과 실제 row 높이가 어긋날 수 있으므로 같은 숫자로 맞춘다.
+
+Column Filtering은 virtual range 계산 전에 source index를 파생한다. 따라서 Filter 변경은 logical projection을 갱신하지만 application은 변경되지 않은 전체 `data` 배열과 stable Row ID를 계속 소유한다.

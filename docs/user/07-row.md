@@ -34,3 +34,5 @@ Selecting a menu item shows its action name in the Playground Alert; the example
 The ref methods `setSelectedRow`, `setSelectedRows`, and `setMoveTargetRow` use the visible row index after sorting and pagination.
 
 The live [`/api/ref`](http://127.0.0.1:4002/api/ref) example shows `setMoveTargetRow(2, 0)` clearing active sorting and committing the moved visible Row order through controlled `onChangeData`.
+
+When `columnFiltering` is configured, Row Drag and `setMoveTargetRow` are disabled because movement through a potentially partial projection is ambiguous. Group Drag remains a separate Group-model operation in the supported Row Grouping combination.

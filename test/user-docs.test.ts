@@ -26,6 +26,7 @@ const userDocs = [
   "18-summary-row.md",
   "19-row-expand.md",
   "20-row-grouping.md",
+  "21-column-filtering.md",
 ];
 
 const implementedTerms = [
@@ -102,6 +103,13 @@ const implementedTerms = [
   "foldGroups",
   "expandedGroupIds",
   "onChangeExpandedGroupIds",
+  "columnFiltering",
+  "CominsColumnFilterConfig",
+  "CominsColumnFilterKind",
+  "CominsColumnFilterModel",
+  "CominsColumnFilterOperator",
+  "CominsColumnFilterRule",
+  "CominsColumnFilteringConfig",
 ];
 
 function readWorkspaceFile(path: string) {
@@ -176,11 +184,13 @@ describe("comins-table user documentation contract", () => {
     expect(readme).toContain("/examples/tree-grid");
     expect(readme).toContain("/examples/row-expand");
     expect(readme).toContain("/examples/row-grouping");
+    expect(readme).toContain("/examples/column-filtering");
     expect(readme).toContain("/examples/selection-clipboard");
     expect(readme).toContain("docs/user/17-tree-grid.md");
     expect(readme).toContain("docs/user/18-summary-row.md");
     expect(readme).toContain("docs/user/19-row-expand.md");
     expect(readme).toContain("docs/user/20-row-grouping.md");
+    expect(readme).toContain("docs/user/21-column-filtering.md");
     expect(readme).not.toContain("does not currently ship a browser example server");
   });
 
@@ -248,6 +258,41 @@ describe("comins-table user documentation contract", () => {
     expect(koreanDocs).toContain("--comins-table-group-row-background");
     expect(englishDocs).toContain("Visual Fill Handle UI");
     expect(playground).toContain("100_000");
+  });
+
+  it("documents and demonstrates controlled Column Filtering", () => {
+    const englishDocs = readWorkspaceFile("docs/user/21-column-filtering.md");
+    const koreanDocs = readWorkspaceFile("docs/ko/21-column-filtering.md");
+    const playground = readWorkspaceFile("example/src/features/ColumnFilteringFeature.tsx");
+    const registry = readWorkspaceFile("example/src/features/featureRegistry.tsx");
+    const routes = readWorkspaceFile("example/src/docs/docsRoutes.tsx");
+    const optionGuide = readWorkspaceFile("example/src/docs/dataTableOptionGuide.ts");
+
+    for (const term of [
+      "columnFiltering",
+      "CominsColumnFilterModel",
+      "onChangeModel",
+      "openColumnId",
+      "onChangeOpenColumnId",
+      "columns[].filter",
+      "caseSensitive",
+      "getValue",
+      "between",
+      "isEmpty",
+      "Row Grouping",
+      "Row Drag",
+    ]) {
+      expect(englishDocs).toContain(term);
+      expect(koreanDocs).toContain(term);
+    }
+
+    expect(playground).toContain('data-testid="column-filtering-viewport"');
+    expect(playground).toContain('data-testid="column-filtering-grouped-viewport"');
+    expect(playground).toContain("onChangeModel");
+    expect(playground).toContain("rowGrouping");
+    expect(registry).toContain('id: "column-filtering"');
+    expect(routes).toContain('path: "/examples/column-filtering"');
+    expect(optionGuide).toContain('name: "columnFiltering"');
   });
 
   it("documents the 100000-row virtualization performance contract", () => {
@@ -511,17 +556,17 @@ describe("comins-table user documentation contract", () => {
     expect(koreanHeader).toContain("88px");
   });
 
-  it("records Column Filter as deferred Header guidance without a Filter API", () => {
+  it("links shipped Column Filter Header guidance to its controlled API", () => {
     const englishHeader = readWorkspaceFile("docs/user/06-header.md");
     const koreanHeader = readWorkspaceFile("docs/ko/06-header.md");
 
-    expect(englishHeader).toContain("Future Column Filter");
+    expect(englishHeader).toContain("## Column Filter");
     expect(englishHeader).toContain("right edge");
-    expect(englishHeader).toContain("not shipped");
-    expect(englishHeader).not.toMatch(/filter\??:\s*(true|boolean)/u);
-    expect(koreanHeader).toContain("향후 Column Filter");
+    expect(englishHeader).toContain("columnFiltering");
+    expect(englishHeader).toContain("docs/user/21-column-filtering.md");
+    expect(koreanHeader).toContain("## Column Filter");
     expect(koreanHeader).toContain("우측");
-    expect(koreanHeader).toContain("제공하지");
+    expect(koreanHeader).toContain("columnFiltering");
   });
 
   it("links Flat Table Ref methods to the live visible-index example", () => {

@@ -38,3 +38,5 @@ async function loadRows(mode: "initial" | "ready" | "refetch", empty = false) {
 Playground는 Infinite Scroll 예제와 같은 DummyJSON `/users` datasource를 사용한다. Initial과 ready는 첫 page를 요청하고 Empty control은 범위를 벗어난 실제 빈 응답을 매핑한다. 실제 application은 다른 endpoint를 사용할 수 있으며 교체된 요청을 취소하고 오래된 응답을 무시해야 한다.
 
 `skeletonRowCount`는 skeleton row 개수만 제어한다. Virtualized table에서 실제 row 높이는 계속 `rowHeight`, `--comins-table-row-height`, `--comins-table-cell-height` 계약을 따른다.
+
+Client-side Column Filtering은 이미 controlled인 dataset에서 일반 `loading`과 `loadingComponent` presentation을 사용할 수 있다. Infinite Scroll, Lazy Load, `loadingMore` 또는 해당 request callback과는 결합할 수 없으며 remote filtering은 application이 소유한다.

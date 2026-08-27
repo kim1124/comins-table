@@ -14,6 +14,7 @@ const codeSampleTitles = {
   "Controlled Flat Table ref usage": defineLocalizedText("Controlled Flat Table ref 사용", "Controlled Flat Table ref usage"),
   "Controlled Row Expand": defineLocalizedText("Controlled Row Expand", "Controlled Row Expand"),
   "Controlled Row Grouping": defineLocalizedText("Controlled Row Grouping", "Controlled Row Grouping"),
+  "Controlled Column Filtering": defineLocalizedText("Controlled Column Filtering", "Controlled Column Filtering"),
   "Controlled Tree Grid": defineLocalizedText("Controlled Tree Grid", "Controlled Tree Grid"),
   "Controlled remote infinite scroll": defineLocalizedText("Controlled 원격 Infinite Scroll", "Controlled remote infinite scroll"),
   "Controlled selection and clipboard": defineLocalizedText("Controlled 선택과 Clipboard", "Controlled selection and clipboard"),
@@ -589,6 +590,35 @@ const [expandedGroupIds, setExpandedGroupIds] = useState<CominsRowId[]>([]);
 />;`,
     language: "tsx",
     title: "Controlled Row Grouping",
+  },
+];
+
+export const columnFilteringSamples: DocsCodeSample[] = [
+  {
+    code: `const [model, setModel] = useState<CominsColumnFilterModel>([]);
+const [openColumnId, setOpenColumnId] = useState<string | null>(null);
+
+const columns = [
+  { field: "name", filter: { kind: "text" }, label: "Name", sort: true },
+  { field: "amount", filter: { kind: "number" }, label: "Amount", sort: true },
+  { field: "joinedAt", filter: { kind: "date" }, label: "Joined", sort: true },
+  { field: "active", filter: { kind: "boolean" }, label: "Enabled", sort: true },
+] satisfies Array<CominsTableColumn<Row>>;
+
+<CominsTable
+  columnFiltering={{
+    model,
+    onChangeModel: setModel,
+    onChangeOpenColumnId: setOpenColumnId,
+    openColumnId,
+  }}
+  columns={columns}
+  data={rows}
+  getRowId={(row) => row.id}
+  summary={{ columns: { amount: "sum" } }}
+/>;`,
+    language: "tsx",
+    title: "Controlled Column Filtering",
   },
 ];
 

@@ -52,6 +52,7 @@ test("keeps every Sidebar group and route name in English for both locales", asy
     "Theme",
     "Header Basics",
     "Header Groups",
+    "Column Filtering",
     "Cells",
     "Components",
     "Selection & Clipboard",

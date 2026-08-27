@@ -184,9 +184,11 @@ Phase 2 Header components는 `button`, `input`, `checkbox`, `radio`, `select`, `
 - Header menu는 바깥 클릭, `Escape`, item 선택 시 닫히며 `onBeforeChange`가 `false`를 반환하면 open/close를 취소한다.
 - Multi-column Sort는 `multiSort`를 명시한 경우 `Shift` 조작으로 활성화되며 각 Header에 우선순위 badge를 표시한다.
 
-## 향후 Column Filter
+## Column Filter
 
-현재 Column Filter는 제공하지 않는다. 이 릴리스에는 Filter prop, callback, button, import, 런타임 state가 없다. 향후 control은 Header 우측에서 sort metadata 뒤와 resize 앞에 배치한다. control의 pointer, click, double-click 이벤트는 Header sort, resize, move와 격리하고, 접근 가능한 이름과 keyboard 동작을 제공하며, Filter 값과 open state는 애플리케이션 소유 controlled state로 유지한다.
+`columns[].filter`를 설정하고 controlled `columnFiltering` state를 전달하면 Header 우측의 sort metadata 뒤와 resize 앞에 Filter control을 렌더링한다. Semantic button과 fixed popover는 pointer, click, double-click, keyboard event를 Header sort, resize, move에서 격리한다. Application이 전체 Filter model과 현재 열린 Column ID를 모두 소유한다.
+
+지원 operator, read-only 동작, 정렬, Summary와 Row Grouping 결합은 [Column Filtering guide](https://github.com/kim1124/comins-table/blob/main/docs/ko/21-column-filtering.md)와 [`/examples/column-filtering`](http://127.0.0.1:4002/examples/column-filtering)에서 확인한다.
 
 Playground 검증 기준:
 

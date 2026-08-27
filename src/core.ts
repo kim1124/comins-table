@@ -1,5 +1,7 @@
 import type React from "react";
 
+import type { CominsColumnFilterConfig } from "./filtering";
+
 export type CominsRowId = string | number;
 
 export type CominsTableDensity = "comfortable" | "compact" | "spacious";
@@ -293,6 +295,7 @@ export type CominsTableHeaderConfig<TData, TValue = unknown> = {
 export type CominsTableColumn<TData, TValue = unknown> = {
   cell?: CominsTableCellConfig<TData, TValue>;
   field: string;
+  filter?: CominsColumnFilterConfig<TData, TValue>;
   header?: CominsTableHeaderConfig<TData, TValue>;
   hidden?: boolean;
   id?: string;
@@ -1721,8 +1724,11 @@ export function getCominsHeaderRows<TData>(state: CominsTableState<TData>): Arra
   return [parentRow, childRow];
 }
 
-export function getCominsSortedRowIndexes<TData>(state: CominsTableState<TData>) {
-  const indexes = state.rows.map((_row, index) => index);
+export function getCominsSortedRowIndexes<TData>(
+  state: CominsTableState<TData>,
+  sourceIndexes: readonly number[] = state.rows.map((_row, index) => index),
+) {
+  const indexes = [...sourceIndexes];
 
   if (state.sortModel.length === 0) {
     return indexes;

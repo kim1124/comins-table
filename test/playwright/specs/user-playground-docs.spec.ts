@@ -37,6 +37,7 @@ const featurePages = [
   { feature: "component", label: "Components", route: "/examples/component" },
   { feature: "row", label: "Rows", route: "/examples/row" },
   { feature: "row-grouping", label: "Row Grouping", route: "/examples/row-grouping" },
+  { feature: "column-filtering", label: "Column Filtering", route: "/examples/column-filtering" },
   { feature: "summary-row", label: "Summary Row", route: "/examples/summary-row" },
   { feature: "tree-grid", label: "Tree Grid", route: "/examples/tree-grid" },
   { feature: "context-menu", label: "Context Menu", route: "/examples/context-menu" },
