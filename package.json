@@ -1,6 +1,6 @@
 {
   "name": "comins-table",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "license": "MIT",
   "type": "module",
   "repository": {
@@ -25,10 +25,11 @@
     "test:perf": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep @perf",
     "test:run": "vitest run",
     "test:licenses": "node --test test/license-gates.node.mjs",
-    "test:security": "node --test test/sensitive-data-gates.node.mjs test/package-artifact-gate.node.mjs",
+    "test:security": "node --test test/sensitive-data-gates.node.mjs test/package-artifact-gate.node.mjs test/npm-maintainer-gate.node.mjs",
     "verify": "npm run check:hygiene && npm run test:security && npm run test:licenses && npm run check:licenses && npm run lint && npm run test:run && npm run build",
     "verify:e2e": "npm run test:e2e",
     "verify:full": "npm run verify && npm run verify:e2e",
+    "verify:npm-maintainer": "node scripts/check-npm-maintainer.mjs",
     "verify:package-artifact": "node scripts/verify-package-artifact.mjs"
   },
   "exports": {
