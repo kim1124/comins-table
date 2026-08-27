@@ -21,3 +21,5 @@ The private height index is activated only when an effective expanded Detail
 makes a data Slot taller than rowHeight.
 
 Virtualization reduces DOM work, but the application still owns the full `data` array in the current CSR model.
+
+Column Filtering derives source indexes before the virtual range. A Filter change therefore updates the logical projection while the application continues to own the unchanged full `data` array and stable Row IDs.

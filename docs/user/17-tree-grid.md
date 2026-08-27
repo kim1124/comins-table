@@ -87,3 +87,5 @@ Tree Grid V1 supports the current fixed `rowHeight` virtualized layout. Paginati
 Tree expansion is not flat Row Expand or Row Grouping. Row Expand renders a Detail region below one flat source Row. Row Grouping derives a hierarchy from flat Row values and keeps separate controlled group expansion state; it cannot be combined with the Tree Grid prop branch.
 
 Run the runnable example with `npm run dev`, then open `/examples/tree-grid`.
+
+Column Filtering is also a flat-data projection and cannot be combined with the Tree Grid prop branch. Applications that require Tree filtering must produce their own controlled nested data.

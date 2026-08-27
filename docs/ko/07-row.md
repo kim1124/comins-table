@@ -91,3 +91,5 @@ Playground 검증 기준:
 - Selection 검증은 내부 state가 아니라 `tr`의 DOM attribute와 computed CSS를 기준으로 한다.
 - Row selection 관련 작업은 initial no-selection, single selection, Ctrl/Cmd toggle, Shift range, sort 후 유지, data 교체 시 초기화를 각각 증거로 남긴다.
 - 사용자가 selection 색상 또는 초기화 문제를 지적한 경우 browser proof에는 selected row의 `data-selected-row`, `background-color`, 관련 event 결과를 포함한다.
+
+`columnFiltering`을 설정하면 일부만 보일 수 있는 projection에서 이동 의미가 모호하므로 Row Drag와 `setMoveTargetRow`를 비활성화한다. 지원되는 Row Grouping 결합의 Group Drag는 별도 Group-model operation으로 유지한다.

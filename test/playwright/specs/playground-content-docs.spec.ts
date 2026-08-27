@@ -31,6 +31,7 @@ const featurePages = [
   ["/examples/cell", "Td Cell 포맷"],
   ["/examples/selection-clipboard", "Row/Cell/Range selection"],
   ["/examples/row", "Tr Row 스타일"],
+  ["/examples/column-filtering", "각 Header의 Filter 버튼"],
   ["/examples/summary-row", "count, sum, avg, max, min"],
   ["/examples/tree-grid", "3개 Department, 9개 Team, 18개 Member"],
   ["/examples/context-menu", "우클릭"],

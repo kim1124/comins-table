@@ -26,3 +26,5 @@ Core helper는 `selectRow`, `selectRows`, `selectCell`, `selectCellRange`, `getC
 controlled React 사용법은 [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard)에서 확인한다. 이 예제는 `onChangeSelection` 전체 payload와 `copyable`, `pasteable` guard를 함께 표시한다.
 
 [`/api/ref`](http://127.0.0.1:4002/api/ref) live 예제는 `setSelectedRow(index)`와 `setSelectedRows(indexes)`를 실행한다. 두 method의 index는 sort와 pagination 적용 후 현재 보이는 Row 기준이다.
+
+Column Filtering은 숨겨진 Row의 selected business Row ID를 dormant 상태로 유지하여 Filter 변경 후 다시 나타날 수 있게 한다. Hidden Cell selection 또는 Cell range는 visible address가 더 이상 유효하지 않으므로 clear한다.

@@ -43,6 +43,7 @@ import {
   updateCominsRows,
 } from "./core";
 import { getCominsColumnMouseIntent } from "./column-pointer";
+import { CominsColumnFilterControl } from "./column-filter";
 import { renderCominsBuiltInComponent, type CominsBuiltInComponentInteraction } from "./component-renderer";
 import { CominsRowDetailRow, CominsRowDetailToggle } from "./row-detail";
 import { CominsTableIcon, CominsTableIconButton } from "./table-icons";
@@ -54,6 +55,10 @@ import {
   orderCominsGroupModel,
   projectCominsGroups,
 } from "./grouping";
+import {
+  getCominsFilteredRowIndexes,
+  normalizeCominsColumnFilterModel,
+} from "./filtering";
 import { getCominsSummaryValues } from "./summary";
 import {
   flattenCominsTree,
@@ -85,6 +90,14 @@ import {
 export * from "./core";
 export * from "./summary";
 export * from "./tree";
+export type {
+  CominsColumnFilterConfig,
+  CominsColumnFilterKind,
+  CominsColumnFilterModel,
+  CominsColumnFilterOperator,
+  CominsColumnFilterRule,
+  CominsColumnFilteringConfig,
+} from "./filtering";
 export { moveCominsRowGroup } from "./grouping";
 export type {
   CominsRowGroupAggregation,
@@ -103,6 +116,11 @@ import type {
   CominsGroupingProjectionEntry,
   CominsRowGroupingConfig,
 } from "./grouping";
+import type {
+  CominsColumnFilterKind,
+  CominsColumnFilterRule,
+  CominsColumnFilteringConfig,
+} from "./filtering";
 
 import type {
   CominsCellAddress,
@@ -335,10 +353,44 @@ type CominsFlatTableBaseProps<TData> = {
 };
 
 type CominsUngroupedTableProps<TData> = CominsFlatTableBaseProps<TData> & {
+  columnFiltering?: undefined;
   rowGrouping?: undefined;
 };
 
-type CominsGroupedTableProps<TData, TGroup> = Omit<
+type CominsNonDraggableRowProps<TData> = Omit<CominsTableRowProps<TData>, "draggable"> & {
+  draggable?: never;
+};
+
+type CominsFilteredTableProps<TData> = Omit<
+  CominsFlatTableBaseProps<TData>,
+  | "hasMoreRows"
+  | "infiniteScroll"
+  | "infiniteScrollThreshold"
+  | "lazyLoad"
+  | "lazyLoadBatchSize"
+  | "lazyLoadMode"
+  | "lazyLoadThreshold"
+  | "loadingMore"
+  | "onLazyLoad"
+  | "onLoadMore"
+  | "rowProps"
+> & {
+  columnFiltering: CominsColumnFilteringConfig;
+  hasMoreRows?: never;
+  infiniteScroll?: never;
+  infiniteScrollThreshold?: never;
+  lazyLoad?: never;
+  lazyLoadBatchSize?: never;
+  lazyLoadMode?: never;
+  lazyLoadThreshold?: never;
+  loadingMore?: never;
+  onLazyLoad?: never;
+  onLoadMore?: never;
+  rowGrouping?: undefined;
+  rowProps?: CominsNonDraggableRowProps<TData>;
+};
+
+type CominsGroupedTableBaseProps<TData, TGroup> = Omit<
   CominsFlatTableBaseProps<TData>,
   | "hasMoreRows"
   | "infiniteScroll"
@@ -366,7 +418,21 @@ type CominsGroupedTableProps<TData, TGroup> = Omit<
   rowGrouping: CominsRowGroupingConfig<TData, TGroup>;
 };
 
+type CominsGroupedTableProps<TData, TGroup> = CominsGroupedTableBaseProps<TData, TGroup> & {
+  columnFiltering?: undefined;
+};
+
+type CominsFilteredGroupedTableProps<TData, TGroup> = Omit<
+  CominsGroupedTableBaseProps<TData, TGroup>,
+  "rowProps"
+> & {
+  columnFiltering: CominsColumnFilteringConfig;
+  rowProps?: CominsNonDraggableRowProps<TData>;
+};
+
 export type CominsTableProps<TData, TGroup = unknown> = (
+  | CominsFilteredGroupedTableProps<TData, TGroup>
+  | CominsFilteredTableProps<TData>
   | CominsGroupedTableProps<TData, TGroup>
   | CominsUngroupedTableProps<TData>
 ) & CominsRowDetailProps<TData>;
@@ -374,6 +440,7 @@ export type CominsTableProps<TData, TGroup = unknown> = (
 export type CominsTreeTableProps<TData> = Omit<
   CominsFlatTableBaseProps<TData>,
   | "data"
+  | "columnFiltering"
   | "getRowId"
   | "hasMoreRows"
   | "infiniteScroll"
@@ -398,6 +465,7 @@ export type CominsTreeTableProps<TData> = Omit<
   | "tree"
 > & {
   data: readonly CominsTreeNode<TData>[];
+  columnFiltering?: never;
   defaultExpandAll?: boolean;
   getRowId: (item: TData, index: number) => CominsRowId;
   hasMoreRows?: never;
@@ -496,6 +564,7 @@ type CominsTreeRenderContext<TData> = {
 };
 
 type CominsTableInnerProps<TData, TGroup = unknown> = CominsFlatTableBaseProps<TData> & CominsRowDetailProps<TData> & {
+  columnFiltering?: CominsColumnFilteringConfig;
   rowGrouping?: CominsRowGroupingConfig<TData, TGroup>;
   treeContext?: CominsTreeRenderContext<TData>;
 };
@@ -1391,6 +1460,7 @@ function CominsTableInner<TData, TGroup>(
     "buffer-size": bufferSize,
     cellSelection = true,
     className,
+    columnFiltering,
     columnGroups,
     columns,
     data,
@@ -1516,13 +1586,21 @@ function CominsTableInner<TData, TGroup>(
     Array.isArray(rowGrouping.groups) &&
     typeof rowGrouping.getGroupId === "function" &&
     typeof rowGrouping.getRowGroupId === "function";
+  const filteringRequested =
+    !treeContext &&
+    columnFiltering !== null &&
+    typeof columnFiltering === "object" &&
+    columnFiltering !== undefined &&
+    Array.isArray(columnFiltering.model);
   const effectivePagination = useMemo(
     () => groupingRequested
       ? { pageIndex: 0, pageSize: Math.max(1, effectiveData.length) }
       : pagination,
     [effectiveData.length, groupingRequested, pagination],
   );
-  const effectiveRowProps = rowProps;
+  const effectiveRowProps = filteringRequested
+    ? { ...rowProps, draggable: false }
+    : rowProps;
   const [state, setState] = useState(() =>
     createCominsTableState({
       columnGroups,
@@ -1586,7 +1664,7 @@ function CominsTableInner<TData, TGroup>(
   const requestLazyLoad = (reason: CominsLazyLoadReason) => {
     const lazyLoadHandler = onLazyLoadRef.current;
 
-    if (groupingRequested || !lazyLoad || lazyLoadMode !== "append" || !lazyLoadHandler || lazyLoadingReasonRef.current) {
+    if (groupingRequested || filteringRequested || !lazyLoad || lazyLoadMode !== "append" || !lazyLoadHandler || lazyLoadingReasonRef.current) {
       return;
     }
 
@@ -1641,7 +1719,7 @@ function CominsTableInner<TData, TGroup>(
   };
 
   useEffect(() => {
-    if (groupingRequested || !lazyLoad || !hasLazyLoadHandler) {
+    if (groupingRequested || filteringRequested || !lazyLoad || !hasLazyLoadHandler) {
       return undefined;
     }
 
@@ -1653,7 +1731,7 @@ function CominsTableInner<TData, TGroup>(
       lazyAbortControllerRef.current?.abort();
       lazyAbortControllerRef.current = null;
     };
-  }, [groupingRequested, hasLazyLoadHandler, lazyLoad, resolvedLazyLoadBatchSize]);
+  }, [filteringRequested, groupingRequested, hasLazyLoadHandler, lazyLoad, resolvedLazyLoadBatchSize]);
 
   useEffect(() => {
     const previousInput = stateInputRef.current;
@@ -2079,9 +2157,45 @@ function CominsTableInner<TData, TGroup>(
       ? Math.round(tableWidth)
       : 0;
   const headerRows = useMemo(() => getCominsHeaderRows(state), [state]);
+  const normalizedColumnFilters = useMemo(
+    () => filteringRequested
+      ? normalizeCominsColumnFilterModel({
+          columns: state.columns,
+          model: columnFiltering?.model,
+        })
+      : [],
+    [columnFiltering?.model, filteringRequested, state.columns],
+  );
+  const filteringActive = normalizedColumnFilters.length > 0;
+  const normalizedColumnFilterById = useMemo(
+    () => new Map(normalizedColumnFilters.map((rule) => [rule.column.id, rule] as const)),
+    [normalizedColumnFilters],
+  );
+  const filteredDataIndexes = useMemo(
+    () => filteringRequested
+      ? getCominsFilteredRowIndexes({
+          columns: state.columns,
+          model: columnFiltering?.model,
+          rows: state.rows.map((data, dataIndex) => ({
+            data,
+            dataIndex,
+            id: state.rowIds[dataIndex]!,
+          })),
+        })
+      : state.rows.map((_row, index) => index),
+    [columnFiltering?.model, filteringRequested, state.columns, state.rowIds, state.rows],
+  );
+  const filteredRows = useMemo(
+    () => filteredDataIndexes.flatMap((dataIndex) => {
+      const row = state.rows[dataIndex];
+
+      return row === undefined ? [] : [row];
+    }),
+    [filteredDataIndexes, state.rows],
+  );
   const summaryValues = useMemo(
-    () => (summary ? getCominsSummaryValues(treeContext?.summaryRows ?? state.rows, visibleColumns, summary) : null),
-    [state.rows, summary, treeContext?.summaryRows, visibleColumns],
+    () => (summary ? getCominsSummaryValues(treeContext?.summaryRows ?? filteredRows, visibleColumns, summary) : null),
+    [filteredRows, summary, treeContext?.summaryRows, visibleColumns],
   );
   const summaryCells = useMemo(() => {
     if (!summary) {
@@ -2154,14 +2268,17 @@ function CominsTableInner<TData, TGroup>(
       ? createCominsGroupModel({
           ...normalizedGrouping,
           getRowGroupId: groupingGetRowGroupId,
-          rows: state.rows.map((data, dataIndex) => ({
-            data,
-            dataIndex,
-            id: state.rowIds[dataIndex]!,
-          })),
+          rows: filteredDataIndexes.flatMap((dataIndex) => {
+            const data = state.rows[dataIndex];
+            const id = state.rowIds[dataIndex];
+
+            return data === undefined || id === undefined
+              ? []
+              : [{ data, dataIndex, id }];
+          }),
         })
       : null,
-    [groupingGetRowGroupId, normalizedGrouping, state.rowIds, state.rows],
+    [filteredDataIndexes, groupingGetRowGroupId, normalizedGrouping, state.rowIds, state.rows],
   );
   const orderedGroupModel = useMemo(
     () => groupModel
@@ -2273,25 +2390,33 @@ function CominsTableInner<TData, TGroup>(
     }
   }, [groupingProjection, orderedGroupModel]);
   const sortedRowIndexes = useMemo(
-    () => (treeContext || groupingActive || state.sortModel.length === 0 ? null : getCominsSortedRowIndexes(state)),
-    [groupingActive, state, treeContext],
+    () => (treeContext || groupingActive ? null : getCominsSortedRowIndexes(state, filteredDataIndexes)),
+    [filteredDataIndexes, groupingActive, state, treeContext],
   );
   const projectedDataIndexes = useMemo(
     () => groupingProjection
       ? groupingProjection.entries.flatMap((entry) => entry.kind === "data" ? [entry.dataIndex] : [])
-      : sortedRowIndexes ?? state.rows.map((_row, index) => index),
-    [groupingProjection, sortedRowIndexes, state.rows],
+      : sortedRowIndexes ?? filteredDataIndexes,
+    [filteredDataIndexes, groupingProjection, sortedRowIndexes],
   );
   const visibleRowCount = projectedDataIndexes.length;
   const visibleSlotCount = groupingProjection?.entries.length ?? visibleRowCount;
   const pageSize = Math.max(1, state.pagination.pageSize);
-  const pageStartIndex = Math.max(0, state.pagination.pageIndex) * pageSize;
+  const maxPageIndex = Math.max(0, Math.ceil(visibleRowCount / pageSize) - 1);
+  const effectivePageIndex = Math.min(Math.max(0, state.pagination.pageIndex), maxPageIndex);
+  const pageStartIndex = effectivePageIndex * pageSize;
   useEffect(() => {
-    if (!groupingProjection) {
+    if (!groupingProjection && !filteringRequested) {
       return;
     }
 
-    const visibleRowIds = new Set(groupingProjection.visibleLeafRowIds);
+    const visibleRowIds = new Set(
+      groupingProjection?.visibleLeafRowIds ?? projectedDataIndexes.flatMap((dataIndex) => {
+        const rowId = state.rowIds[dataIndex];
+
+        return rowId === undefined ? [] : [rowId];
+      }),
+    );
     const current = stateRef.current;
     const cellHidden = current.selection.cell !== null && !visibleRowIds.has(current.selection.cell.rowId);
     const rangeHidden = current.selection.range !== null && (
@@ -2316,7 +2441,7 @@ function CominsTableInner<TData, TGroup>(
         range: rangeHidden || cellHidden ? null : current.selection.range,
       },
     });
-  }, [groupingProjection]);
+  }, [filteringRequested, groupingProjection, projectedDataIndexes, state.rowIds]);
   const effectiveExpandedRowIdSet = useMemo(() => {
     if (!rowDetailEnabled) {
       return new Set<CominsRowId>();
@@ -2795,14 +2920,15 @@ function CominsTableInner<TData, TGroup>(
   const selectedRowIdSet = useMemo(() => new Set(state.selection.rowIds), [state.selection.rowIds]);
   const hasHorizontalOverflow =
     typeof columnWidthTotal === "number" && containerWidth > 0 ? columnWidthTotal > containerWidth + 1 : false;
-  const resolvedHasMoreRows = groupingRequested ? false : hasMoreRows;
+  const resolvedHasMoreRows = groupingRequested || filteringRequested ? false : hasMoreRows;
   const resolvedLoading = loading;
-  const resolvedLoadingMore = groupingRequested ? false : loadingMore;
+  const resolvedLoadingMore = groupingRequested || filteringRequested ? false : loadingMore;
   const isEmpty = visibleSlotCount === 0;
   const shouldRenderSkeleton = resolvedLoading && isEmpty;
   const shouldRenderEmpty = !resolvedLoading && isEmpty;
   const shouldRenderInfiniteLoadingRow =
     !groupingRequested &&
+    !filteringRequested &&
     (infiniteScroll || lazyLoad) &&
     resolvedLoadingMore &&
     resolvedHasMoreRows &&
@@ -3077,7 +3203,7 @@ function CominsTableInner<TData, TGroup>(
         commitState((current) => applyCominsColumnLayout(current, layout), { columnLayoutChanged: true }),
       setMoveTargetRow: (targetIdx, sourceIdx) =>
         commitState((current) => {
-          if (treeContext || groupingRequested) {
+          if (treeContext || groupingRequested || filteringRequested) {
             return current;
           }
 
@@ -3123,6 +3249,7 @@ function CominsTableInner<TData, TGroup>(
     [
       groupingProjection,
       groupingRequested,
+      filteringRequested,
       normalizedExpandedGroupIds,
       orderedGroupModel,
       rowGrouping,
@@ -3967,6 +4094,25 @@ function CominsTableInner<TData, TGroup>(
       ? getCominsColumnPlaceholderText(movingGroup.label, movingGroup.id)
       : undefined;
 
+  const changeColumnFilterRule = (columnId: string, nextRule: CominsColumnFilterRule | null) => {
+    const filtering = columnFiltering;
+    const onChangeModel = filtering?.onChangeModel;
+
+    if (!filtering || typeof onChangeModel !== "function") {
+      return;
+    }
+
+    const currentModel = Array.isArray(filtering.model) ? filtering.model : [];
+    const currentIndex = currentModel.findIndex((rule) => rule?.columnId === columnId);
+    const nextModel = currentModel.filter((rule) => rule?.columnId !== columnId);
+
+    if (nextRule) {
+      nextModel.splice(currentIndex < 0 ? nextModel.length : currentIndex, 0, nextRule);
+    }
+
+    onChangeModel(nextModel);
+  };
+
   const renderHeaderCell = (cell: CominsHeaderCell<TData>, fallbackIndex: number) => {
     if (cell.kind === "group") {
       const isDropTarget = columnMoveTarget?.kind === "group" && columnMoveTarget.id === cell.groupId;
@@ -4161,6 +4307,13 @@ function CominsTableInner<TData, TGroup>(
     const hasHeaderComponents = headerLeftSlots.length > 0 || headerRightSlots.length > 0;
     const isDropTarget = columnMoveTarget?.kind === "column" && columnMoveTarget.id === column.id;
     const columnPositionLocked = column.lockPosition === true;
+    const columnFilterKind = column.filter?.kind;
+    const columnFilterable =
+      filteringRequested &&
+      (columnFilterKind === "boolean" ||
+        columnFilterKind === "date" ||
+        columnFilterKind === "number" ||
+        columnFilterKind === "text");
 
     return (
       <th
@@ -4188,6 +4341,7 @@ function CominsTableInner<TData, TGroup>(
         data-sort-direction={sortRule?.rule.direction}
         data-sort-priority={sortRule?.priority}
         data-sortable={column.sort ? "true" : "false"}
+        data-filter-active={normalizedColumnFilterById.has(column.id) ? "true" : undefined}
         data-testid={`header-${column.id}`}
         aria-sort={column.sort ? getAriaSortState(state.sortModel, column.id) : undefined}
         key={`column-${column.id}`}
@@ -4300,6 +4454,21 @@ function CominsTableInner<TData, TGroup>(
             </span>
           ) : null}
           <span className="comins-table__header-slot" data-comins-header-slot="right">
+            {columnFilterable && !isColumnPlaceholder ? (
+              <CominsColumnFilterControl
+                columnId={column.id}
+                columnLabel={columnPlaceholderLabel}
+                kind={columnFilterKind as CominsColumnFilterKind}
+                onChangeRule={typeof columnFiltering?.onChangeModel === "function"
+                  ? (nextRule) => changeColumnFilterRule(column.id, nextRule)
+                  : undefined}
+                onOpenChange={typeof columnFiltering?.onChangeOpenColumnId === "function"
+                  ? columnFiltering.onChangeOpenColumnId
+                  : undefined}
+                open={columnFiltering?.openColumnId === column.id}
+                rule={normalizedColumnFilterById.get(column.id)}
+              />
+            ) : null}
             {headerRightSlots}
           </span>
         </span>
@@ -4402,7 +4571,7 @@ function CominsTableInner<TData, TGroup>(
     });
   };
   const requestInfiniteLoadIfNeeded = (bodyViewport: HTMLDivElement) => {
-    if (groupingRequested) {
+    if (groupingRequested || filteringRequested) {
       return;
     }
 
@@ -4509,6 +4678,7 @@ function CominsTableInner<TData, TGroup>(
         .filter(Boolean)
         .join(" ")}
       aria-busy={resolvedLoading || resolvedLoadingMore ? "true" : undefined}
+      data-filter-active={filteringActive ? "true" : undefined}
       data-loading={resolvedLoading || resolvedLoadingMore ? "true" : undefined}
       data-show-header={renderedHeaderVisible ? "true" : undefined}
       style={{ ...currentTheme.style, ...style }}
@@ -5251,6 +5421,7 @@ function CominsTableInner<TData, TGroup>(
 function CominsTreeTableInner<TData>(
   {
     data,
+    columnFiltering: _columnFiltering,
     defaultExpandAll = true,
     estimatedRowDetailHeight: _estimatedRowDetailHeight,
     expandedRowIds: _expandedRowIds,

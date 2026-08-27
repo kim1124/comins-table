@@ -2,6 +2,7 @@ import {
   CaretSortIcon,
   ChevronRightIcon,
   DragHandleDots2Icon,
+  MagnifyingGlassIcon,
   ThickArrowDownIcon,
   ThickArrowUpIcon,
 } from "@radix-ui/react-icons";
@@ -11,6 +12,7 @@ export type CominsTableIconName =
   | "columnMove"
   | "disclosureCollapsed"
   | "disclosureExpanded"
+  | "filter"
   | "sortAscending"
   | "sortDescending"
   | "sortUnsorted";
@@ -19,6 +21,7 @@ const icons = {
   columnMove: DragHandleDots2Icon,
   disclosureCollapsed: ChevronRightIcon,
   disclosureExpanded: ChevronRightIcon,
+  filter: MagnifyingGlassIcon,
   sortAscending: ThickArrowUpIcon,
   sortDescending: ThickArrowDownIcon,
   sortUnsorted: CaretSortIcon,

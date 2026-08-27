@@ -450,7 +450,7 @@ body {
   min-height: 300px;
 }
 
-.docs-live .feature-panel:not(.feature-panel--size):not(.feature-panel--header):not(.feature-panel--components):not(.feature-panel--row-grouping)
+.docs-live .feature-panel:not(.feature-panel--size):not(.feature-panel--header):not(.feature-panel--components):not(.feature-panel--row-grouping):not(.feature-panel--column-filtering)
   .example-table.comins-table {
   flex: 0 0 auto;
   height: 300px;
@@ -1536,6 +1536,35 @@ body {
 }
 
 .feature-panel--row-grouping [data-feature-option="row-grouping-virtual"] .feature-option-sample {
+  height: 620px;
+  min-height: 620px;
+}
+
+.feature-panel--column-filtering {
+  flex: 0 0 auto;
+  height: auto;
+  overflow: visible;
+}
+
+.feature-panel--column-filtering .feature-option-sample {
+  height: 460px;
+  min-height: 460px;
+}
+
+.feature-panel--column-filtering .feature-option-sample__inner {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.feature-panel--column-filtering .feature-option-sample__inner > .example-table.comins-table {
+  flex: 1 1 0;
+  height: auto;
+  max-height: 100%;
+  min-height: 0;
+}
+
+.feature-panel--column-filtering [data-feature-option="column-filtering-virtual"] .feature-option-sample {
   height: 620px;
   min-height: 620px;
 }

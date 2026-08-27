@@ -6,6 +6,7 @@ import {
   bodySamples,
   cellSamples,
   componentSamples,
+  columnFilteringSamples,
   contextMenuSamples,
   crudSamples,
   exportSamples,
@@ -250,6 +251,18 @@ const englishDocsPages: DocsPage[] = [
     codeSamples: rowGroupingSamples,
     featureId: "row-grouping",
     path: "/examples/row-grouping",
+  }),
+  featurePage({
+    body: paragraphs([
+      "Each Column opts into text, number, UTC calendar-day date, or boolean filtering. The application owns the complete model and the currently open Header popover.",
+      "Rules across Columns use AND. Invalid rules are ignored, and the first valid rule for each Column wins. Text matching is case-insensitive by default; empty means null, undefined, or an empty string.",
+      "Filtering runs before sorting, pagination, virtualization, Summary aggregation, and Row Grouping membership. Explicit Groups retain their application-owned positions and stay visible when filtered empty.",
+      "Header sorting never changes the Filter model. Filtering cannot be combined with Tree Grid, Infinite/Lazy Loading, loadingMore, or Row Drag; Group Drag can remain enabled because it changes only the explicit Group model.",
+    ]),
+    category: "Header",
+    codeSamples: columnFilteringSamples,
+    featureId: "column-filtering",
+    path: "/examples/column-filtering",
   }),
   featurePage({
     body: paragraphs([
@@ -509,6 +522,18 @@ const koreanDocsCopy: Record<string, KoreanDocsCopy> = {
     label: "Row Grouping",
     summary: "Controlled flat Row Grouping, hierarchy sort, 집계, Row Detail과 가상화를 확인합니다.",
     title: "Row Grouping",
+  },
+  "/examples/column-filtering": {
+    body: [
+      "각 Column은 text, number, UTC calendar-day date 또는 boolean Filter를 선택적으로 정의합니다. Application이 전체 model과 현재 열린 Header popover를 소유합니다.",
+      "Column 간 조건은 AND로 결합하고 invalid rule은 무시하며 Column별 첫 valid rule을 사용합니다. Text 비교는 기본적으로 대소문자를 구분하지 않고 empty는 null, undefined 또는 빈 문자열입니다.",
+      "Filtering은 정렬, pagination, virtualization, Summary 집계와 Row Grouping membership보다 먼저 실행됩니다. Explicit Group은 application-owned 위치를 유지하고 Filter 결과가 비어도 계속 표시됩니다.",
+      "Header 정렬은 Filter model을 변경하지 않습니다. Filtering은 Tree Grid, Infinite/Lazy Loading, loadingMore 또는 Row Drag와 결합할 수 없으며 Group Drag는 explicit Group model만 변경하므로 유지할 수 있습니다.",
+    ],
+    category: "Header",
+    label: "Column Filtering",
+    summary: "Text, number, UTC 날짜, boolean Filter와 Grouping 결합을 확인합니다.",
+    title: "Column Filtering",
   },
   "/examples/selection-clipboard": {
     body: [

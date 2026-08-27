@@ -39,6 +39,7 @@ describe("private Comins Table icon primitives", () => {
       "columnMove",
       "disclosureCollapsed",
       "disclosureExpanded",
+      "filter",
       "sortAscending",
       "sortDescending",
       "sortUnsorted",
