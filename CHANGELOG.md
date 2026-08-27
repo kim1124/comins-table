@@ -2,9 +2,12 @@
 
 ## Unreleased
 
+## 0.1.7 - 2026-08-27
+
 - Added controlled client-side Column Filtering with text, number, UTC calendar-day date, and boolean operators; application-owned Filter/open-popover state; semantic Header controls; filtered sorting, pagination, virtualization, Summary, and Row Grouping projection; explicit Group preservation; Row Drag and remote/Tree exclusions; and matching Korean/English Playground documentation.
 - Added controlled client-side single-depth Row Grouping with application-owned ordered Groups and persistent empty Groups, Group CRUD ownership, Group/Row Drag including cross-Group Row moves, full-width custom-renderable Group Rows, typed per-Group Row `className`/`style`, neutral-gray theme tokens, expand/fold Ref methods, per-Group Row sorting, built-in aggregation, fixed/mixed virtualization, leaf-only selection and Clipboard semantics, grouped Row Detail, runtime/type exclusions, and matching Korean/English Playground documentation.
 - Corrected the Row Grouping Playground layout so every Table fills its example container without clipping or unused fixed-height space, and demonstrated custom Group content and Group Row styling together.
+- Added a fail-closed, value-free npm maintainer identity gate immediately before trusted staged publishing.
 
 ## 0.1.6 - 2026-08-14
 
