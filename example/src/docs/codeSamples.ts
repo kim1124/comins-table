@@ -15,6 +15,7 @@ const codeSampleTitles = {
   "Controlled Row Expand": defineLocalizedText("Controlled Row Expand", "Controlled Row Expand"),
   "Controlled Row Grouping": defineLocalizedText("Controlled Row Grouping", "Controlled Row Grouping"),
   "Controlled Column Filtering": defineLocalizedText("Controlled Column Filtering", "Controlled Column Filtering"),
+  "Cross-Table Coordinator": defineLocalizedText("Cross-Table Coordinator", "Cross-Table Coordinator"),
   "Controlled Tree Grid": defineLocalizedText("Controlled Tree Grid", "Controlled Tree Grid"),
   "Controlled remote infinite scroll": defineLocalizedText("Controlled 원격 Infinite Scroll", "Controlled remote infinite scroll"),
   "Controlled selection and clipboard": defineLocalizedText("Controlled 선택과 Clipboard", "Controlled selection and clipboard"),
@@ -33,6 +34,7 @@ const codeSampleTitles = {
   "Theme class": defineLocalizedText("Theme class", "Theme class"),
   "Tree expansion ref": defineLocalizedText("Tree 펼침 ref", "Tree expansion ref"),
   "Two-level header": defineLocalizedText("2단계 Header", "Two-level header"),
+  "Column and Header Group pinning": defineLocalizedText("Column 및 Header Group Pinning", "Column and Header Group pinning"),
 } as const;
 
 export function localizeDocsCodeSamples(samples: DocsCodeSample[], locale: PlaygroundLocale): DocsCodeSample[] {
@@ -590,6 +592,47 @@ const [expandedGroupIds, setExpandedGroupIds] = useState<CominsRowId[]>([]);
 />;`,
     language: "tsx",
     title: "Controlled Row Grouping",
+  },
+];
+
+export const crossTableDragSamples: DocsCodeSample[] = [
+  {
+    code: `const coordinator = createCominsTableTransferCoordinator<Row, Group>({
+  onTransfer: ({ source, target }) => {
+    updateTable(source.tableId, source.data, source.groups);
+    updateTable(target.tableId, target.data, target.groups);
+  },
+});
+
+const tableTransfer = (tableId: string) => ({
+  coordinator,
+  scope: "people",
+  tableId,
+  resolveConflict: () => "reject" as const,
+});
+
+<CominsTable tableTransfer={tableTransfer("left")} rowProps={{ draggable: true }} />;
+<CominsTable tableTransfer={tableTransfer("right")} rowProps={{ draggable: true }} />;`,
+    language: "tsx",
+    title: "Cross-Table Coordinator",
+  },
+];
+
+export const columnPinningSamples: DocsCodeSample[] = [
+  {
+    code: `const columns = [
+  { field: "name", label: "Name", pinned: "left", width: 180 },
+  { field: "amount", label: "Amount", width: 140 },
+  { field: "status", label: "Status", pinned: "right", width: 140 },
+] satisfies Array<CominsTableColumn<Row>>;
+
+const columnGroups = [
+  { id: "identity", label: "Identity", children: ["name"], pinned: "left" },
+];
+
+<CominsTable columns={columns} columnGroups={columnGroups} data={rows} />;`,
+    language: "tsx",
+    title: "Column and Header Group pinning",
   },
 ];
 

@@ -44,7 +44,15 @@ import {
 } from "./core";
 import { getCominsColumnMouseIntent } from "./column-pointer";
 import { CominsColumnFilterControl } from "./column-filter";
+import {
+  getCominsColumnPinningSpanFragments,
+  resolveCominsColumnPinning,
+} from "./column-pinning";
 import { renderCominsBuiltInComponent, type CominsBuiltInComponentInteraction } from "./component-renderer";
+import {
+  getCominsDragAutoScrollTop,
+  getCominsDragAutoScrollVelocity,
+} from "./drag-autoscroll";
 import { CominsRowDetailRow, CominsRowDetailToggle } from "./row-detail";
 import { CominsTableIcon, CominsTableIconButton } from "./table-icons";
 import {
@@ -59,6 +67,14 @@ import {
   getCominsFilteredRowIndexes,
   normalizeCominsColumnFilterModel,
 } from "./filtering";
+import {
+  emitCominsTableTransfer,
+  getCominsTableTransferRegistration,
+  isCominsTableTransferCoordinator,
+  registerCominsTableTransfer,
+  transferCominsGroupBetweenTables,
+  transferCominsRowBetweenTables,
+} from "./table-transfer";
 import { getCominsSummaryValues } from "./summary";
 import {
   flattenCominsTree,
@@ -109,6 +125,31 @@ export type {
   CominsRowGroupingSourceRow,
   CominsSetRowGroupIdParams,
 } from "./grouping";
+export {
+  createCominsTableTransferCoordinator,
+  transferCominsGroupBetweenTables,
+  transferCominsRowBetweenTables,
+} from "./table-transfer";
+export type {
+  CominsGroupBetweenTablesInput,
+  CominsRowBetweenTablesInput,
+  CominsTableGroupTransferDetails,
+  CominsTableRowTransferDetails,
+  CominsTableTransferConfig,
+  CominsTableTransferConflict,
+  CominsTableTransferConflictPolicy,
+  CominsTableTransferConflictResolver,
+  CominsTableTransferCoordinator,
+  CominsTableTransferCoordinatorOptions,
+  CominsTableTransferDetails,
+  CominsTableTransferDropPosition,
+  CominsTableTransferEndpoint,
+  CominsTableTransferGroupEndpoint,
+  CominsTableTransferIntent,
+  CominsTableTransferResolvedConflict,
+  CominsTableTransferResult,
+  CominsTableTransferRowEndpoint,
+} from "./table-transfer";
 
 import type { CominsTableSummaryConfig } from "./summary";
 import type { CominsTreeNode, CominsVisibleTreeRow } from "./tree";
@@ -121,6 +162,12 @@ import type {
   CominsColumnFilterRule,
   CominsColumnFilteringConfig,
 } from "./filtering";
+import type {
+  CominsTableTransferConfig,
+  CominsTableTransferEndpoint,
+  CominsTableTransferIntent,
+  CominsTableTransferRegistrationSnapshot,
+} from "./table-transfer";
 
 import type {
   CominsCellAddress,
@@ -193,13 +240,50 @@ type CominsRowMoveState = {
   sourceRowId: CominsRowId;
   targetDataIndex?: number;
   targetGroupId?: CominsRowId;
+  targetTableId?: string;
   valid: boolean;
 };
 type CominsRowGroupMoveState = {
-  position: "after" | "before";
+  position: "after" | "append" | "before";
   sourceGroupId: CominsRowId;
-  targetGroupId: CominsRowId;
+  targetGroupId?: CominsRowId;
+  targetTableId?: string;
 };
+type CominsTransferTableHit<TData, TGroup> = {
+  element: HTMLElement;
+  root: HTMLElement;
+  snapshot: CominsTableTransferRegistrationSnapshot<TData, TGroup>;
+};
+type CominsCrossTableRowTarget<TData, TGroup> = CominsTransferTableHit<TData, TGroup> & {
+  marker: HTMLElement;
+  targetGroupId?: CominsRowId;
+  targetRowId?: CominsRowId;
+  valid: boolean;
+};
+type CominsCrossTableGroupTarget<TData, TGroup> = CominsTransferTableHit<TData, TGroup> & {
+  marker: HTMLElement;
+  position: "after" | "append" | "before";
+  targetGroupId?: CominsRowId;
+  valid: boolean;
+};
+
+function isCominsGroupedTransferEndpoint<TData, TGroup>(
+  endpoint: CominsTableTransferEndpoint<TData, TGroup>,
+): endpoint is CominsTableTransferEndpoint<TData, TGroup> & {
+  getGroupId: (group: TGroup) => CominsRowId;
+  getRowGroupId: (row: TData, dataIndex: number) => CominsRowId;
+  groups: readonly TGroup[];
+} {
+  return (
+    Array.isArray(endpoint.groups) &&
+    typeof endpoint.getGroupId === "function" &&
+    typeof endpoint.getRowGroupId === "function"
+  );
+}
+
+function getCominsTransferIdentity(id: CominsRowId) {
+  return `${typeof id}:${String(id)}`;
+}
 
 const COMINS_MIN_COLUMN_WIDTH = 88;
 function getCominsColumnDropStatus(
@@ -352,10 +436,43 @@ type CominsFlatTableBaseProps<TData> = {
   virtualized?: boolean;
 };
 
-type CominsUngroupedTableProps<TData> = CominsFlatTableBaseProps<TData> & {
+type CominsUngroupedTableWithoutTransferProps<TData> = CominsFlatTableBaseProps<TData> & {
   columnFiltering?: undefined;
   rowGrouping?: undefined;
+  tableTransfer?: undefined;
 };
+
+type CominsTransferableUngroupedTableProps<TData> = Omit<
+  CominsFlatTableBaseProps<TData>,
+  | "hasMoreRows"
+  | "infiniteScroll"
+  | "infiniteScrollThreshold"
+  | "lazyLoad"
+  | "lazyLoadBatchSize"
+  | "lazyLoadMode"
+  | "lazyLoadThreshold"
+  | "loadingMore"
+  | "onLazyLoad"
+  | "onLoadMore"
+> & {
+  columnFiltering?: undefined;
+  hasMoreRows?: never;
+  infiniteScroll?: never;
+  infiniteScrollThreshold?: never;
+  lazyLoad?: never;
+  lazyLoadBatchSize?: never;
+  lazyLoadMode?: never;
+  lazyLoadThreshold?: never;
+  loadingMore?: never;
+  onLazyLoad?: never;
+  onLoadMore?: never;
+  rowGrouping?: undefined;
+  tableTransfer: CominsTableTransferConfig<TData>;
+};
+
+type CominsUngroupedTableProps<TData> =
+  | CominsTransferableUngroupedTableProps<TData>
+  | CominsUngroupedTableWithoutTransferProps<TData>;
 
 type CominsNonDraggableRowProps<TData> = Omit<CominsTableRowProps<TData>, "draggable"> & {
   draggable?: never;
@@ -388,6 +505,7 @@ type CominsFilteredTableProps<TData> = Omit<
   onLoadMore?: never;
   rowGrouping?: undefined;
   rowProps?: CominsNonDraggableRowProps<TData>;
+  tableTransfer?: never;
 };
 
 type CominsGroupedTableBaseProps<TData, TGroup> = Omit<
@@ -416,6 +534,7 @@ type CominsGroupedTableBaseProps<TData, TGroup> = Omit<
   onLoadMore?: never;
   pagination?: never;
   rowGrouping: CominsRowGroupingConfig<TData, TGroup>;
+  tableTransfer?: CominsTableTransferConfig<TData, TGroup>;
 };
 
 type CominsGroupedTableProps<TData, TGroup> = CominsGroupedTableBaseProps<TData, TGroup> & {
@@ -428,6 +547,7 @@ type CominsFilteredGroupedTableProps<TData, TGroup> = Omit<
 > & {
   columnFiltering: CominsColumnFilteringConfig;
   rowProps?: CominsNonDraggableRowProps<TData>;
+  tableTransfer?: never;
 };
 
 export type CominsTableProps<TData, TGroup = unknown> = (
@@ -456,6 +576,7 @@ export type CominsTreeTableProps<TData> = Omit<
   | "pagination"
   | "rowProps"
   | "rowGrouping"
+  | "tableTransfer"
   | "estimatedRowDetailHeight"
   | "expandedRowIds"
   | "getRowDetailHeight"
@@ -488,6 +609,7 @@ export type CominsTreeTableProps<TData> = Omit<
   onChangeExpandedRowIds?: never;
   renderRowDetail?: never;
   rowGrouping?: never;
+  tableTransfer?: never;
   tree: true;
 };
 
@@ -566,6 +688,9 @@ type CominsTreeRenderContext<TData> = {
 type CominsTableInnerProps<TData, TGroup = unknown> = CominsFlatTableBaseProps<TData> & CominsRowDetailProps<TData> & {
   columnFiltering?: CominsColumnFilteringConfig;
   rowGrouping?: CominsRowGroupingConfig<TData, TGroup>;
+  tableTransfer?:
+    | CominsTableTransferConfig<TData, TGroup>
+    | CominsTableTransferConfig<TData, never>;
   treeContext?: CominsTreeRenderContext<TData>;
 };
 
@@ -1509,6 +1634,7 @@ function CominsTableInner<TData, TGroup>(
     skeletonRowCount,
     style,
     summary,
+    tableTransfer,
     theme,
     treeContext,
     virtualized = false,
@@ -1518,6 +1644,7 @@ function CominsTableInner<TData, TGroup>(
   const containerRef = useRef<HTMLDivElement | null>(null);
   const footerRef = useRef<HTMLDivElement | null>(null);
   const headerRef = useRef<HTMLDivElement | null>(null);
+  const tableRootRef = useRef<HTMLDivElement | null>(null);
   const copiedCellRef = useRef<CominsCopiedCell | null>(null);
   const copiedRangeRef = useRef<CominsCopiedCellRange | null>(null);
   const copiedRowRef = useRef<CominsCopiedRow<TData> | null>(null);
@@ -1551,6 +1678,11 @@ function CominsTableInner<TData, TGroup>(
   const rangeDragMovedRef = useRef(false);
   const rowMoveStateRef = useRef<CominsRowMoveState | null>(null);
   const rowGroupMoveStateRef = useRef<CominsRowGroupMoveState | null>(null);
+  const transferSnapshotRef = useRef<
+    CominsTableTransferRegistrationSnapshot<TData, TGroup> | null
+  >(null);
+  const externalDropMarkerRef = useRef<HTMLElement | null>(null);
+  const pendingTransferFocusFrameRef = useRef<number | null>(null);
   const groupDisclosureElementsRef = useRef(new Map<CominsRowId, HTMLButtonElement>());
   const pendingGroupDisclosureFocusRef = useRef<CominsRowId | null>(null);
   const focusedLeafDataIndexRef = useRef<number | null>(null);
@@ -1576,6 +1708,7 @@ function CominsTableInner<TData, TGroup>(
   const [rowMoveState, setRowMoveState] = useState<CominsRowMoveState | null>(null);
   const [rowGroupMoveState, setRowGroupMoveState] = useState<CominsRowGroupMoveState | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
+  const tableInstanceId = useId();
   const rowDetailIdPrefix = useId();
   const effectiveData = data;
   const groupingRequested =
@@ -1592,6 +1725,20 @@ function CominsTableInner<TData, TGroup>(
     typeof columnFiltering === "object" &&
     columnFiltering !== undefined &&
     Array.isArray(columnFiltering.model);
+  const normalizedTableTransfer =
+    !treeContext &&
+    !filteringRequested &&
+    !infiniteScroll &&
+    !lazyLoad &&
+    tableTransfer !== null &&
+    typeof tableTransfer === "object" &&
+    typeof tableTransfer.scope === "string" &&
+    tableTransfer.scope.length > 0 &&
+    typeof tableTransfer.tableId === "string" &&
+    tableTransfer.tableId.length > 0 &&
+    isCominsTableTransferCoordinator<TData, TGroup>(tableTransfer.coordinator)
+      ? tableTransfer as CominsTableTransferConfig<TData, TGroup>
+      : undefined;
   const effectivePagination = useMemo(
     () => groupingRequested
       ? { pageIndex: 0, pageSize: Math.max(1, effectiveData.length) }
@@ -1655,6 +1802,255 @@ function CominsTableInner<TData, TGroup>(
   const registerActivePointerGesture = (cleanup: () => void) => {
     clearActivePointerGesture();
     activePointerGestureCleanupRef.current = cleanup;
+  };
+  const clearExternalDropMarker = () => {
+    const marker = externalDropMarkerRef.current;
+
+    if (!marker) {
+      return;
+    }
+
+    marker.removeAttribute("data-comins-cross-row-drop-position");
+    marker.removeAttribute("data-comins-group-drop-position");
+    marker.removeAttribute("data-comins-group-drop-valid");
+    marker.removeAttribute("data-comins-row-drop-valid");
+    externalDropMarkerRef.current = null;
+  };
+  const setExternalDropMarker = (
+    element: HTMLElement,
+    kind: "group" | "row",
+    valid: boolean,
+    position?: "after" | "append" | "before",
+  ) => {
+    clearExternalDropMarker();
+    externalDropMarkerRef.current = element;
+
+    if (kind === "group") {
+      element.dataset.cominsGroupDropValid = valid ? "true" : "false";
+
+      if (position === "after" || position === "before") {
+        element.dataset.cominsGroupDropPosition = position;
+      }
+      return;
+    }
+
+    element.dataset.cominsRowDropValid = valid ? "true" : "false";
+
+    if (element.dataset.cominsRowDataIndex !== undefined) {
+      element.dataset.cominsCrossRowDropPosition = "before";
+    }
+  };
+  const getRegisteredTransferSnapshot = (tableId: string) => {
+    if (!normalizedTableTransfer) {
+      return null;
+    }
+
+    const registration = getCominsTableTransferRegistration(
+      normalizedTableTransfer.coordinator,
+      normalizedTableTransfer.scope,
+      tableId,
+    );
+    const snapshot = registration?.getSnapshot() ?? null;
+
+    if (
+      !snapshot ||
+      snapshot.config.coordinator !== normalizedTableTransfer.coordinator ||
+      snapshot.config.scope !== normalizedTableTransfer.scope ||
+      snapshot.config.tableId !== tableId ||
+      snapshot.endpoint.tableId !== tableId
+    ) {
+      return null;
+    }
+
+    return snapshot;
+  };
+  const getCrossTableTransferHit = (
+    clientX: number,
+    clientY: number,
+  ): CominsTransferTableHit<TData, TGroup> | null => {
+    if (!normalizedTableTransfer) {
+      return null;
+    }
+
+    const sourceSnapshot = getRegisteredTransferSnapshot(normalizedTableTransfer.tableId);
+    const element = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
+    const root = element?.closest<HTMLElement>("[data-comins-table-instance-id]") ?? null;
+    const tableId = root?.dataset.cominsTransferTableId;
+
+    if (
+      !sourceSnapshot ||
+      sourceSnapshot.instanceId !== tableInstanceId ||
+      sourceSnapshot.root !== tableRootRef.current ||
+      !element ||
+      !root ||
+      !tableId ||
+      tableId === normalizedTableTransfer.tableId ||
+      root.dataset.cominsTransferScope !== normalizedTableTransfer.scope
+    ) {
+      return null;
+    }
+
+    const snapshot = getRegisteredTransferSnapshot(tableId);
+
+    if (
+      !snapshot ||
+      snapshot.root !== root ||
+      snapshot.instanceId !== root.dataset.cominsTableInstanceId ||
+      !snapshot.viewport ||
+      !root.contains(snapshot.viewport)
+    ) {
+      return null;
+    }
+
+    return { element, root, snapshot };
+  };
+  const scheduleTransferFocus = (
+    targetTableId: string,
+    kind: "group" | "row",
+    id: CominsRowId,
+  ) => {
+    if (pendingTransferFocusFrameRef.current !== null) {
+      window.cancelAnimationFrame(pendingTransferFocusFrameRef.current);
+    }
+
+    let remainingAttempts = 3;
+    const attemptFocus = () => {
+      pendingTransferFocusFrameRef.current = null;
+      const snapshot = getRegisteredTransferSnapshot(targetTableId);
+      const root = snapshot?.root;
+
+      if (!root) {
+        return;
+      }
+
+      const identity = getCominsTransferIdentity(id);
+      const row = [...root.querySelectorAll<HTMLElement>(
+        kind === "row"
+          ? "[data-comins-transfer-row-id]"
+          : "[data-comins-transfer-group-id]",
+      )].find((candidate) =>
+        (kind === "row"
+          ? candidate.dataset.cominsTransferRowId
+          : candidate.dataset.cominsTransferGroupId) === identity,
+      );
+      const focusTarget = kind === "group"
+        ? row?.querySelector<HTMLElement>(
+            ".comins-row-group-drag-handle, .comins-row-group-expander",
+          )
+        : row;
+
+      if (focusTarget) {
+        focusTarget.focus({ preventScroll: true });
+        return;
+      }
+
+      remainingAttempts -= 1;
+
+      if (remainingAttempts > 0) {
+        pendingTransferFocusFrameRef.current = window.requestAnimationFrame(attemptFocus);
+        return;
+      }
+
+      root.focus({ preventScroll: true });
+    };
+
+    pendingTransferFocusFrameRef.current = window.requestAnimationFrame(attemptFocus);
+  };
+  const createCrossTableAutoScroll = (
+    resolveTarget: (clientX: number, clientY: number) => void,
+  ) => {
+    let animationFrame: number | null = null;
+    let clientX = 0;
+    let clientY = 0;
+    let lastTimestamp: number | null = null;
+    let viewport: HTMLElement | null = null;
+
+    const stop = () => {
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+
+      animationFrame = null;
+      lastTimestamp = null;
+      viewport = null;
+    };
+    const runFrame = (timestamp: number) => {
+      animationFrame = null;
+      const currentViewport = viewport;
+
+      if (!currentViewport?.isConnected) {
+        stop();
+        return;
+      }
+
+      if (lastTimestamp === null) {
+        lastTimestamp = timestamp;
+        animationFrame = window.requestAnimationFrame(runFrame);
+        return;
+      }
+
+      const bounds = currentViewport.getBoundingClientRect();
+      const velocity = getCominsDragAutoScrollVelocity({ bottom: bounds.bottom, clientY, top: bounds.top });
+      const nextScrollTop = getCominsDragAutoScrollTop({
+        clientHeight: currentViewport.clientHeight,
+        deltaMs: timestamp - lastTimestamp,
+        scrollHeight: currentViewport.scrollHeight,
+        scrollTop: currentViewport.scrollTop,
+        velocity,
+      });
+      const moved = Math.abs(nextScrollTop - currentViewport.scrollTop) > 0.01;
+
+      lastTimestamp = timestamp;
+
+      if (!moved) {
+        stop();
+        return;
+      }
+
+      currentViewport.scrollTop = nextScrollTop;
+      resolveTarget(clientX, clientY);
+    };
+    const update = (
+      nextViewport: HTMLElement | null,
+      nextClientX: number,
+      nextClientY: number,
+      valid: boolean,
+    ) => {
+      if (!valid || !nextViewport?.isConnected) {
+        stop();
+        return;
+      }
+
+      const bounds = nextViewport.getBoundingClientRect();
+      const velocity = getCominsDragAutoScrollVelocity({
+        bottom: bounds.bottom,
+        clientY: nextClientY,
+        top: bounds.top,
+      });
+      const maxScrollTop = Math.max(0, nextViewport.scrollHeight - nextViewport.clientHeight);
+      const canScroll = velocity < 0
+        ? nextViewport.scrollTop > 0
+        : velocity > 0 && nextViewport.scrollTop < maxScrollTop;
+
+      if (!canScroll) {
+        stop();
+        return;
+      }
+
+      if (viewport !== nextViewport) {
+        lastTimestamp = null;
+      }
+
+      viewport = nextViewport;
+      clientX = nextClientX;
+      clientY = nextClientY;
+
+      if (animationFrame === null) {
+        animationFrame = window.requestAnimationFrame(runFrame);
+      }
+    };
+
+    return { stop, update };
   };
 
   useLayoutEffect(() => {
@@ -1754,7 +2150,7 @@ function CominsTableInner<TData, TGroup>(
       columnGroups,
       columns,
       getRowId,
-      pagination: effectivePagination ?? current.pagination,
+      pagination: effectivePagination,
       rows: effectiveData,
       showHeader,
       sortModel: current.sortModel,
@@ -1801,6 +2197,11 @@ function CominsTableInner<TData, TGroup>(
   useEffect(() => {
     return () => {
       clearActivePointerGesture();
+      clearExternalDropMarker();
+
+      if (pendingTransferFocusFrameRef.current !== null) {
+        window.cancelAnimationFrame(pendingTransferFocusFrameRef.current);
+      }
 
       if (scrollFrameRef.current !== null) {
         window.cancelAnimationFrame(scrollFrameRef.current);
@@ -2132,6 +2533,69 @@ function CominsTableInner<TData, TGroup>(
       return Math.min(maxWidth, Math.max(minWidth, width));
     });
   }, [containerWidth, state.columnState, visibleColumns]);
+  const columnPinning = useMemo(() => {
+    const groupIdByColumnId = new Map<string, string>();
+
+    for (const group of state.columnGroups) {
+      for (const columnId of group.children) {
+        groupIdByColumnId.set(columnId, group.id);
+      }
+    }
+
+    const visibleColumnIds = new Set(visibleColumns.map((column) => column.id));
+    const widthByColumnId = new Map(
+      visibleColumns.map((column, index) => [
+        column.id,
+        typeof columnWidths[index] === "number" ? columnWidths[index] : 0,
+      ] as const),
+    );
+    const emittedGroups = new Set<string>();
+    const blocks = visibleColumns.flatMap((column) => {
+      const groupId = groupIdByColumnId.get(column.id);
+
+      if (!groupId) {
+        return [{
+          columnIds: [column.id],
+          columnWidths: [widthByColumnId.get(column.id) ?? 0],
+          id: `column:${column.id}`,
+          pinned: state.columnState[column.id]?.pinned,
+        }];
+      }
+
+      if (emittedGroups.has(groupId)) {
+        return [];
+      }
+
+      emittedGroups.add(groupId);
+      const group = state.columnGroups.find((candidate) => candidate.id === groupId);
+      const columnIds = visibleColumns
+        .map((candidate) => candidate.id)
+        .filter((columnId) => visibleColumnIds.has(columnId) && group?.children.includes(columnId));
+
+      return [{
+        columnIds,
+        columnWidths: columnIds.map((columnId) => widthByColumnId.get(columnId) ?? 0),
+        id: `group:${groupId}`,
+        pinned: state.columnGroupState[groupId]?.pinned,
+      }];
+    });
+
+    return resolveCominsColumnPinning(blocks, containerWidth);
+  }, [columnWidths, containerWidth, state.columnGroupState, state.columnGroups, state.columnState, visibleColumns]);
+  const getPinnedColumnAttributes = (columnId: string) => {
+    const pin = columnPinning.columns.get(columnId);
+
+    return {
+      boundary: pin?.boundary,
+      pinned: pin?.pinned,
+      style: pin?.pinned
+        ? {
+            [pin.pinned]: pin.offset,
+            position: "sticky",
+          } as React.CSSProperties
+        : undefined,
+    };
+  };
   const columnWidthTotal = useMemo(() => {
     let totalWidth = 0;
 
@@ -2206,6 +2670,7 @@ function CominsTableInner<TData, TGroup>(
       className?: string;
       colSpan: number;
       column: CominsTableRuntimeColumn<TData>;
+      startIndex: number;
       style?: React.CSSProperties;
       value: React.ReactNode;
     }> = [];
@@ -2227,6 +2692,7 @@ function CominsTableInner<TData, TGroup>(
         className: config?.className,
         colSpan,
         column,
+        startIndex: columnIndex,
         style: config?.style,
         value: summaryValues?.[column.id] ?? (cells.length === 0 ? summary.label : null),
       });
@@ -2334,6 +2800,63 @@ function CominsTableInner<TData, TGroup>(
     [normalizedExpandedGroupIds, orderedGroupModel, state.rowIds],
   );
   const groupingActive = groupingProjection !== null;
+  const transferEndpoint: CominsTableTransferEndpoint<TData, TGroup> | null =
+    normalizedTableTransfer
+      ? groupingActive && rowGrouping
+        ? {
+            data: state.rows,
+            getGroupId: rowGrouping.getGroupId,
+            getRowGroupId: rowGrouping.getRowGroupId,
+            getRowId: state.getRowId,
+            groups: rowGrouping.groups,
+            setRowGroupId: rowGrouping.setRowGroupId,
+            tableId: normalizedTableTransfer.tableId,
+          }
+        : {
+            data: state.rows,
+            getRowId: state.getRowId,
+            tableId: normalizedTableTransfer.tableId,
+          }
+      : null;
+
+  transferSnapshotRef.current = normalizedTableTransfer && transferEndpoint
+    ? {
+        config: normalizedTableTransfer,
+        endpoint: transferEndpoint,
+        instanceId: tableInstanceId,
+        root: tableRootRef.current,
+        viewport: containerRef.current,
+      }
+    : null;
+
+  const transferCoordinator = normalizedTableTransfer?.coordinator;
+  const transferScope = normalizedTableTransfer?.scope;
+  const transferTableId = normalizedTableTransfer?.tableId;
+  useEffect(() => {
+    if (!transferCoordinator || !transferScope || !transferTableId) {
+      return undefined;
+    }
+
+    return registerCominsTableTransfer(
+      transferCoordinator,
+      transferScope,
+      transferTableId,
+      {
+        getSnapshot: () => {
+          const snapshot = transferSnapshotRef.current;
+
+          return snapshot
+            ? {
+                ...snapshot,
+                root: tableRootRef.current,
+                viewport: containerRef.current,
+              }
+            : null;
+        },
+      },
+    );
+  }, [transferCoordinator, transferScope, transferTableId]);
+
   useLayoutEffect(() => {
     if (!groupingProjection || !orderedGroupModel) {
       previousGroupedDataIndexesRef.current = null;
@@ -3128,8 +3651,17 @@ function CominsTableInner<TData, TGroup>(
             ?.children.find((childId) => visibleColumns.some((column) => column.id === childId));
 
     return targetColumnId
-      ? visibleColumns.findIndex((visibleColumn) => visibleColumn.id === targetColumnId)
+      ? stateRef.current.columnOrder.indexOf(targetColumnId)
       : -1;
+  };
+  const getColumnMoveHeaderPinned = (header: CominsColumnMoveHeader) => {
+    if (header.kind === "group") {
+      return stateRef.current.columnGroupState[header.id]?.pinned;
+    }
+
+    return header.parentGroupId
+      ? stateRef.current.columnGroupState[header.parentGroupId]?.pinned
+      : stateRef.current.columnState[header.id]?.pinned;
   };
 
   useImperativeHandle(
@@ -3526,7 +4058,10 @@ function CominsTableInner<TData, TGroup>(
   ) => {
     const column = cell.column;
 
-    if (column.lockPosition) {
+    if (
+      column.lockPosition ||
+      (!cell.groupId && stateRef.current.columnState[column.id]?.pinned !== undefined)
+    ) {
       return;
     }
 
@@ -3544,6 +4079,10 @@ function CominsTableInner<TData, TGroup>(
         setMovingColumnId(column.id);
       },
       commitTarget: (target) => {
+        if (getColumnMoveHeaderPinned(target) !== getColumnMoveHeaderPinned(source)) {
+          return;
+        }
+
         const targetIndex = getColumnMoveTargetIndex(target);
 
         if (targetIndex >= 0) {
@@ -3563,6 +4102,10 @@ function CominsTableInner<TData, TGroup>(
       id: column.id,
       kind: "column",
       resolveTarget: (target) => {
+        if (getColumnMoveHeaderPinned(target) !== getColumnMoveHeaderPinned(source)) {
+          return "invalid";
+        }
+
         const targetIndex = getColumnMoveTargetIndex(target);
 
         if (targetIndex < 0) {
@@ -3588,7 +4131,7 @@ function CominsTableInner<TData, TGroup>(
     group: CominsTableRuntimeColumnGroup,
     activateImmediately = false,
   ) => {
-    if (group.lockPosition) {
+    if (group.lockPosition || stateRef.current.columnGroupState[group.id]?.pinned !== undefined) {
       return;
     }
 
@@ -3601,6 +4144,10 @@ function CominsTableInner<TData, TGroup>(
         setMovingGroupId(group.id);
       },
       commitTarget: (target) => {
+        if (getColumnMoveHeaderPinned(target) !== getColumnMoveHeaderPinned(source)) {
+          return;
+        }
+
         const targetIndex = getColumnMoveTargetIndex(target);
 
         if (targetIndex >= 0) {
@@ -3620,6 +4167,10 @@ function CominsTableInner<TData, TGroup>(
       id: group.id,
       kind: "group",
       resolveTarget: (target) => {
+        if (getColumnMoveHeaderPinned(target) !== getColumnMoveHeaderPinned(source)) {
+          return "invalid";
+        }
+
         const targetIndex = getColumnMoveTargetIndex(target);
 
         if (targetIndex < 0) {
@@ -3857,56 +4408,195 @@ function CominsTableInner<TData, TGroup>(
     event.stopPropagation();
 
     const sourceRowId = entry.rowId;
+    let crossTarget: CominsCrossTableRowTarget<TData, TGroup> | null = null;
+    let autoScroll: ReturnType<typeof createCrossTableAutoScroll>;
     const setActiveRowMoveState = (next: CominsRowMoveState | null) => {
       rowMoveStateRef.current = next;
       setRowMoveState(next);
     };
-    const updateTarget = (clientX: number, clientY: number) => {
-      const target = document
-        .elementFromPoint(clientX, clientY)
-        ?.closest<HTMLElement>("[data-comins-row-data-index], [data-comins-group-index]");
+    const resolveCrossTarget = (
+      clientX: number,
+      clientY: number,
+    ): CominsCrossTableRowTarget<TData, TGroup> | null => {
+      const hit = getCrossTableTransferHit(clientX, clientY);
 
-      if (!target) {
-        return;
+      if (!hit || !normalizedTableTransfer) {
+        return null;
       }
 
-      if (target.dataset.cominsRowDataIndex !== undefined) {
-        const targetDataIndex = Number(target.dataset.cominsRowDataIndex);
+      const sourceSnapshot = getRegisteredTransferSnapshot(normalizedTableTransfer.tableId);
+      const sourceEndpoint = sourceSnapshot?.endpoint;
+      const targetEndpoint = hit.snapshot.endpoint;
+      const sourceGrouped = sourceEndpoint && isCominsGroupedTransferEndpoint(sourceEndpoint)
+        ? sourceEndpoint
+        : null;
+      const targetGrouped = isCominsGroupedTransferEndpoint(targetEndpoint)
+        ? targetEndpoint
+        : null;
+      const sourceDataIndex = sourceEndpoint?.data.findIndex(
+        (row, dataIndex) => sourceEndpoint.getRowId(row, dataIndex) === sourceRowId,
+      ) ?? -1;
+      const sourceRow = sourceDataIndex >= 0 ? sourceEndpoint?.data[sourceDataIndex] : undefined;
+      const rowElement = hit.element.closest<HTMLElement>("[data-comins-row-data-index]");
+      const groupElement = hit.element.closest<HTMLElement>("[data-comins-group-index]");
+      let marker = hit.snapshot.viewport ?? hit.root;
+      let targetGroupId: CominsRowId | undefined;
+      let targetRowId: CominsRowId | undefined;
+      let structurallyValid =
+        sourceRow !== undefined &&
+        (sourceGrouped === null) === (targetGrouped === null);
 
-        if (!Number.isInteger(targetDataIndex)) {
+      if (
+        rowElement &&
+        rowElement.closest<HTMLElement>("[data-comins-table-instance-id]") === hit.root
+      ) {
+        marker = rowElement;
+        const targetDataIndex = Number(rowElement.dataset.cominsRowDataIndex);
+        const targetRow = Number.isInteger(targetDataIndex)
+          ? targetEndpoint.data[targetDataIndex]
+          : undefined;
+
+        if (targetRow === undefined) {
+          structurallyValid = false;
+        } else {
+          targetRowId = targetEndpoint.getRowId(targetRow, targetDataIndex);
+          targetGroupId = targetGrouped?.getRowGroupId(targetRow, targetDataIndex);
+        }
+      } else if (
+        groupElement &&
+        groupElement.closest<HTMLElement>("[data-comins-table-instance-id]") === hit.root
+      ) {
+        marker = groupElement;
+        const targetGroupIndex = Number(groupElement.dataset.cominsGroupIndex);
+        const targetGroup = targetGrouped && Number.isInteger(targetGroupIndex)
+          ? targetGrouped.groups[targetGroupIndex]
+          : undefined;
+
+        if (!targetGrouped || targetGroup === undefined) {
+          structurallyValid = false;
+        } else {
+          targetGroupId = targetGrouped.getGroupId(targetGroup);
+        }
+      } else if (targetGrouped) {
+        structurallyValid = false;
+      }
+
+      if (structurallyValid && sourceGrouped && targetGrouped && sourceRow !== undefined) {
+        const sourceGroupId = sourceGrouped.getRowGroupId(sourceRow, sourceDataIndex);
+
+        structurallyValid =
+          targetGroupId !== undefined &&
+          targetGrouped.groups.some(
+            (group) => targetGrouped.getGroupId(group) === targetGroupId,
+          ) &&
+          (sourceGroupId === targetGroupId || typeof targetGrouped.setRowGroupId === "function");
+      }
+
+      const intent: CominsTableTransferIntent<TData, TGroup> | null =
+        structurallyValid && sourceRow !== undefined
+          ? {
+              kind: "row",
+              row: sourceRow,
+              sourceRowId,
+              sourceTableId: sourceEndpoint!.tableId,
+              targetGroupId,
+              targetRowId,
+              targetTableId: targetEndpoint.tableId,
+            }
+          : null;
+      const valid = Boolean(intent) && (hit.snapshot.config.canTransfer?.(intent!) ?? true);
+
+      return {
+        ...hit,
+        marker,
+        targetGroupId,
+        targetRowId,
+        valid,
+      };
+    };
+    const updateTarget = (clientX: number, clientY: number) => {
+      const pointElement = document.elementFromPoint(clientX, clientY);
+      const target = pointElement
+        ?.closest<HTMLElement>("[data-comins-row-data-index], [data-comins-group-index]");
+      const targetTableInstanceId = pointElement
+        ?.closest<HTMLElement>("[data-comins-table-instance-id]")
+        ?.dataset.cominsTableInstanceId;
+
+      if (target && targetTableInstanceId === tableInstanceId) {
+        crossTarget = null;
+        clearExternalDropMarker();
+        autoScroll.stop();
+
+        if (target.dataset.cominsRowDataIndex !== undefined) {
+          const targetDataIndex = Number(target.dataset.cominsRowDataIndex);
+
+          if (!Number.isInteger(targetDataIndex)) {
+            return;
+          }
+
+          const targetRow = stateRef.current.rows[targetDataIndex];
+          const targetGroupId = groupingActive && rowGrouping && targetRow !== undefined
+            ? rowGrouping.getRowGroupId(targetRow, targetDataIndex)
+            : undefined;
+          const sourceGroupId = groupingActive && rowGrouping
+            ? rowGrouping.getRowGroupId(entry.row, entry.dataIndex)
+            : undefined;
+          const valid =
+            targetGroupId === undefined ||
+            sourceGroupId === targetGroupId ||
+            (typeof rowGrouping?.setRowGroupId === "function" && typeof onChangeData === "function");
+
+          setActiveRowMoveState({ sourceRowId, targetDataIndex, targetGroupId, valid });
           return;
         }
 
-        const targetRow = stateRef.current.rows[targetDataIndex];
-        const targetGroupId = groupingActive && rowGrouping && targetRow !== undefined
-          ? rowGrouping.getRowGroupId(targetRow, targetDataIndex)
+        const targetGroupIndex = Number(target.dataset.cominsGroupIndex);
+        const targetGroupId = Number.isInteger(targetGroupIndex)
+          ? orderedGroupModel?.groupIds[targetGroupIndex]
           : undefined;
-        const sourceGroupId = groupingActive && rowGrouping
-          ? rowGrouping.getRowGroupId(entry.row, entry.dataIndex)
-          : undefined;
-        const valid =
-          targetGroupId === undefined ||
-          sourceGroupId === targetGroupId ||
-          (typeof rowGrouping?.setRowGroupId === "function" && typeof onChangeData === "function");
 
-        setActiveRowMoveState({ sourceRowId, targetDataIndex, targetGroupId, valid });
+        if (targetGroupId !== undefined && groupingActive && rowGrouping) {
+          const sourceGroupId = rowGrouping.getRowGroupId(entry.row, entry.dataIndex);
+          const valid =
+            sourceGroupId === targetGroupId ||
+            (typeof rowGrouping.setRowGroupId === "function" && typeof onChangeData === "function");
+
+          setActiveRowMoveState({ sourceRowId, targetGroupId, valid });
+        }
         return;
       }
 
-      const targetGroupIndex = Number(target.dataset.cominsGroupIndex);
-      const targetGroupId = Number.isInteger(targetGroupIndex)
-        ? orderedGroupModel?.groupIds[targetGroupIndex]
-        : undefined;
-
-      if (targetGroupId !== undefined && groupingActive && rowGrouping) {
-        const sourceGroupId = rowGrouping.getRowGroupId(entry.row, entry.dataIndex);
-        const valid =
-          sourceGroupId === targetGroupId ||
-          (typeof rowGrouping.setRowGroupId === "function" && typeof onChangeData === "function");
-
-        setActiveRowMoveState({ sourceRowId, targetGroupId, valid });
+      if (targetTableInstanceId === tableInstanceId) {
+        crossTarget = null;
+        clearExternalDropMarker();
+        autoScroll.stop();
+        return;
       }
+
+      crossTarget = resolveCrossTarget(clientX, clientY);
+
+      if (crossTarget) {
+        setExternalDropMarker(crossTarget.marker, "row", crossTarget.valid);
+        setActiveRowMoveState({
+          sourceRowId,
+          targetGroupId: crossTarget.targetGroupId,
+          targetTableId: crossTarget.snapshot.endpoint.tableId,
+          valid: crossTarget.valid,
+        });
+        autoScroll.update(
+          crossTarget.snapshot.viewport,
+          clientX,
+          clientY,
+          crossTarget.valid,
+        );
+        return;
+      }
+
+      clearExternalDropMarker();
+      autoScroll.stop();
+      setActiveRowMoveState({ sourceRowId, valid: false });
     };
+    autoScroll = createCrossTableAutoScroll(updateTarget);
     const handlePointerMove = (moveEvent: PointerEvent) => {
       if (moveEvent.buttons !== 1) {
         return;
@@ -3919,19 +4609,50 @@ function CominsTableInner<TData, TGroup>(
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointercancel", handlePointerCancel);
       window.removeEventListener("blur", handlePointerCancel);
+      window.removeEventListener("keydown", handleKeyDown);
+      autoScroll.stop();
 
       if (activePointerGestureCleanupRef.current === cleanup) {
         activePointerGestureCleanupRef.current = null;
       }
     };
     const handlePointerUp = (upEvent: PointerEvent) => {
-      cleanup();
       updateTarget(upEvent.clientX, upEvent.clientY);
 
       const moveState = rowMoveStateRef.current;
+      const finalCrossTarget = crossTarget;
+      cleanup();
+      clearExternalDropMarker();
       setActiveRowMoveState(null);
 
       if (!moveState?.valid) {
+        return;
+      }
+
+      if (moveState.targetTableId && finalCrossTarget && normalizedTableTransfer) {
+        const sourceSnapshot = getRegisteredTransferSnapshot(normalizedTableTransfer.tableId);
+        const targetSnapshot = getRegisteredTransferSnapshot(moveState.targetTableId);
+
+        if (
+          !sourceSnapshot ||
+          !targetSnapshot ||
+          targetSnapshot.instanceId !== finalCrossTarget.snapshot.instanceId
+        ) {
+          return;
+        }
+
+        const result = transferCominsRowBetweenTables({
+          resolveConflict: targetSnapshot.config.resolveConflict,
+          source: sourceSnapshot.endpoint,
+          sourceRowId,
+          target: targetSnapshot.endpoint,
+          targetGroupId: finalCrossTarget.targetGroupId,
+          targetRowId: finalCrossTarget.targetRowId,
+        });
+
+        if (result && emitCominsTableTransfer(normalizedTableTransfer.coordinator, result)) {
+          scheduleTransferFocus(targetSnapshot.endpoint.tableId, "row", sourceRowId);
+        }
         return;
       }
 
@@ -3963,7 +4684,13 @@ function CominsTableInner<TData, TGroup>(
     };
     const handlePointerCancel = () => {
       cleanup();
+      clearExternalDropMarker();
       setActiveRowMoveState(null);
+    };
+    const handleKeyDown = (keyEvent: KeyboardEvent) => {
+      if (keyEvent.key === "Escape") {
+        handlePointerCancel();
+      }
     };
 
     updateTarget(event.clientX, event.clientY);
@@ -3972,17 +4699,19 @@ function CominsTableInner<TData, TGroup>(
     window.addEventListener("pointerup", handlePointerUp);
     window.addEventListener("pointercancel", handlePointerCancel);
     window.addEventListener("blur", handlePointerCancel);
+    window.addEventListener("keydown", handleKeyDown);
   };
   const beginRowGroupHandlePointerDrag = (
     event: React.PointerEvent<HTMLElement>,
     sourceGroupId: CominsRowId,
   ) => {
     const onChangeGroups = rowGrouping?.onChangeGroups;
+    const crossTableEnabled = Boolean(normalizedTableTransfer);
 
     if (
       event.button !== 0 ||
       !rowGrouping?.groupDraggable ||
-      typeof onChangeGroups !== "function" ||
+      (typeof onChangeGroups !== "function" && !crossTableEnabled) ||
       !orderedGroupModel?.groupsById.has(sourceGroupId)
     ) {
       return;
@@ -3991,28 +4720,151 @@ function CominsTableInner<TData, TGroup>(
     event.preventDefault();
     event.stopPropagation();
 
+    let crossTarget: CominsCrossTableGroupTarget<TData, TGroup> | null = null;
+    let autoScroll: ReturnType<typeof createCrossTableAutoScroll>;
     const setActiveGroupMoveState = (next: CominsRowGroupMoveState | null) => {
       rowGroupMoveStateRef.current = next;
       setRowGroupMoveState(next);
     };
-    const updateTarget = (clientX: number, clientY: number) => {
-      const targetRow = document
-        .elementFromPoint(clientX, clientY)
-        ?.closest<HTMLElement>("[data-comins-group-index]");
-      const targetGroupIndex = Number(targetRow?.dataset.cominsGroupIndex);
-      const targetGroupId = Number.isInteger(targetGroupIndex)
-        ? orderedGroupModel.groupIds[targetGroupIndex]
-        : undefined;
+    const resolveCrossTarget = (
+      clientX: number,
+      clientY: number,
+    ): CominsCrossTableGroupTarget<TData, TGroup> | null => {
+      const hit = getCrossTableTransferHit(clientX, clientY);
 
-      if (!targetRow || targetGroupId === undefined) {
+      if (!hit || !normalizedTableTransfer) {
+        return null;
+      }
+
+      const sourceSnapshot = getRegisteredTransferSnapshot(normalizedTableTransfer.tableId);
+      const sourceEndpoint = sourceSnapshot?.endpoint;
+      const sourceGrouped = sourceEndpoint && isCominsGroupedTransferEndpoint(sourceEndpoint)
+        ? sourceEndpoint
+        : null;
+      const targetGrouped = isCominsGroupedTransferEndpoint(hit.snapshot.endpoint)
+        ? hit.snapshot.endpoint
+        : null;
+      const sourceGroupIndex = sourceGrouped?.groups.findIndex(
+        (group) => sourceGrouped.getGroupId(group) === sourceGroupId,
+      ) ?? -1;
+      const sourceGroup = sourceGroupIndex >= 0
+        ? sourceGrouped?.groups[sourceGroupIndex]
+        : undefined;
+      const groupElement = hit.element.closest<HTMLElement>("[data-comins-group-index]");
+      let marker = hit.snapshot.viewport ?? hit.root;
+      let position: "after" | "append" | "before" = "append";
+      let targetGroupId: CominsRowId | undefined;
+      let structurallyValid = Boolean(sourceGrouped && targetGrouped && sourceGroup !== undefined);
+
+      if (
+        groupElement &&
+        groupElement.closest<HTMLElement>("[data-comins-table-instance-id]") === hit.root
+      ) {
+        marker = groupElement;
+        const targetGroupIndex = Number(groupElement.dataset.cominsGroupIndex);
+        const targetGroup = targetGrouped && Number.isInteger(targetGroupIndex)
+          ? targetGrouped.groups[targetGroupIndex]
+          : undefined;
+
+        if (targetGroup === undefined) {
+          structurallyValid = false;
+        } else {
+          targetGroupId = targetGrouped!.getGroupId(targetGroup);
+          const bounds = groupElement.getBoundingClientRect();
+          position = clientY >= bounds.top + bounds.height / 2 ? "after" : "before";
+        }
+      } else if (!targetGrouped || targetGrouped.groups.length > 0) {
+        structurallyValid = false;
+      }
+
+      const intent: CominsTableTransferIntent<TData, TGroup> | null =
+        structurallyValid && sourceGrouped && sourceGroup !== undefined
+          ? {
+              group: sourceGroup,
+              kind: "group",
+              rows: sourceGrouped.data.filter(
+                (row, dataIndex) =>
+                  sourceGrouped.getRowGroupId(row, dataIndex) === sourceGroupId,
+              ),
+              sourceGroupId,
+              sourceTableId: sourceGrouped.tableId,
+              targetGroupId,
+              targetTableId: hit.snapshot.endpoint.tableId,
+            }
+          : null;
+      const valid = Boolean(intent) && (hit.snapshot.config.canTransfer?.(intent!) ?? true);
+
+      return {
+        ...hit,
+        marker,
+        position,
+        targetGroupId,
+        valid,
+      };
+    };
+    const updateTarget = (clientX: number, clientY: number) => {
+      const pointElement = document.elementFromPoint(clientX, clientY);
+      const targetRow = pointElement?.closest<HTMLElement>("[data-comins-group-index]");
+      const targetTableInstanceId = pointElement
+        ?.closest<HTMLElement>("[data-comins-table-instance-id]")
+        ?.dataset.cominsTableInstanceId;
+
+      if (targetRow && targetTableInstanceId === tableInstanceId) {
+        crossTarget = null;
+        clearExternalDropMarker();
+        autoScroll.stop();
+
+        if (typeof onChangeGroups !== "function") {
+          setActiveGroupMoveState(null);
+          return;
+        }
+
+        const targetGroupIndex = Number(targetRow.dataset.cominsGroupIndex);
+        const targetGroupId = Number.isInteger(targetGroupIndex)
+          ? orderedGroupModel.groupIds[targetGroupIndex]
+          : undefined;
+
+        if (targetGroupId === undefined) {
+          setActiveGroupMoveState(null);
+          return;
+        }
+
+        const bounds = targetRow.getBoundingClientRect();
+        const position = clientY >= bounds.top + bounds.height / 2 ? "after" : "before";
+
+        setActiveGroupMoveState({ position, sourceGroupId, targetGroupId });
         return;
       }
 
-      const bounds = targetRow.getBoundingClientRect();
-      const position = clientY >= bounds.top + bounds.height / 2 ? "after" : "before";
+      crossTarget = resolveCrossTarget(clientX, clientY);
 
-      setActiveGroupMoveState({ position, sourceGroupId, targetGroupId });
+      if (crossTarget) {
+        setExternalDropMarker(
+          crossTarget.marker,
+          "group",
+          crossTarget.valid,
+          crossTarget.position,
+        );
+        setActiveGroupMoveState({
+          position: crossTarget.position,
+          sourceGroupId,
+          targetGroupId: crossTarget.targetGroupId,
+          targetTableId: crossTarget.snapshot.endpoint.tableId,
+        });
+        autoScroll.update(
+          crossTarget.snapshot.viewport,
+          clientX,
+          clientY,
+          crossTarget.valid,
+        );
+        return;
+      }
+
+      clearExternalDropMarker();
+      autoScroll.stop();
+      setActiveGroupMoveState(null);
     };
+    autoScroll = createCrossTableAutoScroll(updateTarget);
     const handlePointerMove = (moveEvent: PointerEvent) => {
       if (moveEvent.buttons === 1) {
         updateTarget(moveEvent.clientX, moveEvent.clientY);
@@ -4023,19 +4875,59 @@ function CominsTableInner<TData, TGroup>(
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointercancel", handlePointerCancel);
       window.removeEventListener("blur", handlePointerCancel);
+      window.removeEventListener("keydown", handleKeyDown);
+      autoScroll.stop();
 
       if (activePointerGestureCleanupRef.current === cleanup) {
         activePointerGestureCleanupRef.current = null;
       }
     };
     const handlePointerUp = (upEvent: PointerEvent) => {
-      cleanup();
       updateTarget(upEvent.clientX, upEvent.clientY);
 
       const moveState = rowGroupMoveStateRef.current;
+      const finalCrossTarget = crossTarget;
+      cleanup();
+      clearExternalDropMarker();
       setActiveGroupMoveState(null);
 
-      if (!moveState || moveState.sourceGroupId === moveState.targetGroupId) {
+      if (
+        moveState?.targetTableId &&
+        finalCrossTarget?.valid &&
+        normalizedTableTransfer
+      ) {
+        const sourceSnapshot = getRegisteredTransferSnapshot(normalizedTableTransfer.tableId);
+        const targetSnapshot = getRegisteredTransferSnapshot(moveState.targetTableId);
+
+        if (
+          !sourceSnapshot ||
+          !targetSnapshot ||
+          targetSnapshot.instanceId !== finalCrossTarget.snapshot.instanceId
+        ) {
+          return;
+        }
+
+        const result = transferCominsGroupBetweenTables({
+          position: finalCrossTarget.position,
+          resolveConflict: targetSnapshot.config.resolveConflict,
+          source: sourceSnapshot.endpoint,
+          sourceGroupId,
+          target: targetSnapshot.endpoint,
+          targetGroupId: finalCrossTarget.targetGroupId,
+        });
+
+        if (result && emitCominsTableTransfer(normalizedTableTransfer.coordinator, result)) {
+          scheduleTransferFocus(targetSnapshot.endpoint.tableId, "group", sourceGroupId);
+        }
+        return;
+      }
+
+      if (
+        !moveState ||
+        moveState.position === "append" ||
+        moveState.targetGroupId === undefined ||
+        moveState.sourceGroupId === moveState.targetGroupId
+      ) {
         return;
       }
 
@@ -4059,7 +4951,7 @@ function CominsTableInner<TData, TGroup>(
         currentGroups.some((group, index) => group !== nextGroups[index]);
 
       if (changed) {
-        onChangeGroups(nextGroups, {
+        onChangeGroups?.(nextGroups, {
           fromIndex,
           groupId: moveState.sourceGroupId,
           reason: "move",
@@ -4070,7 +4962,13 @@ function CominsTableInner<TData, TGroup>(
     };
     const handlePointerCancel = () => {
       cleanup();
+      clearExternalDropMarker();
       setActiveGroupMoveState(null);
+    };
+    const handleKeyDown = (keyEvent: KeyboardEvent) => {
+      if (keyEvent.key === "Escape") {
+        handlePointerCancel();
+      }
     };
 
     setActiveGroupMoveState({
@@ -4083,6 +4981,7 @@ function CominsTableInner<TData, TGroup>(
     window.addEventListener("pointerup", handlePointerUp);
     window.addEventListener("pointercancel", handlePointerCancel);
     window.addEventListener("blur", handlePointerCancel);
+    window.addEventListener("keydown", handleKeyDown);
   };
   const movingColumn = movingColumnId
     ? visibleColumns.find((visibleColumn) => visibleColumn.id === movingColumnId)
@@ -4117,7 +5016,33 @@ function CominsTableInner<TData, TGroup>(
     if (cell.kind === "group") {
       const isDropTarget = columnMoveTarget?.kind === "group" && columnMoveTarget.id === cell.groupId;
       const isGroupPlaceholder = movingGroupId === cell.groupId;
-      const groupPositionLocked = cell.group.lockPosition === true;
+      const groupPositionLocked =
+        cell.group.lockPosition === true ||
+        state.columnGroupState[cell.groupId]?.pinned !== undefined;
+      const groupColumnIds = visibleColumns
+        .map((column) => column.id)
+        .filter((columnId) => cell.group.children.includes(columnId));
+      const firstGroupPin = groupColumnIds[0]
+        ? getPinnedColumnAttributes(groupColumnIds[0])
+        : undefined;
+      const lastGroupPin = groupColumnIds.at(-1)
+        ? getPinnedColumnAttributes(groupColumnIds.at(-1)!)
+        : undefined;
+      const groupPinned = firstGroupPin?.pinned && groupColumnIds.every(
+        (columnId) => getPinnedColumnAttributes(columnId).pinned === firstGroupPin.pinned,
+      )
+        ? firstGroupPin.pinned
+        : undefined;
+      const groupPinStyle = groupPinned === "left"
+        ? firstGroupPin?.style
+        : groupPinned === "right"
+          ? lastGroupPin?.style
+          : undefined;
+      const groupPinBoundary = groupPinned === "left"
+        ? lastGroupPin?.boundary
+        : groupPinned === "right"
+          ? firstGroupPin?.boundary
+          : undefined;
       const groupPlaceholderLabel = getCominsColumnPlaceholderText(cell.group.label, cell.groupId);
       return (
         <th
@@ -4142,11 +5067,14 @@ function CominsTableInner<TData, TGroup>(
           data-column-position-locked={groupPositionLocked ? "true" : undefined}
           data-comins-column-depth="0"
           data-comins-column-group-id={cell.groupId}
+          data-comins-pin-boundary={groupPinBoundary ? "true" : undefined}
+          data-comins-pinned={groupPinned}
           data-testid={`header-group-${cell.groupId}`}
           key={`group-${cell.groupId}`}
           onPointerDown={(event) => beginGroupPointerInteraction(event, cell.group)}
           rowSpan={cell.rowSpan}
           scope="colgroup"
+          style={groupPinStyle}
         >
           <span aria-hidden="true" className="comins-column-drop-marker" />
           <span
@@ -4266,6 +5194,7 @@ function CominsTableInner<TData, TGroup>(
     const index = visibleColumns.findIndex((visibleColumn) => visibleColumn.id === column.id);
     const safeIndex = index >= 0 ? index : fallbackIndex;
     const columnState = state.columnState[column.id];
+    const pinnedColumn = getPinnedColumnAttributes(column.id);
     const headerProps = column.header?.props ?? {};
     const sortRule = getSortRule(state.sortModel, column.id);
     const sortIndicatorState = getSortIndicatorState(state.sortModel, column.id);
@@ -4306,7 +5235,9 @@ function CominsTableInner<TData, TGroup>(
       : [];
     const hasHeaderComponents = headerLeftSlots.length > 0 || headerRightSlots.length > 0;
     const isDropTarget = columnMoveTarget?.kind === "column" && columnMoveTarget.id === column.id;
-    const columnPositionLocked = column.lockPosition === true;
+    const columnPositionLocked =
+      column.lockPosition === true ||
+      (!cell.groupId && columnState?.pinned !== undefined);
     const columnFilterKind = column.filter?.kind;
     const columnFilterable =
       filteringRequested &&
@@ -4337,6 +5268,8 @@ function CominsTableInner<TData, TGroup>(
         data-comins-column-id={column.id}
         data-comins-column-index={safeIndex}
         data-comins-column-parent-group-id={cell.groupId}
+        data-comins-pin-boundary={pinnedColumn.boundary ? "true" : undefined}
+        data-comins-pinned={pinnedColumn.pinned}
         data-sort-count={sortRule ? state.sortModel.length : undefined}
         data-sort-direction={sortRule?.rule.direction}
         data-sort-priority={sortRule?.priority}
@@ -4383,7 +5316,7 @@ function CominsTableInner<TData, TGroup>(
         onPointerDown={(event) => beginHeaderPointerInteraction(event, cell)}
         rowSpan={cell.rowSpan}
         scope="col"
-        style={{ width: columnState?.width ?? column.width, ...headerProps.style }}
+        style={{ width: columnState?.width ?? column.width, ...headerProps.style, ...pinnedColumn.style }}
         tabIndex={column.sort && !isColumnPlaceholder ? 0 : undefined}
       >
         <span aria-hidden="true" className="comins-column-drop-marker" />
@@ -4678,10 +5611,15 @@ function CominsTableInner<TData, TGroup>(
         .filter(Boolean)
         .join(" ")}
       aria-busy={resolvedLoading || resolvedLoadingMore ? "true" : undefined}
+      data-comins-table-instance-id={tableInstanceId}
+      data-comins-transfer-scope={normalizedTableTransfer?.scope}
+      data-comins-transfer-table-id={normalizedTableTransfer?.tableId}
       data-filter-active={filteringActive ? "true" : undefined}
       data-loading={resolvedLoading || resolvedLoadingMore ? "true" : undefined}
       data-show-header={renderedHeaderVisible ? "true" : undefined}
+      ref={tableRootRef}
       style={{ ...currentTheme.style, ...style }}
+      tabIndex={-1}
     >
       {renderedHeaderVisible ? (
         <div className="comins-table__header" ref={headerRef}>
@@ -4743,16 +5681,22 @@ function CominsTableInner<TData, TGroup>(
                   style={{ height: rowHeight }}
                 >
                   {visibleColumns.length > 0 ? (
-                    visibleColumns.map((column) => (
-                      <td
-                        className="comins-table__td comins-table__skeleton-cell px-3 py-2"
-                        data-testid={`loading-skeleton-cell-${skeletonIndex}-${column.id}`}
-                        key={column.id}
-                        style={{ height: rowHeight }}
-                      >
-                        <span className="comins-table__skeleton-block" />
-                      </td>
-                    ))
+                    visibleColumns.map((column) => {
+                      const pinnedColumn = getPinnedColumnAttributes(column.id);
+
+                      return (
+                        <td
+                          className="comins-table__td comins-table__skeleton-cell px-3 py-2"
+                          data-comins-pin-boundary={pinnedColumn.boundary ? "true" : undefined}
+                          data-comins-pinned={pinnedColumn.pinned}
+                          data-testid={`loading-skeleton-cell-${skeletonIndex}-${column.id}`}
+                          key={column.id}
+                          style={{ height: rowHeight, ...pinnedColumn.style }}
+                        >
+                          <span className="comins-table__skeleton-block" />
+                        </td>
+                      );
+                    })
                   ) : (
                     <td className="comins-table__td comins-table__skeleton-cell px-3 py-2">
                       <span className="comins-table__skeleton-block" />
@@ -4819,13 +5763,16 @@ function CominsTableInner<TData, TGroup>(
               });
               const groupDraggable =
                 rowGrouping?.groupDraggable === true &&
-                typeof rowGrouping.onChangeGroups === "function";
+                (typeof rowGrouping.onChangeGroups === "function" || Boolean(normalizedTableTransfer));
               const groupDropPosition =
+                rowGroupMoveState?.targetTableId === undefined &&
                 rowGroupMoveState?.targetGroupId === slot.groupId &&
                 rowGroupMoveState.sourceGroupId !== slot.groupId
                   ? rowGroupMoveState.position
                   : undefined;
-              const isRowDropTarget = rowMoveState?.targetGroupId === slot.groupId;
+              const isRowDropTarget =
+                rowMoveState?.targetTableId === undefined &&
+                rowMoveState?.targetGroupId === slot.groupId;
 
               return (
                 <tr
@@ -4839,6 +5786,7 @@ function CominsTableInner<TData, TGroup>(
                   data-comins-group-id={String(slot.groupId)}
                   data-comins-group-index={node.groupIndex}
                   data-comins-group-row="true"
+                  data-comins-transfer-group-id={getCominsTransferIdentity(slot.groupId)}
                   data-comins-group-drag-source={
                     rowGroupMoveState?.sourceGroupId === slot.groupId ? "true" : undefined
                   }
@@ -4936,7 +5884,10 @@ function CominsTableInner<TData, TGroup>(
 
             return (
               <Fragment key={rowRenderKey}>
-                {rowMoveState?.targetDataIndex === entry.dataIndex && rowMoveState.sourceRowId !== entry.rowId ? (
+                {
+                  rowMoveState?.targetTableId === undefined &&
+                  rowMoveState?.targetDataIndex === entry.dataIndex &&
+                  rowMoveState.sourceRowId !== entry.rowId ? (
                   <tr
                     aria-hidden="true"
                     className="comins-row-move-placeholder"
@@ -4962,6 +5913,7 @@ function CominsTableInner<TData, TGroup>(
                 data-comins-row-custom-background={rowCustomBackground === undefined ? undefined : "true"}
                 data-comins-row-data-index={entry.dataIndex}
                 data-comins-row-parity={entry.visibleIndex % 2 === 0 ? "even" : "odd"}
+                data-comins-transfer-row-id={getCominsTransferIdentity(entry.rowId)}
                 data-row-draggable={rowRuntimeProps.draggable ? "true" : "false"}
                 data-selected-row={isRowSelected ? "true" : undefined}
                 data-testid={`row-${String(entry.rowId)}`}
@@ -5002,6 +5954,7 @@ function CominsTableInner<TData, TGroup>(
                 tabIndex={rowRuntimeProps.disabled ? -1 : 0}
               >
                 {visibleColumns.map((column, columnIndex) => {
+                  const pinnedColumn = getPinnedColumnAttributes(column.id);
                   const rawValue = getCominsCellValue(state, entry.row, column.id);
                   const address = { columnId: column.id, rowId: entry.rowId };
                   const isCellInRange = cellSelection && isCominsCellInSelectedRange(
@@ -5127,6 +6080,8 @@ function CominsTableInner<TData, TGroup>(
 	                      data-comins-cell-column-id={column.id}
 	                      data-comins-component-cell={visibleCellComponents.length > 0 ? "true" : undefined}
                       data-comins-data-index={entry.dataIndex}
+                      data-comins-pin-boundary={pinnedColumn.boundary ? "true" : undefined}
+                      data-comins-pinned={pinnedColumn.pinned}
                       data-range-selected={isCellInRange ? "true" : undefined}
                       data-selected={isCellSelected ? "true" : undefined}
                       data-testid={`cell-${String(entry.rowId)}-${column.id}`}
@@ -5254,7 +6209,7 @@ function CominsTableInner<TData, TGroup>(
                         }
                       }}
                       onPointerUp={endCellRangeDrag}
-                      style={{ height: rowHeight, ...cellStyle }}
+                      style={{ height: rowHeight, ...cellStyle, ...pinnedColumn.style }}
                       title={typeof tooltip === "string" ? tooltip : undefined}
                       tabIndex={cellDisabled ? -1 : 0}
                     >
@@ -5386,18 +6341,35 @@ function CominsTableInner<TData, TGroup>(
                 className={["comins-table__summary-row", summary.className].filter(Boolean).join(" ")}
                 style={summary.style}
               >
-                {summaryCells.map((cell) => (
-                  <td
-                    className={["comins-table__summary-cell px-3 py-2", cell.className].filter(Boolean).join(" ")}
-                    colSpan={cell.colSpan}
-                    data-comins-summary-column-id={cell.column.id}
-                    data-testid={`summary-cell-${cell.column.id}`}
-                    key={cell.column.id}
-                    style={cell.style}
-                  >
-                    {cell.value}
-                  </td>
-                ))}
+                {summaryCells.flatMap((cell) =>
+                  getCominsColumnPinningSpanFragments(
+                    columnPinning,
+                    cell.startIndex,
+                    cell.colSpan,
+                  ).map((fragment, fragmentIndex) => {
+                    const fragmentStyle = fragment.pinned
+                      ? {
+                          [fragment.pinned]: fragment.offset,
+                          position: "sticky",
+                        } as React.CSSProperties
+                      : undefined;
+
+                    return (
+                      <td
+                        className={["comins-table__summary-cell px-3 py-2", cell.className].filter(Boolean).join(" ")}
+                        colSpan={fragment.colSpan}
+                        data-comins-pin-boundary={fragment.boundary ? "true" : undefined}
+                        data-comins-pinned={fragment.pinned}
+                        data-comins-summary-column-id={fragmentIndex === 0 ? cell.column.id : undefined}
+                        data-testid={fragmentIndex === 0 ? `summary-cell-${cell.column.id}` : undefined}
+                        key={`${cell.column.id}-${fragment.startIndex}`}
+                        style={{ ...cell.style, ...fragmentStyle }}
+                      >
+                        {fragmentIndex === 0 ? cell.value : null}
+                      </td>
+                    );
+                  }),
+                )}
               </tr>
             </tfoot>
           </table>
@@ -5442,6 +6414,7 @@ function CominsTreeTableInner<TData>(
     onLazyLoad: _onLazyLoad,
     onLoadMore: _onLoadMore,
     rowGrouping: _rowGrouping,
+    tableTransfer: _tableTransfer,
     rowProps,
     isRowExpandable: _isRowExpandable,
     renderRowDetail: _renderRowDetail,
@@ -5455,7 +6428,11 @@ function CominsTreeTableInner<TData>(
   const treeColumns = useMemo(
     () =>
       props.columns.map((column, index) =>
-        index === 0 ? { ...column, lockPosition: true } : column,
+        ({
+          ...column,
+          lockPosition: index === 0 ? true : column.lockPosition,
+          pinned: undefined,
+        }),
       ),
     [props.columns],
   );

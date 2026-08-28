@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.1.8 - 2026-08-28
+
+- Added responsive left/right Column Pinning for leaf Columns and atomic Header Groups, including persisted pin intent, position locking, resize-aware sticky offsets, wider-side inner-block demotion with a 48px center budget, opaque Header/Body/Skeleton/Summary surfaces, and Summary `colSpan` zone splitting while keeping full-width structural Rows non-sticky.
+- Added application-created Cross-Table Drag Coordinators for flat and grouped Rows and complete Group bundles, target-owned permission and reject/overwrite conflict callbacks, persistent empty Groups, immutable atomic source/target results, destination focus recovery, duplicate registration fail-closed behavior, and target-only vertical edge auto-scroll.
+- Added matching Korean/English Playground routes and public guides for Column Pinning and Cross-Table Row/Group Drag, including model ownership, supported combinations, destructive overwrite semantics, layout persistence, and responsive behavior.
+
 ## 0.1.7 - 2026-08-27
 
 - Added controlled client-side Column Filtering with text, number, UTC calendar-day date, and boolean operators; application-owned Filter/open-popover state; semantic Header controls; filtered sorting, pagination, virtualization, Summary, and Row Grouping projection; explicit Group preservation; Row Drag and remote/Tree exclusions; and matching Korean/English Playground documentation.

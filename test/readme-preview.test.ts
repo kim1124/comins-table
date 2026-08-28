@@ -74,6 +74,7 @@ describe("README preview contract", () => {
       "## Header And Layout",
       "## Rows, Cells, And Selection",
       "## Row Grouping",
+      "## Cross-Table Row And Group Drag",
       "## Column Filtering",
       "## Virtualization And Loading",
       "## Summary Row",

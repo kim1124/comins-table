@@ -27,6 +27,8 @@ const userDocs = [
   "19-row-expand.md",
   "20-row-grouping.md",
   "21-column-filtering.md",
+  "22-column-pinning.md",
+  "23-cross-table-drag.md",
 ];
 
 const implementedTerms = [
@@ -110,6 +112,11 @@ const implementedTerms = [
   "CominsColumnFilterOperator",
   "CominsColumnFilterRule",
   "CominsColumnFilteringConfig",
+  "CominsColumnPinned",
+  "tableTransfer",
+  "createCominsTableTransferCoordinator",
+  "transferCominsRowBetweenTables",
+  "transferCominsGroupBetweenTables",
 ];
 
 function readWorkspaceFile(path: string) {
@@ -185,12 +192,16 @@ describe("comins-table user documentation contract", () => {
     expect(readme).toContain("/examples/row-expand");
     expect(readme).toContain("/examples/row-grouping");
     expect(readme).toContain("/examples/column-filtering");
+    expect(readme).toContain("/examples/column-pinning");
+    expect(readme).toContain("/examples/cross-table-drag");
     expect(readme).toContain("/examples/selection-clipboard");
     expect(readme).toContain("docs/user/17-tree-grid.md");
     expect(readme).toContain("docs/user/18-summary-row.md");
     expect(readme).toContain("docs/user/19-row-expand.md");
     expect(readme).toContain("docs/user/20-row-grouping.md");
     expect(readme).toContain("docs/user/21-column-filtering.md");
+    expect(readme).toContain("docs/user/22-column-pinning.md");
+    expect(readme).toContain("docs/user/23-cross-table-drag.md");
     expect(readme).not.toContain("does not currently ship a browser example server");
   });
 
@@ -293,6 +304,43 @@ describe("comins-table user documentation contract", () => {
     expect(registry).toContain('id: "column-filtering"');
     expect(routes).toContain('path: "/examples/column-filtering"');
     expect(optionGuide).toContain('name: "columnFiltering"');
+  });
+
+  it("documents and demonstrates Column Pinning and Cross-Table Drag", () => {
+    const columnDocs = readWorkspaceFile("docs/user/22-column-pinning.md");
+    const koreanColumnDocs = readWorkspaceFile("docs/ko/22-column-pinning.md");
+    const transferDocs = readWorkspaceFile("docs/user/23-cross-table-drag.md");
+    const koreanTransferDocs = readWorkspaceFile("docs/ko/23-cross-table-drag.md");
+    const pinningPlayground = readWorkspaceFile("example/src/features/ColumnPinningFeature.tsx");
+    const transferPlayground = readWorkspaceFile("example/src/features/CrossTableDragFeature.tsx");
+    const registry = readWorkspaceFile("example/src/features/featureRegistry.tsx");
+    const routes = readWorkspaceFile("example/src/docs/docsRoutes.tsx");
+
+    for (const document of [columnDocs, koreanColumnDocs]) {
+      expect(document).toContain("pinned");
+      expect(document).toContain("48");
+      expect(document).toContain("getColumnLayout");
+      expect(document).toContain("Header Group");
+      expect(document).toContain("Summary");
+    }
+
+    for (const document of [transferDocs, koreanTransferDocs]) {
+      expect(document).toContain("createCominsTableTransferCoordinator");
+      expect(document).toContain("tableTransfer");
+      expect(document).toContain("canTransfer");
+      expect(document).toContain("resolveConflict");
+      expect(document).toContain("overwrite");
+      expect(document).toContain("empty");
+      expect(document).toContain("onTransfer");
+    }
+
+    expect(pinningPlayground).toContain('data-testid="column-pinning-viewport"');
+    expect(transferPlayground).toContain('data-testid="cross-table-flat-left"');
+    expect(transferPlayground).toContain('data-testid="cross-table-group-right"');
+    expect(registry).toContain('id: "column-pinning"');
+    expect(registry).toContain('id: "cross-table-drag"');
+    expect(routes).toContain('path: "/examples/column-pinning"');
+    expect(routes).toContain('path: "/examples/cross-table-drag"');
   });
 
   it("documents the 100000-row virtualization performance contract", () => {
