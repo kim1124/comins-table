@@ -4,8 +4,10 @@ import { BodyFeature } from "./BodyFeature";
 import { CellFeature } from "./CellFeature";
 import { ColumnGroupFeature } from "./ColumnGroupFeature";
 import { ColumnFilteringFeature } from "./ColumnFilteringFeature";
+import { ColumnPinningFeature } from "./ColumnPinningFeature";
 import { ComponentFeature } from "./ComponentFeature";
 import { ContextMenuFeature } from "./ContextMenuFeature";
+import { CrossTableDragFeature } from "./CrossTableDragFeature";
 import { ExportFeature } from "./ExportFeature";
 import { HeaderFeature } from "./HeaderFeature";
 import { InfiniteScrollFeature } from "./InfiniteScrollFeature";
@@ -122,6 +124,22 @@ export const featureRegistry: FeatureDefinitionSource[] = [
       { description: defineLocalizedText("선택한 child Column은 유지하면서 parent Group만 별도로 숨깁니다.", "Hides parent groups independently while preserving the selected child columns."), example: "group visibility checkbox", name: "parent visibility" },
     ],
     summary: defineLocalizedText("2단계 Header Group, parent 이동·resize와 child Column 표시 예제입니다.", "Two-level header groups, parent movement, parent resize, and child column visibility example."),
+  },
+  {
+    Component: ColumnPinningFeature,
+    description: defineLocalizedText(
+      "Left/right Column과 Header Group 고정, responsive demotion, resize 및 layout 저장/복원 예제입니다.",
+      "Left/right Column and Header Group pinning with responsive demotion, resize, and layout persistence.",
+    ),
+    id: "column-pinning",
+    label: defineLocalizedText("컬럼 고정", "Column Pinning"),
+    options: [
+      { description: defineLocalizedText("Column을 left 또는 right sticky zone에 배치하고 위치 이동을 잠급니다.", "Places a Column in the left or right sticky zone and locks its position."), example: 'pinned: "left"', name: "columns.pinned" },
+      { description: defineLocalizedText("Header Group과 visible child 전체를 하나의 pinned block으로 처리합니다.", "Treats a Header Group and all visible children as one pinned block."), example: 'pinned: "right"', name: "columnGroups.pinned" },
+      { description: defineLocalizedText("Container가 좁아지면 최소 center 공간을 위해 안쪽 pinned block을 일시적으로 해제합니다.", "Temporarily demotes inner pinned blocks to preserve minimum center space in a narrow container."), example: "resize container", name: "responsive demotion" },
+      { description: defineLocalizedText("Configured pin intent를 기존 Column layout과 함께 저장하고 복원합니다.", "Persists configured pin intent with the existing Column layout."), example: "getColumnLayout() / setColumnLayout(layout)", name: "layout persistence" },
+    ],
+    summary: defineLocalizedText("Left/right sticky Column, atomic Header Group과 responsive demotion 예제입니다.", "Left/right sticky Columns, atomic Header Groups, and responsive demotion."),
   },
   {
     Component: PaginationFeature,
@@ -271,6 +289,22 @@ export const featureRegistry: FeatureDefinitionSource[] = [
       { description: defineLocalizedText("전체 descendant leaf에 count, sum, avg, min 또는 max를 계산합니다.", "Computes count, sum, avg, min, or max across every descendant leaf."), example: "aggregations: { amount: 'sum' }", name: "rowGrouping.aggregations" },
     ],
     summary: defineLocalizedText("빈 Group CRUD, Group/Row Drag, custom content/style, Group별 정렬, Row Detail과 100000 Row 가상화 예제입니다.", "Empty-Group CRUD, Group/Row Drag, custom content/style, per-Group sorting, Row Detail, and 100000-row virtualization."),
+  },
+  {
+    Component: CrossTableDragFeature,
+    description: defineLocalizedText(
+      "Shared Coordinator를 사용하는 flat Row, grouped Row와 Group bundle의 Table 간 Drag 예제입니다.",
+      "Cross-Table Drag for flat Rows, grouped Rows, and Group bundles through a shared Coordinator.",
+    ),
+    id: "cross-table-drag",
+    label: defineLocalizedText("테이블 간 드래그", "Cross-Table Drag"),
+    options: [
+      { description: defineLocalizedText("같은 객체와 scope를 공유하는 Table 사이에서만 Transfer를 허용합니다.", "Allows Transfer only between Tables sharing the same object and scope."), example: "createCominsTableTransferCoordinator({ onTransfer })", name: "Coordinator" },
+      { description: defineLocalizedText("Table의 stable identity와 Coordinator scope를 연결합니다.", "Connects the Table's stable identity and Coordinator scope."), example: "{ coordinator, scope, tableId }", name: "tableTransfer" },
+      { description: defineLocalizedText("중복 Row/Group ID를 기본 reject하거나 명시적으로 overwrite합니다.", "Rejects duplicate Row/Group IDs by default or explicitly overwrites them."), example: 'resolveConflict={() => "overwrite"}', name: "resolveConflict" },
+      { description: defineLocalizedText("한 callback에서 source와 target의 data/groups를 원자적으로 반영합니다.", "Applies source and target data/groups atomically in one callback."), example: "onTransfer(result)", name: "onTransfer" },
+    ],
+    summary: defineLocalizedText("Flat/grouped Row 및 전체 Group bundle의 controlled Table 간 이동 예제입니다.", "Controlled cross-Table movement for flat/grouped Rows and complete Group bundles."),
   },
   {
     Component: ColumnFilteringFeature,

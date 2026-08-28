@@ -7,7 +7,9 @@ import {
   cellSamples,
   componentSamples,
   columnFilteringSamples,
+  columnPinningSamples,
   contextMenuSamples,
+  crossTableDragSamples,
   crudSamples,
   exportSamples,
   headerGroupSamples,
@@ -195,6 +197,17 @@ const englishDocsPages: DocsPage[] = [
     title: "Header Groups",
   }),
   featurePage({
+    body: paragraphs([
+      "Set Column or Header Group pinned to left or right to keep that atomic block visible during horizontal scrolling and lock its configured position.",
+      "Responsive demotion preserves at least 48px of center space by temporarily demoting the wider side's inner block; configured layout intent remains unchanged.",
+      "Header, Body, Skeleton, and Summary surfaces share offsets. Full-width Group Rows, empty/loading rows, and Row Details remain non-sticky.",
+    ]),
+    category: "Header",
+    codeSamples: columnPinningSamples,
+    featureId: "column-pinning",
+    path: "/examples/column-pinning",
+  }),
+  featurePage({
     body: paragraphs(["Review cell formatting, styles, events, renderers, and context menu wiring."]),
     category: "Cell",
     codeSamples: cellSamples,
@@ -251,6 +264,18 @@ const englishDocsPages: DocsPage[] = [
     codeSamples: rowGroupingSamples,
     featureId: "row-grouping",
     path: "/examples/row-grouping",
+  }),
+  featurePage({
+    body: paragraphs([
+      "Tables opt into Cross-Table Drag by sharing one application-created Coordinator object, scope, and unique tableId values.",
+      "Existing Row Drag moves one Row. Group Drag moves the Group and all member Rows. Moving the last Row leaves the source Group empty, while moving a Group removes the source Group.",
+      "Duplicate IDs reject by default. The target can reject through canTransfer or explicitly overwrite through resolveConflict; Group overwrite replaces the complete target Group bundle rather than merging it.",
+      "The Coordinator emits one immutable source/target result. The application must apply both controlled models atomically.",
+    ]),
+    category: "Row / Context",
+    codeSamples: crossTableDragSamples,
+    featureId: "cross-table-drag",
+    path: "/examples/cross-table-drag",
   }),
   featurePage({
     body: paragraphs([
@@ -444,6 +469,17 @@ const koreanDocsCopy: Record<string, KoreanDocsCopy> = {
     summary: "Header Group, parent resize·이동과 child Column 표시를 확인합니다.",
     title: "헤더 그룹",
   },
+  "/examples/column-pinning": {
+    body: [
+      "Column 또는 Header Group의 pinned를 left/right로 지정하면 수평 Scroll과 관계없이 보이면서 configured 위치가 잠깁니다.",
+      "Responsive demotion은 center 최소 48px를 확보하도록 넓은 side의 안쪽 block을 임시 해제하며 저장된 layout intent는 바꾸지 않습니다.",
+      "Header, Body, Skeleton과 Summary가 offset을 공유하고 full-width Group Row, empty/loading Row와 Row Detail은 non-sticky로 유지됩니다.",
+    ],
+    category: "Header",
+    label: "Column Pinning",
+    summary: "Left/right sticky Column, atomic Header Group과 responsive demotion을 확인합니다.",
+    title: "Column Pinning",
+  },
   "/examples/component": {
     body: ["Header와 Cell의 내장 control 및 custom renderer를 확인합니다."],
     category: "Cell",
@@ -522,6 +558,18 @@ const koreanDocsCopy: Record<string, KoreanDocsCopy> = {
     label: "Row Grouping",
     summary: "Controlled flat Row Grouping, hierarchy sort, 집계, Row Detail과 가상화를 확인합니다.",
     title: "Row Grouping",
+  },
+  "/examples/cross-table-drag": {
+    body: [
+      "Table은 application이 만든 Coordinator 객체, 같은 scope와 고유 tableId를 공유하여 Cross-Table Drag에 참여합니다.",
+      "기존 Row Drag는 Row 하나를 옮기고 Group Drag는 Group과 모든 member Row를 함께 옮깁니다. 마지막 Row 이동은 source 빈 Group을 유지하고 Group 이동은 source Group을 제거합니다.",
+      "중복 ID는 기본 reject입니다. Target의 canTransfer가 이동을 거부하거나 resolveConflict가 overwrite를 명시할 수 있으며 Group overwrite는 merge 없이 전체 target Group bundle을 교체합니다.",
+      "Coordinator는 immutable source/target 결과를 한 번 전달하며 application이 두 controlled model을 원자적으로 반영해야 합니다.",
+    ],
+    category: "Row / Context",
+    label: "Cross-Table Drag",
+    summary: "Flat/grouped Row 및 전체 Group bundle의 controlled Table 간 이동을 확인합니다.",
+    title: "Cross-Table Drag",
   },
   "/examples/column-filtering": {
     body: [

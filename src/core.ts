@@ -1,6 +1,9 @@
 import type React from "react";
 
 import type { CominsColumnFilterConfig } from "./filtering";
+import { normalizeCominsColumnPinned, type CominsColumnPinned } from "./column-pinning";
+
+export type { CominsColumnPinned } from "./column-pinning";
 
 export type CominsRowId = string | number;
 
@@ -303,6 +306,7 @@ export type CominsTableColumn<TData, TValue = unknown> = {
   lockPosition?: boolean;
   maxWidth?: number;
   minWidth?: number;
+  pinned?: CominsColumnPinned;
   sort?: boolean | ((left: TValue, right: TValue, leftRow: TData, rightRow: TData) => number);
   width?: number;
 };
@@ -313,6 +317,7 @@ export type CominsTableColumnGroup = {
   id: string;
   label: React.ReactNode;
   lockPosition?: boolean;
+  pinned?: CominsColumnPinned;
 };
 
 export type CominsTableRuntimeColumn<TData, TValue = unknown> = Omit<
@@ -336,11 +341,13 @@ export type CominsEventColumn<TData, TValue = unknown> = {
 
 export type CominsColumnRuntimeState = {
   hidden?: boolean;
+  pinned?: CominsColumnPinned;
   width?: number;
 };
 
 export type CominsColumnGroupRuntimeState = {
   hidden?: boolean;
+  pinned?: CominsColumnPinned;
 };
 
 export type CominsColumnLayout = {
@@ -572,6 +579,9 @@ function normalizeColumnState<TData>(
   for (const column of columns) {
     state[column.id] = {
       hidden: layout?.columns?.[column.id]?.hidden ?? column.hidden,
+      pinned: normalizeCominsColumnPinned(
+        layout === undefined ? column.pinned : layout.columns?.[column.id]?.pinned,
+      ),
       width: layout?.columns?.[column.id]?.width ?? column.width,
     };
   }
@@ -588,6 +598,9 @@ function normalizeColumnGroupState(
   for (const group of columnGroups) {
     state[group.id] = {
       hidden: layout?.groups?.[group.id]?.hidden ?? group.hidden,
+      pinned: normalizeCominsColumnPinned(
+        layout === undefined ? group.pinned : layout.groups?.[group.id]?.pinned,
+      ),
     };
   }
 
@@ -625,6 +638,19 @@ function normalizeColumnOrder<TData>(
   const columnById = new Map(columns.map((column) => [column.id, column]));
   const groupIdByColumnId = getColumnGroupIdMap(columnGroups);
   const groupById = new Map(columnGroups.map((group) => [group.id, group]));
+  const isColumnPinned = (columnId: string) =>
+    !groupIdByColumnId.has(columnId) &&
+    normalizeCominsColumnPinned(
+      layout === undefined
+        ? columnById.get(columnId)?.pinned
+        : layout.columns?.[columnId]?.pinned,
+    ) !== undefined;
+  const isGroupPinned = (groupId: string) =>
+    normalizeCominsColumnPinned(
+      layout === undefined
+        ? groupById.get(groupId)?.pinned
+        : layout.groups?.[groupId]?.pinned,
+    ) !== undefined;
   type ColumnOrderEntity = {
     columnIds: string[];
     key: string;
@@ -641,7 +667,9 @@ function normalizeColumnOrder<TData>(
         entities.push({
           columnIds: [columnId],
           key: `column:${columnId}`,
-          locked: columnById.get(columnId)?.lockPosition === true,
+          locked:
+            columnById.get(columnId)?.lockPosition === true ||
+            isColumnPinned(columnId),
         });
         continue;
       }
@@ -656,7 +684,9 @@ function normalizeColumnOrder<TData>(
         entities.push({
           columnIds: [columnId],
           key: `column:${columnId}`,
-          locked: columnById.get(columnId)?.lockPosition === true,
+          locked:
+            columnById.get(columnId)?.lockPosition === true ||
+            isColumnPinned(columnId),
         });
         continue;
       }
@@ -667,6 +697,7 @@ function normalizeColumnOrder<TData>(
         key: `group:${groupId}`,
         locked:
           group.lockPosition ||
+          isGroupPinned(groupId) ||
           groupChildrenInOrder.some((currentId) => columnById.get(currentId)?.lockPosition === true),
       });
       emittedGroups.add(groupId);
@@ -1338,9 +1369,14 @@ function doesColumnMoveChangeLockedPositions<TData>(
     nextOrder.map((columnId, index) => [columnId, index] as const),
   );
 
+  const groupIdByColumnId = getColumnGroupIdMap(state.columnGroups);
+
   for (const column of state.columns) {
     if (
-      column.lockPosition &&
+      (
+        column.lockPosition ||
+        (!groupIdByColumnId.has(column.id) && state.columnState[column.id]?.pinned !== undefined)
+      ) &&
       currentIndexByColumnId.get(column.id) !== nextIndexByColumnId.get(column.id)
     ) {
       return true;
@@ -1348,7 +1384,7 @@ function doesColumnMoveChangeLockedPositions<TData>(
   }
 
   for (const group of state.columnGroups) {
-    if (!group.lockPosition) {
+    if (!group.lockPosition && state.columnGroupState[group.id]?.pinned === undefined) {
       continue;
     }
 
@@ -1378,13 +1414,17 @@ export function moveCominsColumn<TData>(
   targetIndex: number,
 ) {
   const sourceColumn = findColumn(state, columnId);
+  const sourceGroupId = getColumnGroupIdMap(state.columnGroups).get(columnId);
 
-  if (!sourceColumn || sourceColumn.lockPosition) {
+  if (
+    !sourceColumn ||
+    sourceColumn.lockPosition ||
+    (!sourceGroupId && state.columnState[columnId]?.pinned !== undefined)
+  ) {
     return state;
   }
 
   const groupIdByColumnId = getColumnGroupIdMap(state.columnGroups);
-  const sourceGroupId = groupIdByColumnId.get(columnId);
 
   const current = state.columnOrder.filter((id) => id !== columnId);
 
@@ -1445,7 +1485,11 @@ export function moveCominsColumnGroup<TData>(
 ) {
   const group = findColumnGroupById(state.columnGroups, groupId);
 
-  if (!group || group.lockPosition) {
+  if (
+    !group ||
+    group.lockPosition ||
+    state.columnGroupState[groupId]?.pinned !== undefined
+  ) {
     return state;
   }
 
@@ -1624,15 +1668,56 @@ export function isCominsCellInSelectedRange<TData>(
 
 export function getCominsVisibleColumns<TData>(state: CominsTableState<TData>) {
   const groupIdByColumnId = getColumnGroupIdMap(state.columnGroups);
+  const groupById = new Map(state.columnGroups.map((group) => [group.id, group]));
+  const emittedGroups = new Set<string>();
+  const blocks: Array<{
+    columns: Array<CominsTableRuntimeColumn<TData>>;
+    pinned?: CominsColumnPinned;
+  }> = [];
 
-  return state.columnOrder
-    .map((columnId) => findColumn(state, columnId))
-    .filter((column): column is CominsTableRuntimeColumn<TData> => Boolean(column))
-    .filter((column) => {
-      const groupId = groupIdByColumnId.get(column.id);
+  for (const columnId of state.columnOrder) {
+    const column = findColumn(state, columnId);
 
-      return state.columnState[column.id]?.hidden !== true && (!groupId || state.columnGroupState[groupId]?.hidden !== true);
-    });
+    if (!column || state.columnState[column.id]?.hidden === true) {
+      continue;
+    }
+
+    const groupId = groupIdByColumnId.get(column.id);
+
+    if (!groupId) {
+      blocks.push({ columns: [column], pinned: state.columnState[column.id]?.pinned });
+      continue;
+    }
+
+    if (emittedGroups.has(groupId) || state.columnGroupState[groupId]?.hidden === true) {
+      continue;
+    }
+
+    const group = groupById.get(groupId);
+
+    if (!group) {
+      continue;
+    }
+
+    const columns = state.columnOrder
+      .filter((currentId) => group.children.includes(currentId))
+      .map((currentId) => findColumn(state, currentId))
+      .filter((current): current is CominsTableRuntimeColumn<TData> =>
+        Boolean(current) && state.columnState[current!.id]?.hidden !== true,
+      );
+
+    if (columns.length > 0) {
+      blocks.push({ columns, pinned: state.columnGroupState[groupId]?.pinned });
+    }
+
+    emittedGroups.add(groupId);
+  }
+
+  return ["left", undefined, "right"].flatMap((pinned) =>
+    blocks
+      .filter((block) => block.pinned === pinned)
+      .flatMap((block) => block.columns),
+  );
 }
 
 export function getCominsHeaderRows<TData>(state: CominsTableState<TData>): Array<Array<CominsHeaderCell<TData>>> {
@@ -1657,16 +1742,8 @@ export function getCominsHeaderRows<TData>(state: CominsTableState<TData>): Arra
   const parentRow: Array<CominsHeaderCell<TData>> = [];
   const childRow: Array<CominsHeaderCell<TData>> = [];
 
-  for (const columnId of state.columnOrder) {
-    if (!visibleColumnIds.has(columnId)) {
-      continue;
-    }
-
-    const column = findColumn(state, columnId);
-
-    if (!column) {
-      continue;
-    }
+  for (const column of visibleColumns) {
+    const columnId = column.id;
 
     const groupId = groupIdByColumnId.get(columnId);
 
@@ -1691,10 +1768,9 @@ export function getCominsHeaderRows<TData>(state: CominsTableState<TData>): Arra
       continue;
     }
 
-    const visibleGroupColumns = state.columnOrder
-      .filter((currentId) => group.children.includes(currentId) && visibleColumnIds.has(currentId))
-      .map((currentId) => findColumn(state, currentId))
-      .filter((currentColumn): currentColumn is CominsTableRuntimeColumn<TData> => Boolean(currentColumn));
+    const visibleGroupColumns = visibleColumns.filter((currentColumn) =>
+      group.children.includes(currentColumn.id),
+    );
 
     if (visibleGroupColumns.length === 0) {
       emittedGroups.add(groupId);

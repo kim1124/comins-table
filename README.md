@@ -1,6 +1,6 @@
 # Comins Table
 
-Comins Table is a controlled React data table for data-heavy application screens, with virtualized rendering, precise selection, movable headers, controlled Column Filtering, Row Grouping and Row Expand Details, Summary Row aggregation, Tree Grid data, built-in component cells, and framework-independent core helpers.
+Comins Table is a controlled React data table for data-heavy application screens, with virtualized rendering, precise selection, movable and pinned headers, controlled Column Filtering, Row Grouping and Row Expand Details, Cross-Table Row/Group Drag, Summary Row aggregation, Tree Grid data, built-in component cells, and framework-independent core helpers.
 
 [![npm version](https://img.shields.io/npm/v/comins-table)](https://www.npmjs.com/package/comins-table)
 [![TypeScript declarations](https://img.shields.io/npm/types/comins-table)](https://www.npmjs.com/package/comins-table)
@@ -15,7 +15,7 @@ Comins Table is a controlled React data table for data-heavy application screens
 | --- | --- |
 | Controlled data | Application-owned `data`, CRUD helpers, `onChangeData`, pagination, sorting, and layout callbacks |
 | Rendering and scale | Fixed-height virtualization with a tested 100,000-row route, infinite scroll, append-mode lazy loading, loading, and empty states |
-| Interaction | Accessible single and opt-in multi-column Header sorting, controlled Column Filtering, resize, 6-pixel horizontal column reorder with source placeholder, Row and Cell selection, ranges, clipboard, and context menu callbacks |
+| Interaction | Accessible single and opt-in multi-column Header sorting, controlled Column Filtering, resize, responsive Column Pinning, 6-pixel horizontal column reorder, Cross-Table Row/Group Drag, Row and Cell selection, ranges, clipboard, and context menu callbacks |
 | Data structure | Controlled client-side flat Row Grouping, flat Row Expand Details, Summary Row aggregation, and controlled Tree Grid expand/fold |
 | Custom UI | Cell/Header renderers, built-in button/input/checkbox/radio/select/toggle/progress/menu/Virtual List components, and CSS-variable themes |
 
@@ -136,6 +136,8 @@ A left-button mouse interaction activates column movement after a 6-pixel horizo
 
 Use `getColumnLayout()` and `setColumnLayout()` through the Ref API, or `serializeCominsColumnLayout()` and `applyCominsColumnLayout()` from `comins-table/core`, to persist and restore order, widths, and visibility.
 
+Set `pinned: "left"` or `pinned: "right"` on a Column or Header Group to keep its atomic block visible during horizontal scrolling and lock its configured position. Container resize can temporarily demote inner pinned blocks to preserve 48px of center space without changing the persisted layout intent. Header, Body, Skeleton, and Summary use the same offsets; Group Rows and Row Details remain full-width non-sticky cells. See the [Column Pinning guide](https://github.com/kim1124/comins-table/blob/main/docs/user/22-column-pinning.md) and [`/examples/column-pinning`](http://127.0.0.1:4002/examples/column-pinning).
+
 ## Rows, Cells, And Selection
 
 Rows expose click, double-click, keyboard, and context-menu callbacks. Cells expose the corresponding Cell callbacks plus `format`, `renderer`, and props hooks.
@@ -173,6 +175,14 @@ See the [Row Grouping guide](https://github.com/kim1124/comins-table/blob/main/d
 Each synthetic Group Row is one full-width colspan Cell with a distinct neutral-gray background. Use `getGroupRowProps` for a typed per-Group `className` or `style`, and override `--comins-table-group-row-background` and `--comins-table-group-row-color` for theme-level styling. The Table owns disclosure and Drag controls while `renderGroupContent` can replace its inner label, count, aggregate, badge, or business-action content. Header sorting never reorders Groups; the existing Row sort policy runs independently inside every Group. Built-in `count`, `sum`, `avg`, `min`, and `max` aggregations remain available.
 
 Synthetic Group Rows never masquerade as `TData`: ordinary Row/Cell callbacks, selection, Clipboard, Cell renderers, formatters, and Row Detail remain leaf-only. Row Grouping supports fixed-height virtualization and grouped leaf Row Detail, but cannot be combined with pagination, infinite/lazy loading, or Tree Grid. Multi-depth grouping remains deferred.
+
+## Cross-Table Row And Group Drag
+
+See the [Cross-Table Drag guide](https://github.com/kim1124/comins-table/blob/main/docs/user/23-cross-table-drag.md) and run the [`/examples/cross-table-drag`](http://127.0.0.1:4002/examples/cross-table-drag) Playground route.
+
+Create a `createCominsTableTransferCoordinator()` and pass the same Coordinator, `scope`, and unique `tableId` through `tableTransfer` to participating Tables. Existing Row Drag moves one Row between compatible flat or grouped Tables. Group Drag moves the Group plus every member Row; moving the last Row preserves the empty source Group, while moving a Group removes it from the source model.
+
+Duplicate IDs reject by default. The target can reject through `canTransfer` or explicitly return `"overwrite"` from `resolveConflict`; Group overwrite replaces the complete target Group bundle and never merges it. The Coordinator emits one immutable source/target result, and the application applies both controlled models atomically. Cross-Table Transfer is unavailable with Tree Grid, Column Filtering, Infinite Scroll, and Lazy Load.
 
 ## Column Filtering
 
