@@ -44,8 +44,27 @@ test("Column Pinning keeps sticky surfaces aligned and demotes responsively", as
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
   }));
-  expect(Math.abs(scrollbarMetrics.clientWidth - overflow.clientWidth)).toBeLessThanOrEqual(1);
-  expect(Math.abs(scrollbarMetrics.scrollWidth - overflow.scrollWidth)).toBeLessThanOrEqual(1);
+  const [headerMetrics, summaryMetrics] = await Promise.all([
+    root.locator(".comins-table__header").evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    })),
+    summary.evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    })),
+  ]);
+  const expectedMaxScrollLeft = overflow.scrollWidth - overflow.clientWidth;
+
+  for (const metrics of [headerMetrics, summaryMetrics, scrollbarMetrics]) {
+    expect(Math.abs(metrics.clientWidth - overflow.clientWidth)).toBeLessThanOrEqual(1);
+  }
+  expect(headerMetrics.scrollWidth).toBeGreaterThanOrEqual(overflow.scrollWidth);
+  expect(headerMetrics.scrollWidth - headerMetrics.clientWidth).toBeGreaterThanOrEqual(expectedMaxScrollLeft);
+  for (const metrics of [summaryMetrics, scrollbarMetrics]) {
+    expect(Math.abs(metrics.scrollWidth - overflow.scrollWidth)).toBeLessThanOrEqual(1);
+    expect(Math.abs(metrics.scrollWidth - metrics.clientWidth - expectedMaxScrollLeft)).toBeLessThanOrEqual(1);
+  }
 
   const before = await Promise.all([leftCell.boundingBox(), centerCell.boundingBox(), rightCell.boundingBox()]);
 

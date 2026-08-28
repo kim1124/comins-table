@@ -1712,6 +1712,7 @@ function CominsTableInner<TData, TGroup>(
   const suppressedSortClickRef = useRef<CominsSuppressedSortClick | null>(null);
   const [containerHeight, setContainerHeight] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [horizontalViewportWidth, setHorizontalViewportWidth] = useState(0);
   const [detailLayoutVersion, setDetailLayoutVersion] = useState(0);
   const [movingColumnId, setMovingColumnId] = useState<string | null>(null);
   const [movingGroupId, setMovingGroupId] = useState<string | null>(null);
@@ -2290,6 +2291,7 @@ function CominsTableInner<TData, TGroup>(
       if (entry) {
         setContainerHeight(entry.contentRect.height);
         setContainerWidth(entry.contentRect.width);
+        setHorizontalViewportWidth(element.clientWidth);
       }
     });
     observer.observe(element);
@@ -3512,6 +3514,18 @@ function CominsTableInner<TData, TGroup>(
   const selectedRowIdSet = useMemo(() => new Set(state.selection.rowIds), [state.selection.rowIds]);
   const hasHorizontalOverflow =
     typeof columnWidthTotal === "number" && containerWidth > 0 ? columnWidthTotal > containerWidth + 1 : false;
+  useLayoutEffect(() => {
+    const nextWidth = containerRef.current?.clientWidth ?? 0;
+
+    setHorizontalViewportWidth((current) =>
+      Math.abs(current - nextWidth) > 0.5 ? nextWidth : current);
+  }, [containerWidth, hasHorizontalOverflow]);
+  const synchronizedHorizontalViewportWidth =
+    horizontalViewportWidth > 0
+      ? horizontalViewportWidth
+      : containerWidth > 0
+        ? containerWidth
+        : undefined;
   const resolvedHasMoreRows = groupingRequested || filteringRequested ? false : hasMoreRows;
   const resolvedLoading = loading;
   const resolvedLoadingMore = groupingRequested || filteringRequested ? false : loadingMore;
@@ -5804,7 +5818,11 @@ function CominsTableInner<TData, TGroup>(
       tabIndex={-1}
     >
       {renderedHeaderVisible ? (
-        <div className="comins-table__header" ref={headerRef}>
+        <div
+          className="comins-table__header"
+          ref={headerRef}
+          style={{ width: synchronizedHorizontalViewportWidth }}
+        >
           <table
             className="comins-table__table comins-table__header-table min-w-full table-fixed"
             style={{ width: tableWidth }}
@@ -6516,7 +6534,12 @@ function CominsTableInner<TData, TGroup>(
         ) : null}
       </div>
       {summary ? (
-        <div aria-label="Table summary" className="comins-table__summary" ref={footerRef}>
+        <div
+          aria-label="Table summary"
+          className="comins-table__summary"
+          ref={footerRef}
+          style={{ width: synchronizedHorizontalViewportWidth }}
+        >
           <table className="comins-table__table comins-table__summary-table min-w-full table-fixed" style={{ width: tableWidth }}>
             {renderColumnSizing()}
             <tfoot>
@@ -6566,7 +6589,7 @@ function CominsTableInner<TData, TGroup>(
           onScroll={(event) => syncHorizontalScrollLeft(event.currentTarget.scrollLeft)}
           ref={horizontalScrollbarRef}
           role="region"
-          style={{ width: containerWidth }}
+          style={{ width: synchronizedHorizontalViewportWidth }}
           tabIndex={0}
         >
           <div

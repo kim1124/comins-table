@@ -499,7 +499,7 @@
   max-width: 100%;
   min-height: 12px;
   overflow-x: scroll;
-  overflow-y: scroll;
+  overflow-y: hidden;
   scrollbar-color: var(--comins-table-scrollbar-thumb) var(--comins-table-scrollbar-track);
   scrollbar-gutter: stable;
 }
