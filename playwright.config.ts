@@ -12,6 +12,7 @@ export default defineConfig({
     : [["html", { open: "never", outputFolder: "reports/artifacts/playwright-html" }], ["list"]],
   retries: isCI ? 1 : 0,
   failOnFlakyTests: isCI || process.env.PLAYWRIGHT_FAIL_ON_FLAKY_TESTS === "1",
+  workers: 1,
   testDir: "test/playwright/specs",
   use: {
     baseURL,

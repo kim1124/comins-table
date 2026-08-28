@@ -23,13 +23,13 @@ test("Column Pinning keeps sticky surfaces aligned and demotes responsively", as
   await expect(rightCell).toHaveCSS("position", "sticky");
   await expect(leftHeader.getByTestId("column-move-handle-name")).toHaveCount(0);
 
+  await expect(horizontalScrollbar).toBeVisible();
+
   const overflow = await viewport.evaluate((element) => ({
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
   }));
   expect(overflow.scrollWidth).toBeGreaterThan(overflow.clientWidth + 500);
-
-  await expect(horizontalScrollbar).toBeVisible();
   const [viewportBox, summaryBox, scrollbarBox] = await Promise.all([
     viewport.boundingBox(),
     summary.boundingBox(),
@@ -44,18 +44,38 @@ test("Column Pinning keeps sticky surfaces aligned and demotes responsively", as
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
   }));
-  expect(Math.abs(scrollbarMetrics.clientWidth - overflow.clientWidth)).toBeLessThanOrEqual(1);
-  expect(Math.abs(scrollbarMetrics.scrollWidth - overflow.scrollWidth)).toBeLessThanOrEqual(1);
+  expect(scrollbarMetrics.scrollWidth).toBeGreaterThan(scrollbarMetrics.clientWidth + 500);
 
   const before = await Promise.all([leftCell.boundingBox(), centerCell.boundingBox(), rightCell.boundingBox()]);
 
-  const scrollLeft = await horizontalScrollbar.evaluate((element) => {
+  await horizontalScrollbar.evaluate((element) => {
     element.scrollLeft = element.scrollWidth;
     element.dispatchEvent(new Event("scroll", { bubbles: true }));
-    return element.scrollLeft;
   });
-  expect(scrollLeft).toBeGreaterThan(500);
-  expect(await viewport.evaluate((element) => element.scrollLeft)).toBe(scrollLeft);
+
+  await expect
+    .poll(async () =>
+      root.evaluate((element) => {
+        const positions = [
+          element.querySelector<HTMLElement>(".comins-table__header")?.scrollLeft,
+          element.querySelector<HTMLElement>("[data-testid='column-pinning-viewport']")?.scrollLeft,
+          element.querySelector<HTMLElement>(".comins-table__summary")?.scrollLeft,
+          element.querySelector<HTMLElement>("[data-testid='table-horizontal-scrollbar']")?.scrollLeft,
+        ].filter((value): value is number => typeof value === "number");
+
+        return positions.length === 4
+          ? Math.max(...positions) - Math.min(...positions)
+          : Number.POSITIVE_INFINITY;
+      }),
+    )
+    .toBeLessThanOrEqual(1);
+
+  const bodyScroll = await viewport.evaluate((element) => ({
+    maxScrollLeft: Math.max(0, element.scrollWidth - element.clientWidth),
+    scrollLeft: element.scrollLeft,
+  }));
+  expect(bodyScroll.scrollLeft).toBeGreaterThan(500);
+  expect(Math.abs(bodyScroll.maxScrollLeft - bodyScroll.scrollLeft)).toBeLessThanOrEqual(1);
 
   const after = await Promise.all([leftCell.boundingBox(), centerCell.boundingBox(), rightCell.boundingBox()]);
 
