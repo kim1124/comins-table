@@ -303,6 +303,8 @@ export const featureRegistry: FeatureDefinitionSource[] = [
       { description: defineLocalizedText("Table의 stable identity와 Coordinator scope를 연결합니다.", "Connects the Table's stable identity and Coordinator scope."), example: "{ coordinator, scope, tableId }", name: "tableTransfer" },
       { description: defineLocalizedText("중복 Row/Group ID를 기본 reject하거나 명시적으로 overwrite합니다.", "Rejects duplicate Row/Group IDs by default or explicitly overwrites them."), example: 'resolveConflict={() => "overwrite"}', name: "resolveConflict" },
       { description: defineLocalizedText("한 callback에서 source와 target의 data/groups를 원자적으로 반영합니다.", "Applies source and target data/groups atomically in one callback."), example: "onTransfer(result)", name: "onTransfer" },
+      { description: defineLocalizedText("중복 ID 거부를 Pointer Tooltip과 target outline으로 알리고 content/duration을 custom합니다.", "Reports duplicate-ID rejection with a Pointer Tooltip and target outline, with customizable content and duration."), example: "rejectionFeedback={{ renderTooltip, duration: 2400 }}", name: "rejectionFeedback" },
+      { description: defineLocalizedText("거부된 duplicate conflict를 application 알림 또는 기록 로직에 전달합니다.", "Passes a rejected duplicate conflict to application notification or logging logic."), example: "onTransferRejected(rejection)", name: "onTransferRejected" },
     ],
     summary: defineLocalizedText("Flat/grouped Row 및 전체 Group bundle의 controlled Table 간 이동 예제입니다.", "Controlled cross-Table movement for flat/grouped Rows and complete Group bundles."),
   },

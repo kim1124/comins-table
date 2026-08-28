@@ -8,6 +8,9 @@ const coordinator = createCominsTableTransferCoordinator<Row, Group>({
     updateTable(source.tableId, source.data, source.groups);
     updateTable(target.tableId, target.data, target.groups);
   },
+  onTransferRejected: ({ conflict, reason }) => {
+    logTransferRejection({ conflict, reason });
+  },
 });
 
 const tableTransfer = (tableId: string) => ({
@@ -15,6 +18,19 @@ const tableTransfer = (tableId: string) => ({
   scope: "people",
   tableId,
   resolveConflict: () => "reject" as const,
+  rejectionFeedback: {
+    duration: 2400,
+    renderTooltip: (rejection) => (
+      <>
+        <strong>Duplicate ID</strong>
+        <span>{`"${String(
+          rejection.conflict.kind === "group"
+            ? rejection.conflict.groupId
+            : rejection.conflict.rowId,
+        )}" ID가 이미 존재합니다.`}</span>
+      </>
+    ),
+  },
 });
 
 <CominsTable tableTransfer={tableTransfer("left")} rowProps={{ draggable: true }} />;
@@ -39,9 +55,25 @@ Selection, Cell/range 상태, Row Detail expansion과 Group disclosure 상태는
 
 Target Table이 `canTransfer`와 `resolveConflict`를 소유합니다. `canTransfer(intent)`는 model 전이 전에 거부할 수 있습니다. 중복 Row 또는 Group ID는 기본 reject이며 resolver가 undefined 또는 지원하지 않는 값을 반환해도 reject합니다.
 
+Pointer Drop의 duplicate conflict가 `"reject"`로 확정되면 target Table에 절제된 error outline을 표시하고 pointer release 좌표 옆에 compact한 `Duplicate ID` Tooltip을 표시합니다. Feedback은 `pointerup` 이후에만 생성되고 `pointer-events: none`이며 semantic Table Body 외부에 위치합니다. Browser viewport 안으로 위치를 보정하고 polite live status로 알리므로 hit-test 대상 Drop 영역을 대체하거나 이후 interaction을 차단하지 않습니다.
+
+`tableTransfer.rejectionFeedback`은 target Table 설정입니다. `renderTooltip(rejection)`으로 Tooltip body를 교체하고 `duration`으로 500~10000ms 범위의 표시 시간을 지정할 수 있으며 기본값은 1800ms입니다. `rejectionFeedback: false`이면 기본 Tooltip과 outline을 표시하지 않습니다. Built-in feedback을 꺼도 `Coordinator.onTransferRejected(rejection)`은 `reason: "duplicate-id"`, source/target Table ID, transfer kind와 실제 reject된 conflict를 전달합니다. `canTransfer()` 거부는 application-owned 정책이므로 duplicate conflict notification을 발생시키지 않습니다.
+
+Tooltip의 positioning과 accessibility 동작을 유지하면서 다음 CSS 변수로 디자인을 변경할 수 있습니다.
+
+```css
+.comins-table {
+  --comins-table-tooltip-danger-background: #7f1d1d;
+  --comins-table-tooltip-danger-border: rgba(254, 202, 202, 0.28);
+  --comins-table-tooltip-danger-color: #ffffff;
+  --comins-table-tooltip-danger-muted: #fecaca;
+  --comins-table-tooltip-shadow: 0 12px 30px rgba(69, 10, 10, 0.28);
+}
+```
+
 파괴적 교체가 의도된 경우에만 `"overwrite"`를 반환해야 합니다. Row overwrite는 같은 ID의 target Row를 제거한 뒤 삽입합니다. Group overwrite는 target Group과 모든 member Row를 제거한 다음 source Group bundle을 삽입하며 두 Group을 merge하지 않습니다. 확정된 conflict는 감사 또는 알림을 위해 `result.details`에 포함됩니다.
 
-Pure `transferCominsRowBetweenTables()`와 `transferCominsGroupBetweenTables()` helper로 UI와 같은 immutable reject/overwrite model 전이를 application JavaScript에서 사용할 수 있습니다.
+Pure `transferCominsRowBetweenTables()`와 `transferCominsGroupBetweenTables()` helper로 UI와 같은 immutable reject/overwrite model 전이를 application JavaScript에서 사용할 수 있습니다. Pure helper에는 Coordinator와 pointer lifecycle이 없으므로 reject 시 `null`을 반환하며 Tooltip feedback이나 `onTransferRejected`를 발생시키지 않습니다.
 
 ## Lifecycle과 지원 조합
 

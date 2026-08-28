@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createCominsTableTransferCoordinator,
   emitCominsTableTransfer,
+  emitCominsTableTransferRejected,
   getCominsTableTransferRegistration,
   registerCominsTableTransfer,
   transferCominsGroupBetweenTables,
@@ -45,7 +46,11 @@ function groupedEndpoint(
 describe("cross-table transfer", () => {
   it("isolates registrations per Coordinator and fails closed for duplicate table IDs", () => {
     const onTransfer = vi.fn();
-    const coordinator = createCominsTableTransferCoordinator<Row>({ onTransfer });
+    const onTransferRejected = vi.fn();
+    const coordinator = createCominsTableTransferCoordinator<Row>({
+      onTransfer,
+      onTransferRejected,
+    });
     const endpoint = flatEndpoint("left", []);
     const registration: CominsTableTransferRegistration<Row, never> = {
       getSnapshot: () => ({
@@ -77,6 +82,25 @@ describe("cross-table transfer", () => {
     })!;
     expect(emitCominsTableTransfer(coordinator, result)).toBe(true);
     expect(onTransfer).toHaveBeenCalledWith(result);
+
+    const source = flatEndpoint("left", [{ id: "a", label: "Source Alpha" }]);
+    const target = flatEndpoint("right", [{ id: "a", label: "Target Alpha" }]);
+    const conflict = {
+      kind: "row" as const,
+      rowId: "a",
+      source: { dataIndex: 0, row: source.data[0]!, rowId: "a", tableId: "left" },
+      target: { dataIndex: 0, row: target.data[0]!, rowId: "a", tableId: "right" },
+    };
+    const rejection = {
+      conflict,
+      kind: "row" as const,
+      reason: "duplicate-id" as const,
+      sourceTableId: "left",
+      targetTableId: "right",
+    };
+
+    expect(emitCominsTableTransferRejected(coordinator, rejection)).toBe(true);
+    expect(onTransferRejected).toHaveBeenCalledWith(rejection);
 
     cleanup();
     expect(getCominsTableTransferRegistration(coordinator, "tasks", "left")).toBeNull();

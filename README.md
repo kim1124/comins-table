@@ -136,7 +136,9 @@ A left-button mouse interaction activates column movement after a 6-pixel horizo
 
 Use `getColumnLayout()` and `setColumnLayout()` through the Ref API, or `serializeCominsColumnLayout()` and `applyCominsColumnLayout()` from `comins-table/core`, to persist and restore order, widths, and visibility.
 
-Set `pinned: "left"` or `pinned: "right"` on a Column or Header Group to keep its atomic block visible during horizontal scrolling and lock its configured position. Container resize can temporarily demote inner pinned blocks to preserve 48px of center space without changing the persisted layout intent. Header, Body, Skeleton, and Summary use the same offsets; Group Rows and Row Details remain full-width non-sticky cells. See the [Column Pinning guide](https://github.com/kim1124/comins-table/blob/main/docs/user/22-column-pinning.md) and [`/examples/column-pinning`](http://127.0.0.1:4002/examples/column-pinning).
+Set `pinned: "left"` or `pinned: "right"` on a Column or Header Group to keep its atomic block visible during horizontal scrolling and lock its configured position. Direct resize of an effective pinned block stops before it would consume the 48px center budget and demote itself; independent container resize can still temporarily demote inner pinned blocks without changing the persisted layout intent. Header, Body, Skeleton, and Summary use the same offsets; Group Rows and Row Details remain full-width non-sticky cells. See the [Column Pinning guide](https://github.com/kim1124/comins-table/blob/main/docs/user/22-column-pinning.md) and [`/examples/column-pinning`](http://127.0.0.1:4002/examples/column-pinning).
+
+When columns overflow horizontally, Comins Table renders one native horizontal scrollbar at the bottom of the complete Table. A configured Summary Row stays above that scrollbar, while Body trackpad or Shift-wheel input and direct scrollbar input keep Header, Body, and Summary `scrollLeft` synchronized.
 
 ## Rows, Cells, And Selection
 
@@ -182,7 +184,9 @@ See the [Cross-Table Drag guide](https://github.com/kim1124/comins-table/blob/ma
 
 Create a `createCominsTableTransferCoordinator()` and pass the same Coordinator, `scope`, and unique `tableId` through `tableTransfer` to participating Tables. Existing Row Drag moves one Row between compatible flat or grouped Tables. Group Drag moves the Group plus every member Row; moving the last Row preserves the empty source Group, while moving a Group removes it from the source model.
 
-Duplicate IDs reject by default. The target can reject through `canTransfer` or explicitly return `"overwrite"` from `resolveConflict`; Group overwrite replaces the complete target Group bundle and never merges it. The Coordinator emits one immutable source/target result, and the application applies both controlled models atomically. Cross-Table Transfer is unavailable with Tree Grid, Column Filtering, Infinite Scroll, and Lazy Load.
+Duplicate IDs reject by default. A rejected duplicate displays a post-drop, pointer-adjacent `Duplicate ID` Tooltip and a restrained target Table outline without intercepting pointer events. The target can replace the Tooltip body through `rejectionFeedback.renderTooltip`, change its duration, disable default feedback, and customize its CSS variables. `Coordinator.onTransferRejected` receives the structured duplicate conflict for application Toasts or logging.
+
+The target can reject through `canTransfer` or explicitly return `"overwrite"` from `resolveConflict`; Group overwrite replaces the complete target Group bundle and never merges it. The Coordinator emits one immutable source/target result, and the application applies both controlled models atomically. Cross-Table Transfer is unavailable with Tree Grid, Column Filtering, Infinite Scroll, and Lazy Load.
 
 ## Column Filtering
 

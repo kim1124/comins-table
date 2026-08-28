@@ -8,6 +8,9 @@ const coordinator = createCominsTableTransferCoordinator<Row, Group>({
     updateTable(source.tableId, source.data, source.groups);
     updateTable(target.tableId, target.data, target.groups);
   },
+  onTransferRejected: ({ conflict, reason }) => {
+    logTransferRejection({ conflict, reason });
+  },
 });
 
 const tableTransfer = (tableId: string) => ({
@@ -15,6 +18,19 @@ const tableTransfer = (tableId: string) => ({
   scope: "people",
   tableId,
   resolveConflict: () => "reject" as const,
+  rejectionFeedback: {
+    duration: 2400,
+    renderTooltip: (rejection) => (
+      <>
+        <strong>Duplicate ID</strong>
+        <span>{`The ID "${String(
+          rejection.conflict.kind === "group"
+            ? rejection.conflict.groupId
+            : rejection.conflict.rowId,
+        )}" already exists.`}</span>
+      </>
+    ),
+  },
 });
 
 <CominsTable tableTransfer={tableTransfer("left")} rowProps={{ draggable: true }} />;
@@ -39,9 +55,25 @@ Selection, Cell/range state, Row Detail expansion, and Group disclosure state do
 
 The target Table owns `canTransfer` and `resolveConflict`. `canTransfer(intent)` can reject before model transition. Duplicate Row or Group IDs reject by default, including an undefined or unsupported resolver result.
 
+When a pointer drop resolves a duplicate conflict to `"reject"`, the target Table receives a restrained error outline and a compact `Duplicate ID` Tooltip appears next to the release coordinates. The feedback is created only after `pointerup`, uses `pointer-events: none`, stays outside the semantic Table body, clamps to the browser viewport, and is announced as a polite live status. It therefore does not replace the hit-tested Drop target or block a later interaction.
+
+`tableTransfer.rejectionFeedback` belongs to the target Table. Use `renderTooltip(rejection)` to replace the Tooltip body and `duration` to set its visible time from 500 through 10000 milliseconds; the default is 1800 milliseconds. Set `rejectionFeedback: false` to suppress the built-in Tooltip and outline. `Coordinator.onTransferRejected(rejection)` still receives the structured `reason: "duplicate-id"`, source/target Table IDs, transfer kind, and exact rejected conflict, including when built-in feedback is disabled. `canTransfer()` rejection remains application-owned and does not emit the duplicate-conflict notification.
+
+The Tooltip visuals are customizable without replacing its positioning or accessibility behavior:
+
+```css
+.comins-table {
+  --comins-table-tooltip-danger-background: #7f1d1d;
+  --comins-table-tooltip-danger-border: rgba(254, 202, 202, 0.28);
+  --comins-table-tooltip-danger-color: #ffffff;
+  --comins-table-tooltip-danger-muted: #fecaca;
+  --comins-table-tooltip-shadow: 0 12px 30px rgba(69, 10, 10, 0.28);
+}
+```
+
 Return `"overwrite"` only when destructive replacement is intended. Row overwrite removes the target Row with the same ID before insertion. Group overwrite removes the complete target Group and its member Rows, then inserts the source Group bundle; it never merges the two Groups. Resolved conflicts are included in `result.details` for audit or notification.
 
-The pure `transferCominsRowBetweenTables()` and `transferCominsGroupBetweenTables()` helpers expose the same immutable reject/overwrite model transition for application JavaScript.
+The pure `transferCominsRowBetweenTables()` and `transferCominsGroupBetweenTables()` helpers expose the same immutable reject/overwrite model transition for application JavaScript. They have no Coordinator or pointer lifecycle, so rejected pure-helper calls return `null` without Tooltip feedback or `onTransferRejected`.
 
 ## Lifecycle and supported combinations
 

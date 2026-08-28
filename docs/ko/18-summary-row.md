@@ -2,6 +2,8 @@
 
 Summary Row는 현재 visible-column layout에 맞춰 고정 footer 집계 값을 출력한다. 각 컬럼은 resolved column id, 즉 명시한 `id` 또는 id가 없을 때의 `field`를 key로 설정한다.
 
+Visible Column이 수평으로 overflow되면 하나의 native horizontal scrollbar를 Summary Row 다음, 즉 전체 Table 최하단에 표시한다. Scrollbar 직접 입력과 Body 위의 horizontal wheel 입력은 Header, Body와 Summary를 같은 위치로 동기화한다. Summary가 없으면 동일한 scrollbar가 Body 바로 다음에 표시된다.
+
 ```tsx
 <CominsTable
   columns={columns}

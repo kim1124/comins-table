@@ -200,7 +200,7 @@ Pin offset calculation and effective-zone calculation run from the same resolved
 
 ### 8.1 Single-table zones
 
-Header, body, and Summary Row retain their current separate table elements and synchronized horizontal scroll containers. Each table renders the same effective column order and resolved widths.
+Header, body, and Summary Row retain their separate table elements and render the same effective column order and resolved widths. Body owns vertical scrolling. One native horizontal scroll rail follows Summary, or Body when Summary is absent, and synchronizes `scrollLeft` across all three rendering surfaces.
 
 Pinned cells use CSS sticky positioning within their existing table:
 
@@ -272,14 +272,14 @@ Temporarily demoted columns remain position-locked because configured pin state,
 
 ### 9.2 Resize
 
-Pinned columns and groups remain resizable under the existing column resize rules. After each accepted width change, the table recomputes:
+Pinned columns and groups remain resizable. A direct resize of an effective pinned block is capped before it would consume the 48px center budget and demote itself. A block already demoted by the container behaves as center content until pinning can be restored. After each accepted width change, the table recomputes:
 
-- effective overflow demotion,
+- effective zones within the accepted resize cap,
 - left offsets,
 - right offsets,
 - header/body/Summary alignment.
 
-Resizing does not mutate pin intent.
+Independent container resize, visibility changes, and layout restore still run responsive demotion. Resizing does not mutate pin intent.
 
 ## 10. Grouped Header Rules
 
@@ -358,12 +358,14 @@ Pinning does not change virtual slot counts, slot heights, total height, or scro
 - Row Detail remains one non-sticky spanning cell.
 - Header groups never render partially pinned.
 - Responsive demotion preserves layout serialization and restores pins after growth.
+- Direct resize of an effective pinned Column or Header Group stops at the 48px center budget without self-demotion.
 
 ### 15.3 Browser tests
 
 - Pointer reorder cannot start from configured pinned columns, including temporarily demoted columns.
 - Center columns reorder correctly beside both pinned zones.
 - Column resize updates all three table surfaces without drift.
+- Effective pinned Column and Header Group resize retains its pin while preserving the center budget.
 - Focus and keyboard navigation follow visual order.
 - Narrow-to-wide resizing performs deterministic demotion and restoration.
 - Horizontal scrolling does not expose transparent gaps or black separators.

@@ -13,20 +13,32 @@ import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-loc
 
 type PinningRow = {
   amount: number;
+  category: string;
+  createdAt: string;
   id: string;
   name: string;
   owner: string;
+  priority: string;
+  progress: number;
   region: string;
   status: string;
+  team: string;
+  updatedAt: string;
 };
 
 const pinningRows: PinningRow[] = Array.from({ length: 12 }, (_value, index) => ({
   amount: (index + 1) * 125,
+  category: index % 2 === 0 ? "Operations" : "Growth",
+  createdAt: `2026-08-${String((index % 12) + 1).padStart(2, "0")}`,
   id: `pin-${index + 1}`,
   name: `Pinned row ${index + 1}`,
   owner: index % 2 === 0 ? "Platform" : "Product",
+  priority: index % 3 === 0 ? "High" : "Normal",
+  progress: (index + 1) * 7,
   region: index % 3 === 0 ? "East" : "West",
   status: index % 2 === 0 ? "Active" : "Review",
+  team: index % 2 === 0 ? "Core" : "Experience",
+  updatedAt: `2026-08-${String((index % 12) + 13).padStart(2, "0")}`,
 }));
 
 export function ColumnPinningFeature() {
@@ -39,7 +51,13 @@ export function ColumnPinningFeature() {
     { field: "name", label: text(defineLocalizedText("이름", "Name")), pinned: "left", sort: true, width: 180 },
     { field: "region", label: text(defineLocalizedText("지역", "Region")), sort: true, width: 140 },
     { field: "owner", label: text(defineLocalizedText("담당", "Owner")), sort: true, width: 160 },
+    { field: "team", label: text(defineLocalizedText("팀", "Team")), sort: true, width: 160 },
+    { field: "category", label: text(defineLocalizedText("분류", "Category")), sort: true, width: 160 },
+    { field: "priority", label: text(defineLocalizedText("우선순위", "Priority")), sort: true, width: 130 },
     { field: "amount", label: text(defineLocalizedText("금액", "Amount")), sort: true, width: 140 },
+    { field: "progress", label: text(defineLocalizedText("진행률", "Progress")), sort: true, width: 140 },
+    { field: "createdAt", label: text(defineLocalizedText("생성일", "Created")), sort: true, width: 180 },
+    { field: "updatedAt", label: text(defineLocalizedText("수정일", "Updated")), sort: true, width: 180 },
     { field: "status", label: text(defineLocalizedText("상태", "Status")), pinned: "right", sort: true, width: 140 },
     { field: "id", label: "ID", pinned: "right", width: 170 },
   ], [text]);
@@ -48,8 +66,8 @@ export function ColumnPinningFeature() {
     <section className="feature-panel feature-panel--column-pinning">
       <FeatureSampleSection
         description={text(defineLocalizedText(
-          "Configured left/right Column은 수평 스크롤에서 유지되고 위치 이동은 잠깁니다. 좁은 container에서는 center 48px를 확보하도록 안쪽 block이 자동으로 demote됩니다.",
-          "Configured left/right Columns stay visible during horizontal scrolling and are position-locked. A narrow container demotes inner blocks to preserve 48px of center space.",
+          "12개 고정 폭 Column으로 수평 Scroll과 left/right pin을 확인합니다. Scrollbar는 Summary 아래의 Table 최하단에 있고, 고정 block의 직접 Resize는 center 48px를 유지하는 범위로 제한됩니다.",
+          "Twelve fixed-width Columns demonstrate horizontal scrolling and left/right pinning. The scrollbar follows Summary at the bottom of the Table, and direct pinned-block resize stops before consuming 48px of center space.",
         ))}
         id="column-pinning-responsive"
         title={text(defineLocalizedText("Responsive Column Pinning", "Responsive Column Pinning"))}

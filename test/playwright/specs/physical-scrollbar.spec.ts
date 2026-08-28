@@ -131,8 +131,8 @@ async function dragViewportScrollbarWithMouse(page: Page, direction: "down" | "u
       const maxScrollTop = Math.max(1, element.scrollHeight - element.clientHeight);
 
       return scrollDirection === "down"
-        ? element.scrollTop >= maxScrollTop * 0.985
-        : element.scrollTop <= maxScrollTop * 0.015;
+        ? element.scrollTop >= maxScrollTop * 0.999
+        : element.scrollTop <= maxScrollTop * 0.001;
     }, direction);
 
   for (let attempt = 0; attempt < 8; attempt += 1) {

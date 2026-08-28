@@ -36,6 +36,23 @@ test("Cross-Table Drag moves flat Rows and overwrites duplicate IDs only when se
   await dragPointer(page, left.getByTestId("row-drag-handle-shared"), right.getByTestId("row-shared"));
   await expect(left.getByTestId("row-shared")).toBeVisible();
   await expect(right.getByTestId("row-shared")).toContainText("Shared from right");
+  const rejectionTooltip = page.getByTestId("transfer-rejection-tooltip");
+
+  await expect(rejectionTooltip).toBeVisible();
+  await expect(rejectionTooltip).toContainText("Duplicate ID");
+  await expect(rejectionTooltip).toContainText('The ID "shared" already exists.');
+  await expect(right.locator("..")).toHaveAttribute("data-comins-transfer-rejected", "true");
+  expect(await rejectionTooltip.evaluate((element) => getComputedStyle(element).pointerEvents))
+    .toBe("none");
+  const tooltipBox = await rejectionTooltip.boundingBox();
+
+  expect(tooltipBox).not.toBeNull();
+  expect(await page.evaluate(
+    ({ x, y }) => document.elementFromPoint(x, y)
+      ?.closest<HTMLElement>("[data-comins-transfer-table-id]")
+      ?.dataset.cominsTransferTableId,
+    { x: tooltipBox!.x + tooltipBox!.width / 2, y: tooltipBox!.y + tooltipBox!.height / 2 },
+  )).toBe("flat-right");
 
   await page.getByRole("button", { name: "Conflict: reject" }).click();
   await dragPointer(page, left.getByTestId("row-drag-handle-shared"), right.getByTestId("row-shared"));

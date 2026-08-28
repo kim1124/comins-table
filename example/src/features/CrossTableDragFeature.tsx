@@ -4,6 +4,7 @@ import {
   CominsTable,
   createCominsTableTransferCoordinator,
   type CominsTableTransferConflictPolicy,
+  type CominsTableTransferRejection,
 } from "../../../src";
 import { FeatureControls } from "../components/FeatureControls";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
@@ -64,6 +65,25 @@ export function CrossTableDragFeature() {
   const [groupedRightRows, setGroupedRightRows] = useState(initialGroupedRightRows);
   const [groupedLeftGroups, setGroupedLeftGroups] = useState(initialGroupedLeftGroups);
   const [groupedRightGroups, setGroupedRightGroups] = useState(initialGroupedRightGroups);
+  const renderRejectionTooltip = (
+    rejection:
+      | CominsTableTransferRejection<TransferRow>
+      | CominsTableTransferRejection<TransferRow, TransferGroup>,
+  ) => {
+    const duplicateId = rejection.conflict.kind === "group"
+      ? rejection.conflict.groupId
+      : rejection.conflict.rowId;
+
+    return (
+      <>
+        <strong>{text(defineLocalizedText("Duplicate ID", "Duplicate ID"))}</strong>
+        <span>{text(defineLocalizedText(
+          `"${String(duplicateId)}" ID가 이미 존재합니다.`,
+          `The ID "${String(duplicateId)}" already exists.`,
+        ))}</span>
+      </>
+    );
+  };
   const [flatCoordinator] = useState(() => createCominsTableTransferCoordinator<TransferRow>({
     onTransfer: (result) => {
       const sourceSetter = result.source.tableId === "flat-left" ? setFlatLeft : setFlatRight;
@@ -88,12 +108,14 @@ export function CrossTableDragFeature() {
   );
   const flatTransfer = (tableId: string) => ({
     coordinator: flatCoordinator,
+    rejectionFeedback: { duration: 2400, renderTooltip: renderRejectionTooltip },
     resolveConflict: () => conflictPolicy,
     scope: "flat-example",
     tableId,
   } as const);
   const groupedTransfer = (tableId: string) => ({
     coordinator: groupedCoordinator,
+    rejectionFeedback: { duration: 2400, renderTooltip: renderRejectionTooltip },
     resolveConflict: () => conflictPolicy,
     scope: "group-example",
     tableId,
