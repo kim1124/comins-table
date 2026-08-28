@@ -821,6 +821,90 @@ describe("row grouping interaction contract", () => {
     expect(document.activeElement).toBe(targetViewport.querySelector("[data-testid='row-a']"));
   });
 
+  it("reports a duplicate Cross-Table Row and renders non-blocking target feedback", () => {
+    const onTransfer = vi.fn();
+    const onTransferRejected = vi.fn();
+    const coordinator = createCominsTableTransferCoordinator<PersonRow>({
+      onTransfer,
+      onTransferRejected,
+    });
+    const view = renderTableElement(
+      <div>
+        <CominsTable
+          columns={columns}
+          data={[rows[0]!]}
+          data-testid="duplicate-transfer-source"
+          getRowId={getPersonRowId}
+          rowProps={{ draggable: true }}
+          tableTransfer={{ coordinator, scope: "people", tableId: "source" }}
+        />
+        <CominsTable
+          columns={columns}
+          data={[{ ...rows[0]!, name: "Target Alpha" }]}
+          data-testid="duplicate-transfer-target"
+          getRowId={getPersonRowId}
+          rowProps={{ draggable: true }}
+          tableTransfer={{
+            coordinator,
+            rejectionFeedback: {
+              duration: 10000,
+              renderTooltip: (rejection) => (
+                <>
+                  <strong>Duplicate ID</strong>
+                  <span>{`custom:${String(rejection.conflict.kind === "row" ? rejection.conflict.rowId : rejection.conflict.groupId)}`}</span>
+                </>
+              ),
+            },
+            scope: "people",
+            tableId: "target",
+          }}
+        />
+      </div>,
+    );
+    const source = view.querySelector<HTMLElement>(
+      "[data-testid='duplicate-transfer-source'] [data-testid='row-drag-handle-a']",
+    )!;
+    const target = view.querySelector<HTMLElement>(
+      "[data-testid='duplicate-transfer-target'] [data-testid='row-a']",
+    )!;
+    const targetTable = view.querySelector<HTMLElement>(
+      "[data-comins-transfer-table-id='target']",
+    )!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => target),
+    });
+
+    try {
+      act(() => {
+        source.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointerup", { bubbles: true, button: 0, clientX: 24, clientY: 36 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    expect(onTransfer).not.toHaveBeenCalled();
+    expect(onTransferRejected).toHaveBeenCalledWith(expect.objectContaining({
+      kind: "row",
+      reason: "duplicate-id",
+      sourceTableId: "source",
+      targetTableId: "target",
+    }));
+    expect(view.querySelector("[data-testid='transfer-rejection-tooltip']")?.textContent)
+      .toContain("Duplicate IDcustom:a");
+    expect(targetTable.dataset.cominsTransferRejected).toBe("true");
+  });
+
   it("lets the target reject a Cross-Table Row before conflict resolution", () => {
     const canTransfer = vi.fn(() => false);
     const onTransfer = vi.fn();

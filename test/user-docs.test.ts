@@ -332,6 +332,9 @@ describe("comins-table user documentation contract", () => {
       expect(document).toContain("overwrite");
       expect(document).toContain("empty");
       expect(document).toContain("onTransfer");
+      expect(document).toContain("onTransferRejected");
+      expect(document).toContain("rejectionFeedback");
+      expect(document).toContain("pointer-events: none");
     }
 
     expect(pinningPlayground).toContain('data-testid="column-pinning-viewport"');

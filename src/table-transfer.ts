@@ -1,3 +1,5 @@
+import type React from "react";
+
 import type { CominsRowId } from "./core";
 
 export type CominsTableTransferConflictPolicy = "overwrite" | "reject";
@@ -61,6 +63,21 @@ export type CominsTableTransferIntent<TData, TGroup> =
       targetTableId: string;
     };
 
+export type CominsTableTransferRejection<TData, TGroup = never> = {
+  conflict: CominsTableTransferConflict<TData, TGroup>;
+  kind: "group" | "row";
+  reason: "duplicate-id";
+  sourceTableId: string;
+  targetTableId: string;
+};
+
+export type CominsTableTransferRejectionFeedback<TData, TGroup = never> = {
+  duration?: number;
+  renderTooltip?: (
+    rejection: CominsTableTransferRejection<TData, TGroup>,
+  ) => React.ReactNode;
+};
+
 declare const cominsTableTransferCoordinatorBrand: unique symbol;
 
 export type CominsTableTransferCoordinator<TData, TGroup = never> = {
@@ -72,11 +89,15 @@ export type CominsTableTransferCoordinator<TData, TGroup = never> = {
 
 export type CominsTableTransferCoordinatorOptions<TData, TGroup = never> = {
   onTransfer: (result: CominsTableTransferResult<TData, TGroup>) => void;
+  onTransferRejected?: (
+    rejection: CominsTableTransferRejection<TData, TGroup>,
+  ) => void;
 };
 
 export type CominsTableTransferConfig<TData, TGroup = never> = {
   canTransfer?: (intent: CominsTableTransferIntent<TData, TGroup>) => boolean;
   coordinator: CominsTableTransferCoordinator<TData, TGroup>;
+  rejectionFeedback?: false | CominsTableTransferRejectionFeedback<TData, TGroup>;
   resolveConflict?: CominsTableTransferConflictResolver<TData, TGroup>;
   scope: string;
   tableId: string;
@@ -271,6 +292,20 @@ export function emitCominsTableTransfer<TData, TGroup>(
   }
 
   state.options.onTransfer(result);
+  return true;
+}
+
+export function emitCominsTableTransferRejected<TData, TGroup>(
+  coordinator: CominsTableTransferCoordinator<TData, TGroup>,
+  rejection: CominsTableTransferRejection<TData, TGroup>,
+) {
+  const state = getCoordinatorState(coordinator);
+
+  if (!state) {
+    return false;
+  }
+
+  state.options.onTransferRejected?.(rejection);
   return true;
 }
 

@@ -28,6 +28,10 @@ const flatCoordinator = createCominsTableTransferCoordinator<Row>({
     result.source.data satisfies Row[];
     result.source.groups satisfies never[] | undefined;
   },
+  onTransferRejected: (rejection) => {
+    rejection.reason satisfies "duplicate-id";
+    rejection.conflict.kind satisfies "group" | "row";
+  },
 });
 const groupedCoordinator = createCominsTableTransferCoordinator<Row, Group>({
   onTransfer: (result) => {
@@ -52,6 +56,10 @@ void (
     tableTransfer={{
       canTransfer: (intent) => intent.kind === "row" && intent.row.id.length > 0,
       coordinator: flatCoordinator,
+      rejectionFeedback: {
+        duration: 1800,
+        renderTooltip: (rejection) => <span>{rejection.reason}</span>,
+      },
       resolveConflict: (conflict) => conflict.kind === "row" ? "overwrite" : "reject",
       scope: "people",
       tableId: "flat-a",

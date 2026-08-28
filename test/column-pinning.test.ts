@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getCominsPinnedBlockResizeMaxWidth,
   getCominsColumnPinningSpanFragments,
   normalizeCominsColumnPinned,
   resolveCominsColumnPinning,
@@ -51,6 +52,19 @@ describe("column pinning", () => {
 
     expect(resolved.orderedColumnIds).toEqual(["left-a", "center", "right-a", "right-b"]);
     expect([...resolved.columns.values()].every((column) => column.pinned === undefined)).toBe(true);
+  });
+
+  it("limits an effective pinned block resize without changing responsive demotion", () => {
+    const resolved = resolveCominsColumnPinning(blocks, 400);
+
+    expect(getCominsPinnedBlockResizeMaxWidth(blocks, resolved, "left-a", 400)).toBe(222);
+    expect(getCominsPinnedBlockResizeMaxWidth(blocks, resolved, "right-a", 400)).toBe(212);
+    expect(getCominsPinnedBlockResizeMaxWidth(blocks, resolved, "center", 400)).toBeUndefined();
+
+    const narrow = resolveCominsColumnPinning(blocks, 200);
+
+    expect(getCominsPinnedBlockResizeMaxWidth(blocks, narrow, "right-a", 200)).toBeUndefined();
+    expect(getCominsPinnedBlockResizeMaxWidth(blocks, narrow, "right-b", 200)).toBe(72);
   });
 
   it("splits a spanning Summary cell at effective zone boundaries", () => {

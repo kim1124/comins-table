@@ -45,6 +45,7 @@ import {
 import { getCominsColumnMouseIntent } from "./column-pointer";
 import { CominsColumnFilterControl } from "./column-filter";
 import {
+  getCominsPinnedBlockResizeMaxWidth,
   getCominsColumnPinningSpanFragments,
   resolveCominsColumnPinning,
 } from "./column-pinning";
@@ -69,12 +70,14 @@ import {
 } from "./filtering";
 import {
   emitCominsTableTransfer,
+  emitCominsTableTransferRejected,
   getCominsTableTransferRegistration,
   isCominsTableTransferCoordinator,
   registerCominsTableTransfer,
   transferCominsGroupBetweenTables,
   transferCominsRowBetweenTables,
 } from "./table-transfer";
+import { CominsPointerTooltip } from "./tooltip";
 import { getCominsSummaryValues } from "./summary";
 import {
   flattenCominsTree,
@@ -147,6 +150,8 @@ export type {
   CominsTableTransferGroupEndpoint,
   CominsTableTransferIntent,
   CominsTableTransferResolvedConflict,
+  CominsTableTransferRejection,
+  CominsTableTransferRejectionFeedback,
   CominsTableTransferResult,
   CominsTableTransferRowEndpoint,
 } from "./table-transfer";
@@ -164,8 +169,10 @@ import type {
 } from "./filtering";
 import type {
   CominsTableTransferConfig,
+  CominsTableTransferConflict,
   CominsTableTransferEndpoint,
   CominsTableTransferIntent,
+  CominsTableTransferRejection,
   CominsTableTransferRegistrationSnapshot,
 } from "./table-transfer";
 
@@ -265,6 +272,11 @@ type CominsCrossTableGroupTarget<TData, TGroup> = CominsTransferTableHit<TData, 
   position: "after" | "append" | "before";
   targetGroupId?: CominsRowId;
   valid: boolean;
+};
+type CominsTransferRejectionFeedbackState = {
+  content: React.ReactNode;
+  x: number;
+  y: number;
 };
 
 function isCominsGroupedTransferEndpoint<TData, TGroup>(
@@ -1644,6 +1656,7 @@ function CominsTableInner<TData, TGroup>(
   const containerRef = useRef<HTMLDivElement | null>(null);
   const footerRef = useRef<HTMLDivElement | null>(null);
   const headerRef = useRef<HTMLDivElement | null>(null);
+  const horizontalScrollbarRef = useRef<HTMLDivElement | null>(null);
   const tableRootRef = useRef<HTMLDivElement | null>(null);
   const copiedCellRef = useRef<CominsCopiedCell | null>(null);
   const copiedRangeRef = useRef<CominsCopiedCellRange | null>(null);
@@ -1682,6 +1695,8 @@ function CominsTableInner<TData, TGroup>(
     CominsTableTransferRegistrationSnapshot<TData, TGroup> | null
   >(null);
   const externalDropMarkerRef = useRef<HTMLElement | null>(null);
+  const transferRejectionTargetRef = useRef<HTMLElement | null>(null);
+  const transferRejectionTimerRef = useRef<number | null>(null);
   const pendingTransferFocusFrameRef = useRef<number | null>(null);
   const groupDisclosureElementsRef = useRef(new Map<CominsRowId, HTMLButtonElement>());
   const pendingGroupDisclosureFocusRef = useRef<CominsRowId | null>(null);
@@ -1707,6 +1722,8 @@ function CominsTableInner<TData, TGroup>(
   const [resizingColumnId, setResizingColumnId] = useState<string | null>(null);
   const [rowMoveState, setRowMoveState] = useState<CominsRowMoveState | null>(null);
   const [rowGroupMoveState, setRowGroupMoveState] = useState<CominsRowGroupMoveState | null>(null);
+  const [transferRejectionFeedback, setTransferRejectionFeedback] =
+    useState<CominsTransferRejectionFeedbackState | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const tableInstanceId = useId();
   const rowDetailIdPrefix = useId();
@@ -1815,6 +1832,54 @@ function CominsTableInner<TData, TGroup>(
     marker.removeAttribute("data-comins-group-drop-valid");
     marker.removeAttribute("data-comins-row-drop-valid");
     externalDropMarkerRef.current = null;
+  };
+  const clearTransferRejectionFeedback = (updateState = true) => {
+    if (transferRejectionTimerRef.current !== null) {
+      window.clearTimeout(transferRejectionTimerRef.current);
+      transferRejectionTimerRef.current = null;
+    }
+
+    transferRejectionTargetRef.current?.removeAttribute("data-comins-transfer-rejected");
+    transferRejectionTargetRef.current = null;
+
+    if (updateState) {
+      setTransferRejectionFeedback(null);
+    }
+  };
+  const showTransferRejectionFeedback = (
+    rejection: CominsTableTransferRejection<TData, TGroup>,
+    targetSnapshot: CominsTableTransferRegistrationSnapshot<TData, TGroup>,
+    clientX: number,
+    clientY: number,
+  ) => {
+    const feedback = targetSnapshot.config.rejectionFeedback;
+
+    if (feedback === false) {
+      return;
+    }
+
+    clearTransferRejectionFeedback();
+    const duplicateId = rejection.conflict.kind === "group"
+      ? rejection.conflict.groupId
+      : rejection.conflict.rowId;
+    const content = feedback?.renderTooltip?.(rejection) ?? (
+      <>
+        <strong>Duplicate ID</strong>
+        <span>{`The ID "${String(duplicateId)}" already exists.`}</span>
+      </>
+    );
+    const requestedDuration = feedback?.duration ?? 1800;
+    const duration = Number.isFinite(requestedDuration)
+      ? Math.max(500, Math.min(10000, requestedDuration))
+      : 1800;
+
+    targetSnapshot.root?.setAttribute("data-comins-transfer-rejected", "true");
+    transferRejectionTargetRef.current = targetSnapshot.root;
+    setTransferRejectionFeedback({ content, x: clientX, y: clientY });
+    transferRejectionTimerRef.current = window.setTimeout(
+      () => clearTransferRejectionFeedback(),
+      duration,
+    );
   };
   const setExternalDropMarker = (
     element: HTMLElement,
@@ -2198,6 +2263,7 @@ function CominsTableInner<TData, TGroup>(
     return () => {
       clearActivePointerGesture();
       clearExternalDropMarker();
+      clearTransferRejectionFeedback(false);
 
       if (pendingTransferFocusFrameRef.current !== null) {
         window.cancelAnimationFrame(pendingTransferFocusFrameRef.current);
@@ -2533,7 +2599,7 @@ function CominsTableInner<TData, TGroup>(
       return Math.min(maxWidth, Math.max(minWidth, width));
     });
   }, [containerWidth, state.columnState, visibleColumns]);
-  const columnPinning = useMemo(() => {
+  const columnPinningBlocks = useMemo(() => {
     const groupIdByColumnId = new Map<string, string>();
 
     for (const group of state.columnGroups) {
@@ -2550,7 +2616,7 @@ function CominsTableInner<TData, TGroup>(
       ] as const),
     );
     const emittedGroups = new Set<string>();
-    const blocks = visibleColumns.flatMap((column) => {
+    return visibleColumns.flatMap((column) => {
       const groupId = groupIdByColumnId.get(column.id);
 
       if (!groupId) {
@@ -2580,8 +2646,11 @@ function CominsTableInner<TData, TGroup>(
       }];
     });
 
-    return resolveCominsColumnPinning(blocks, containerWidth);
-  }, [columnWidths, containerWidth, state.columnGroupState, state.columnGroups, state.columnState, visibleColumns]);
+  }, [columnWidths, state.columnGroupState, state.columnGroups, state.columnState, visibleColumns]);
+  const columnPinning = useMemo(
+    () => resolveCominsColumnPinning(columnPinningBlocks, containerWidth),
+    [columnPinningBlocks, containerWidth],
+  );
   const getPinnedColumnAttributes = (columnId: string) => {
     const pin = columnPinning.columns.get(columnId);
 
@@ -4641,8 +4710,21 @@ function CominsTableInner<TData, TGroup>(
           return;
         }
 
+        const rejectedConflict: {
+          conflict?: CominsTableTransferConflict<TData, TGroup>;
+        } = {};
         const result = transferCominsRowBetweenTables({
-          resolveConflict: targetSnapshot.config.resolveConflict,
+          resolveConflict: (conflict) => {
+            const policy = targetSnapshot.config.resolveConflict?.(conflict) === "overwrite"
+              ? "overwrite"
+              : "reject";
+
+            if (policy === "reject" && rejectedConflict.conflict === undefined) {
+              rejectedConflict.conflict = conflict;
+            }
+
+            return policy;
+          },
           source: sourceSnapshot.endpoint,
           sourceRowId,
           target: targetSnapshot.endpoint,
@@ -4652,6 +4734,22 @@ function CominsTableInner<TData, TGroup>(
 
         if (result && emitCominsTableTransfer(normalizedTableTransfer.coordinator, result)) {
           scheduleTransferFocus(targetSnapshot.endpoint.tableId, "row", sourceRowId);
+        } else if (rejectedConflict.conflict) {
+          const rejection: CominsTableTransferRejection<TData, TGroup> = Object.freeze({
+            conflict: rejectedConflict.conflict,
+            kind: "row",
+            reason: "duplicate-id",
+            sourceTableId: sourceSnapshot.endpoint.tableId,
+            targetTableId: targetSnapshot.endpoint.tableId,
+          });
+
+          showTransferRejectionFeedback(
+            rejection,
+            targetSnapshot,
+            upEvent.clientX,
+            upEvent.clientY,
+          );
+          emitCominsTableTransferRejected(normalizedTableTransfer.coordinator, rejection);
         }
         return;
       }
@@ -4907,9 +5005,22 @@ function CominsTableInner<TData, TGroup>(
           return;
         }
 
+        const rejectedConflict: {
+          conflict?: CominsTableTransferConflict<TData, TGroup>;
+        } = {};
         const result = transferCominsGroupBetweenTables({
           position: finalCrossTarget.position,
-          resolveConflict: targetSnapshot.config.resolveConflict,
+          resolveConflict: (conflict) => {
+            const policy = targetSnapshot.config.resolveConflict?.(conflict) === "overwrite"
+              ? "overwrite"
+              : "reject";
+
+            if (policy === "reject" && rejectedConflict.conflict === undefined) {
+              rejectedConflict.conflict = conflict;
+            }
+
+            return policy;
+          },
           source: sourceSnapshot.endpoint,
           sourceGroupId,
           target: targetSnapshot.endpoint,
@@ -4918,6 +5029,22 @@ function CominsTableInner<TData, TGroup>(
 
         if (result && emitCominsTableTransfer(normalizedTableTransfer.coordinator, result)) {
           scheduleTransferFocus(targetSnapshot.endpoint.tableId, "group", sourceGroupId);
+        } else if (rejectedConflict.conflict) {
+          const rejection: CominsTableTransferRejection<TData, TGroup> = Object.freeze({
+            conflict: rejectedConflict.conflict,
+            kind: "group",
+            reason: "duplicate-id",
+            sourceTableId: sourceSnapshot.endpoint.tableId,
+            targetTableId: targetSnapshot.endpoint.tableId,
+          });
+
+          showTransferRejectionFeedback(
+            rejection,
+            targetSnapshot,
+            upEvent.clientX,
+            upEvent.clientY,
+          );
+          emitCominsTableTransferRejected(normalizedTableTransfer.coordinator, rejection);
         }
         return;
       }
@@ -5144,6 +5271,12 @@ function CominsTableInner<TData, TGroup>(
               const fallbackGroupWidth = [...visibleWidthSnapshot.values()].reduce((sum, width) => sum + width, 0);
               const startWidth =
                 measuredWidth && Number.isFinite(measuredWidth) ? measuredWidth : Math.max(1, fallbackGroupWidth);
+              const resizeMaxWidth = getCominsPinnedBlockResizeMaxWidth(
+                columnPinningBlocks,
+                columnPinning,
+                `group:${cell.groupId}`,
+                containerWidth,
+              );
               setResizingColumnId(cell.groupId);
               const handlePointerMove = (moveEvent: PointerEvent) => {
                 commitState(
@@ -5154,7 +5287,11 @@ function CominsTableInner<TData, TGroup>(
                       next = setCominsColumnWidth(next, visibleColumnId, visibleColumnWidth);
                     }
 
-                    return setCominsColumnGroupWidth(next, cell.groupId, startWidth + moveEvent.clientX - startX);
+                    return setCominsColumnGroupWidth(
+                      next,
+                      cell.groupId,
+                      Math.min(resizeMaxWidth ?? Number.POSITIVE_INFINITY, startWidth + moveEvent.clientX - startX),
+                    );
                   },
                   { columnLayoutChanged: true },
                 );
@@ -5439,6 +5576,14 @@ function CominsTableInner<TData, TGroup>(
             const startWidth =
               visibleWidthSnapshot.get(column.id) ??
               (measuredWidth && Number.isFinite(measuredWidth) ? measuredWidth : (columnState?.width ?? column.width ?? 160));
+            const resizeMaxWidth = cell.groupId
+              ? undefined
+              : getCominsPinnedBlockResizeMaxWidth(
+                  columnPinningBlocks,
+                  columnPinning,
+                  `column:${column.id}`,
+                  containerWidth,
+                );
             setResizingColumnId(column.id);
             const handlePointerMove = (moveEvent: PointerEvent) => {
               commitState(
@@ -5452,7 +5597,10 @@ function CominsTableInner<TData, TGroup>(
                   return setColumnWidthInsideParentGroup(
                     next,
                     column.id,
-                    Math.max(getEffectiveColumnMinWidth(column), startWidth + moveEvent.clientX - startX),
+                    Math.min(
+                      resizeMaxWidth ?? Number.POSITIVE_INFINITY,
+                      Math.max(getEffectiveColumnMinWidth(column), startWidth + moveEvent.clientX - startX),
+                    ),
                   );
                 },
                 { columnLayoutChanged: true },
@@ -5542,6 +5690,30 @@ function CominsTableInner<TData, TGroup>(
     lastLoadMoreRowCountRef.current = currentRowCount;
     onLoadMore();
   };
+  const syncHorizontalScrollLeft = (requestedScrollLeft: number) => {
+    const scrollContainers = [
+      headerRef.current,
+      containerRef.current,
+      footerRef.current,
+      horizontalScrollbarRef.current,
+    ].filter((element): element is HTMLDivElement => element !== null);
+    const sharedMaxScrollLeft = scrollContainers.reduce(
+      (current, element) => Math.min(current, Math.max(0, element.scrollWidth - element.clientWidth)),
+      Number.POSITIVE_INFINITY,
+    );
+    const nextScrollLeft = Math.min(
+      Number.isFinite(sharedMaxScrollLeft) ? sharedMaxScrollLeft : 0,
+      Math.max(0, requestedScrollLeft),
+    );
+
+    for (const element of scrollContainers) {
+      if (Math.abs(element.scrollLeft - nextScrollLeft) > 0.5) {
+        element.scrollLeft = nextScrollLeft;
+      }
+    }
+
+    return nextScrollLeft;
+  };
   const handleBodyScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const bodyViewport = event.currentTarget;
     const activeAnchorTransaction =
@@ -5585,23 +5757,33 @@ function CominsTableInner<TData, TGroup>(
       });
     }
 
-    let nextScrollLeft = Math.max(0, bodyViewport.scrollLeft);
-
-    if (headerRef.current) {
-      const headerMaxScrollLeft = Math.max(0, headerRef.current.scrollWidth - headerRef.current.clientWidth);
-      const bodyMaxScrollLeft = Math.max(0, bodyViewport.scrollWidth - bodyViewport.clientWidth);
-      const sharedMaxScrollLeft = Math.min(headerMaxScrollLeft, bodyMaxScrollLeft);
-      nextScrollLeft = Math.min(sharedMaxScrollLeft, nextScrollLeft);
-
-      if (Math.abs(bodyViewport.scrollLeft - nextScrollLeft) > 0.5) {
-        bodyViewport.scrollLeft = nextScrollLeft;
-      }
-
-      headerRef.current.scrollLeft = nextScrollLeft;
+    syncHorizontalScrollLeft(bodyViewport.scrollLeft);
+  };
+  const handleBodyWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (!hasHorizontalOverflow || !horizontalScrollbarRef.current) {
+      return;
     }
 
-    if (footerRef.current) {
-      footerRef.current.scrollLeft = nextScrollLeft;
+    const rawDelta = Math.abs(event.deltaX) > 0.01
+      ? event.deltaX
+      : event.shiftKey
+        ? event.deltaY
+        : 0;
+
+    if (Math.abs(rawDelta) <= 0.01) {
+      return;
+    }
+
+    const deltaScale = event.deltaMode === WheelEvent.DOM_DELTA_LINE
+      ? 16
+      : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+        ? Math.max(1, event.currentTarget.clientWidth)
+        : 1;
+    const previousScrollLeft = horizontalScrollbarRef.current.scrollLeft;
+    const nextScrollLeft = syncHorizontalScrollLeft(previousScrollLeft + rawDelta * deltaScale);
+
+    if (event.shiftKey && Math.abs(nextScrollLeft - previousScrollLeft) > 0.5) {
+      event.preventDefault();
     }
   };
 
@@ -5650,6 +5832,7 @@ function CominsTableInner<TData, TGroup>(
           focusedLeafDataIndexRef.current = Number.isInteger(dataIndex) ? dataIndex : null;
         }}
         onScroll={handleBodyScroll}
+        onWheel={handleBodyWheel}
         ref={containerRef}
       >
         <table
@@ -6375,6 +6558,24 @@ function CominsTableInner<TData, TGroup>(
           </table>
         </div>
       ) : null}
+      {hasHorizontalOverflow ? (
+        <div
+          aria-label="Table horizontal scroll"
+          className="comins-table__horizontal-scrollbar"
+          data-testid="table-horizontal-scrollbar"
+          onScroll={(event) => syncHorizontalScrollLeft(event.currentTarget.scrollLeft)}
+          ref={horizontalScrollbarRef}
+          role="region"
+          style={{ width: containerWidth }}
+          tabIndex={0}
+        >
+          <div
+            aria-hidden="true"
+            className="comins-table__horizontal-scrollbar-content"
+            style={{ width: tableWidth }}
+          />
+        </div>
+      ) : null}
       {movingHeaderLabel && columnMovePointer ? (
         <div
           aria-hidden="true"
@@ -6385,6 +6586,16 @@ function CominsTableInner<TData, TGroup>(
           <CominsTableIcon name="columnMove" />
           <span className="comins-column-move-ghost__label">{movingHeaderLabel}</span>
         </div>
+      ) : null}
+      {transferRejectionFeedback ? (
+        <CominsPointerTooltip
+          icon={<span className="comins-tooltip-surface__warning">!</span>}
+          tone="danger"
+          x={transferRejectionFeedback.x}
+          y={transferRejectionFeedback.y}
+        >
+          {transferRejectionFeedback.content}
+        </CominsPointerTooltip>
       ) : null}
     </div>
   );

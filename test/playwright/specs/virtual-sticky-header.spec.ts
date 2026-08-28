@@ -128,7 +128,7 @@ test("split header and body columns stay aligned after column resize @perf", asy
   expect(diagnostics).toEqual([]);
 });
 
-test("body viewport uses horizontal overflow for the wide data set and keeps scroll sync @perf", async ({ page }) => {
+test("bottom scrollbar owns horizontal overflow for the wide data set and keeps scroll sync @perf", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
   await page.goto("/performance/virtualization");
@@ -137,8 +137,10 @@ test("body viewport uses horizontal overflow for the wide data set and keeps scr
 
   const table = getDefaultVirtualTable(page);
   const viewport = table.getByTestId("data-table-viewport");
+  const horizontalScrollbar = table.getByTestId("table-horizontal-scrollbar");
   await expect(viewport).toHaveCSS("overflow-y", "scroll");
-  await expect(viewport).toHaveCSS("overflow-x", "scroll");
+  await expect(viewport).toHaveCSS("overflow-x", "hidden");
+  await expect(horizontalScrollbar).toHaveCSS("overflow-x", "scroll");
   const defaultOverflow = await viewport.evaluate((element) => ({
     horizontalOverflow: element.getAttribute("data-horizontal-overflow"),
     clientWidth: element.clientWidth,
@@ -158,7 +160,7 @@ test("body viewport uses horizontal overflow for the wide data set and keeps scr
   await page.mouse.move(handleBox!.x + handleBox!.width / 2 + 900, handleBox!.y + handleBox!.height / 2);
   await page.mouse.up();
 
-  await expect(viewport).toHaveCSS("overflow-x", "scroll");
+  await expect(viewport).toHaveCSS("overflow-x", "hidden");
   const resizedOverflow = await viewport.evaluate((element) => ({
     clientWidth: element.clientWidth,
     horizontalOverflow: element.getAttribute("data-horizontal-overflow"),
@@ -167,20 +169,24 @@ test("body viewport uses horizontal overflow for the wide data set and keeps scr
   expect(resizedOverflow.horizontalOverflow).toBe("true");
   expect(resizedOverflow.scrollWidth).toBeGreaterThan(resizedOverflow.clientWidth + 100);
 
-  const horizontalScrollSync = await viewport.evaluate((element) => {
+  const horizontalScrollSync = await horizontalScrollbar.evaluate((element) => {
     element.scrollLeft = element.scrollWidth;
     element.dispatchEvent(new Event("scroll", { bubbles: true }));
     const tableRoot = element.closest(".comins-table");
     const header = tableRoot?.querySelector<HTMLElement>(".comins-table__header");
+    const viewport = tableRoot?.querySelector<HTMLElement>("[data-testid='data-table-viewport']");
 
     return {
       headerScrollLeft: header?.scrollLeft ?? null,
-      viewportScrollLeft: element.scrollLeft,
+      scrollbarScrollLeft: element.scrollLeft,
+      viewportScrollLeft: viewport?.scrollLeft ?? null,
     };
   });
-  expect(horizontalScrollSync.viewportScrollLeft).toBeGreaterThan(0);
+  expect(horizontalScrollSync.scrollbarScrollLeft).toBeGreaterThan(0);
+  expect(horizontalScrollSync.viewportScrollLeft).not.toBeNull();
   expect(horizontalScrollSync.headerScrollLeft).not.toBeNull();
-  expect(Math.abs(horizontalScrollSync.headerScrollLeft! - horizontalScrollSync.viewportScrollLeft)).toBeLessThan(1);
+  expect(Math.abs(horizontalScrollSync.headerScrollLeft! - horizontalScrollSync.scrollbarScrollLeft)).toBeLessThan(1);
+  expect(Math.abs(horizontalScrollSync.viewportScrollLeft! - horizontalScrollSync.scrollbarScrollLeft)).toBeLessThan(1);
 
   const scrolledAlignment = await readColumnAlignment(table);
 

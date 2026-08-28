@@ -116,6 +116,45 @@ export function resolveCominsColumnPinning(
   };
 }
 
+export function getCominsPinnedBlockResizeMaxWidth(
+  blocks: readonly CominsColumnPinningBlock[],
+  resolved: CominsResolvedColumnPinning,
+  blockId: string,
+  containerWidth: number,
+  minimumCenterWidth = 48,
+): number | undefined {
+  const target = blocks.find((block) => block.id === blockId);
+
+  if (
+    !target?.pinned ||
+    target.columnIds.length === 0 ||
+    target.columnIds.some((columnId) => resolved.columns.get(columnId)?.pinned !== target.pinned)
+  ) {
+    return undefined;
+  }
+
+  const otherPinnedWidth = blocks.reduce((total, block) => {
+    if (
+      block.id === target.id ||
+      !block.pinned ||
+      block.columnIds.some((columnId) => resolved.columns.get(columnId)?.pinned !== block.pinned)
+    ) {
+      return total;
+    }
+
+    return total + block.columnWidths.reduce(
+      (blockTotal, width) => blockTotal + (Number.isFinite(width) ? Math.max(0, width) : 0),
+      0,
+    );
+  }, 0);
+  const safeContainerWidth = Number.isFinite(containerWidth) ? Math.max(0, containerWidth) : 0;
+  const safeMinimumCenterWidth = Number.isFinite(minimumCenterWidth)
+    ? Math.max(0, minimumCenterWidth)
+    : 48;
+
+  return Math.max(0, safeContainerWidth - safeMinimumCenterWidth - otherPinnedWidth);
+}
+
 export function getCominsColumnPinningSpanFragments(
   resolved: CominsResolvedColumnPinning,
   startIndex: number,
