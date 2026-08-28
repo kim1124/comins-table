@@ -9,7 +9,7 @@
 - Added matching Korean/English Playground routes and public guides for Column Pinning and Cross-Table Row/Group Drag, including model ownership, supported combinations, destructive overwrite semantics, layout persistence, and responsive behavior.
 - Added non-blocking pointer-adjacent `Duplicate ID` rejection feedback with a reusable internal Tooltip Surface, restrained target outline, viewport collision handling, accessible live status, renderer/duration/disable controls, CSS theme tokens, and structured `onTransferRejected` notifications.
 - Corrected the Column Pinning Playground to guarantee observable horizontal overflow, and capped direct resize of effective pinned Columns and Header Groups at the 48px center budget so the active pinned surface no longer demotes beneath scrolling content.
-- Moved the single native horizontal scrollbar to the bottom of the complete Table, after Summary when configured, while preserving Body wheel input, vertical virtualization, synchronized Header/Body/Summary scrolling, and a visible final Row boundary when native scrollbar chrome auto-hides.
+- Moved the single native horizontal scrollbar to the bottom of the complete Table, after Summary when configured, while preserving Body wheel input, vertical virtualization, synchronized Header/Body/Summary scrolling, a visible final Row boundary when native scrollbar chrome auto-hides, and equal Body/rail scroll ranges with classic non-overlay scrollbars.
 
 ## 0.1.7 - 2026-08-27
 
