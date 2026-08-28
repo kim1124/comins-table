@@ -223,48 +223,57 @@ async function dragVirtualScrollbar(page: Page, direction: "down" | "up") {
   );
 }
 
+async function exerciseVirtualScroll(currentPage: Page) {
+  await openFeature(currentPage, "Virtualization", "body");
+  await expect(currentPage.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
+  const viewport = currentPage.getByTestId("data-table-viewport");
+
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
+  await viewport.hover();
+  await currentPage.mouse.wheel(0, 2400);
+  await dragVirtualScrollbar(currentPage, "down");
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => {
+        const rows = Array.from(
+          element.querySelectorAll<HTMLTableRowElement>(
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
+          ),
+        );
+        const last = rows[rows.length - 1];
+
+        return Number(last?.getAttribute("data-comins-row-data-index") ?? "-1");
+      }),
+    )
+    .toBeGreaterThan(99_900);
+
+  await currentPage.mouse.wheel(0, -2400);
+  await dragVirtualScrollbar(currentPage, "up");
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => {
+        const rows = Array.from(
+          element.querySelectorAll<HTMLTableRowElement>(
+            ".comins-table__body-table tbody tr[data-comins-row-data-index]",
+          ),
+        );
+        const first = rows[0];
+
+        return Number(first?.getAttribute("data-comins-row-data-index") ?? "-1");
+      }),
+    )
+    .toBeLessThan(100);
+}
+
 test("full audit keeps 100000 row virtual scroll counters within 10 percent @perf", async ({ page }, testInfo) => {
-  await runMemoryScenario(page, testInfo, "100000-row-virtual-scroll", async (currentPage) => {
-    await openFeature(currentPage, "Virtualization", "body");
-    await expect(currentPage.getByRole("button", { name: "10만 행 로드" })).toHaveCount(0);
-    const viewport = currentPage.getByTestId("data-table-viewport");
-
-    await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
-    await viewport.hover();
-    await currentPage.mouse.wheel(0, 2400);
-    await dragVirtualScrollbar(currentPage, "down");
-    await expect
-      .poll(() =>
-        viewport.evaluate((element) => {
-          const rows = Array.from(
-            element.querySelectorAll<HTMLTableRowElement>(
-              ".comins-table__body-table tbody tr[data-comins-row-data-index]",
-            ),
-          );
-          const last = rows[rows.length - 1];
-
-          return Number(last?.getAttribute("data-comins-row-data-index") ?? "-1");
-        }),
-      )
-      .toBeGreaterThan(99_900);
-
-    await currentPage.mouse.wheel(0, -2400);
-    await dragVirtualScrollbar(currentPage, "up");
-    await expect
-      .poll(() =>
-        viewport.evaluate((element) => {
-          const rows = Array.from(
-            element.querySelectorAll<HTMLTableRowElement>(
-              ".comins-table__body-table tbody tr[data-comins-row-data-index]",
-            ),
-          );
-          const first = rows[0];
-
-          return Number(first?.getAttribute("data-comins-row-data-index") ?? "-1");
-        }),
-      )
-      .toBeLessThan(100);
-  });
+  await runMemoryScenario(
+    page,
+    testInfo,
+    "100000-row-virtual-scroll",
+    exerciseVirtualScroll,
+    90_000,
+    exerciseVirtualScroll,
+  );
 });
 
 test("full audit releases Row Expand Detail observers and counters within 10 percent @perf", async ({

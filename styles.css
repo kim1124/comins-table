@@ -242,13 +242,17 @@
 }
 
 .comins-table__header {
+  align-self: flex-start;
   flex: 0 0 auto;
+  max-width: 100%;
   overflow-x: hidden;
   overflow-y: hidden;
 }
 
 .comins-table__summary {
+  align-self: flex-start;
   flex: 0 0 auto;
+  max-width: 100%;
   overflow: hidden;
 }
 
@@ -493,6 +497,7 @@
 }
 
 .comins-table__horizontal-scrollbar {
+  align-self: flex-start;
   border-top: 1px solid var(--comins-table-row-border);
   box-sizing: border-box;
   flex: 0 0 12px;
