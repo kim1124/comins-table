@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { classifyVerificationScope } from "../scripts/classify-verification-scope.mjs";
+
 const gifPath = "docs/assets/comins-table-demo.gif";
 
 function getReadmeSection(readme: string, heading: string) {
@@ -20,7 +22,15 @@ describe("README preview contract", () => {
     const metadataJob = workflow.match(/  gif_metadata:\n(?<body>[\s\S]*?)(?=\n  [a-z][a-z_-]+:\n)/u)?.groups?.body ?? "";
     const verifyJob = workflow.match(/  verify:\n(?<body>[\s\S]*)$/u)?.groups?.body ?? "";
 
-    expect(changesJob).toContain("README.md|docs/assets/comins-table-demo.gif");
+    for (const path of [
+      "README.md",
+      "docs/assets/comins-table-demo.gif",
+      "scripts/capture-readme-demo.mjs",
+      "test/readme-preview.test.ts",
+    ]) {
+      expect(classifyVerificationScope([path]).gif, path).toBe(true);
+    }
+    expect(classifyVerificationScope(["src/index.tsx"]).gif).toBe(false);
     expect(changesJob).toContain("gif: ${{ steps.scope.outputs.gif }}");
     expect(metadataJob).toContain("runs-on: macos-latest");
     expect(metadataJob).toContain("needs: changes");

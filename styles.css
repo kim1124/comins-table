@@ -508,6 +508,11 @@
   pointer-events: none;
 }
 
+.comins-table__horizontal-range-spacer {
+  height: 0;
+  pointer-events: none;
+}
+
 .comins-table__body-viewport::-webkit-scrollbar,
 .comins-table__horizontal-scrollbar::-webkit-scrollbar {
   height: 12px;

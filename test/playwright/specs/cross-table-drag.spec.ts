@@ -22,6 +22,17 @@ async function dragPointer(page: Page, source: Locator, target: Locator, targetY
   await page.mouse.up();
 }
 
+async function dragPointerToPoint(page: Page, source: Locator, target: { x: number; y: number }) {
+  await source.scrollIntoViewIfNeeded();
+  const sourceBox = await source.boundingBox();
+
+  expect(sourceBox).not.toBeNull();
+  await page.mouse.move(sourceBox!.x + sourceBox!.width / 2, sourceBox!.y + sourceBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(target.x, target.y, { steps: 12 });
+  await page.mouse.up();
+}
+
 test("Cross-Table Drag moves flat Rows and overwrites duplicate IDs only when selected", async ({ page }) => {
   await page.goto("/examples/cross-table-drag");
 
@@ -103,6 +114,39 @@ test("Cross-Table Row Drag auto-scrolls only the long target Table", async ({ pa
 
   await expect(left.getByTestId("row-flat-a")).toHaveCount(0);
   await expect(right.getByTestId("row-flat-a")).toBeFocused();
+});
+
+test("Cross-Table Row Drag accepts the visible empty Body area as a target", async ({ page }) => {
+  await page.setViewportSize({ height: 1000, width: 1440 });
+  await page.goto("/examples/cross-table-drag");
+
+  const left = page.getByTestId("cross-table-flat-left");
+  const right = page.getByTestId("cross-table-flat-right");
+  const source = right.getByTestId("row-drag-handle-flat-b");
+
+  await left.scrollIntoViewIfNeeded();
+  const lastRow = left.locator("tbody tr[data-comins-row-data-index]").last();
+  const [targetBox, lastRowBox] = await Promise.all([left.boundingBox(), lastRow.boundingBox()]);
+
+  expect(targetBox).not.toBeNull();
+  expect(lastRowBox).not.toBeNull();
+  const target = {
+    x: targetBox!.x + targetBox!.width / 2,
+    y: Math.min(targetBox!.y + targetBox!.height - 8, lastRowBox!.y + lastRowBox!.height + 40),
+  };
+  expect(target.y).toBeGreaterThan(lastRowBox!.y + lastRowBox!.height + 1);
+  expect(await page.evaluate(
+    ({ x, y }) => document.elementFromPoint(x, y)
+      ?.closest<HTMLElement>("[data-comins-transfer-table-id]")
+      ?.dataset.cominsTransferTableId,
+    target,
+  )).toBe("flat-left");
+
+  await dragPointerToPoint(page, source, target);
+
+  await expect(right.getByTestId("row-flat-b")).toHaveCount(0);
+  await expect(left.getByTestId("row-flat-b")).toBeVisible();
+  await expect(left.getByTestId("row-flat-b")).toBeFocused();
 });
 
 test("Cross-Table Row Drag moves a grouped Row into an empty target Group", async ({ page }) => {

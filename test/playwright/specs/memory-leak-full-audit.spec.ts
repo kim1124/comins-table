@@ -26,6 +26,8 @@ type MemoryScenarioEvidence = {
   intermediate?: DevtoolsAuditSnapshot[];
 };
 
+type MemoryScenarioExercise = (page: Page) => Promise<MemoryScenarioEvidence | void>;
+
 function collectBrowserDiagnostics(page: Page) {
   const diagnostics: Array<{ text: string; type: ReturnType<ConsoleMessage["type"]> | "pageerror" }> = [];
 
@@ -90,7 +92,7 @@ async function openBasicPage(page: Page) {
 }
 
 async function returnToBasic(page: Page) {
-  await page.goto("/docs/getting-started");
+  await page.getByRole("link", { exact: true, name: "Getting Started" }).click();
   await expectBasicFeature(page);
 }
 
@@ -99,25 +101,30 @@ async function openFeature(page: Page, label: string, featureId: string) {
   await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", featureId);
 }
 
-async function warmMemoryBaseline(page: Page) {
-  const sequence = [
-    ["CRUD", "basic-crud"],
-    ["Sizing", "size"],
-    ["Theme", "theme"],
-    ["Header Basics", "header"],
-    ["Virtualization", "body"],
-    ["Cells", "cell"],
-    ["Components", "component"],
-    ["Rows", "row"],
-    ["Context Menu", "context-menu"],
-    ["Selection & Clipboard", "selection-clipboard"],
-    ["Ref API", "ref-api"],
-  ] as const;
+const memoryFeatureSequence = [
+  ["CRUD", "basic-crud"],
+  ["Sizing", "size"],
+  ["Theme", "theme"],
+  ["Header Basics", "header"],
+  ["Virtualization", "body"],
+  ["Cells", "cell"],
+  ["Components", "component"],
+  ["Rows", "row"],
+  ["Context Menu", "context-menu"],
+  ["Selection & Clipboard", "selection-clipboard"],
+  ["Ref API", "ref-api"],
+] as const;
 
-  for (const [label, featureId] of sequence) {
-    await openFeature(page, label, featureId);
+async function exerciseFeatureLifecycle(page: Page, rounds = 1) {
+  for (let round = 0; round < rounds; round += 1) {
+    for (const [label, featureId] of memoryFeatureSequence) {
+      await openFeature(page, label, featureId);
+    }
   }
+}
 
+async function warmMemoryBaseline(page: Page) {
+  await exerciseFeatureLifecycle(page);
   await returnToBasic(page);
 }
 
@@ -172,14 +179,19 @@ async function runMemoryScenario(
   page: Page,
   testInfo: TestInfo,
   scenario: string,
-  exercise: (page: Page) => Promise<MemoryScenarioEvidence | void>,
+  exercise: MemoryScenarioExercise,
   timeout = 90_000,
+  warmup?: MemoryScenarioExercise,
 ) {
   test.setTimeout(timeout);
   const diagnostics = collectBrowserDiagnostics(page);
 
   await openBasicPage(page);
   await warmMemoryBaseline(page);
+  if (warmup) {
+    await warmup(page);
+    await returnToBasic(page);
+  }
   const baseline = await readDevtoolsAuditSnapshot(page, `${scenario}:initial-basic`);
 
   const evidence = await exercise(page);
@@ -406,47 +418,54 @@ test("full audit releases Row Expand Detail observers and counters within 10 per
   }, 120_000);
 });
 
+async function exerciseComponentColumns(currentPage: Page) {
+  await openFeature(currentPage, "Components", "component");
+
+  const inputExample = currentPage.getByTestId("component-example-input");
+  await inputExample.getByTestId("row-input-a").click();
+  const cellInput = inputExample.locator("tbody .comins-table__component-input").first();
+  await expect(cellInput).toBeVisible();
+  await cellInput.fill("Data Audit");
+  await cellInput.press("Enter");
+
+  const selectExample = currentPage.getByTestId("component-example-select");
+  await selectExample.getByTestId("row-select-a").click();
+  const select = selectExample.locator("tbody .comins-table__component-select").first();
+  await expect(select).toBeVisible();
+  await select.selectOption("Viewer");
+
+  const menuExample = currentPage.getByTestId("component-example-menu");
+  const menuTrigger = menuExample.locator(".comins-table__component-menu-trigger").first();
+  await menuTrigger.scrollIntoViewIfNeeded();
+  await menuTrigger.click();
+  await expect(currentPage.getByRole("menu", { name: "Header menu" })).toBeVisible();
+  await currentPage.getByRole("menuitem", { name: "Check status" }).click();
+  await expect(currentPage.getByRole("menu", { name: "Header menu" })).toHaveCount(0);
+
+  const moreList = currentPage.getByTestId("virtual-list-virtual-list-more-a-virtual-list-more-component");
+  const moreButton = currentPage.getByTestId("virtual-list-overflow-virtual-list-more-a-virtual-list-more-component");
+  await currentPage.getByTestId("cell-virtual-list-more-a-id").click();
+  await moreButton.click();
+  await expect(moreList).toHaveAttribute("data-comins-virtual-list-expanded", "true");
+  await moreList.locator(".comins-table__component-virtual-list-items").evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+
+  await currentPage.getByTestId("cell-virtual-list-search-a-id").click();
+  const search = currentPage.getByTestId("virtual-list-search-virtual-list-search-a-virtual-list-search-component");
+  await expect(search).toBeEnabled();
+  await search.fill("검색-9999");
+  await expect(currentPage.getByText("검색-9999").first()).toBeVisible();
+}
+
 test("full audit keeps component column counters within 10 percent @perf", async ({ page }, testInfo) => {
   await runMemoryScenario(page, testInfo, "component-columns", async (currentPage) => {
-    await openFeature(currentPage, "Components", "component");
-
-    const inputExample = currentPage.getByTestId("component-example-input");
-    await inputExample.getByTestId("row-input-a").click();
-    const cellInput = inputExample.locator("tbody .comins-table__component-input").first();
-    await expect(cellInput).toBeVisible();
-    await cellInput.fill("Data Audit");
-    await cellInput.press("Enter");
-
-    const selectExample = currentPage.getByTestId("component-example-select");
-    await selectExample.getByTestId("row-select-a").click();
-    const select = selectExample.locator("tbody .comins-table__component-select").first();
-    await expect(select).toBeVisible();
-    await select.selectOption("Viewer");
-
-    const menuExample = currentPage.getByTestId("component-example-menu");
-    const menuTrigger = menuExample.locator(".comins-table__component-menu-trigger").first();
-    await menuTrigger.scrollIntoViewIfNeeded();
-    await menuTrigger.click();
-    await expect(currentPage.getByRole("menu", { name: "Header menu" })).toBeVisible();
-    await currentPage.getByRole("menuitem", { name: "Check status" }).click();
-    await expect(currentPage.getByRole("menu", { name: "Header menu" })).toHaveCount(0);
-
-    const moreList = currentPage.getByTestId("virtual-list-virtual-list-more-a-virtual-list-more-component");
-    const moreButton = currentPage.getByTestId("virtual-list-overflow-virtual-list-more-a-virtual-list-more-component");
-    await currentPage.getByTestId("cell-virtual-list-more-a-id").click();
-    await moreButton.click();
-    await expect(moreList).toHaveAttribute("data-comins-virtual-list-expanded", "true");
-    await moreList.locator(".comins-table__component-virtual-list-items").evaluate((element) => {
-      element.scrollTop = element.scrollHeight;
-      element.dispatchEvent(new Event("scroll", { bubbles: true }));
-    });
-
-    await currentPage.getByTestId("cell-virtual-list-search-a-id").click();
-    const search = currentPage.getByTestId("virtual-list-search-virtual-list-search-a-virtual-list-search-component");
-    await expect(search).toBeEnabled();
-    await search.fill("검색-9999");
-    await expect(currentPage.getByText("검색-9999").first()).toBeVisible();
-  });
+    for (let cycle = 0; cycle < 3; cycle += 1) {
+      await exerciseComponentColumns(currentPage);
+      if (cycle < 2) await returnToBasic(currentPage);
+    }
+  }, 90_000, exerciseComponentColumns);
 });
 
 test("full audit keeps context menu counters within 10 percent @perf", async ({ page }, testInfo) => {
@@ -477,7 +496,8 @@ test("full audit keeps header row cell and size counters within 10 percent @perf
     expect(nameBox).not.toBeNull();
     await currentPage.mouse.move(ageBox!.x + ageBox!.width / 2, ageBox!.y + ageBox!.height / 2);
     await currentPage.mouse.down();
-    await currentPage.waitForTimeout(1100);
+    await currentPage.mouse.move(ageBox!.x + ageBox!.width / 2 + 6, ageBox!.y + ageBox!.height / 2);
+    await expect(ageHeader).toHaveAttribute("data-column-placeholder", "true");
     await currentPage.mouse.move(nameBox!.x + nameBox!.width / 2, nameBox!.y + nameBox!.height / 2);
     await currentPage.mouse.up();
 
@@ -511,27 +531,11 @@ test("full audit keeps header row cell and size counters within 10 percent @perf
 });
 
 test("full audit keeps feature lifecycle counters within 10 percent @perf", async ({ page }, testInfo) => {
-  await runMemoryScenario(page, testInfo, "feature-lifecycle", async (currentPage) => {
-    const sequence = [
-      ["CRUD", "basic-crud"],
-      ["Sizing", "size"],
-      ["Theme", "theme"],
-      ["Header Basics", "header"],
-      ["Virtualization", "body"],
-      ["Cells", "cell"],
-      ["Components", "component"],
-      ["Rows", "row"],
-      ["Context Menu", "context-menu"],
-      ["Selection & Clipboard", "selection-clipboard"],
-      ["Ref API", "ref-api"],
-    ] as const;
-
-    for (let round = 0; round < 5; round += 1) {
-      for (const [label, featureId] of sequence) {
-        await openFeature(currentPage, label, featureId);
-      }
-    }
+  const exercise = async (currentPage: Page) => {
+    await exerciseFeatureLifecycle(currentPage, 5);
 
     await expect.poll(() => currentPage.evaluate(() => window.__cominsTableLifecycle?.activeMountCount ?? 0)).toBe(1);
-  });
+  };
+
+  await runMemoryScenario(page, testInfo, "feature-lifecycle", exercise, 90_000, exercise);
 });

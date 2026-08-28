@@ -48,10 +48,8 @@ test("Column Pinning keeps sticky surfaces aligned and demotes responsively", as
 
   const before = await Promise.all([leftCell.boundingBox(), centerCell.boundingBox(), rightCell.boundingBox()]);
 
-  await horizontalScrollbar.evaluate((element) => {
-    element.scrollLeft = element.scrollWidth;
-    element.dispatchEvent(new Event("scroll", { bubbles: true }));
-  });
+  await horizontalScrollbar.hover();
+  await page.mouse.wheel(10_000, 0);
 
   await expect
     .poll(async () =>
@@ -95,11 +93,11 @@ test("Column Pinning keeps sticky surfaces aligned and demotes responsively", as
   expect(before[1]!.x - after[1]!.x).toBeGreaterThan(500);
   expect(Math.abs(after[2]!.x - before[2]!.x)).toBeLessThanOrEqual(1);
 
-  await horizontalScrollbar.evaluate((element) => {
-    element.scrollLeft = 0;
-    element.dispatchEvent(new Event("scroll", { bubbles: true }));
-  });
-  await viewport.dispatchEvent("wheel", { deltaX: 240, deltaY: 0 });
+  await horizontalScrollbar.hover();
+  await page.mouse.wheel(-10_000, 0);
+  await expect.poll(() => horizontalScrollbar.evaluate((element) => element.scrollLeft)).toBe(0);
+  await viewport.hover();
+  await page.mouse.wheel(240, 0);
   await expect.poll(async () => root.evaluate((element) => {
     const body = element.querySelector<HTMLElement>("[data-testid='column-pinning-viewport']");
     const header = element.querySelector<HTMLElement>(".comins-table__header");
@@ -123,6 +121,68 @@ test("Column Pinning keeps sticky surfaces aligned and demotes responsively", as
   const grouped = page.getByTestId("column-pinning-grouped-viewport").locator("xpath=..");
   await expect(grouped.getByTestId("header-group-identity")).toHaveAttribute("data-comins-pinned", "left");
   await expect(grouped.getByTestId("group-row-East")).not.toHaveAttribute("data-comins-pinned");
+});
+
+test("Column Pinning keeps every surface at the same end with a reserved vertical scrollbar gutter", async ({ page }) => {
+  await page.setViewportSize({ height: 1000, width: 1440 });
+  await page.goto("/examples/column-pinning");
+
+  const viewport = page.getByTestId("column-pinning-viewport");
+  const root = viewport.locator("xpath=..");
+  const horizontalScrollbar = root.getByTestId("table-horizontal-scrollbar");
+
+  await page.addStyleTag({
+    content: `
+      [data-testid="column-pinning-viewport"] {
+        scrollbar-gutter: stable both-edges !important;
+      }
+    `,
+  });
+  await expect(viewport).toHaveCSS("scrollbar-gutter", "stable both-edges");
+
+  const nativeRangeDifference = await root.evaluate((element) => {
+    const body = element.querySelector<HTMLElement>("[data-testid='column-pinning-viewport']");
+    const scrollbar = element.querySelector<HTMLElement>("[data-testid='table-horizontal-scrollbar']");
+
+    return body && scrollbar
+      ? Math.abs(
+          (body.scrollWidth - body.clientWidth) -
+          (scrollbar.scrollWidth - scrollbar.clientWidth),
+        )
+      : -1;
+  });
+  if (nativeRangeDifference <= 1) {
+    await viewport.evaluate((element) => {
+      element.style.paddingInlineEnd = "15px";
+    });
+  }
+
+  await expect.poll(() => root.evaluate((element) => {
+    const body = element.querySelector<HTMLElement>("[data-testid='column-pinning-viewport']");
+    const scrollbar = element.querySelector<HTMLElement>("[data-testid='table-horizontal-scrollbar']");
+    const bodyMax = body ? body.scrollWidth - body.clientWidth : -1;
+    const scrollbarMax = scrollbar ? scrollbar.scrollWidth - scrollbar.clientWidth : -1;
+
+    return Math.abs(bodyMax - scrollbarMax);
+  })).toBeLessThanOrEqual(1);
+
+  await horizontalScrollbar.hover();
+  await page.mouse.wheel(10_000, 0);
+  await expect.poll(() => root.evaluate((element) => {
+    const surfaces = [
+      element.querySelector<HTMLElement>(".comins-table__header"),
+      element.querySelector<HTMLElement>("[data-testid='column-pinning-viewport']"),
+      element.querySelector<HTMLElement>(".comins-table__summary"),
+      element.querySelector<HTMLElement>("[data-testid='table-horizontal-scrollbar']"),
+    ].filter((surface): surface is HTMLElement => surface !== null);
+    const positions = surfaces.map((surface) => surface.scrollLeft);
+    const endGaps = surfaces.map((surface) => surface.scrollWidth - surface.clientWidth - surface.scrollLeft);
+
+    return {
+      atEnd: Math.max(...endGaps.map(Math.abs)) <= 1,
+      synchronized: Math.max(...positions) - Math.min(...positions) <= 1,
+    };
+  })).toEqual({ atEnd: true, synchronized: true });
 });
 
 test("Column Pinning keeps the final Row boundary visible above an auto-hidden scrollbar", async ({ page }) => {

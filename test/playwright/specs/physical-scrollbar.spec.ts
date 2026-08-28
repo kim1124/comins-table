@@ -204,10 +204,14 @@ test("playground releases devtools counters after physical scrollbar drag and re
   test.setTimeout(60_000);
 
   const diagnostics = collectBrowserDiagnostics(page);
-  await page.goto("/");
+  await page.goto("/docs/getting-started");
   const basicBaseline = await readDevtoolsMemorySnapshot(page);
 
-  await page.goto("/performance/virtualization?fixture=row-detail-fixed");
+  await page.evaluate(() => {
+    window.history.pushState(null, "", "/performance/virtualization?fixture=row-detail-fixed");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  });
+  await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "body");
   await page.addStyleTag({
     content: `
       [data-testid="data-table-viewport"]::-webkit-scrollbar {
@@ -277,7 +281,7 @@ test("playground releases devtools counters after physical scrollbar drag and re
     )
     .toBeLessThan(100);
 
-  await page.goto("/docs/getting-started");
+  await page.getByRole("link", { exact: true, name: "Getting Started" }).click();
   await expect(page.getByTestId("feature-content")).toHaveAttribute("data-feature", "basic");
   const afterBasic = await readDevtoolsMemorySnapshot(page);
   const failureContext = JSON.stringify({ afterBasic, basicBaseline, postLoad }, null, 2);

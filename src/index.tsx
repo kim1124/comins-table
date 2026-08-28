@@ -1712,6 +1712,7 @@ function CominsTableInner<TData, TGroup>(
   const suppressedSortClickRef = useRef<CominsSuppressedSortClick | null>(null);
   const [containerHeight, setContainerHeight] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [horizontalScrollContentWidth, setHorizontalScrollContentWidth] = useState(0);
   const [horizontalViewportWidth, setHorizontalViewportWidth] = useState(0);
   const [detailLayoutVersion, setDetailLayoutVersion] = useState(0);
   const [movingColumnId, setMovingColumnId] = useState<string | null>(null);
@@ -2291,6 +2292,7 @@ function CominsTableInner<TData, TGroup>(
       if (entry) {
         setContainerHeight(entry.contentRect.height);
         setContainerWidth(entry.contentRect.width);
+        setHorizontalScrollContentWidth(element.scrollWidth);
         setHorizontalViewportWidth(element.clientWidth);
       }
     });
@@ -3515,17 +3517,23 @@ function CominsTableInner<TData, TGroup>(
   const hasHorizontalOverflow =
     typeof columnWidthTotal === "number" && containerWidth > 0 ? columnWidthTotal > containerWidth + 1 : false;
   useLayoutEffect(() => {
-    const nextWidth = containerRef.current?.clientWidth ?? 0;
+    const nextContentWidth = containerRef.current?.scrollWidth ?? 0;
+    const nextViewportWidth = containerRef.current?.clientWidth ?? 0;
 
+    setHorizontalScrollContentWidth((current) =>
+      Math.abs(current - nextContentWidth) > 0.5 ? nextContentWidth : current);
     setHorizontalViewportWidth((current) =>
-      Math.abs(current - nextWidth) > 0.5 ? nextWidth : current);
-  }, [containerWidth, hasHorizontalOverflow]);
+      Math.abs(current - nextViewportWidth) > 0.5 ? nextViewportWidth : current);
+  }, [containerWidth, hasHorizontalOverflow, tableWidth]);
   const synchronizedHorizontalViewportWidth =
     horizontalViewportWidth > 0
       ? horizontalViewportWidth
       : containerWidth > 0
         ? containerWidth
         : undefined;
+  const synchronizedHorizontalContentWidth = horizontalScrollContentWidth > 0
+    ? Math.max(typeof tableWidth === "number" ? tableWidth : 0, horizontalScrollContentWidth)
+    : tableWidth;
   const resolvedHasMoreRows = groupingRequested || filteringRequested ? false : hasMoreRows;
   const resolvedLoading = loading;
   const resolvedLoadingMore = groupingRequested || filteringRequested ? false : loadingMore;
@@ -5836,6 +5844,13 @@ function CominsTableInner<TData, TGroup>(
               ))}
             </thead>
           </table>
+          {hasHorizontalOverflow ? (
+            <div
+              aria-hidden="true"
+              className="comins-table__horizontal-range-spacer"
+              style={{ width: synchronizedHorizontalContentWidth }}
+            />
+          ) : null}
         </div>
       ) : null}
       <div
@@ -6579,6 +6594,13 @@ function CominsTableInner<TData, TGroup>(
               </tr>
             </tfoot>
           </table>
+          {hasHorizontalOverflow ? (
+            <div
+              aria-hidden="true"
+              className="comins-table__horizontal-range-spacer"
+              style={{ width: synchronizedHorizontalContentWidth }}
+            />
+          ) : null}
         </div>
       ) : null}
       {hasHorizontalOverflow ? (
@@ -6595,7 +6617,7 @@ function CominsTableInner<TData, TGroup>(
           <div
             aria-hidden="true"
             className="comins-table__horizontal-scrollbar-content"
-            style={{ width: tableWidth }}
+            style={{ width: synchronizedHorizontalContentWidth }}
           />
         </div>
       ) : null}

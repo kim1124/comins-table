@@ -24,6 +24,10 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          package-manager-cache: false
       - name: Classify changed surfaces
         id: scope
         shell: bash
@@ -43,43 +47,9 @@ jobs:
             head_sha="$PUSH_HEAD_SHA"
           fi
 
-          policy=false
-          docs=false
-          fast=false
-          browser=false
-          gif=false
-          while IFS= read -r path; do
-            case "$path" in
-              AGENTS.md|.codex/*|SECURITY.md|.gitleaks.toml|.githooks/*|.github/workflows/*|scripts/check-public-identities.mjs|test/sensitive-data-gates.node.mjs)
-                policy=true
-                ;;
-            esac
-            case "$path" in
-              docs/user/*|docs/ko/*)
-                docs=true
-                ;;
-            esac
-            case "$path" in
-              README.md|docs/assets/comins-table-demo.gif|scripts/capture-readme-demo.mjs|test/readme-preview.test.ts|.github/workflows/verify.yml)
-                gif=true
-                ;;
-            esac
-            case "$path" in
-              AGENTS.md|.codex/*|README.md|CHANGELOG.md|SECURITY.md|docs/*|reports/*)
-                ;;
-              *)
-                fast=true
-                ;;
-            esac
-            case "$path" in
-              src/*|example/*|test/playwright/*|playwright.config.ts|vite.example.config.ts|package.json|package-lock.json|.github/workflows/verify.yml)
-                browser=true
-                ;;
-            esac
-          done < <(git diff --name-only "$base_sha" "$head_sha")
-
-          printf 'policy=%s\ndocs=%s\nfast=%s\nbrowser=%s\ngif=%s\n' \
-            "$policy" "$docs" "$fast" "$browser" "$gif" >> "$GITHUB_OUTPUT"
+          git diff --name-only "$base_sha" "$head_sha" \
+            | node scripts/classify-verification-scope.mjs \
+            >> "$GITHUB_OUTPUT"
 
   security:
     name: Sensitive data
@@ -218,7 +188,7 @@ jobs:
             reports/artifacts/playwright
             reports/artifacts/playwright-html
           if-no-files-found: ignore
-          retention-days: 3
+          retention-days: 14
 
   verify:
     if: ${{ always() }}
