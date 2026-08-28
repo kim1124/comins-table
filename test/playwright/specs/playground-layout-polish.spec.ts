@@ -575,6 +575,7 @@ test("data table uses 2px outer radius and keeps viewport edge lines visible", a
       scrollbarGutter: scrollbarContainerStyle.scrollbarGutter,
       scrollbarWidth: scrollbarStyle.width,
       trackBackgroundColor: trackStyle.backgroundColor,
+      viewportScrollbarGutter: viewportStyle?.scrollbarGutter ?? null,
     };
   });
 
@@ -582,7 +583,8 @@ test("data table uses 2px outer radius and keeps viewport edge lines visible", a
   expect(scrollbarMetrics.overflowX).toBe("hidden");
   expect(scrollbarMetrics.overflowY).toBe("scroll");
   expect(scrollbarMetrics.scrollbarContainerOverflowX).toBe("scroll");
-  expect(scrollbarMetrics.scrollbarGutter).toContain("stable");
+  expect(scrollbarMetrics.viewportScrollbarGutter).toContain("stable");
+  expect(scrollbarMetrics.scrollbarGutter).toBe("auto");
   expect(scrollbarMetrics.scrollbarHeight).toBe("12px");
   expect(scrollbarMetrics.scrollbarWidth).toBe("12px");
   expect(scrollbarMetrics.trackBackgroundColor).toBe("rgb(246, 252, 250)");

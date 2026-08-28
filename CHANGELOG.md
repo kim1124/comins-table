@@ -10,6 +10,7 @@
 - Added non-blocking pointer-adjacent `Duplicate ID` rejection feedback with a reusable internal Tooltip Surface, restrained target outline, viewport collision handling, accessible live status, renderer/duration/disable controls, CSS theme tokens, and structured `onTransferRejected` notifications.
 - Corrected the Column Pinning Playground to guarantee observable horizontal overflow, and capped direct resize of effective pinned Columns and Header Groups at the 48px center budget so the active pinned surface no longer demotes beneath scrolling content.
 - Moved the single native horizontal scrollbar to the bottom of the complete Table, after Summary when configured, while preserving Body wheel input, vertical virtualization, synchronized Header/Body/Summary scrolling, and a visible final Row boundary when native scrollbar chrome auto-hides.
+- Corrected the bottom scrollbar range to use the Body's actual horizontal viewport width across native scrollbar layouts, so direct rail input reaches the final horizontal content without desynchronizing Header, Body, or Summary.
 
 ## 0.1.7 - 2026-08-27
 

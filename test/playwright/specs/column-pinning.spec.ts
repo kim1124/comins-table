@@ -70,12 +70,24 @@ test("Column Pinning keeps sticky surfaces aligned and demotes responsively", as
     )
     .toBeLessThanOrEqual(1);
 
-  const bodyScroll = await viewport.evaluate((element) => ({
-    maxScrollLeft: Math.max(0, element.scrollWidth - element.clientWidth),
-    scrollLeft: element.scrollLeft,
-  }));
-  expect(bodyScroll.scrollLeft).toBeGreaterThan(500);
-  expect(Math.abs(bodyScroll.maxScrollLeft - bodyScroll.scrollLeft)).toBeLessThanOrEqual(1);
+  const endState = await root.evaluate((element) => {
+    const surfaces = {
+      Body: element.querySelector<HTMLElement>("[data-testid='column-pinning-viewport']"),
+      "horizontal scrollbar": element.querySelector<HTMLElement>("[data-testid='table-horizontal-scrollbar']"),
+    };
+
+    return Object.fromEntries(Object.entries(surfaces).map(([name, surface]) => [name, {
+      maxScrollLeft: surface ? Math.max(0, surface.scrollWidth - surface.clientWidth) : -1,
+      scrollLeft: surface?.scrollLeft ?? -1,
+    }]));
+  });
+  expect(endState.Body?.scrollLeft).toBeGreaterThan(500);
+  for (const [surface, state] of Object.entries(endState)) {
+    expect(
+      Math.abs(state.maxScrollLeft - state.scrollLeft),
+      `${surface} must reach its horizontal end (${state.scrollLeft}/${state.maxScrollLeft})`,
+    ).toBeLessThanOrEqual(1);
+  }
 
   const after = await Promise.all([leftCell.boundingBox(), centerCell.boundingBox(), rightCell.boundingBox()]);
 
