@@ -501,7 +501,6 @@
   overflow-x: scroll;
   overflow-y: hidden;
   scrollbar-color: var(--comins-table-scrollbar-thumb) var(--comins-table-scrollbar-track);
-  scrollbar-gutter: stable;
 }
 
 .comins-table__horizontal-scrollbar-content {

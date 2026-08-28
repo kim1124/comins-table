@@ -44,6 +44,8 @@ test("Column Pinning keeps sticky surfaces aligned and demotes responsively", as
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
   }));
+  await expect(viewport).toHaveCSS("scrollbar-gutter", "stable");
+  await expect(horizontalScrollbar).toHaveCSS("scrollbar-gutter", "auto");
   const [headerMetrics, summaryMetrics] = await Promise.all([
     root.locator(".comins-table__header").evaluate((element) => ({
       clientWidth: element.clientWidth,
@@ -56,8 +58,15 @@ test("Column Pinning keeps sticky surfaces aligned and demotes responsively", as
   ]);
   const expectedMaxScrollLeft = overflow.scrollWidth - overflow.clientWidth;
 
-  for (const metrics of [headerMetrics, summaryMetrics, scrollbarMetrics]) {
-    expect(Math.abs(metrics.clientWidth - overflow.clientWidth)).toBeLessThanOrEqual(1);
+  for (const [surface, metrics] of [
+    ["Header", headerMetrics],
+    ["Summary", summaryMetrics],
+    ["horizontal scrollbar", scrollbarMetrics],
+  ] as const) {
+    expect(
+      Math.abs(metrics.clientWidth - overflow.clientWidth),
+      `${surface} clientWidth must match the Body viewport`,
+    ).toBeLessThanOrEqual(1);
   }
   expect(headerMetrics.scrollWidth).toBeGreaterThanOrEqual(overflow.scrollWidth);
   expect(headerMetrics.scrollWidth - headerMetrics.clientWidth).toBeGreaterThanOrEqual(expectedMaxScrollLeft);
