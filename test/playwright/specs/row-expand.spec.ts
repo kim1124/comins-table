@@ -34,10 +34,25 @@ test("controls fixed Row Details with semantic disclosure state and focus restor
   const value = fixed.getByTestId("cell-fixed-1-name").locator(".comins-table__cell-value");
   const state = page.getByTestId("row-expand-fixed-state");
 
-  const toggleBox = await toggle.boundingBox();
-  const dragBox = await drag.boundingBox();
-  const valueBox = await value.boundingBox();
+  const { dragBox, toggleBox, valueBox } = await fixed.evaluate((element) => {
+    const readBox = (selector: string) => {
+      const target = element.querySelector<HTMLElement>(selector);
 
+      if (!target) return null;
+      const box = target.getBoundingClientRect();
+
+      return { height: box.height, width: box.width, x: box.x, y: box.y };
+    };
+
+    return {
+      dragBox: readBox("[data-testid='row-drag-handle-fixed-1']"),
+      toggleBox: readBox("[data-testid='row-detail-toggle-fixed-1']"),
+      valueBox: readBox("[data-testid='cell-fixed-1-name'] .comins-table__cell-value"),
+    };
+  });
+
+  expect(toggleBox).not.toBeNull();
+  expect(dragBox).not.toBeNull();
   expect(toggleBox?.width).toBe(24);
   expect(toggleBox?.height).toBe(24);
   expect(dragBox?.width).toBe(24);

@@ -1,8 +1,38 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 
 import { initializePlaygroundLocale } from "../helpers/playground-locale";
 
 test.beforeEach(async ({ page }) => initializePlaygroundLocale(page, "en"));
+
+async function readHorizontalNativeEndState(root: Locator) {
+  return root.evaluate((element) => {
+    const surfaces = {
+      Body: element.querySelector<HTMLElement>("[data-testid='column-pinning-viewport']"),
+      Header: element.querySelector<HTMLElement>(".comins-table__header"),
+      Summary: element.querySelector<HTMLElement>(".comins-table__summary"),
+      "horizontal scrollbar": element.querySelector<HTMLElement>("[data-testid='table-horizontal-scrollbar']"),
+    };
+
+    return Object.fromEntries(Object.entries(surfaces).map(([name, surface]) => {
+      const scrollLeft = surface?.scrollLeft ?? -1;
+      const ownsHorizontalInput = name === "Body" || name === "horizontal scrollbar";
+
+      if (surface && ownsHorizontalInput) {
+        surface.scrollLeft = Number.MAX_SAFE_INTEGER;
+      }
+      const nativeEndScrollLeft = surface && ownsHorizontalInput ? surface.scrollLeft : null;
+      if (surface && ownsHorizontalInput) {
+        surface.scrollLeft = scrollLeft;
+      }
+
+      return [name, {
+        arithmeticEndScrollLeft: surface ? Math.max(0, surface.scrollWidth - surface.clientWidth) : -1,
+        nativeEndScrollLeft,
+        scrollLeft,
+      }];
+    }));
+  });
+}
 
 test("Column Pinning keeps sticky surfaces aligned and demotes responsively", async ({ page }) => {
   await page.goto("/examples/column-pinning");
@@ -68,22 +98,16 @@ test("Column Pinning keeps sticky surfaces aligned and demotes responsively", as
     )
     .toBeLessThanOrEqual(1);
 
-  const endState = await root.evaluate((element) => {
-    const surfaces = {
-      Body: element.querySelector<HTMLElement>("[data-testid='column-pinning-viewport']"),
-      "horizontal scrollbar": element.querySelector<HTMLElement>("[data-testid='table-horizontal-scrollbar']"),
-    };
-
-    return Object.fromEntries(Object.entries(surfaces).map(([name, surface]) => [name, {
-      maxScrollLeft: surface ? Math.max(0, surface.scrollWidth - surface.clientWidth) : -1,
-      scrollLeft: surface?.scrollLeft ?? -1,
-    }]));
-  });
+  const endState = await readHorizontalNativeEndState(root);
   expect(endState.Body?.scrollLeft).toBeGreaterThan(500);
-  for (const [surface, state] of Object.entries(endState)) {
+  for (const surface of ["Body", "horizontal scrollbar"] as const) {
+    const state = endState[surface];
+
+    expect(state.nativeEndScrollLeft).not.toBeNull();
     expect(
-      Math.abs(state.maxScrollLeft - state.scrollLeft),
-      `${surface} must reach its horizontal end (${state.scrollLeft}/${state.maxScrollLeft})`,
+      Math.abs(state.nativeEndScrollLeft! - state.scrollLeft),
+      `${surface} must reach its native horizontal end ` +
+        `(${state.scrollLeft}/${state.nativeEndScrollLeft}; arithmetic=${state.arithmeticEndScrollLeft})`,
     ).toBeLessThanOrEqual(1);
   }
 
@@ -169,20 +193,29 @@ test("Column Pinning keeps every surface at the same end with a reserved vertica
   await horizontalScrollbar.hover();
   await page.mouse.wheel(10_000, 0);
   await expect.poll(() => root.evaluate((element) => {
-    const surfaces = [
-      element.querySelector<HTMLElement>(".comins-table__header"),
-      element.querySelector<HTMLElement>("[data-testid='column-pinning-viewport']"),
-      element.querySelector<HTMLElement>(".comins-table__summary"),
-      element.querySelector<HTMLElement>("[data-testid='table-horizontal-scrollbar']"),
-    ].filter((surface): surface is HTMLElement => surface !== null);
-    const positions = surfaces.map((surface) => surface.scrollLeft);
-    const endGaps = surfaces.map((surface) => surface.scrollWidth - surface.clientWidth - surface.scrollLeft);
+    const positions = [
+      element.querySelector<HTMLElement>(".comins-table__header")?.scrollLeft,
+      element.querySelector<HTMLElement>("[data-testid='column-pinning-viewport']")?.scrollLeft,
+      element.querySelector<HTMLElement>(".comins-table__summary")?.scrollLeft,
+      element.querySelector<HTMLElement>("[data-testid='table-horizontal-scrollbar']")?.scrollLeft,
+    ].filter((position): position is number => typeof position === "number");
 
-    return {
-      atEnd: Math.max(...endGaps.map(Math.abs)) <= 1,
-      synchronized: Math.max(...positions) - Math.min(...positions) <= 1,
-    };
-  })).toEqual({ atEnd: true, synchronized: true });
+    return positions.length === 4
+      ? Math.max(...positions) - Math.min(...positions)
+      : Number.POSITIVE_INFINITY;
+  })).toBeLessThanOrEqual(1);
+
+  const endState = await readHorizontalNativeEndState(root);
+  for (const surface of ["Body", "horizontal scrollbar"] as const) {
+    const state = endState[surface];
+
+    expect(state.nativeEndScrollLeft).not.toBeNull();
+    expect(
+      Math.abs(state.nativeEndScrollLeft! - state.scrollLeft),
+      `${surface} must reach its native horizontal end ` +
+        `(${state.scrollLeft}/${state.nativeEndScrollLeft}; arithmetic=${state.arithmeticEndScrollLeft})`,
+    ).toBeLessThanOrEqual(1);
+  }
 });
 
 test("Column Pinning keeps the final Row boundary visible above an auto-hidden scrollbar", async ({ page }) => {
