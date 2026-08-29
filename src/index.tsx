@@ -3540,13 +3540,8 @@ function CominsTableInner<TData, TGroup>(
     horizontalViewportOuterWidth > 0
       ? horizontalViewportOuterWidth
       : synchronizedHorizontalViewportWidth;
-  const horizontalViewportInset = Math.max(
-    0,
-    horizontalViewportOuterWidth - horizontalViewportWidth,
-  );
   const synchronizedHorizontalContentWidth = horizontalScrollContentWidth > 0
-    ? Math.max(typeof tableWidth === "number" ? tableWidth : 0, horizontalScrollContentWidth) +
-      horizontalViewportInset
+    ? Math.max(typeof tableWidth === "number" ? tableWidth : 0, horizontalScrollContentWidth)
     : tableWidth;
   const resolvedHasMoreRows = groupingRequested || filteringRequested ? false : hasMoreRows;
   const resolvedLoading = loading;

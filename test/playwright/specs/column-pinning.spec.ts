@@ -151,7 +151,7 @@ test("Column Pinning keeps sticky surfaces aligned and demotes responsively", as
   await expect(grouped.getByTestId("group-row-East")).not.toHaveAttribute("data-comins-pinned");
 });
 
-test("Column Pinning keeps every surface at the same end with a reserved viewport inset", async ({ page }) => {
+test("Column Pinning keeps every surface at the same end with a reserved vertical scrollbar gutter", async ({ page }) => {
   await page.setViewportSize({ height: 1000, width: 1440 });
   await page.goto("/examples/column-pinning");
 
@@ -162,14 +162,11 @@ test("Column Pinning keeps every surface at the same end with a reserved viewpor
   await page.addStyleTag({
     content: `
       [data-testid="column-pinning-viewport"] {
-        border-right: 24px solid transparent !important;
-        overflow-y: hidden !important;
-        scrollbar-gutter: auto !important;
+        scrollbar-gutter: stable both-edges !important;
       }
     `,
   });
-  await expect(viewport).toHaveCSS("border-right-width", "24px");
-  await expect.poll(() => viewport.evaluate((element) => element.offsetWidth - element.clientWidth)).toBe(24);
+  await expect(viewport).toHaveCSS("scrollbar-gutter", "stable both-edges");
 
   await expect.poll(() => root.evaluate((element) => {
     const body = element.querySelector<HTMLElement>("[data-testid='column-pinning-viewport']");
