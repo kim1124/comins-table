@@ -18,7 +18,7 @@ function collectBrowserDiagnostics(page: Page) {
   return diagnostics;
 }
 
-const featurePages = [
+const selectedKoreanContentPages = [
   ["/docs/getting-started", "comins-table 기본 예제입니다."],
   ["/examples/crud", "추가, 수정, 삭제, 초기화"],
   ["/examples/size", "300px 고정 높이와 부모 컨테이너 500px"],
@@ -38,12 +38,12 @@ const featurePages = [
   ["/api/ref", "현재 visible index"],
 ] as const;
 
-test("feature pages render docs in the main content area", async ({ page }) => {
+test("selected Korean content pages render their documented copy in the main content area", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await initializePlaygroundLocale(page, "ko");
   await page.goto("/");
 
-  for (const [route, descriptionText] of featurePages) {
+  for (const [route, descriptionText] of selectedKoreanContentPages) {
     await page.goto(route);
     await expect(page.getByTestId("feature-option-description").first()).toContainText(descriptionText);
     await expect(page.getByTestId("feature-option-sample").first().locator(".comins-table").first()).toBeVisible();

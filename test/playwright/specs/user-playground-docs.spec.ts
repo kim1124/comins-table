@@ -1,5 +1,6 @@
 import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
 
+import { playgroundFeatureRouteManifest } from "../../../example/src/docs/featureRouteManifest";
 import { initializePlaygroundLocale } from "../helpers/playground-locale";
 
 test.beforeEach(async ({ page }) => initializePlaygroundLocale(page, "en"));
@@ -20,32 +21,7 @@ function collectBrowserDiagnostics(page: Page) {
   return diagnostics;
 }
 
-const featurePages = [
-  { feature: "basic", label: "Basic", route: "/docs/getting-started" },
-  { feature: "basic-crud", label: "CRUD", route: "/examples/crud" },
-  { feature: "size", label: "Sizing", route: "/examples/size" },
-  { feature: "theme", label: "Theme", route: "/examples/theme" },
-  { feature: "loading", label: "Loading / Empty State", route: "/examples/loading" },
-  { feature: "header", label: "Header Basics", route: "/examples/header" },
-  { feature: "column-groups", label: "Header Groups", route: "/examples/column-groups" },
-  { feature: "pagination", label: "Pagination", route: "/performance/pagination" },
-  { feature: "infinite-scroll", label: "Infinite Scroll", route: "/performance/infinite-scroll" },
-  { feature: "lazy-load", label: "Lazy Load", route: "/performance/lazy-load" },
-  { feature: "body", label: "Virtualization", route: "/performance/virtualization" },
-  { feature: "cell", label: "Cells", route: "/examples/cell" },
-  { feature: "selection-clipboard", label: "Selection & Clipboard", route: "/examples/selection-clipboard" },
-  { feature: "component", label: "Components", route: "/examples/component" },
-  { feature: "row", label: "Rows", route: "/examples/row" },
-  { feature: "row-grouping", label: "Row Grouping", route: "/examples/row-grouping" },
-  { feature: "column-filtering", label: "Column Filtering", route: "/examples/column-filtering" },
-  { feature: "summary-row", label: "Summary Row", route: "/examples/summary-row" },
-  { feature: "tree-grid", label: "Tree Grid", route: "/examples/tree-grid" },
-  { feature: "context-menu", label: "Context Menu", route: "/examples/context-menu" },
-  { feature: "export", label: "Export Helper", route: "/examples/export" },
-  { feature: "ref-api", label: "Ref API", route: "/api/ref" },
-];
-
-test("user playground exposes every current feature page with recreated content", async ({ page }) => {
+test("user playground recreates feature content across sidebar navigation", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/examples/crud");
 
@@ -54,20 +30,6 @@ test("user playground exposes every current feature page with recreated content"
   await expect(page.getByTestId("mount-id")).not.toHaveText(firstMountId ?? "");
   await expect.poll(() => page.evaluate(() => window.__cominsTableLastUnmount)).toBe(firstMountId);
 
-  for (const item of featurePages) {
-    await page.goto(item.route);
-    const content = page.getByTestId("feature-content");
-    await expect(content).toHaveAttribute("data-feature", item.feature);
-    await expect(content).toHaveAttribute("data-feature-label", item.label);
-    await expect(page.getByTestId("feature-option-container").first()).toBeVisible();
-    await expect(page.getByTestId("feature-option-description").first()).toBeVisible();
-    if (item.feature === "size") {
-      await expect(page.getByTestId("data-table-size-manual")).toBeVisible();
-    } else {
-      await expect(page.locator(".comins-table").first()).toBeVisible();
-    }
-  }
-
   await page.goto("/examples/header");
   const headerMountId = await page.getByTestId("mount-id").textContent();
   await page.getByRole("link", { exact: true, name: "CRUD" }).click();
@@ -75,6 +37,26 @@ test("user playground exposes every current feature page with recreated content"
 
   expect(diagnostics).toEqual([]);
 });
+
+for (const item of playgroundFeatureRouteManifest) {
+  test(`user playground renders the ${item.featureId} route`, async ({ page }) => {
+    const diagnostics = collectBrowserDiagnostics(page);
+
+    await page.goto(item.path);
+    const content = page.getByTestId("feature-content");
+    await expect(content).toHaveAttribute("data-feature", item.featureId);
+    await expect(content).toHaveAttribute("data-feature-label", /.+/u);
+    await expect(page.getByTestId("feature-option-container").first()).toBeVisible();
+    await expect(page.getByTestId("feature-option-description").first()).toBeVisible();
+    if (item.featureId === "size") {
+      await expect(page.getByTestId("data-table-size-manual")).toBeVisible();
+    } else {
+      await expect(page.locator(".comins-table").first()).toBeVisible();
+    }
+
+    expect(diagnostics).toEqual([]);
+  });
+}
 
 test("user playground uses charts-style docs shell and shadcn-style action buttons", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);

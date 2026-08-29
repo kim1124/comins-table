@@ -1,6 +1,6 @@
 {
   "name": "comins-table",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "license": "MIT",
   "type": "module",
   "repository": {
@@ -28,7 +28,8 @@
     "test:security": "node --test test/sensitive-data-gates.node.mjs test/package-artifact-gate.node.mjs test/npm-maintainer-gate.node.mjs",
     "verify": "npm run check:hygiene && npm run test:security && npm run test:licenses && npm run check:licenses && npm run lint && npm run test:run && npm run build",
     "verify:e2e": "npm run test:e2e",
-    "verify:full": "npm run verify && npm run verify:e2e",
+    "verify:local": "npm run verify && npm run verify:e2e",
+    "verify:full": "npm run verify:local && npm run test:perf -- --workers=1",
     "verify:npm-maintainer": "node scripts/check-npm-maintainer.mjs",
     "verify:package-artifact": "node scripts/verify-package-artifact.mjs"
   },

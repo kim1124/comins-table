@@ -556,28 +556,35 @@ test("data table uses 2px outer radius and keeps viewport edge lines visible", a
   expect(viewportMetrics.rootBorderLeftWidth).toBe("1px");
   expect(viewportMetrics.rootLeftDiff).toBeLessThanOrEqual(1);
 
-  const scrollbarMetrics = await page.getByTestId("data-table-viewport").evaluate((element) => {
+  const horizontalScrollbar = table.getByTestId("table-horizontal-scrollbar");
+  const scrollbarMetrics = await horizontalScrollbar.evaluate((element) => {
     const cornerStyle = window.getComputedStyle(element, "::-webkit-scrollbar-corner");
     const scrollbarStyle = window.getComputedStyle(element, "::-webkit-scrollbar");
     const trackStyle = window.getComputedStyle(element, "::-webkit-scrollbar-track");
-    const viewportStyle = window.getComputedStyle(element);
+    const scrollbarContainerStyle = window.getComputedStyle(element);
+    const viewport = element.closest(".comins-table")?.querySelector<HTMLElement>("[data-testid='data-table-viewport']");
+    const viewportStyle = viewport ? window.getComputedStyle(viewport) : null;
 
     return {
       cornerBackgroundColor: cornerStyle.backgroundColor,
-      horizontalOverflow: element.getAttribute("data-horizontal-overflow"),
-      overflowX: viewportStyle.overflowX,
-      overflowY: viewportStyle.overflowY,
+      horizontalOverflow: viewport?.getAttribute("data-horizontal-overflow") ?? null,
+      overflowX: viewportStyle?.overflowX ?? null,
+      overflowY: viewportStyle?.overflowY ?? null,
+      scrollbarContainerOverflowX: scrollbarContainerStyle.overflowX,
       scrollbarHeight: scrollbarStyle.height,
-      scrollbarGutter: viewportStyle.scrollbarGutter,
+      scrollbarGutter: scrollbarContainerStyle.scrollbarGutter,
       scrollbarWidth: scrollbarStyle.width,
       trackBackgroundColor: trackStyle.backgroundColor,
+      viewportScrollbarGutter: viewportStyle?.scrollbarGutter ?? null,
     };
   });
 
   expect(scrollbarMetrics.horizontalOverflow).toBe("true");
-  expect(scrollbarMetrics.overflowX).toBe("scroll");
+  expect(scrollbarMetrics.overflowX).toBe("hidden");
   expect(scrollbarMetrics.overflowY).toBe("scroll");
-  expect(scrollbarMetrics.scrollbarGutter).toContain("stable");
+  expect(scrollbarMetrics.scrollbarContainerOverflowX).toBe("scroll");
+  expect(scrollbarMetrics.viewportScrollbarGutter).toContain("stable");
+  expect(scrollbarMetrics.scrollbarGutter).toBe("auto");
   expect(scrollbarMetrics.scrollbarHeight).toBe("12px");
   expect(scrollbarMetrics.scrollbarWidth).toBe("12px");
   expect(scrollbarMetrics.trackBackgroundColor).toBe("rgb(246, 252, 250)");
@@ -623,7 +630,7 @@ test("column shrink clips overflowing component content inside the resized cell"
   expect(diagnostics).toEqual([]);
 });
 
-test("body viewport keeps a single bottom border at max scroll @perf", async ({ page }) => {
+test("table keeps a single bottom border below the horizontal scrollbar at max scroll @perf", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
   await page.goto("/performance/virtualization");
@@ -642,19 +649,26 @@ test("body viewport keeps a single bottom border at max scroll @perf", async ({ 
     );
     const lastDataRow = dataRows.at(-1);
     const firstCell = lastDataRow?.querySelector<HTMLElement>(".comins-table__td");
+    const horizontalScrollbar = tableRoot?.querySelector<HTMLElement>(".comins-table__horizontal-scrollbar");
     const rootStyle = tableRoot ? window.getComputedStyle(tableRoot) : null;
     const cellStyle = firstCell ? window.getComputedStyle(firstCell) : null;
 
     return {
       cellBorderBottomWidth: cellStyle?.borderBottomWidth ?? null,
-      rootBottomDiff: tableRoot ? Math.abs(viewport.getBoundingClientRect().bottom - tableRoot.getBoundingClientRect().bottom) : Number.POSITIVE_INFINITY,
+      rootBottomDiff: tableRoot && horizontalScrollbar
+        ? Math.abs(horizontalScrollbar.getBoundingClientRect().bottom - tableRoot.getBoundingClientRect().bottom)
+        : Number.POSITIVE_INFINITY,
       rootBorderBottomWidth: rootStyle?.borderBottomWidth ?? null,
       scrollTop: viewport.scrollTop,
+      scrollbarFollowsViewport: horizontalScrollbar
+        ? Math.abs(horizontalScrollbar.getBoundingClientRect().top - viewport.getBoundingClientRect().bottom)
+        : Number.POSITIVE_INFINITY,
     };
   });
 
   expect(metrics.scrollTop).toBeGreaterThan(0);
   expect(metrics.rootBottomDiff).toBeLessThanOrEqual(2);
+  expect(metrics.scrollbarFollowsViewport).toBeLessThanOrEqual(1);
   expect(metrics.rootBorderBottomWidth).toBe("1px");
   expect(metrics.cellBorderBottomWidth).toBe("0px");
   expect(diagnostics).toEqual([]);

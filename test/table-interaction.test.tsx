@@ -7,10 +7,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   CominsTable,
+  createCominsTableTransferCoordinator,
   type CominsColumnFilterModel,
   type CominsRowGroupingConfig,
   type CominsTableProps,
   type CominsTableRef,
+  type CominsTableTransferResult,
 } from "../src";
 import { CominsHeightIndex } from "../src/virtual-layout";
 
@@ -105,6 +107,90 @@ afterEach(() => {
   container?.remove();
   root = undefined;
   container = undefined;
+});
+
+describe("column pinning interaction contract", () => {
+  it("renders responsive sticky Header, Body, and split Summary surfaces", () => {
+    const restoreResizeObserver = installTestResizeObserver(240, 400);
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          columns={[
+            { field: "name", label: "Name", pinned: "left", width: 120 },
+            { field: "age", label: "Age", width: 120 },
+            { field: "id", label: "ID", pinned: "right", width: 120 },
+          ]}
+          data={rows}
+          getRowId={(row) => row.id}
+          rowProps={{ draggable: true }}
+          summary={{
+            columns: {
+              name: { aggregate: "count", colSpan: 3 },
+            },
+          }}
+        />,
+      );
+      const leftHeader = element.querySelector<HTMLElement>("[data-testid='header-name']")!;
+      const centerHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
+      const rightHeader = element.querySelector<HTMLElement>("[data-testid='header-id']")!;
+      const leftCell = element.querySelector<HTMLElement>("[data-testid='cell-a-name']")!;
+      const rightCell = element.querySelector<HTMLElement>("[data-testid='cell-a-id']")!;
+      const summaryCells = element.querySelectorAll<HTMLElement>(".comins-table__summary-cell");
+
+      expect(leftHeader.dataset.cominsPinned).toBe("left");
+      expect(leftHeader.style.position).toBe("sticky");
+      expect(leftHeader.style.left).toBe("0px");
+      expect(centerHeader.dataset.cominsPinned).toBeUndefined();
+      expect(rightHeader.dataset.cominsPinned).toBe("right");
+      expect(rightHeader.style.right).toBe("0px");
+      expect(leftCell.dataset.cominsPinned).toBe("left");
+      expect(rightCell.dataset.cominsPinned).toBe("right");
+      expect(leftHeader.querySelector("[data-testid='column-move-handle-name']")).toBeNull();
+      expect(element.querySelector("[data-testid='row-drag-handle-a']")).not.toBeNull();
+      expect(summaryCells).toHaveLength(3);
+      expect(summaryCells[0]?.dataset.cominsPinned).toBe("left");
+      expect(summaryCells[1]?.dataset.cominsPinned).toBeUndefined();
+      expect(summaryCells[2]?.dataset.cominsPinned).toBe("right");
+      expect(summaryCells[0]?.getAttribute("data-testid")).toBe("summary-cell-name");
+      expect(summaryCells[1]?.hasAttribute("data-testid")).toBe(false);
+    } finally {
+      restoreResizeObserver();
+    }
+  });
+
+  it("pins a Header Group atomically, ignores child pin intent, and demotes the wider side", () => {
+    const restoreResizeObserver = installTestResizeObserver(240, 250);
+
+    try {
+      const element = renderTableElement(
+        <CominsTable
+          columnGroups={[
+            { children: ["name", "age"], id: "profile", label: "Profile", pinned: "left" },
+          ]}
+          columns={[
+            { field: "name", label: "Name", pinned: "right", width: 100 },
+            { field: "age", label: "Age", width: 100 },
+            { field: "id", label: "ID", pinned: "right", width: 200 },
+          ]}
+          data={rows}
+          getRowId={(row) => row.id}
+        />,
+      );
+      const groupHeader = element.querySelector<HTMLElement>("[data-testid='header-group-profile']")!;
+      const nameHeader = element.querySelector<HTMLElement>("[data-testid='header-name']")!;
+      const ageHeader = element.querySelector<HTMLElement>("[data-testid='header-age']")!;
+      const rightHeader = element.querySelector<HTMLElement>("[data-testid='header-id']")!;
+
+      expect(groupHeader.dataset.cominsPinned).toBe("left");
+      expect(groupHeader.querySelector("[data-testid='column-group-move-handle-profile']")).toBeNull();
+      expect(nameHeader.dataset.cominsPinned).toBe("left");
+      expect(ageHeader.dataset.cominsPinned).toBe("left");
+      expect(rightHeader.dataset.cominsPinned).toBeUndefined();
+    } finally {
+      restoreResizeObserver();
+    }
+  });
 });
 
 describe("row grouping interaction contract", () => {
@@ -531,6 +617,454 @@ describe("row grouping interaction contract", () => {
         toIndex: 2,
       },
     );
+  });
+
+  it("does not interpret another Table's Row or Group indexes as local drag targets", () => {
+    const onChangeData = vi.fn();
+    const onChangeGroups = vi.fn();
+    const view = renderTableElement(
+      <div>
+        <CominsTable
+          columns={columns}
+          data={rows}
+          data-testid="ownership-source"
+          getRowId={getPersonRowId}
+          onChangeData={onChangeData}
+          rowGrouping={createPersonGrouping({
+            expandedGroupIds: [31, 42],
+            groupDraggable: true,
+            onChangeGroups,
+          })}
+          rowProps={{ draggable: true }}
+        />
+        <CominsTable
+          columns={columns}
+          data={rows}
+          data-testid="ownership-target"
+          getRowId={getPersonRowId}
+          rowGrouping={createPersonGrouping({ expandedGroupIds: [31, 42] })}
+          rowProps={{ draggable: true }}
+        />
+      </div>,
+    );
+    const sourceViewport = view.querySelector<HTMLElement>("[data-testid='ownership-source']")!;
+    const targetViewport = view.querySelector<HTMLElement>("[data-testid='ownership-target']")!;
+    const sourceRowHandle = sourceViewport.querySelector<HTMLElement>("[data-testid='row-drag-handle-a']")!;
+    const targetRow = targetViewport.querySelector<HTMLElement>("[data-testid='row-b']")!;
+    const sourceGroupHandle = sourceViewport.querySelector<HTMLElement>("[data-testid='group-drag-handle-31']")!;
+    const targetGroup = targetViewport.querySelector<HTMLElement>("[data-testid='group-row-42']")!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    try {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: vi.fn(() => targetRow),
+      });
+      act(() => {
+        sourceRowHandle.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointerup", { bubbles: true, button: 0, clientX: 10, clientY: 20 }),
+        );
+      });
+
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: vi.fn(() => targetGroup),
+      });
+      act(() => {
+        sourceGroupHandle.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointerup", { bubbles: true, button: 0, clientX: 10, clientY: 20 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    expect(onChangeData).not.toHaveBeenCalled();
+    expect(onChangeGroups).not.toHaveBeenCalled();
+    expect(sourceViewport.closest("[data-comins-table-instance-id]")).not.toBeNull();
+    expect(targetViewport.closest("[data-comins-table-instance-id]")).not.toBeNull();
+  });
+
+  it("commits a local Row drop when the pointerup lands on its rendered placeholder", () => {
+    const onChangeData = vi.fn();
+    const view = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={threeRows}
+        getRowId={getPersonRowId}
+        onChangeData={onChangeData}
+        rowProps={{ draggable: true }}
+      />,
+    );
+    const source = view.querySelector<HTMLElement>("[data-testid='row-drag-handle-c']")!;
+    const target = view.querySelector<HTMLElement>("[data-testid='row-a']")!;
+    const originalElementFromPoint = document.elementFromPoint;
+    let pointElement: Element | null = source;
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => pointElement),
+    });
+
+    try {
+      act(() => {
+        source.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+      });
+      pointElement = target;
+      act(() => {
+        window.dispatchEvent(
+          createMousePointerEvent("pointermove", { bubbles: true, buttons: 1, clientX: 10, clientY: 20 }),
+        );
+      });
+      pointElement = view.querySelector("[data-testid='row-move-placeholder']");
+      expect(pointElement).not.toBeNull();
+      act(() => {
+        window.dispatchEvent(
+          createMousePointerEvent("pointerup", { bubbles: true, button: 0, clientX: 10, clientY: 20 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    expect(onChangeData).toHaveBeenCalledWith([threeRows[2], threeRows[0], threeRows[1]]);
+  });
+
+  it("moves one draggable Row between flat Tables through a shared Coordinator", async () => {
+    const onTransfer = vi.fn();
+
+    function CrossTableRowFixture() {
+      const [sourceData, setSourceData] = useState([rows[0]!]);
+      const [targetData, setTargetData] = useState([rows[1]!]);
+      const [coordinator] = useState(() =>
+        createCominsTableTransferCoordinator<PersonRow>({
+          onTransfer: (result) => {
+            onTransfer(result);
+            setSourceData(result.source.data);
+            setTargetData(result.target.data);
+          },
+        }),
+      );
+
+      return (
+        <div>
+          <CominsTable
+            columns={columns}
+            data={sourceData}
+            data-testid="transfer-row-source"
+            getRowId={getPersonRowId}
+            rowProps={{ draggable: true }}
+            tableTransfer={{ coordinator, scope: "people", tableId: "source" }}
+          />
+          <CominsTable
+            columns={columns}
+            data={targetData}
+            data-testid="transfer-row-target"
+            getRowId={getPersonRowId}
+            rowProps={{ draggable: true }}
+            tableTransfer={{ coordinator, scope: "people", tableId: "target" }}
+          />
+        </div>
+      );
+    }
+
+    const view = renderTableElement(<CrossTableRowFixture />);
+    const sourceViewport = view.querySelector<HTMLElement>("[data-testid='transfer-row-source']")!;
+    const targetViewport = view.querySelector<HTMLElement>("[data-testid='transfer-row-target']")!;
+    const sourceHandle = sourceViewport.querySelector<HTMLElement>("[data-testid='row-drag-handle-a']")!;
+    const targetRow = targetViewport.querySelector<HTMLElement>("[data-testid='row-b']")!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => targetRow),
+    });
+
+    try {
+      act(() => {
+        sourceHandle.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointerup", { bubbles: true, button: 0, clientX: 10, clientY: 20 }),
+        );
+      });
+      await act(async () => new Promise((resolve) => window.requestAnimationFrame(resolve)));
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    expect(onTransfer).toHaveBeenCalledTimes(1);
+    const result = onTransfer.mock.calls[0]![0] as CominsTableTransferResult<PersonRow>;
+
+    expect(result.source.data).toEqual([]);
+    expect(result.target.data).toEqual([rows[0], rows[1]]);
+    expect(sourceViewport.querySelector("[data-testid='row-a']")).toBeNull();
+    expect(targetViewport.querySelector("[data-testid='row-a']")).not.toBeNull();
+    expect(document.activeElement).toBe(targetViewport.querySelector("[data-testid='row-a']"));
+  });
+
+  it("reports a duplicate Cross-Table Row and renders non-blocking target feedback", () => {
+    const onTransfer = vi.fn();
+    const onTransferRejected = vi.fn();
+    const coordinator = createCominsTableTransferCoordinator<PersonRow>({
+      onTransfer,
+      onTransferRejected,
+    });
+    const view = renderTableElement(
+      <div>
+        <CominsTable
+          columns={columns}
+          data={[rows[0]!]}
+          data-testid="duplicate-transfer-source"
+          getRowId={getPersonRowId}
+          rowProps={{ draggable: true }}
+          tableTransfer={{ coordinator, scope: "people", tableId: "source" }}
+        />
+        <CominsTable
+          columns={columns}
+          data={[{ ...rows[0]!, name: "Target Alpha" }]}
+          data-testid="duplicate-transfer-target"
+          getRowId={getPersonRowId}
+          rowProps={{ draggable: true }}
+          tableTransfer={{
+            coordinator,
+            rejectionFeedback: {
+              duration: 10000,
+              renderTooltip: (rejection) => (
+                <>
+                  <strong>Duplicate ID</strong>
+                  <span>{`custom:${String(rejection.conflict.kind === "row" ? rejection.conflict.rowId : rejection.conflict.groupId)}`}</span>
+                </>
+              ),
+            },
+            scope: "people",
+            tableId: "target",
+          }}
+        />
+      </div>,
+    );
+    const source = view.querySelector<HTMLElement>(
+      "[data-testid='duplicate-transfer-source'] [data-testid='row-drag-handle-a']",
+    )!;
+    const target = view.querySelector<HTMLElement>(
+      "[data-testid='duplicate-transfer-target'] [data-testid='row-a']",
+    )!;
+    const targetTable = view.querySelector<HTMLElement>(
+      "[data-comins-transfer-table-id='target']",
+    )!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => target),
+    });
+
+    try {
+      act(() => {
+        source.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointerup", { bubbles: true, button: 0, clientX: 24, clientY: 36 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    expect(onTransfer).not.toHaveBeenCalled();
+    expect(onTransferRejected).toHaveBeenCalledWith(expect.objectContaining({
+      kind: "row",
+      reason: "duplicate-id",
+      sourceTableId: "source",
+      targetTableId: "target",
+    }));
+    expect(view.querySelector("[data-testid='transfer-rejection-tooltip']")?.textContent)
+      .toContain("Duplicate IDcustom:a");
+    expect(targetTable.dataset.cominsTransferRejected).toBe("true");
+  });
+
+  it("lets the target reject a Cross-Table Row before conflict resolution", () => {
+    const canTransfer = vi.fn(() => false);
+    const onTransfer = vi.fn();
+    const resolveConflict = vi.fn(() => "overwrite" as const);
+    const coordinator = createCominsTableTransferCoordinator<PersonRow>({ onTransfer });
+    const view = renderTableElement(
+      <div>
+        <CominsTable
+          columns={columns}
+          data={[rows[0]!]}
+          data-testid="guarded-transfer-source"
+          getRowId={getPersonRowId}
+          rowProps={{ draggable: true }}
+          tableTransfer={{ coordinator, scope: "people", tableId: "source" }}
+        />
+        <CominsTable
+          columns={columns}
+          data={[rows[0]!]}
+          data-testid="guarded-transfer-target"
+          getRowId={getPersonRowId}
+          rowProps={{ draggable: true }}
+          tableTransfer={{
+            canTransfer,
+            coordinator,
+            resolveConflict,
+            scope: "people",
+            tableId: "target",
+          }}
+        />
+      </div>,
+    );
+    const source = view.querySelector<HTMLElement>(
+      "[data-testid='guarded-transfer-source'] [data-testid='row-drag-handle-a']",
+    )!;
+    const target = view.querySelector<HTMLElement>(
+      "[data-testid='guarded-transfer-target'] [data-testid='row-a']",
+    )!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => target),
+    });
+
+    try {
+      act(() => {
+        source.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointerup", { bubbles: true, button: 0, clientX: 10, clientY: 20 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    expect(canTransfer).toHaveBeenCalledWith(expect.objectContaining({
+      kind: "row",
+      sourceTableId: "source",
+      targetTableId: "target",
+    }));
+    expect(resolveConflict).not.toHaveBeenCalled();
+    expect(onTransfer).not.toHaveBeenCalled();
+  });
+
+  it("moves a Group bundle and preserves a different empty source Group", () => {
+    const onTransfer = vi.fn();
+
+    function CrossTableGroupFixture() {
+      const [sourceData, setSourceData] = useState([rows[0]!]);
+      const [sourceGroups, setSourceGroups] = useState([personGroups[0]!, personGroups[1]!]);
+      const [targetData, setTargetData] = useState([rows[1]!]);
+      const [targetGroups, setTargetGroups] = useState([personGroups[2]!]);
+      const [coordinator] = useState(() =>
+        createCominsTableTransferCoordinator<PersonRow, PersonGroup>({
+          onTransfer: (result) => {
+            onTransfer(result);
+            setSourceData(result.source.data);
+            setSourceGroups(result.source.groups ?? []);
+            setTargetData(result.target.data);
+            setTargetGroups(result.target.groups ?? []);
+          },
+        }),
+      );
+
+      return (
+        <div>
+          <CominsTable
+            columns={columns}
+            data={sourceData}
+            data-testid="transfer-group-source"
+            getRowId={getPersonRowId}
+            rowGrouping={createPersonGrouping({ groupDraggable: true, groups: sourceGroups })}
+            tableTransfer={{ coordinator, scope: "people", tableId: "source" }}
+          />
+          <CominsTable
+            columns={columns}
+            data={targetData}
+            data-testid="transfer-group-target"
+            getRowId={getPersonRowId}
+            rowGrouping={createPersonGrouping({ groups: targetGroups })}
+            tableTransfer={{ coordinator, scope: "people", tableId: "target" }}
+          />
+        </div>
+      );
+    }
+
+    const view = renderTableElement(<CrossTableGroupFixture />);
+    const sourceViewport = view.querySelector<HTMLElement>("[data-testid='transfer-group-source']")!;
+    const targetViewport = view.querySelector<HTMLElement>("[data-testid='transfer-group-target']")!;
+    const sourceHandle = sourceViewport.querySelector<HTMLElement>("[data-testid='group-drag-handle-31']")!;
+    const targetGroup = targetViewport.querySelector<HTMLElement>("[data-testid='group-row-42']")!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    vi.spyOn(targetGroup, "getBoundingClientRect").mockReturnValue({
+      bottom: 40,
+      height: 40,
+      left: 0,
+      right: 200,
+      top: 0,
+      width: 200,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => targetGroup),
+    });
+
+    try {
+      act(() => {
+        sourceHandle.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointerup", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    expect(onTransfer).toHaveBeenCalledTimes(1);
+    const result = onTransfer.mock.calls[0]![0] as CominsTableTransferResult<PersonRow, PersonGroup>;
+
+    expect(result.source.groups).toEqual([personGroups[1]]);
+    expect(result.source.data).toEqual([]);
+    expect(result.target.groups).toEqual([personGroups[0], personGroups[2]]);
+    expect(result.target.data).toEqual([rows[1], rows[0]]);
+    expect(sourceViewport.querySelector("[data-testid='group-row-99']")).not.toBeNull();
+    expect(sourceViewport.querySelector("[data-testid='group-row-31']")).toBeNull();
+    expect(targetViewport.querySelector("[data-testid='group-row-31']")).not.toBeNull();
   });
 
   it("moves an existing draggable Row into a collapsed Group and restores disclosure focus", () => {
@@ -3113,6 +3647,18 @@ describe("comins-table keyboard interaction", () => {
 
     expect(element.querySelector("[data-testid='cell-a-name']")?.textContent).toBe("Alpha");
     expect(element.querySelector("[data-testid='cell-b-age']")?.textContent).toBe("42");
+  });
+
+  it("keeps every controlled Row visible when data grows without pagination", () => {
+    const renderControlledRows = (data: readonly PersonRow[]) => (
+      <CominsTable columns={columns} data={data} getRowId={(row) => row.id} />
+    );
+    const element = renderTableElement(renderControlledRows(rows));
+
+    act(() => root?.render(renderControlledRows(threeRows)));
+
+    expect(element.querySelectorAll("tr[data-comins-row-data-index]")).toHaveLength(3);
+    expect(element.querySelector("[data-testid='row-c']")).not.toBeNull();
   });
 
   it("notifies onChangeData when internal interactions mutate controlled data", () => {

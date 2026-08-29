@@ -145,6 +145,89 @@ describe("comins-table basic core", () => {
     expect(queryCominsRows(restored).map((row) => row.id)).toEqual(["a", "b"]);
   });
 
+  it("persists configured pin intent and normalizes old or invalid layouts to center", () => {
+    const createPinnedState = () => createCominsTableState<PersonRow>({
+      columns: [
+        { field: "name", label: "Name", pinned: "left" },
+        { field: "age", label: "Age" },
+        { field: "profile.score", label: "Score", pinned: "right" },
+      ],
+      getRowId: (row) => row.id,
+      rows,
+    });
+    const state = createPinnedState();
+    const layout = serializeCominsColumnLayout(state);
+
+    expect(layout.columns.name?.pinned).toBe("left");
+    expect(layout.columns["profile.score"]?.pinned).toBe("right");
+    expect(getCominsVisibleColumns(state).map((column) => column.id)).toEqual([
+      "name",
+      "age",
+      "profile.score",
+    ]);
+
+    const oldLayout = applyCominsColumnLayout(createPinnedState(), {
+      columns: {},
+      order: ["name", "age", "profile.score"],
+    });
+    const invalidLayout = applyCominsColumnLayout(createPinnedState(), {
+      columns: {
+        name: { pinned: "center" },
+        "profile.score": { pinned: "outside" },
+      } as never,
+      order: ["name", "age", "profile.score"],
+    });
+
+    expect(oldLayout.columnState.name?.pinned).toBeUndefined();
+    expect(oldLayout.columnState["profile.score"]?.pinned).toBeUndefined();
+    expect(invalidLayout.columnState.name?.pinned).toBeUndefined();
+    expect(invalidLayout.columnState["profile.score"]?.pinned).toBeUndefined();
+  });
+
+  it("locks configured pinned blocks and lets a Header Group own child pinning", () => {
+    const state = createCominsTableState<PersonRow>({
+      columnGroups: [
+        { children: ["name", "age"], id: "profile", label: "Profile" },
+      ],
+      columns: [
+        { field: "name", label: "Name", pinned: "right" },
+        { field: "age", label: "Age" },
+        { field: "profile.score", label: "Score", pinned: "left" },
+      ],
+      getRowId: (row) => row.id,
+      rows,
+    });
+
+    expect(getCominsVisibleColumns(state).map((column) => column.id)).toEqual([
+      "profile.score",
+      "name",
+      "age",
+    ]);
+    expect(moveCominsColumn(state, "profile.score", 0)).toBe(state);
+    expect(moveCominsColumn(state, "name", 1).columnOrder).toEqual([
+      "age",
+      "name",
+      "profile.score",
+    ]);
+
+    const groupedPinned = createCominsTableState<PersonRow>({
+      columnGroups: [
+        { children: ["name", "age"], id: "profile", label: "Profile", pinned: "left" },
+      ],
+      columns,
+      getRowId: (row) => row.id,
+      rows,
+    });
+
+    expect(groupedPinned.columnGroupState.profile?.pinned).toBe("left");
+    expect(moveCominsColumnGroup(groupedPinned, "profile", 1)).toBe(groupedPinned);
+    expect(getCominsVisibleColumns(groupedPinned).map((column) => column.id)).toEqual([
+      "name",
+      "age",
+      "profile.score",
+    ]);
+  });
+
   it("normalizes 2-depth column groups without changing flat column tables", () => {
     const flatState = createState();
     const groupedState = createCominsTableState<PersonRow>({

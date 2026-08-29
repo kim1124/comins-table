@@ -14,6 +14,8 @@ Set `virtualized` for large row sets.
 
 The package is validated against a 100000-row virtualization scenario. Performance review uses Chrome DevTools Performance Monitor counters such as DOM Node count and JS heap size.
 
+Header and Body remain separate table elements. Body owns vertical scrolling and virtual range updates; horizontal overflow uses the single scrollbar at the bottom of the complete Table and synchronizes Header, Body, and Summary.
+
 `"buffer-size"` controls how many rows remain mounted around the viewport. `rowHeight` must match the visual row height when CSS overrides `--comins-table-row-height`.
 
 Data Rows and collapsed Detail owners keep the arithmetic fixed-height path.

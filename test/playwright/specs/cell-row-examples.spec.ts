@@ -185,7 +185,6 @@ test("row page demonstrates styling and events", async ({ page }) => {
   await expect(page.getByTestId("row-event-alert")).toContainText("행 클릭");
   await expect(page.getByTestId("row-event-alert")).toContainText("a");
 
-  await page.waitForTimeout(350);
   await eventsExample.getByTestId("row-b").dblclick();
   await expect(page.getByTestId("row-event-alert")).toContainText("행 더블클릭");
   await expect(page.getByTestId("row-event-alert")).toContainText("b");

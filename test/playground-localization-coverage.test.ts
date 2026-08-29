@@ -25,6 +25,7 @@ import {
 import { API } from "typescript/unstable/sync";
 
 import { dataTableOptionGuide, getDataTableOptionGuide } from "../example/src/docs/dataTableOptionGuide";
+import { playgroundFeatureRouteManifest } from "../example/src/docs/featureRouteManifest";
 import { createDocsPages } from "../example/src/docs/docsRoutes";
 import { searchDataTableDocs } from "../example/src/docs/search";
 import { featureRegistry, findFeature } from "../example/src/features/featureRegistry";
@@ -37,6 +38,7 @@ const canonicalFeatureIds = [
   "loading",
   "header",
   "column-groups",
+  "column-pinning",
   "pagination",
   "body",
   "infinite-scroll",
@@ -47,6 +49,7 @@ const canonicalFeatureIds = [
   "row",
   "row-expand",
   "row-grouping",
+  "cross-table-drag",
   "column-filtering",
   "summary-row",
   "tree-grid",
@@ -76,6 +79,18 @@ type LocalizedCopyEntry = {
 };
 
 describe("Playground localization coverage", () => {
+  it("keeps the lightweight feature route manifest aligned with runtime docs and registry", () => {
+    const runtimeRoutes = createDocsPages("en").flatMap((page) =>
+      page.featureId ? [{ featureId: page.featureId, path: page.path }] : []);
+    const registryIds = featureRegistry.map((feature) => feature.id).sort();
+    const manifestIds = playgroundFeatureRouteManifest.map((route) => route.featureId).sort();
+
+    expect(playgroundFeatureRouteManifest).toEqual(runtimeRoutes);
+    expect(manifestIds).toEqual(registryIds);
+    expect(new Set(playgroundFeatureRouteManifest.map((route) => route.path)).size)
+      .toBe(playgroundFeatureRouteManifest.length);
+  });
+
   it("keeps Korean and English docs route structure and code samples aligned", () => {
     const koreanPages = createDocsPages("ko");
     const englishPages = createDocsPages("en");
