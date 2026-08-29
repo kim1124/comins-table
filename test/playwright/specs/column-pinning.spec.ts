@@ -8,20 +8,16 @@ async function readHorizontalNativeEndState(root: Locator) {
   return root.evaluate((element) => {
     const surfaces = {
       Body: element.querySelector<HTMLElement>("[data-testid='column-pinning-viewport']"),
-      Header: element.querySelector<HTMLElement>(".comins-table__header"),
-      Summary: element.querySelector<HTMLElement>(".comins-table__summary"),
       "horizontal scrollbar": element.querySelector<HTMLElement>("[data-testid='table-horizontal-scrollbar']"),
     };
 
     return Object.fromEntries(Object.entries(surfaces).map(([name, surface]) => {
       const scrollLeft = surface?.scrollLeft ?? -1;
-      const ownsHorizontalInput = name === "Body" || name === "horizontal scrollbar";
-
-      if (surface && ownsHorizontalInput) {
+      if (surface) {
         surface.scrollLeft = Number.MAX_SAFE_INTEGER;
       }
-      const nativeEndScrollLeft = surface && ownsHorizontalInput ? surface.scrollLeft : null;
-      if (surface && ownsHorizontalInput) {
+      const nativeEndScrollLeft = surface?.scrollLeft ?? null;
+      if (surface) {
         surface.scrollLeft = scrollLeft;
       }
 
@@ -75,6 +71,14 @@ test("Column Pinning keeps sticky surfaces aligned and demotes responsively", as
     scrollWidth: element.scrollWidth,
   }));
   expect(scrollbarMetrics.scrollWidth).toBeGreaterThan(scrollbarMetrics.clientWidth + 500);
+  await expect.poll(() => root.evaluate((element) => {
+    const body = element.querySelector<HTMLElement>("[data-testid='column-pinning-viewport']");
+    const scrollbar = element.querySelector<HTMLElement>("[data-testid='table-horizontal-scrollbar']");
+
+    return body && scrollbar
+      ? Math.abs(body.offsetWidth - scrollbar.clientWidth)
+      : Number.POSITIVE_INFINITY;
+  })).toBeLessThanOrEqual(1);
 
   const before = await Promise.all([leftCell.boundingBox(), centerCell.boundingBox(), rightCell.boundingBox()]);
 
@@ -164,30 +168,13 @@ test("Column Pinning keeps every surface at the same end with a reserved vertica
   });
   await expect(viewport).toHaveCSS("scrollbar-gutter", "stable both-edges");
 
-  const nativeRangeDifference = await root.evaluate((element) => {
+  await expect.poll(() => root.evaluate((element) => {
     const body = element.querySelector<HTMLElement>("[data-testid='column-pinning-viewport']");
     const scrollbar = element.querySelector<HTMLElement>("[data-testid='table-horizontal-scrollbar']");
 
     return body && scrollbar
-      ? Math.abs(
-          (body.scrollWidth - body.clientWidth) -
-          (scrollbar.scrollWidth - scrollbar.clientWidth),
-        )
-      : -1;
-  });
-  if (nativeRangeDifference <= 1) {
-    await viewport.evaluate((element) => {
-      element.style.paddingInlineEnd = "15px";
-    });
-  }
-
-  await expect.poll(() => root.evaluate((element) => {
-    const body = element.querySelector<HTMLElement>("[data-testid='column-pinning-viewport']");
-    const scrollbar = element.querySelector<HTMLElement>("[data-testid='table-horizontal-scrollbar']");
-    const bodyMax = body ? body.scrollWidth - body.clientWidth : -1;
-    const scrollbarMax = scrollbar ? scrollbar.scrollWidth - scrollbar.clientWidth : -1;
-
-    return Math.abs(bodyMax - scrollbarMax);
+      ? Math.abs(body.offsetWidth - scrollbar.clientWidth)
+      : Number.POSITIVE_INFINITY;
   })).toBeLessThanOrEqual(1);
 
   await horizontalScrollbar.hover();

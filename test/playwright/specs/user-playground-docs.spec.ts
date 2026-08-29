@@ -21,7 +21,7 @@ function collectBrowserDiagnostics(page: Page) {
   return diagnostics;
 }
 
-test("user playground exposes every current feature page with recreated content", async ({ page }) => {
+test("user playground recreates feature content across sidebar navigation", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/examples/crud");
 
@@ -30,7 +30,18 @@ test("user playground exposes every current feature page with recreated content"
   await expect(page.getByTestId("mount-id")).not.toHaveText(firstMountId ?? "");
   await expect.poll(() => page.evaluate(() => window.__cominsTableLastUnmount)).toBe(firstMountId);
 
-  for (const item of playgroundFeatureRouteManifest) {
+  await page.goto("/examples/header");
+  const headerMountId = await page.getByTestId("mount-id").textContent();
+  await page.getByRole("link", { exact: true, name: "CRUD" }).click();
+  await expect.poll(() => page.evaluate(() => window.__cominsTableLastUnmount)).toBe(headerMountId);
+
+  expect(diagnostics).toEqual([]);
+});
+
+for (const item of playgroundFeatureRouteManifest) {
+  test(`user playground renders the ${item.featureId} route`, async ({ page }) => {
+    const diagnostics = collectBrowserDiagnostics(page);
+
     await page.goto(item.path);
     const content = page.getByTestId("feature-content");
     await expect(content).toHaveAttribute("data-feature", item.featureId);
@@ -42,15 +53,10 @@ test("user playground exposes every current feature page with recreated content"
     } else {
       await expect(page.locator(".comins-table").first()).toBeVisible();
     }
-  }
 
-  await page.goto("/examples/header");
-  const headerMountId = await page.getByTestId("mount-id").textContent();
-  await page.getByRole("link", { exact: true, name: "CRUD" }).click();
-  await expect.poll(() => page.evaluate(() => window.__cominsTableLastUnmount)).toBe(headerMountId);
-
-  expect(diagnostics).toEqual([]);
-});
+    expect(diagnostics).toEqual([]);
+  });
+}
 
 test("user playground uses charts-style docs shell and shadcn-style action buttons", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);

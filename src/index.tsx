@@ -1713,6 +1713,7 @@ function CominsTableInner<TData, TGroup>(
   const [containerHeight, setContainerHeight] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
   const [horizontalScrollContentWidth, setHorizontalScrollContentWidth] = useState(0);
+  const [horizontalViewportOuterWidth, setHorizontalViewportOuterWidth] = useState(0);
   const [horizontalViewportWidth, setHorizontalViewportWidth] = useState(0);
   const [detailLayoutVersion, setDetailLayoutVersion] = useState(0);
   const [movingColumnId, setMovingColumnId] = useState<string | null>(null);
@@ -2293,6 +2294,7 @@ function CominsTableInner<TData, TGroup>(
         setContainerHeight(entry.contentRect.height);
         setContainerWidth(entry.contentRect.width);
         setHorizontalScrollContentWidth(element.scrollWidth);
+        setHorizontalViewportOuterWidth(element.offsetWidth);
         setHorizontalViewportWidth(element.clientWidth);
       }
     });
@@ -3518,10 +3520,13 @@ function CominsTableInner<TData, TGroup>(
     typeof columnWidthTotal === "number" && containerWidth > 0 ? columnWidthTotal > containerWidth + 1 : false;
   useLayoutEffect(() => {
     const nextContentWidth = containerRef.current?.scrollWidth ?? 0;
+    const nextViewportOuterWidth = containerRef.current?.offsetWidth ?? 0;
     const nextViewportWidth = containerRef.current?.clientWidth ?? 0;
 
     setHorizontalScrollContentWidth((current) =>
       Math.abs(current - nextContentWidth) > 0.5 ? nextContentWidth : current);
+    setHorizontalViewportOuterWidth((current) =>
+      Math.abs(current - nextViewportOuterWidth) > 0.5 ? nextViewportOuterWidth : current);
     setHorizontalViewportWidth((current) =>
       Math.abs(current - nextViewportWidth) > 0.5 ? nextViewportWidth : current);
   }, [containerWidth, hasHorizontalOverflow, tableWidth]);
@@ -3531,6 +3536,10 @@ function CominsTableInner<TData, TGroup>(
       : containerWidth > 0
         ? containerWidth
         : undefined;
+  const synchronizedHorizontalScrollbarWidth =
+    horizontalViewportOuterWidth > 0
+      ? horizontalViewportOuterWidth
+      : synchronizedHorizontalViewportWidth;
   const synchronizedHorizontalContentWidth = horizontalScrollContentWidth > 0
     ? Math.max(typeof tableWidth === "number" ? tableWidth : 0, horizontalScrollContentWidth)
     : tableWidth;
@@ -6611,7 +6620,7 @@ function CominsTableInner<TData, TGroup>(
           onScroll={(event) => syncHorizontalScrollLeft(event.currentTarget.scrollLeft)}
           ref={horizontalScrollbarRef}
           role="region"
-          style={{ width: synchronizedHorizontalViewportWidth }}
+          style={{ width: synchronizedHorizontalScrollbarWidth }}
           tabIndex={0}
         >
           <div
