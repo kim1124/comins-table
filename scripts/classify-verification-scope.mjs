@@ -47,7 +47,8 @@ function isFastExcludedPath(path) {
 }
 
 function isBrowserPath(path) {
-  return path === 'styles.css' ||
+  return path === '.nvmrc' ||
+    path === 'styles.css' ||
     path === 'playwright.config.ts' ||
     path === 'vite.example.config.ts' ||
     path === 'package.json' ||

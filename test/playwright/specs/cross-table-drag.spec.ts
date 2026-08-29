@@ -7,13 +7,11 @@ test.beforeEach(async ({ page }) => initializePlaygroundLocale(page, "en"));
 async function dragPointer(page: Page, source: Locator, target: Locator, targetYRatio = 0.5) {
   await source.scrollIntoViewIfNeeded();
   await target.scrollIntoViewIfNeeded();
-  const sourceBox = await source.boundingBox();
+  await source.hover();
+  await page.mouse.down();
   const targetBox = await target.boundingBox();
 
-  expect(sourceBox).not.toBeNull();
   expect(targetBox).not.toBeNull();
-  await page.mouse.move(sourceBox!.x + sourceBox!.width / 2, sourceBox!.y + sourceBox!.height / 2);
-  await page.mouse.down();
   await page.mouse.move(
     targetBox!.x + targetBox!.width / 2,
     targetBox!.y + targetBox!.height * targetYRatio,
@@ -24,10 +22,7 @@ async function dragPointer(page: Page, source: Locator, target: Locator, targetY
 
 async function dragPointerToPoint(page: Page, source: Locator, target: { x: number; y: number }) {
   await source.scrollIntoViewIfNeeded();
-  const sourceBox = await source.boundingBox();
-
-  expect(sourceBox).not.toBeNull();
-  await page.mouse.move(sourceBox!.x + sourceBox!.width / 2, sourceBox!.y + sourceBox!.height / 2);
+  await source.hover();
   await page.mouse.down();
   await page.mouse.move(target.x, target.y, { steps: 12 });
   await page.mouse.up();
