@@ -45,7 +45,7 @@ jobs:
           execFileSync("npm", ["view", name, "version"], { stdio: "inherit" });'
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run verify:full
+      - run: npm run verify:local
         env:
           PLAYWRIGHT_FAIL_ON_FLAKY_TESTS: '1'
       - name: Install pinned Gitleaks

@@ -99,4 +99,12 @@ describe("test reliability contract", () => {
       "npm run verify:local && npm run test:perf -- --workers=1",
     );
   });
+
+  it("keeps hosted release verification portable and performance verification local", () => {
+    const publishWorkflow = read(".github/workflows/publish.yml");
+
+    expect(publishWorkflow).toMatch(/- run:\s+npm run verify:local/u);
+    expect(publishWorkflow).not.toMatch(/- run:\s+npm run verify:full/u);
+    expect(publishWorkflow).not.toMatch(/- run:\s+npm run test:perf/u);
+  });
 });
