@@ -16,6 +16,13 @@ describe('verification change scope', () => {
     });
   });
 
+  it('runs browser verification when the pinned local Node runtime changes', () => {
+    expect(classifyVerificationScope(['.nvmrc'])).toMatchObject({
+      browser: true,
+      fast: true,
+    });
+  });
+
   it('keeps documentation-only changes out of executable gates', () => {
     expect(classifyVerificationScope(['docs/user/22-column-pinning.md', 'reports/2026-08-29.md']))
       .toEqual({

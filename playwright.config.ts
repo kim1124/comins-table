@@ -10,13 +10,20 @@ export default defineConfig({
   reporter: isCI
     ? [["github"], ["html", { open: "never", outputFolder: "reports/artifacts/playwright-html" }], ["list"]]
     : [["html", { open: "never", outputFolder: "reports/artifacts/playwright-html" }], ["list"]],
-  retries: isCI ? 1 : 0,
+  retries: 0,
   failOnFlakyTests: true,
   workers: 1,
   testDir: "test/playwright/specs",
   use: {
     baseURL,
+    browserName: "chromium",
+    deviceScaleFactor: 1,
+    headless: true,
+    locale: "en-US",
+    reducedMotion: "no-preference",
+    timezoneId: "UTC",
     trace: "retain-on-failure-and-retries",
+    viewport: { height: 720, width: 1280 },
   },
   webServer: {
     command: `./node_modules/.bin/vite --config vite.example.config.ts --host 127.0.0.1 --port ${port}`,

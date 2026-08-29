@@ -82,13 +82,36 @@ describe("test reliability contract", () => {
     expect(violations).toEqual([]);
   });
 
-  it("keeps local E2E deterministic and treats flaky retries as failures", () => {
+  it("keeps local and hosted ordinary E2E on one deterministic execution contract", () => {
     const config = read("playwright.config.ts");
 
     expect(config).toMatch(/forbidOnly:\s*true/u);
     expect(config).toMatch(/failOnFlakyTests:\s*true/u);
-    expect(config).toMatch(/retries:\s*isCI\s*\?\s*1\s*:\s*0/u);
+    expect(config).toMatch(/retries:\s*0/u);
+    expect(config).not.toMatch(/retries:\s*isCI/u);
     expect(config).toMatch(/workers:\s*1/u);
+    expect(config).toMatch(/browserName:\s*["']chromium["']/u);
+    expect(config).toMatch(/headless:\s*true/u);
+    expect(config).toMatch(/locale:\s*["']en-US["']/u);
+    expect(config).toMatch(/timezoneId:\s*["']UTC["']/u);
+    expect(config).toMatch(/viewport:\s*\{\s*height:\s*720,\s*width:\s*1280\s*\}/u);
+    expect(config).toMatch(
+      /reuseExistingServer:\s*process\.env\.PLAYWRIGHT_REUSE_EXISTING_SERVER\s*===\s*["']1["']/u,
+    );
+  });
+
+  it("pins one Node runtime for local and hosted verification", () => {
+    const nodeVersion = read(".nvmrc").trim();
+
+    expect(nodeVersion).toBe("24.19.0");
+    for (const workflowPath of [".github/workflows/verify.yml", ".github/workflows/publish.yml"]) {
+      const workflow = read(workflowPath);
+      const setupNodeCount = [...workflow.matchAll(/uses:\s*actions\/setup-node@/gu)].length;
+      const pinnedNodeCount = [...workflow.matchAll(/node-version:\s*24\.19\.0/gu)].length;
+
+      expect(pinnedNodeCount, `${workflowPath} must pin every setup-node step`).toBe(setupNodeCount);
+      expect(workflow).not.toMatch(/node-version:\s*24\s*$/mu);
+    }
   });
 
   it("keeps local full verification ordered from fast gates to E2E and performance", () => {
