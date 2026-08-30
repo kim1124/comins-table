@@ -1,5 +1,7 @@
 # Lazy Load
 
+[문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/16-lazy-load.md) · [Playground](http://127.0.0.1:4002/performance/lazy-load)
+
 `lazyLoad`는 request 시점을 Comins Table에 위임하고, application이 Row 배열과 원격 상태를 소유하는 controlled API다.
 
 ```tsx

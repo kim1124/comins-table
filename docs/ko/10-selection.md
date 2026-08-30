@@ -1,5 +1,7 @@
 # Selection
 
+[문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/10-selection.md) · [Playground](http://127.0.0.1:4002/examples/selection-clipboard)
+
 Selection은 row, cell, cell range를 지원한다. React ref method는 화면에 보이는 visible row index 기준으로 row selection을 설정한다.
 
 ```tsx

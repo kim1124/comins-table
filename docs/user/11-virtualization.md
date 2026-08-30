@@ -1,5 +1,7 @@
 # Virtualization
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/11-virtualization.md) · [Playground](http://127.0.0.1:4002/performance/virtualization)
+
 Set `virtualized` for large row sets.
 
 ```tsx

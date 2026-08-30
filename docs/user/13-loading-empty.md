@@ -1,5 +1,7 @@
 # Loading And Empty State
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/13-loading-empty.md) · [Playground](http://127.0.0.1:4002/examples/loading)
+
 Use `loading` for initial loading and refetch states. The application owns the fetch lifecycle and maps its response into controlled `data`.
 
 ```tsx

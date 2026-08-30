@@ -1,13 +1,13 @@
 # Comins Table
 
-Comins Table is a controlled React data table for data-heavy application screens, with virtualized rendering, precise selection, movable and pinned headers, controlled Column Filtering, Row Grouping and Row Expand Details, Cross-Table Row/Group Drag, Summary Row aggregation, Tree Grid data, built-in component cells, and framework-independent core helpers.
+Comins Table is a controlled React data table for data-heavy application screens. Applications keep ownership of their data and business models while the Table provides virtualized rendering, structured Rows, configurable Headers, precise selection, and customizable cells.
 
 [![npm version](https://img.shields.io/npm/v/comins-table)](https://www.npmjs.com/package/comins-table)
 [![TypeScript declarations](https://img.shields.io/npm/types/comins-table)](https://www.npmjs.com/package/comins-table)
 [![Verify](https://github.com/kim1124/comins-table/actions/workflows/verify.yml/badge.svg?branch=main)](https://github.com/kim1124/comins-table/actions/workflows/verify.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-![Comins Table sorting, column reorder, Row selection, Summary Row, and Tree Grid demo](https://raw.githubusercontent.com/kim1124/comins-table/main/docs/assets/comins-table-demo.gif)
+![Comins Table controlled Rows, Column Pinning, Row Grouping, Filtering, Tree Grid, and Cross-Table Drag overview](https://raw.githubusercontent.com/kim1124/comins-table/main/docs/assets/comins-table-overview.gif)
 
 ## Why Comins Table
 
@@ -20,6 +20,18 @@ Comins Table is a controlled React data table for data-heavy application screens
 | Custom UI | Cell/Header renderers, built-in button/input/checkbox/radio/select/toggle/progress/menu/Virtual List components, and CSS-variable themes |
 
 Comins Table is standalone and does not wrap another table or grid implementation.
+
+### Feature catalog
+
+| Area | Shipped capabilities | Live examples | Guides |
+| --- | --- | --- | --- |
+| Getting started | Controlled data, CRUD, Core state, loading, and empty states | [`Getting Started`](http://127.0.0.1:4002/docs/getting-started), [`CRUD`](http://127.0.0.1:4002/examples/crud) | [Quick Start](https://github.com/kim1124/comins-table/blob/main/docs/user/01-quick-start.md), [Data And CRUD](https://github.com/kim1124/comins-table/blob/main/docs/user/02-data-and-crud.md) |
+| Header and layout | Sort, multi-sort, resize, move, Header Groups, Filtering, and Pinning | [`Header`](http://127.0.0.1:4002/examples/header), [`Filtering`](http://127.0.0.1:4002/examples/column-filtering), [`Pinning`](http://127.0.0.1:4002/examples/column-pinning) | [Header](https://github.com/kim1124/comins-table/blob/main/docs/user/06-header.md), [Filtering](https://github.com/kim1124/comins-table/blob/main/docs/user/21-column-filtering.md), [Pinning](https://github.com/kim1124/comins-table/blob/main/docs/user/22-column-pinning.md) |
+| Rows, cells, and selection | Row and Cell callbacks, selection, Clipboard, Context Menu, and Row Expand | [`Selection`](http://127.0.0.1:4002/examples/selection-clipboard), [`Row Expand`](http://127.0.0.1:4002/examples/row-expand) | [Row](https://github.com/kim1124/comins-table/blob/main/docs/user/07-row.md), [Cell](https://github.com/kim1124/comins-table/blob/main/docs/user/08-cell.md), [Selection](https://github.com/kim1124/comins-table/blob/main/docs/user/10-selection.md) |
+| Structured rows | Summary Row, Tree Grid, Row Grouping, and Cross-Table Row/Group Drag | [`Summary`](http://127.0.0.1:4002/examples/summary-row), [`Tree`](http://127.0.0.1:4002/examples/tree-grid), [`Grouping`](http://127.0.0.1:4002/examples/row-grouping), [`Transfer`](http://127.0.0.1:4002/examples/cross-table-drag) | [Summary](https://github.com/kim1124/comins-table/blob/main/docs/user/18-summary-row.md), [Tree](https://github.com/kim1124/comins-table/blob/main/docs/user/17-tree-grid.md), [Grouping](https://github.com/kim1124/comins-table/blob/main/docs/user/20-row-grouping.md), [Transfer](https://github.com/kim1124/comins-table/blob/main/docs/user/23-cross-table-drag.md) |
+| Loading and performance | Pagination, fixed-height virtualization, Infinite Scroll, and Lazy Load | [`Pagination`](http://127.0.0.1:4002/performance/pagination), [`Virtualization`](http://127.0.0.1:4002/performance/virtualization) | [Pagination](https://github.com/kim1124/comins-table/blob/main/docs/user/05-pagination.md), [Virtualization](https://github.com/kim1124/comins-table/blob/main/docs/user/11-virtualization.md), [Lazy Load](https://github.com/kim1124/comins-table/blob/main/docs/user/16-lazy-load.md) |
+| Rendering and styling | Built-in components, custom renderers, themes, CSS variables, and export helpers | [`Components`](http://127.0.0.1:4002/examples/component), [`Theme`](http://127.0.0.1:4002/examples/theme), [`Export`](http://127.0.0.1:4002/examples/export) | [Cell](https://github.com/kim1124/comins-table/blob/main/docs/user/08-cell.md), [Styling](https://github.com/kim1124/comins-table/blob/main/docs/user/04-styling.md), [Export](https://github.com/kim1124/comins-table/blob/main/docs/user/14-export.md) |
+| API and utilities | Ref controls, framework-independent Core helpers, Clipboard, and selection helpers | [`Ref API`](http://127.0.0.1:4002/api/ref), [`Props`](http://127.0.0.1:4002/api/props) | [Core State](https://github.com/kim1124/comins-table/blob/main/docs/user/03-core-state.md), [Clipboard](https://github.com/kim1124/comins-table/blob/main/docs/user/09-clipboard.md) |
 
 ## Support
 
@@ -46,6 +58,19 @@ import "comins-table/styles.css";
 ```
 
 React and React DOM are peer dependencies. Import `comins-table/styles.css` when the default table shell, themes, and built-in component skin are required.
+
+### Run the Playground locally
+
+The Playground is a repository development server, not a command installed into a consumer application.
+
+```bash
+git clone https://github.com/kim1124/comins-table.git
+cd comins-table
+npm ci
+npm run dev
+```
+
+Open [`http://127.0.0.1:4002/docs/getting-started`](http://127.0.0.1:4002/docs/getting-started).
 
 ## Quick Start
 
@@ -135,6 +160,8 @@ Sortable headers support pointer and keyboard activation and expose `aria-sort`.
 A left-button mouse interaction activates column movement after a 6-pixel horizontal drag, provided horizontal movement remains greater than vertical movement. The source becomes a source placeholder while a ghost and target marker show the proposed move. Pointer Up commits only over a valid target; vertical intent, pointer cancellation, `Escape`, and window blur cancel the pending move. Non-mouse pointers retain one-second long-press compatibility. Parent header groups move their children as one block.
 
 Use `getColumnLayout()` and `setColumnLayout()` through the Ref API, or `serializeCominsColumnLayout()` and `applyCominsColumnLayout()` from `comins-table/core`, to persist and restore order, widths, and visibility.
+
+### Column Pinning
 
 Set `pinned: "left"` or `pinned: "right"` on a Column or Header Group to keep its atomic block visible during horizontal scrolling and lock its configured position. Direct resize of an effective pinned block stops before it would consume the 48px center budget and demote itself; independent container resize can still temporarily demote inner pinned blocks without changing the persisted layout intent. Header, Body, Skeleton, and Summary use the same offsets; Group Rows and Row Details remain full-width non-sticky cells. See the [Column Pinning guide](https://github.com/kim1124/comins-table/blob/main/docs/user/22-column-pinning.md) and [`/examples/column-pinning`](http://127.0.0.1:4002/examples/column-pinning).
 
@@ -264,15 +291,11 @@ tableRef.current?.fold(); // all Tree Grid branches
 
 ## Playground
 
-```bash
-npm run dev
-```
-
-The local Playground starts at [`/docs/getting-started`](http://127.0.0.1:4002/docs/getting-started). Key routes include [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard), [`/examples/row-expand`](http://127.0.0.1:4002/examples/row-expand), [`/examples/row-grouping`](http://127.0.0.1:4002/examples/row-grouping), [`/examples/column-filtering`](http://127.0.0.1:4002/examples/column-filtering), [`/examples/summary-row`](http://127.0.0.1:4002/examples/summary-row), [`/examples/tree-grid`](http://127.0.0.1:4002/examples/tree-grid), [`/examples/component`](http://127.0.0.1:4002/examples/component), and [`/performance/virtualization`](http://127.0.0.1:4002/performance/virtualization).
+After the repository setup under Installation, the local Playground starts at [`/docs/getting-started`](http://127.0.0.1:4002/docs/getting-started). Key routes include [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard), [`/examples/row-expand`](http://127.0.0.1:4002/examples/row-expand), [`/examples/row-grouping`](http://127.0.0.1:4002/examples/row-grouping), [`/examples/column-filtering`](http://127.0.0.1:4002/examples/column-filtering), [`/examples/column-pinning`](http://127.0.0.1:4002/examples/column-pinning), [`/examples/cross-table-drag`](http://127.0.0.1:4002/examples/cross-table-drag), [`/examples/summary-row`](http://127.0.0.1:4002/examples/summary-row), [`/examples/tree-grid`](http://127.0.0.1:4002/examples/tree-grid), [`/examples/component`](http://127.0.0.1:4002/examples/component), and [`/performance/virtualization`](http://127.0.0.1:4002/performance/virtualization).
 
 ## Documentation
 
-Start with the [English Quick Start](https://github.com/kim1124/comins-table/blob/main/docs/user/01-quick-start.md), then browse [all English feature guides](https://github.com/kim1124/comins-table/tree/main/docs/user). The detailed [Tree Grid](https://github.com/kim1124/comins-table/blob/main/docs/user/17-tree-grid.md), [Summary Row](https://github.com/kim1124/comins-table/blob/main/docs/user/18-summary-row.md), [Row Expand](https://github.com/kim1124/comins-table/blob/main/docs/user/19-row-expand.md), [Row Grouping](https://github.com/kim1124/comins-table/blob/main/docs/user/20-row-grouping.md), and [Column Filtering](https://github.com/kim1124/comins-table/blob/main/docs/user/21-column-filtering.md) contracts include runnable examples and edge cases. [Korean guides](https://github.com/kim1124/comins-table/tree/main/docs/ko) are retained as secondary documentation.
+Start with the [English Quick Start](https://github.com/kim1124/comins-table/blob/main/docs/user/01-quick-start.md), [documentation index](https://github.com/kim1124/comins-table/blob/main/docs/README.md), [English feature guides](https://github.com/kim1124/comins-table/blob/main/docs/user/README.md), or [Korean feature guides](https://github.com/kim1124/comins-table/blob/main/docs/ko/README.md). Each category links the detailed usage contract, runnable Playground route, related features, and the matching guide in the other language.
 
 Use the [source repository](https://github.com/kim1124/comins-table) for development context, review the [changelog](https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md) for version history, and follow the [security policy](https://github.com/kim1124/comins-table/blob/main/SECURITY.md) for vulnerability reporting.
 
@@ -295,7 +318,7 @@ npm run verify
 npm run docs:readme-gif
 ```
 
-`npm run docs:readme-gif` is a maintainer command that captures the real hidden Playground fixture and regenerates the checked-in README animation.
+`npm run docs:readme-gif` is a maintainer command that captures the real hidden Playground fixtures and regenerates the overview animation plus four detailed feature animations.
 
 ## Trusted Publishing
 

@@ -1,5 +1,7 @@
 # Playground
 
+[문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/12-playground.md) · [Playground 열기](http://127.0.0.1:4002/docs/getting-started)
+
 Playground는 `comins-table` 기능을 문서와 예제로 함께 확인하는 Vite 기반 문서 shell이다.
 상단 package navigation, 왼쪽 기능별 메뉴, 오른쪽 article content로 구성하며 React Router route 이동을 사용한다.
 
@@ -30,12 +32,16 @@ Route에는 locale prefix를 추가하지 않는다. API 및 prop 이름, code s
 - `/examples/loading`: Infinite Scroll과 같은 원격 API를 사용한 0 Row 초기 skeleton, 30개 매핑 Row 재조회 overlay, 실제 빈 응답과 ready 상태
 - `/examples/header`: 1Depth Header 이동, resize, 컬럼 설정 저장/불러오기, Header 표시 토글, Header 컬럼별 Checkbox Select Box 숨김/표시, Multi-column Sort. 컬럼 설정 저장/불러오기는 컬럼 표시 상태도 함께 저장한다. 다중 정렬 예제는 일반 클릭 또는 `Enter`/`Space`의 단일 정렬과 `Shift` 조작의 조건 추가를 구분하고 현재 `CominsSortModel`을 함께 출력한다.
 - `/examples/column-groups`: 2Depth Header 이동, resize, child Column MultiSelect와 parent Group Checkbox를 조합한 숨김/표시. `/examples/header-groups`는 legacy URL 호환용 redirect로 유지한다.
+- `/examples/column-pinning`: 좌우 Column 및 Header Group 고정, 중앙 가로 스크롤, responsive demotion과 Summary 정렬
 - `/examples/body`: legacy URL 호환용 redirect. 실제 화면은 `/performance/virtualization`으로 이동한다.
 - `/examples/cell`: `cell.format`, `cell.props`, `cell.renderer`, cell event Alert, clipboard guard
 - `/examples/selection-clipboard`: controlled React data, `onChangeSelection`, Row/Cell/Range 선택, Ctrl/Cmd+C, Ctrl/Cmd+V, Column clipboard guard
 - `/examples/component`: Header와 Cell에 적용되는 built-in component와 custom renderer. Component 예제는 렌더링 결과 중심으로 표시한다.
 - `/examples/row`: drag handle reorder, `rowProps.draggable`, row disabled, row custom formatting, row event Alert, row keyboard copy/paste
 - `/examples/row-expand`: semantic Detail Row, controlled expanded ID, fixed/auto height, 480px Table frame 안의 960px tall Detail scroll
+- `/examples/row-grouping`: application-owned Group CRUD, Group/Row Drag, custom Group content/style, Group별 정렬과 가상화
+- `/examples/cross-table-drag`: shared Coordinator를 통한 Row 및 전체 Group bundle 이동, duplicate ID 거부/덮어쓰기
+- `/examples/column-filtering`: controlled Header Filter, Group과 Summary 연동, text/number/date/boolean operator
 - `/examples/summary-row`: 기본 집계, visible-column `colSpan`, 집계 결과 `format`, Row/Cell class 및 style
 - `/examples/tree-grid`: 30개 기본 node, 배열 기반 ref expand/fold, `defaultExpandAll`, Component/Renderer Cell, 10000개 node virtualization. 기본/Style/Component/Renderer 예제는 처음부터 펼쳐지고 ref 제어 예제만 접힌 상태로 시작한다.
 - `/examples/context-menu`: callback 기반 row/cell context menu, 선택된 Row 우클릭 시 selection 유지, 선택 0/1/N action matrix, payload preview

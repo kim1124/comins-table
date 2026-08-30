@@ -1,5 +1,7 @@
 # Header
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/06-header.md) · [Header](http://127.0.0.1:4002/examples/header) · [Header Groups](http://127.0.0.1:4002/examples/column-groups)
+
 Columns can enable sorting, width constraints, resizing, and custom header content.
 
 ```tsx

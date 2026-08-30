@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { getDataTableOptionGuide } from "../example/src/docs/dataTableOptionGuide";
+import { playgroundFeatureRouteManifest } from "../example/src/docs/featureRouteManifest";
 
 const englishDataTableOptionGuide = getDataTableOptionGuide("en");
 
@@ -202,7 +203,48 @@ describe("comins-table user documentation contract", () => {
     expect(readme).toContain("docs/user/21-column-filtering.md");
     expect(readme).toContain("docs/user/22-column-pinning.md");
     expect(readme).toContain("docs/user/23-cross-table-drag.md");
+    expect(readme).toContain("docs/README.md");
+    expect(readme).toContain("docs/user/README.md");
+    expect(readme).toContain("docs/ko/README.md");
+    expect(readme).toContain("docs/assets/comins-table-overview.gif");
+    for (const [guide, asset] of [
+      ["20-row-grouping.md", "comins-table-row-grouping.gif"],
+      ["21-column-filtering.md", "comins-table-column-filtering.gif"],
+      ["22-column-pinning.md", "comins-table-column-pinning.gif"],
+      ["23-cross-table-drag.md", "comins-table-cross-table-drag.gif"],
+    ]) {
+      expect(readWorkspaceFile(`docs/user/${guide}`)).toContain(`../assets/${asset}`);
+      expect(readWorkspaceFile(`docs/ko/${guide}`)).toContain(`../assets/${asset}`);
+    }
+    expect(readme).not.toContain("docs/assets/comins-table-demo.gif");
     expect(readme).not.toContain("does not currently ship a browser example server");
+  });
+
+  it("provides category indexes, language counterparts, and every public Playground route", () => {
+    const rootIndex = readWorkspaceFile("docs/README.md");
+    const englishIndex = readWorkspaceFile("docs/user/README.md");
+    const koreanIndex = readWorkspaceFile("docs/ko/README.md");
+
+    expect(rootIndex).toContain("user/README.md");
+    expect(rootIndex).toContain("ko/README.md");
+    for (const doc of userDocs) {
+      const english = readWorkspaceFile(`docs/user/${doc}`);
+      const korean = readWorkspaceFile(`docs/ko/${doc}`);
+
+      expect(englishIndex, doc).toContain(`(${doc})`);
+      expect(koreanIndex, doc).toContain(`(${doc})`);
+      expect(english, doc).toContain(`../ko/${doc}`);
+      expect(korean, doc).toContain(`../user/${doc}`);
+      expect(english, doc).toContain("../README.md");
+      expect(korean, doc).toContain("../README.md");
+      expect(english, doc).toContain("http://127.0.0.1:4002/");
+      expect(korean, doc).toContain("http://127.0.0.1:4002/");
+    }
+    for (const { path } of playgroundFeatureRouteManifest) {
+      expect(`${englishIndex}\n${koreanIndex}`, path).toContain(path);
+    }
+    expect(englishIndex).toContain("/api/props");
+    expect(koreanIndex).toContain("/api/props");
   });
 
   it("does not present deferred advanced features as supported user-facing APIs", () => {
@@ -669,7 +711,7 @@ describe("comins-table user documentation contract", () => {
       expect(document).toContain("comins-table-playground-locale");
       expect(document).toContain("localStorage");
       expect(document).toContain("<html lang>");
-      expect(document).not.toMatch(/\/(?:ko|en)\//u);
+      expect(document).not.toMatch(/`\/(?:ko|en)\//u);
     }
   });
 

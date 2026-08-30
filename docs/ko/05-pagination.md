@@ -1,5 +1,7 @@
 # Pagination
 
+[문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/05-pagination.md) · [Playground](http://127.0.0.1:4002/performance/pagination)
+
 Pagination은 `pagination` prop 또는 `setCominsPagination` core helper로 제어한다.
 
 ```tsx

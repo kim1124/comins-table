@@ -1,5 +1,9 @@
 # Column Filtering
 
+[문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/21-column-filtering.md) · [Playground](http://127.0.0.1:4002/examples/column-filtering)
+
+![Controlled Column Filtering에 따른 Group Row와 Summary 갱신](../assets/comins-table-column-filtering.gif)
+
 Comins Table은 application-owned flat `data`를 대상으로 controlled client-side Column Filtering을 제공합니다. 각 Column은 `columns[].filter`로 값 kind를 정의하고 application은 전체 `columnFiltering.model`과 현재 열린 Header Filter popover를 모두 소유합니다.
 
 Text, number, UTC date, boolean, Summary Row, 정렬과 Row Grouping 결합 예제는 [`/examples/column-filtering`](http://127.0.0.1:4002/examples/column-filtering)에서 확인합니다.

@@ -1,5 +1,9 @@
 # Column Filtering
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/21-column-filtering.md) · [Playground](http://127.0.0.1:4002/examples/column-filtering)
+
+![Controlled Column Filtering updates grouped Rows and Summary values](../assets/comins-table-column-filtering.gif)
+
 Comins Table provides controlled client-side Column Filtering for flat application-owned `data`. Each Column opts into a value kind through `columns[].filter`, while the application owns both the complete `columnFiltering.model` and the currently open Header Filter popover.
 
 Run the [`/examples/column-filtering`](http://127.0.0.1:4002/examples/column-filtering) Playground route for text, number, UTC date, boolean, Summary Row, sorting, and Row Grouping integration.

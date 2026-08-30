@@ -37,7 +37,13 @@ const spoqaFonts = [
   'example/public/fonts/spoqa/SpoqaHanSansNeo-Regular.woff2',
 ];
 const spoqaLicense = 'example/public/fonts/spoqa/LICENSE.SpoqaHanSans.txt';
-const readmeGif = 'docs/assets/comins-table-demo.gif';
+const readmeGifs = [
+  'docs/assets/comins-table-column-filtering.gif',
+  'docs/assets/comins-table-column-pinning.gif',
+  'docs/assets/comins-table-cross-table-drag.gif',
+  'docs/assets/comins-table-overview.gif',
+  'docs/assets/comins-table-row-grouping.gif',
+];
 const radixName = '@radix-ui/react-icons';
 const radixVersion = '1.3.2';
 const radixIntegrity = 'sha512-fyQIhGDhzfc9pK2kH6Pl9c4BDJGfMkPqkyIgYDthyNYoNg3wVhoJMMh19WS4Up/1KMPFVpNsT2q3WmXn2N1m6g==';
@@ -247,7 +253,7 @@ function assetEvidence() {
         containsFontBinary: true,
       },
       {
-        id: 'comins-table-readme-demo-gif',
+        id: 'comins-table-readme-feature-gifs',
         ...common,
         useSurface: 'generated-output',
         generated: true,
@@ -255,7 +261,7 @@ function assetEvidence() {
           'Keep the generated GIF outside the npm package.',
           'Do not embed the source font binaries in the GIF.',
         ],
-        files: [readmeGif],
+        files: readmeGifs,
         containsFontBinary: false,
       },
     ],
@@ -267,7 +273,9 @@ function writeSpoqaAssets(root, evidence = assetEvidence()) {
     write(root, font, Buffer.concat([Buffer.from('wOF2'), Buffer.alloc(12)]));
   }
   write(root, spoqaLicense, spoqaLicenseText);
-  write(root, readmeGif, Buffer.concat([Buffer.from('GIF87a'), Buffer.alloc(12)]));
+  for (const readmeGif of readmeGifs) {
+    write(root, readmeGif, Buffer.concat([Buffer.from('GIF87a'), Buffer.alloc(12)]));
+  }
   if (evidence) writeJson(root, 'THIRD_PARTY_ASSETS.json', evidence);
 }
 
@@ -665,7 +673,7 @@ test('rejects missing fonts, incomplete OFL text, package-boundary drift, and em
     },
     (root) => write(
       root,
-      readmeGif,
+      readmeGifs[0],
       Buffer.concat([Buffer.from('GIF87a'), Buffer.from('wOF2'), Buffer.alloc(8)]),
     ),
   ];

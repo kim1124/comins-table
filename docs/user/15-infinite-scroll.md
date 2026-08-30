@@ -1,5 +1,7 @@
 # Infinite Scroll
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/15-infinite-scroll.md) · [Playground](http://127.0.0.1:4002/performance/infinite-scroll)
+
 Enable controlled append loading with `infiniteScroll`.
 
 ```tsx

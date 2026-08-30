@@ -1,5 +1,7 @@
 # Summary Row
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/18-summary-row.md) · [Playground](http://127.0.0.1:4002/examples/summary-row)
+
 Summary Row renders fixed footer values against the table's current visible-column layout. Configure each column by its resolved column id (the explicit `id`, or the column `field` when no id is supplied).
 
 When visible Columns overflow horizontally, the single native horizontal scrollbar is rendered after Summary Row at the bottom of the complete Table. Direct scrollbar input and horizontal wheel input over Body keep Header, Body, and Summary aligned. Without Summary, the same scrollbar directly follows Body.

@@ -1,5 +1,7 @@
 # Selection
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/10-selection.md) · [Playground](http://127.0.0.1:4002/examples/selection-clipboard)
+
 Selection supports row selection, single-cell selection, and range selection.
 
 ```ts

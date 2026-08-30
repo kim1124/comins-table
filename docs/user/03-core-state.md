@@ -1,5 +1,7 @@
 # Core State
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/03-core-state.md) · [Props](http://127.0.0.1:4002/api/props) · [Ref API](http://127.0.0.1:4002/api/ref)
+
 The core helpers are framework-independent functions for row, sort, layout, pagination, selection, clipboard, and export work.
 
 ```ts

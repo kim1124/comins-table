@@ -1,5 +1,7 @@
 # Loading And Empty State
 
+[문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/13-loading-empty.md) · [Playground](http://127.0.0.1:4002/examples/loading)
+
 `CominsTable`은 `loading`, `loadingComponent`, `emptyComponent`, `persistHeaderWhenEmpty`, `skeletonRowCount`로 로딩과 빈 데이터 표시를 제어한다. Application은 fetch lifecycle을 소유하고 응답을 controlled `data`에 매핑한다.
 
 ```tsx

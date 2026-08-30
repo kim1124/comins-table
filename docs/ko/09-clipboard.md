@@ -1,5 +1,7 @@
 # Clipboard
 
+[문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/09-clipboard.md) · [Playground](http://127.0.0.1:4002/examples/selection-clipboard)
+
 Core helper와 keyboard handler는 row copy/paste, cell copy/paste, multi-cell clipboard를 제공한다. Column별 `cell.props.copyable`, `cell.props.pasteable`, `cell.props.disabled` guard로 복사/붙여넣기 가능 여부를 제한할 수 있다.
 `fillCominsCellRange`는 core helper로 제공하지만, 셀 모서리를 드래그하는 Visual Fill Handle UI는 아직 제공하지 않는다.
 

@@ -1,5 +1,7 @@
 # Data And CRUD
 
+[문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/02-data-and-crud.md) · [Playground](http://127.0.0.1:4002/examples/crud)
+
 Core helper는 framework와 분리된 상태 모델을 제공한다. React component에서는 외부 `useState` 또는 store state 배열을 `data` prop에 직접 연결한다.
 
 ```ts

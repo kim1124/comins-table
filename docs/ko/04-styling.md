@@ -1,5 +1,7 @@
 # Styling
 
+[문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/04-styling.md) · [크기](http://127.0.0.1:4002/examples/size) · [Theme](http://127.0.0.1:4002/examples/theme)
+
 Table 전체 스타일은 `className`, `style`, `theme`로 제어한다. Row 스타일은 `rowProps`, column/cell 스타일은 `columns[].cell.props`로 둔다.
 
 ```tsx
