@@ -1,5 +1,7 @@
 # Infinite Scroll
 
+[문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/15-infinite-scroll.md) · [Playground](http://127.0.0.1:4002/performance/infinite-scroll)
+
 Infinite Scroll은 body viewport가 하단 threshold에 가까워졌을 때 다음 row batch를 요청해 append하는 UX다.
 Playground 예제는 소비자가 `rows`, 원격 요청, offset, 취소를 직접 소유하는 controlled 흐름을 사용한다.
 

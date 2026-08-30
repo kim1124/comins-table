@@ -1,5 +1,7 @@
 # Virtualization
 
+[문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/11-virtualization.md) · [Playground](http://127.0.0.1:4002/performance/virtualization)
+
 `virtualized` prop은 대용량 row 표시를 위한 window rendering 경로를 사용한다. 현재 gate는 100000 rows smoke와 perf 검증을 포함한다. Header와 Body는 모든 모드에서 별도 `table` 태그로 렌더링한다. Body viewport는 vertical scroll과 virtual range 갱신을 소유하고, horizontal overflow는 전체 Table 최하단의 scrollbar 하나가 Header, Body와 Summary를 동기화한다. Header는 virtual body scroll 중에도 같은 위치에 유지된다.
 현재 대용량 데이터 처리는 CSR 기준이다. Server-side row model과 viewport datasource model은 후속 단계로 분리한다.
 하단 도달 시 다음 batch를 외부에서 append하는 UX는 `infiniteScroll`, `hasMoreRows`, `loadingMore`, `onLoadMore` 또는 append-mode `lazyLoad`, `onLazyLoad`로 제어한다.

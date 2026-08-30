@@ -1,5 +1,7 @@
 # Styling
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/04-styling.md) · [Sizing](http://127.0.0.1:4002/examples/size) · [Theme](http://127.0.0.1:4002/examples/theme)
+
 Import `comins-table/styles.css` to use the default shell, table layout, themes, and built-in component skin.
 
 ```tsx

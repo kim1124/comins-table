@@ -1,5 +1,7 @@
 # Playground
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/12-playground.md) · [Open Playground](http://127.0.0.1:4002/docs/getting-started)
+
 Comins Table is maintained as an independent repository. Run the local playground from this repository root; an `npm --workspace` prefix is not required.
 
 ```bash
@@ -24,11 +26,15 @@ Implemented routes include:
 - `/examples/loading`
 - `/examples/header`
 - `/examples/column-groups`
+- `/examples/column-pinning`
 - `/examples/cell`
 - `/examples/selection-clipboard`
 - `/examples/component`
 - `/examples/row`
 - `/examples/row-expand`
+- `/examples/row-grouping`
+- `/examples/cross-table-drag`
+- `/examples/column-filtering`
 - `/examples/summary-row`
 - `/examples/tree-grid`
 - `/examples/context-menu`

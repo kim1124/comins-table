@@ -1,5 +1,7 @@
 # Data And CRUD
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/02-data-and-crud.md) · [Playground](http://127.0.0.1:4002/examples/crud)
+
 Comins Table is designed around a controlled CSR data flow.
 
 - `data` is the current row array.

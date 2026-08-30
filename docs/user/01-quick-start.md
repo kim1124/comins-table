@@ -1,5 +1,7 @@
 # Quick Start
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/01-quick-start.md) · [Playground](http://127.0.0.1:4002/docs/getting-started)
+
 Install Comins Table with React and React DOM.
 
 ```bash

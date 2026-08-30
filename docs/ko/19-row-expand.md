@@ -1,5 +1,7 @@
 # Row Expand
 
+[문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/19-row-expand.md) · [Playground](http://127.0.0.1:4002/examples/row-expand)
+
 Row Expand는 flat owner business Row 바로 다음에 controlled full-width Detail
 영역을 추가한다. 애플리케이션이 expanded ID와 Detail content를 소유하며, Comins
 Table의 sorting, pagination, loading, movement, selection, clipboard, callback은

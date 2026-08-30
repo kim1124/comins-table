@@ -1,5 +1,9 @@
 # Row Grouping
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/20-row-grouping.md) · [Playground](http://127.0.0.1:4002/examples/row-grouping)
+
+![Application-owned Row Grouping expands, collapses, and reorders full-width Group Rows](../assets/comins-table-row-grouping.gif)
+
 Comins Table renders application-owned flat `data` inside an application-owned, single-depth `groups` model. The order of the `groups` array is the actual Group order, including empty Groups. Synthetic Group Rows never become `TData` or business Row IDs.
 
 Run the [`/examples/row-grouping`](http://127.0.0.1:4002/examples/row-grouping) Playground route for explicit Group CRUD, Group and Row Drag, custom Group content and styling, Row Detail, aggregation, sorting, and 100000-leaf virtualization.

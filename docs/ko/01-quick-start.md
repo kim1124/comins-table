@@ -1,5 +1,7 @@
 # Quick Start
 
+[문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/01-quick-start.md) · [Playground](http://127.0.0.1:4002/docs/getting-started)
+
 `CominsTable`의 React row 입력은 `data` 하나로 통일한다. 내부 copy/paste, row 이동, cell 편집성 동작으로 데이터 배열이 바뀌면 `onChangeData`로 다음 배열을 받는다.
 
 ```tsx

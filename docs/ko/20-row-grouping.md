@@ -1,5 +1,9 @@
 # Row Grouping
 
+[문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/20-row-grouping.md) · [Playground](http://127.0.0.1:4002/examples/row-grouping)
+
+![Application-owned Row Grouping의 펼침, 접기와 Group 순서 변경](../assets/comins-table-row-grouping.gif)
+
 Comins Table은 application-owned flat `data`를 application-owned 단일 Depth `groups` 모델 안에 렌더링합니다. 빈 Group을 포함한 `groups` 배열 순서가 실제 Group 순서이며 synthetic Group Row는 `TData`나 business Row ID가 되지 않습니다.
 
 Explicit Group CRUD, Group/Row Drag, custom Group content/style, Row Detail, 집계, 정렬과 100000개 leaf 가상화 예제는 [`/examples/row-grouping`](http://127.0.0.1:4002/examples/row-grouping)에서 확인합니다.

@@ -1,5 +1,7 @@
 # Cell
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/08-cell.md) · [Cell](http://127.0.0.1:4002/examples/cell) · [Components](http://127.0.0.1:4002/examples/component)
+
 Cells support formatting, custom rendering, event callbacks, props, and component slots.
 
 ```tsx

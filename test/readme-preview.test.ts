@@ -1,12 +1,19 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { classifyVerificationScope } from "../scripts/classify-verification-scope.mjs";
+import { waitForReadmeState } from "../scripts/wait-for-readme-state.mjs";
 
-const gifPath = "docs/assets/comins-table-demo.gif";
+const gifPaths = [
+  "docs/assets/comins-table-column-filtering.gif",
+  "docs/assets/comins-table-column-pinning.gif",
+  "docs/assets/comins-table-cross-table-drag.gif",
+  "docs/assets/comins-table-overview.gif",
+  "docs/assets/comins-table-row-grouping.gif",
+] as const;
 
 function getReadmeSection(readme: string, heading: string) {
   const start = readme.indexOf(`## ${heading}\n`);
@@ -24,7 +31,7 @@ describe("README preview contract", () => {
 
     for (const path of [
       "README.md",
-      "docs/assets/comins-table-demo.gif",
+      ...gifPaths,
       "scripts/capture-readme-demo.mjs",
       "test/readme-preview.test.ts",
     ]) {
@@ -145,7 +152,7 @@ describe("README preview contract", () => {
       "https://img.shields.io/npm/types/comins-table",
       "actions/workflows/verify.yml/badge.svg?branch=main",
       "License-MIT",
-      "https://raw.githubusercontent.com/kim1124/comins-table/main/docs/assets/comins-table-demo.gif",
+      "https://raw.githubusercontent.com/kim1124/comins-table/main/docs/assets/comins-table-overview.gif",
       "Controlled data",
       "100,000-row",
       "6-pixel",
@@ -162,7 +169,22 @@ describe("README preview contract", () => {
     for (const text of required) expect(readme).toContain(text);
     expect(readme).not.toContain("does not yet exist on the npm registry");
     expect(readme).not.toContain("first public version must be published interactively");
-    expect(readme.indexOf("comins-table-demo.gif")).toBeLessThan(readme.indexOf("## Installation"));
+    expect(readme).not.toContain("comins-table-demo.gif");
+  });
+
+  it("places repository Playground setup immediately after package installation", () => {
+    const installation = getReadmeSection(readFileSync("README.md", "utf8"), "Installation");
+    const packageInstall = installation.indexOf("npm install comins-table react react-dom");
+    const clone = installation.indexOf("git clone https://github.com/kim1124/comins-table.git");
+    const cleanInstall = installation.indexOf("npm ci");
+    const dev = installation.indexOf("npm run dev");
+
+    expect(packageInstall).toBeGreaterThanOrEqual(0);
+    expect(clone).toBeGreaterThan(packageInstall);
+    expect(cleanInstall).toBeGreaterThan(clone);
+    expect(dev).toBeGreaterThan(cleanInstall);
+    expect(installation).toContain("http://127.0.0.1:4002/docs/getting-started");
+    expect(installation).toContain("not a command installed into a consumer application");
   });
 
   it("uses an explicit non-personal placeholder in the packaged Quick Start", () => {
@@ -179,10 +201,9 @@ describe("README preview contract", () => {
 
     for (const url of [
       "https://github.com/kim1124/comins-table/blob/main/docs/user/01-quick-start.md",
-      "https://github.com/kim1124/comins-table/tree/main/docs/user",
-      "https://github.com/kim1124/comins-table/blob/main/docs/user/17-tree-grid.md",
-      "https://github.com/kim1124/comins-table/blob/main/docs/user/18-summary-row.md",
-      "https://github.com/kim1124/comins-table/tree/main/docs/ko",
+      "https://github.com/kim1124/comins-table/blob/main/docs/README.md",
+      "https://github.com/kim1124/comins-table/blob/main/docs/user/README.md",
+      "https://github.com/kim1124/comins-table/blob/main/docs/ko/README.md",
       "https://github.com/kim1124/comins-table",
       "https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md",
       "https://github.com/kim1124/comins-table/blob/main/SECURITY.md",
@@ -214,11 +235,17 @@ describe("README preview contract", () => {
     expect(capture).toContain("finally");
     expect(capture).toContain("5 * 1024 * 1024");
     expect(capture).toContain("12");
-    expect(capture).toContain("assertHeaderMoveCommitted");
-    expect(capture).toContain('getAttribute("data-column-placeholder")');
-    expect(capture).toContain('getAttribute("data-column-drop-target")');
-    expect(capture).toContain(".comins-column-drop-marker");
-    expect(capture).toContain("data-comins-column-id");
+    expect(capture).toContain("featureDefinitions");
+    expect(capture).toContain("captureColumnPinning");
+    expect(capture).toContain("captureOverview");
+    expect(capture).toContain("captureRowGrouping");
+    expect(capture).toContain("captureColumnFiltering");
+    expect(capture).toContain("captureCrossTableDrag");
+    expect(capture).toContain("finalizeReadmeGifs");
+    expect(capture).toContain("waitForReadmeState");
+    for (const gifPath of gifPaths) {
+      expect(capture).toContain(gifPath.split("/").at(-1));
+    }
     expect(encoder).toContain("ImageIO");
     expect(encoder).toContain("kCGImagePropertyGIFLoopCount");
   });
@@ -307,12 +334,133 @@ describe("README preview contract", () => {
     }
   });
 
-  it("keeps the checked-in preview within the GIF contract", () => {
-    const gif = readFileSync(gifPath);
-    const header = gif.subarray(0, 6).toString("ascii");
+  it("replaces the complete feature GIF set only after every ready asset exists", async () => {
+    const root = mkdtempSync(join(tmpdir(), "comins-table-readme-feature-finalizer-"));
+    const assets = ["pinning", "grouping"].map((name) => ({
+      outputPath: join(root, `${name}.gif`),
+      readyOutputPath: join(root, `.${name}.ready.gif`),
+    }));
+    const legacyPath = join(root, "legacy.gif");
 
-    expect(["GIF87a", "GIF89a"]).toContain(header);
-    expect(statSync(gifPath).size).toBeLessThanOrEqual(5 * 1024 * 1024);
+    try {
+      for (const asset of assets) {
+        writeFileSync(asset.outputPath, `current ${asset.outputPath}`);
+        writeFileSync(asset.readyOutputPath, `ready ${asset.outputPath}`);
+      }
+      writeFileSync(legacyPath, "legacy");
+      const finalizerUrl = new URL("../scripts/finalize-readme-gif.mjs", import.meta.url).href;
+      const { finalizeReadmeGifs } = await import(/* @vite-ignore */ finalizerUrl);
+
+      await finalizeReadmeGifs({ assets, cleanup: async () => undefined, legacyPaths: [legacyPath] });
+
+      for (const asset of assets) {
+        expect(readFileSync(asset.outputPath, "utf8")).toBe(`ready ${asset.outputPath}`);
+        expect(existsSync(asset.readyOutputPath)).toBe(false);
+      }
+      expect(existsSync(legacyPath)).toBe(false);
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it("restores every current feature GIF when one set replacement fails", async () => {
+    const root = mkdtempSync(join(tmpdir(), "comins-table-readme-feature-rollback-"));
+    const assets = ["pinning", "grouping"].map((name) => ({
+      outputPath: join(root, `${name}.gif`),
+      readyOutputPath: join(root, `.${name}.ready.gif`),
+    }));
+    const legacyPath = join(root, "legacy.gif");
+
+    try {
+      for (const asset of assets) {
+        writeFileSync(asset.outputPath, `current ${asset.outputPath}`);
+        writeFileSync(asset.readyOutputPath, `ready ${asset.outputPath}`);
+      }
+      writeFileSync(legacyPath, "legacy");
+      const finalizerUrl = new URL("../scripts/finalize-readme-gif.mjs", import.meta.url).href;
+      const { finalizeReadmeGifs } = await import(/* @vite-ignore */ finalizerUrl);
+      const renameError = new Error("injected set rename failure");
+
+      await expect(finalizeReadmeGifs(
+        { assets, cleanup: async () => undefined, legacyPaths: [legacyPath] },
+        {
+          renameFile: async (from: string, to: string) => {
+            if (from === assets[1]!.readyOutputPath) throw renameError;
+            renameSync(from, to);
+          },
+        },
+      )).rejects.toBe(renameError);
+
+      for (const asset of assets) {
+        expect(readFileSync(asset.outputPath, "utf8")).toBe(`current ${asset.outputPath}`);
+        expect(existsSync(asset.readyOutputPath)).toBe(false);
+      }
+      expect(readFileSync(legacyPath, "utf8")).toBe("legacy");
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it("keeps the complete new GIF set when post-commit backup cleanup fails", async () => {
+    const root = mkdtempSync(join(tmpdir(), "comins-table-readme-feature-cleanup-"));
+    const assets = ["pinning", "grouping"].map((name) => ({
+      outputPath: join(root, `${name}.gif`),
+      readyOutputPath: join(root, `.${name}.ready.gif`),
+    }));
+
+    try {
+      for (const asset of assets) {
+        writeFileSync(asset.outputPath, `current ${asset.outputPath}`);
+        writeFileSync(asset.readyOutputPath, `ready ${asset.outputPath}`);
+      }
+      const finalizerUrl = new URL("../scripts/finalize-readme-gif.mjs", import.meta.url).href;
+      const { finalizeReadmeGifs } = await import(/* @vite-ignore */ finalizerUrl);
+      const cleanupError = new Error("injected backup cleanup failure");
+      let backupRemovalCount = 0;
+
+      await expect(finalizeReadmeGifs(
+        { assets, cleanup: async () => undefined },
+        {
+          removeFile: async (path: string) => {
+            if (path.endsWith(".backup") && backupRemovalCount++ === 1) throw cleanupError;
+            rmSync(path, { force: true });
+          },
+        },
+      )).rejects.toBe(cleanupError);
+
+      for (const asset of assets) {
+        expect(readFileSync(asset.outputPath, "utf8")).toBe(`ready ${asset.outputPath}`);
+        expect(existsSync(asset.readyOutputPath)).toBe(false);
+      }
+    } finally {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it("waits for an asynchronous README capture state and fails with a bounded error", async () => {
+    let attempts = 0;
+
+    await expect(waitForReadmeState(
+      async () => ++attempts === 3,
+      "state unavailable",
+      { attempts: 3, interval: 0 },
+    )).resolves.toBeUndefined();
+    expect(attempts).toBe(3);
+    await expect(waitForReadmeState(
+      async () => false,
+      "state unavailable",
+      { attempts: 2, interval: 0 },
+    )).rejects.toThrow("readme-gif: state unavailable");
+  });
+
+  it("keeps the checked-in preview within the GIF contract", () => {
+    for (const gifPath of gifPaths) {
+      const gif = readFileSync(gifPath);
+      const header = gif.subarray(0, 6).toString("ascii");
+
+      expect(["GIF87a", "GIF89a"]).toContain(header);
+      expect(statSync(gifPath).size).toBeLessThanOrEqual(5 * 1024 * 1024);
+    }
   });
 
   it.skipIf(process.platform !== "darwin")(
@@ -321,23 +469,25 @@ describe("README preview contract", () => {
       const moduleCache = mkdtempSync(join(tmpdir(), "comins-table-readme-swift-cache-"));
 
       try {
-        const metadata = JSON.parse(execFileSync(
-          "swift",
-          ["scripts/inspect-readme-gif.swift", gifPath],
-          {
-            encoding: "utf8",
-            env: {
-              ...process.env,
-              CLANG_MODULE_CACHE_PATH: join(moduleCache, "clang"),
-              SWIFT_MODULECACHE_PATH: join(moduleCache, "swift"),
+        for (const gifPath of gifPaths) {
+          const metadata = JSON.parse(execFileSync(
+            "swift",
+            ["scripts/inspect-readme-gif.swift", gifPath],
+            {
+              encoding: "utf8",
+              env: {
+                ...process.env,
+                CLANG_MODULE_CACHE_PATH: join(moduleCache, "clang"),
+                SWIFT_MODULECACHE_PATH: join(moduleCache, "swift"),
+              },
             },
-          },
-        ));
+          ));
 
-        expect(metadata).toMatchObject({ height: 655, loopCount: 0, width: 960 });
-        expect(metadata.frameCount).toBeGreaterThan(1);
-        expect(metadata.duration).toBeGreaterThan(0);
-        expect(metadata.duration).toBeLessThanOrEqual(12);
+          expect(metadata).toMatchObject({ height: 655, loopCount: 0, width: 960 });
+          expect(metadata.frameCount).toBeGreaterThan(1);
+          expect(metadata.duration).toBeGreaterThan(0);
+          expect(metadata.duration).toBeLessThanOrEqual(12);
+        }
       } finally {
         rmSync(moduleCache, { force: true, recursive: true });
       }

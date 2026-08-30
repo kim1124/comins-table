@@ -1,5 +1,9 @@
 # Cross-Table Row and Group Drag
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/23-cross-table-drag.md) · [Playground](http://127.0.0.1:4002/examples/cross-table-drag)
+
+![Cross-Table Drag moves a complete Group bundle and reports a duplicate Row ID](../assets/comins-table-cross-table-drag.gif)
+
 Cross-Table Drag extends the existing Row and Group Drag handles to another Comins Table. The application creates a Coordinator and passes the same object, `scope`, and a unique `tableId` to every participating Table.
 
 ```tsx

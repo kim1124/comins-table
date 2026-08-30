@@ -1,5 +1,7 @@
 # Row Expand
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/19-row-expand.md) · [Playground](http://127.0.0.1:4002/examples/row-expand)
+
 Row Expand adds a controlled full-width Detail region immediately after a flat
 owner business Row. The application owns the expanded IDs and Detail content;
 Comins Table keeps sorting, pagination, loading, movement, selection, clipboard,

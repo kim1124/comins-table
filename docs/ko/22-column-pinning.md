@@ -1,5 +1,9 @@
 # Column Pinning
 
+[문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/22-column-pinning.md) · [Playground](http://127.0.0.1:4002/examples/column-pinning)
+
+![가운데 영역이 스크롤되는 동안 좌우 Column을 유지하는 Column Pinning](../assets/comins-table-column-pinning.gif)
+
 Column Pinning은 Body, Header와 Summary가 수평 Scroll될 때 configured Column을 계속 표시합니다. Column 또는 2단계 Header Group에 `pinned: "left"` 또는 `pinned: "right"`를 지정합니다.
 Export된 `CominsColumnPinned` type은 Column 정의, Group 정의와 저장된 runtime layout state에서 사용하는 `"left" | "right"` union입니다.
 

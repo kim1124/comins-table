@@ -2,13 +2,20 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 const outputOrder = ['policy', 'docs', 'fast', 'browser', 'gif'];
+const readmeGifs = new Set([
+  'docs/assets/comins-table-column-filtering.gif',
+  'docs/assets/comins-table-column-pinning.gif',
+  'docs/assets/comins-table-cross-table-drag.gif',
+  'docs/assets/comins-table-overview.gif',
+  'docs/assets/comins-table-row-grouping.gif',
+]);
 
 export function classifyVerificationScope(inputPaths) {
   const paths = inputPaths.map(normalizePath).filter(Boolean);
 
   return {
     policy: paths.some(isPolicyPath),
-    docs: paths.some((path) => path.startsWith('docs/user/') || path.startsWith('docs/ko/')),
+    docs: paths.some((path) => path === 'docs/README.md' || path.startsWith('docs/user/') || path.startsWith('docs/ko/')),
     fast: paths.some((path) => !isFastExcludedPath(path)),
     browser: paths.some(isBrowserPath),
     gif: paths.some(isGifPath),
@@ -63,7 +70,7 @@ function isBrowserPath(path) {
 
 function isGifPath(path) {
   return path === 'README.md' ||
-    path === 'docs/assets/comins-table-demo.gif' ||
+    readmeGifs.has(path) ||
     path === 'scripts/capture-readme-demo.mjs' ||
     path === 'test/readme-preview.test.ts' ||
     path === '.github/workflows/verify.yml';

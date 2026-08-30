@@ -24,7 +24,11 @@ describe('verification change scope', () => {
   });
 
   it('keeps documentation-only changes out of executable gates', () => {
-    expect(classifyVerificationScope(['docs/user/22-column-pinning.md', 'reports/2026-08-29.md']))
+    expect(classifyVerificationScope([
+      'docs/README.md',
+      'docs/user/22-column-pinning.md',
+      'reports/2026-08-29.md',
+    ]))
       .toEqual({
         browser: false,
         docs: true,

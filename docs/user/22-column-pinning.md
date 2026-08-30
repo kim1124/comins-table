@@ -1,5 +1,9 @@
 # Column Pinning
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/22-column-pinning.md) · [Playground](http://127.0.0.1:4002/examples/column-pinning)
+
+![Responsive Column Pinning keeps left and right Columns visible while the center scrolls](../assets/comins-table-column-pinning.gif)
+
 Column Pinning keeps configured Columns visible while the Body, Header, and Summary scroll horizontally. Set `pinned: "left"` or `pinned: "right"` on a Column or two-level Header Group.
 The exported `CominsColumnPinned` type is the `"left" | "right"` union used by Column definitions, Group definitions, and persisted runtime layout state.
 

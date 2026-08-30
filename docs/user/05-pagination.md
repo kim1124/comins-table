@@ -1,5 +1,7 @@
 # Pagination
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/05-pagination.md) · [Playground](http://127.0.0.1:4002/performance/pagination)
+
 Pass `pagination` to control page index and page size.
 
 ```tsx

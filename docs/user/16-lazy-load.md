@@ -1,5 +1,7 @@
 # Lazy Load
 
+[Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/16-lazy-load.md) · [Playground](http://127.0.0.1:4002/performance/lazy-load)
+
 Lazy Load delegates request timing to Comins Table while the application owns rows and remote state.
 
 ```tsx
