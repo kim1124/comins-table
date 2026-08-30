@@ -75,6 +75,24 @@ test("row selection is mint styled, multi-selectable, sort-stable, and grid bord
   expect(diagnostics).toEqual([]);
 });
 
+test("Ctrl/Cmd visibly selects discontiguous Cells and keeps Row multi-selection", async ({ page, browserName }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/");
+
+  const modifier = process.platform === "darwin" || browserName === "webkit" ? "Meta" : "Control";
+  const firstCell = page.getByTestId("cell-a-name");
+  const secondCell = page.getByTestId("cell-b-age");
+
+  await firstCell.click();
+  await secondCell.click({ modifiers: [modifier] });
+
+  await expect(firstCell).toHaveAttribute("data-selected", "true");
+  await expect(secondCell).toHaveAttribute("data-selected", "true");
+  await expect(page.getByTestId("row-a")).toHaveAttribute("data-selected-row", "true");
+  await expect(page.getByTestId("row-b")).toHaveAttribute("data-selected-row", "true");
+  expect(diagnostics).toEqual([]);
+});
+
 test("same-column cell drag selects a range without reordering rows", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");

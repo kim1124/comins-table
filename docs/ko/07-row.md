@@ -4,6 +4,7 @@
 
 Row interaction은 React event prop으로 받는다. 이벤트 payload는 `event`, `row`, `index`를 포함한다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   columns={[{ field: "name", label: "Name" }]}
@@ -28,12 +29,23 @@ Row interaction은 React event prop으로 받는다. 이벤트 payload는 `event
 Row copy/paste는 focused row에서 `Ctrl+C`, `Ctrl+V`로 동작하며 paste mode는 `insert-after`다.
 Row 위치 이동은 cell range drag와 충돌하지 않도록 첫 번째 cell 안의 Row drag handle을 기준으로 수행한다.
 
+## Row Drag lifecycle
+
+`onBeforeRowDrag`, `onRowDrag`, `onAfterDragRow`는 `onChangeData` 또는 Cross-Table Coordinator의 model 소유권을 변경하지 않고 handle gesture를 관찰하고 제어한다.
+
+- `onBeforeRowDrag(payload)`는 pointer listener 등록 전에 실행한다. `false`를 반환하면 gesture를 시작하지 않으며 이후 callback도 호출하지 않는다.
+- `onRowDrag(payload)`는 raw pointer move마다 실행하지 않고 `CominsRowDragTarget`의 identity 또는 validity가 바뀔 때만 실행한다.
+- `onAfterDragRow(payload)`는 시작된 gesture마다 정확히 한 번 실행하며 `CominsRowDragResult` (`moved`, `cancelled`, `rejected`)와 `CominsRowDragReason` (`drop`, `unchanged`, `invalid-target`, `duplicate-id`, `escape`, `blur` 등)을 전달한다.
+
+`CominsBeforeRowDragPayload`, `CominsRowDragPayload`, `CominsAfterDragRowPayload`는 typed source Row, 선택적인 source Group/Table identity, pointer event와 target identity를 유지한다. 같은 Table, 다른 Group, Cross-Table Row gesture가 같은 lifecycle 계약을 사용하지만 Cross-Table model 변경은 계속 Coordinator가 소유한다.
+
 ## rowProps.draggable
 
 `rowProps.draggable`은 row 클릭, 선택, context menu를 유지하면서 drag reorder만 끄는 옵션이다.
 `rowProps.disabled`는 row와 cell interaction 전체를 차단하고, `rowProps.draggable`은 row 이동 gesture만 차단한다.
 비활성 row의 기본 배경과 글자색은 theme CSS 변수 `--comins-table-row-disabled-background`, `--comins-table-row-disabled-color`로 조정한다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   columns={columns}
@@ -51,6 +63,7 @@ Row 위치 이동은 cell range drag와 충돌하지 않도록 첫 번째 cell �
 `setMoveTargetRow(targetIdx, sourceIdx)`는 현재 화면에 보이는 row index 기준으로 source row를 target 위치로 이동한다.
 sort가 적용된 상태에서는 sort를 해제한 뒤 이동 결과를 data 순서에 반영한다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const tableRef = useRef<CominsTableRef<PersonRow>>(null);
 

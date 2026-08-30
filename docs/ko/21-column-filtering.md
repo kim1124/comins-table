@@ -1,5 +1,7 @@
 # Column Filtering
 
+<!-- comins-restriction: filtering-no-remote-loading -->
+
 [문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/21-column-filtering.md) · [Playground](http://127.0.0.1:4002/examples/column-filtering)
 
 ![Controlled Column Filtering에 따른 Group Row와 Summary 갱신](../assets/comins-table-column-filtering.gif)
@@ -10,6 +12,7 @@ Text, number, UTC date, boolean, Summary Row, 정렬과 Row Grouping 결합 예�
 
 ## Controlled 모델
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 type Row = {
   active: boolean;
@@ -65,6 +68,7 @@ Date Filter는 UTC calendar day를 사용합니다. Model 값은 정확한 `YYYY
 
 일반 nested `field` 값과 비교 값이 다르면 `filter.getValue`를 사용합니다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 {
   field: "owner",

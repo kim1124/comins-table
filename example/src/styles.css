@@ -342,6 +342,71 @@ body {
   margin: 0;
 }
 
+.docs-api-table {
+  margin-top: 24px;
+}
+
+.docs-api-table h2 {
+  font-size: 20px;
+  line-height: 1.3;
+  margin: 0 0 12px;
+}
+
+.docs-api-table__viewport {
+  border: 1px solid #d7eee6;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.docs-api-table table {
+  border-collapse: collapse;
+  min-width: 720px;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.docs-api-table th,
+.docs-api-table td {
+  border-bottom: 1px solid #e5f2ed;
+  color: #30483f;
+  font-size: 13px;
+  line-height: 1.55;
+  padding: 11px 14px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.docs-api-table thead th {
+  background: #f1fbf7;
+  color: #24463b;
+  font-weight: 900;
+}
+
+.docs-api-table th:first-child {
+  width: 25%;
+}
+
+.docs-api-table th:nth-child(2) {
+  width: 42%;
+}
+
+.docs-api-table tbody th {
+  background: #fbfefc;
+  font-weight: 800;
+}
+
+.docs-api-table tbody tr:last-child th,
+.docs-api-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.docs-api-table code {
+  color: #08795f;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
 .docs-code {
   background: #ffffff;
   border: 1px solid #d7eee6;
@@ -621,6 +686,18 @@ body {
 .ui-button--primary:hover {
   background: #115e59;
   border-color: #115e59;
+}
+
+.ui-button[aria-pressed="false"] {
+  background: #ffffff;
+  border-color: var(--comins-color-border);
+  color: #111827;
+}
+
+.ui-button[aria-pressed="true"] {
+  background: var(--comins-color-accent);
+  border-color: var(--comins-color-accent);
+  color: var(--comins-color-accent-foreground);
 }
 
 .ui-button--filter {

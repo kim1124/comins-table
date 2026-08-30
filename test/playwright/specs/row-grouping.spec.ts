@@ -100,6 +100,16 @@ test("Row Grouping keeps explicit Groups ordered and Group Rows synthetic", asyn
   await custom.getByTestId("group-toggle-product").click();
   await custom.getByTestId("row-detail-toggle-group-b").click();
   await expect(custom.getByTestId("row-grouping-detail-group-b")).toContainText("west / product / Review");
+  await custom.getByTestId("row-detail-toggle-group-d").click();
+  await expect(custom.locator("[data-testid^='row-grouping-detail-']")).toHaveCount(2);
+  await custom.getByTestId("group-toggle-product").click();
+  await expect(custom.getByTestId("group-toggle-product")).toHaveAttribute("aria-expanded", "false");
+  await page.getByRole("button", { name: "Collapse all Details" }).click();
+  await expect(custom.locator("[data-testid^='row-grouping-detail-']")).toHaveCount(0);
+  await custom.getByTestId("group-toggle-product").click();
+  await expect(custom.getByTestId("group-toggle-product")).toHaveAttribute("aria-expanded", "true");
+  await expect(custom.getByTestId("row-detail-toggle-group-b")).toHaveAttribute("aria-expanded", "false");
+  await expect(custom.getByTestId("row-detail-toggle-group-d")).toHaveAttribute("aria-expanded", "false");
   await custom.getByTestId("rename-group-product").click();
   await expect(custom.getByTestId("custom-group-content-product")).toContainText("Product*");
 });

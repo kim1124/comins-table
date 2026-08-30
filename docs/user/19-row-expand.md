@@ -12,6 +12,7 @@ Detail examples. Each sample demonstrates one expanded owner at a time.
 
 ## Public Types
 
+<!-- comins-doc-example: fragment -->
 ```ts
 export type CominsRowDetailParams<TData> = {
   row: CominsEventRow<TData>;
@@ -38,6 +39,7 @@ Detail props remain inert.
 
 ## Controlled State
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const [expandedRowIds, setExpandedRowIds] = useState<readonly string[]>([]);
 
@@ -62,6 +64,7 @@ The library accepts multiple IDs so applications can keep several Details open.
 To use an accordion-style single expansion policy, normalize the callback before
 writing the controlled state:
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const [expandedRowIds, setExpandedRowIds] = useState<readonly CominsRowId[]>([]);
 
@@ -89,6 +92,7 @@ Only a finite positive number is fixed: its Detail keeps that inline height.
 Missing values, invalid numeric values, and `"auto"` use automatic measurement,
 so the rendered Detail has no inline height.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   estimatedRowDetailHeight={300}

@@ -1,5 +1,7 @@
 # Quick Start
 
+<!-- comins-restriction: client-only -->
+
 [Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/01-quick-start.md) · [Playground](http://127.0.0.1:4002/docs/getting-started)
 
 Install Comins Table with React and React DOM.
@@ -10,6 +12,7 @@ npm install comins-table react react-dom
 
 Import the component and the optional default stylesheet.
 
+<!-- comins-doc-example: compile=quick-start -->
 ```tsx
 import { useState } from "react";
 import { CominsTable, type CominsTableColumn } from "comins-table";
@@ -45,3 +48,5 @@ export function PeopleTable() {
 ```
 
 `CominsTable` is controlled. Your application owns `data`; table-side edits call `onChangeData`, and your state update renders the next table state.
+
+Comins Table is a client-only component and does not currently support server rendering.

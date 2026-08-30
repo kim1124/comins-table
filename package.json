@@ -1,6 +1,6 @@
 {
   "name": "comins-table",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "license": "MIT",
   "type": "module",
   "repository": {
@@ -13,6 +13,7 @@
   "homepage": "https://github.com/kim1124/comins-table#readme",
   "scripts": {
     "build": "vite build && tsc -p tsconfig.build.json",
+    "check:docs": "node scripts/check-documentation-contract.mjs",
     "check:hygiene": "node scripts/check-repository-hygiene.mjs",
     "check:licenses": "node scripts/check-licenses.mjs",
     "dev": "vite --config vite.example.config.ts",
@@ -26,7 +27,7 @@
     "test:run": "vitest run",
     "test:licenses": "node --test test/license-gates.node.mjs",
     "test:security": "node --test test/sensitive-data-gates.node.mjs test/package-artifact-gate.node.mjs test/npm-maintainer-gate.node.mjs",
-    "verify": "npm run check:hygiene && npm run test:security && npm run test:licenses && npm run check:licenses && npm run lint && npm run test:run && npm run build",
+    "verify": "npm run check:hygiene && npm run check:docs && npm run test:security && npm run test:licenses && npm run check:licenses && npm run lint && npm run test:run && npm run build",
     "verify:e2e": "npm run test:e2e",
     "verify:local": "npm run verify && npm run verify:e2e",
     "verify:full": "npm run verify:local && npm run test:perf -- --workers=1",
@@ -54,6 +55,7 @@
   },
   "files": [
     "dist",
+    "DESIGN.md",
     "README.md",
     "styles.css",
     "CHANGELOG.md",

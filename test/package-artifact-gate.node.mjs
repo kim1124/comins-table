@@ -40,7 +40,7 @@ function radixNotice() {
 }
 
 function fixture({
-  files = ['dist', 'README.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md'],
+  files = ['dist', 'DESIGN.md', 'README.md', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.md'],
   dependencies = { [radixName]: radixVersion },
   optionalDependencies,
   includeLicense = true,
@@ -64,6 +64,7 @@ function fixture({
     writeFileSync(join(cwd, 'dist', `${entry}.d.ts`), 'export declare const value: number;\n');
   }
   writeFileSync(join(cwd, 'dist', 'index.d.ts'), indexDeclaration);
+  writeFileSync(join(cwd, 'DESIGN.md'), '# Design Contract\n');
   writeFileSync(join(cwd, 'README.md'), '# Fixture\n');
   writeFileSync(join(cwd, 'CHANGELOG.md'), '# Changes\n');
   if (includeNotice) writeFileSync(join(cwd, 'THIRD_PARTY_NOTICES.md'), radixNotice());

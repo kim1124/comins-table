@@ -440,7 +440,14 @@ test("header page keeps only requested actions and state outputs", async ({ page
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "컬럼 동적 표시" })).toHaveCount(0);
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "2중 헤더 예제" })).toHaveCount(0);
   await expect(page.getByTestId("header-example-basic").getByRole("button", { exact: true, name: "초기화" })).toBeVisible();
-  await expect(page.getByTestId("header-example-visibility").getByRole("button", { exact: true, name: "Header 표시" })).toHaveAttribute("aria-pressed", "true");
+  const headerVisibilityToggle = page.getByTestId("header-example-visibility").getByRole("button", { exact: true, name: "Header 표시" });
+  await expect(headerVisibilityToggle).toHaveAttribute("aria-pressed", "true");
+  await expect(headerVisibilityToggle).toHaveCSS("background-color", "rgb(16, 185, 129)");
+  await expect(headerVisibilityToggle).toHaveCSS("color", "rgb(255, 255, 255)");
+  await headerVisibilityToggle.click();
+  await expect(headerVisibilityToggle).toHaveAttribute("aria-pressed", "false");
+  await expect(headerVisibilityToggle).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(headerVisibilityToggle).toHaveCSS("color", "rgb(17, 24, 39)");
   await expect(page.getByTestId("header-example-layout").getByRole("button", { exact: true, name: "저장" })).toBeVisible();
   await expect(page.getByTestId("header-example-layout").getByRole("button", { exact: true, name: "불러오기" })).toBeVisible();
   await expect(page.getByTestId("header-example-layout").getByRole("button", { exact: true, name: "초기화" })).toBeVisible();

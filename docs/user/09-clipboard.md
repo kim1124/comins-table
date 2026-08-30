@@ -1,9 +1,12 @@
 # Clipboard
 
+<!-- comins-restriction: fill-helper-no-visual-handle -->
+
 [Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/09-clipboard.md) · [Playground](http://127.0.0.1:4002/examples/selection-clipboard)
 
 Clipboard helpers are available from the root export, `comins-table/core`, and the `comins-table/clipboard` subpath.
 
+<!-- comins-doc-example: fragment -->
 ```ts
 import {
   copyCominsCell,

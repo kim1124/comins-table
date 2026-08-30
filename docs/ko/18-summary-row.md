@@ -6,6 +6,7 @@ Summary Row는 현재 visible-column layout에 맞춰 고정 footer 집계 값�
 
 Visible Column이 수평으로 overflow되면 하나의 native horizontal scrollbar를 Summary Row 다음, 즉 전체 Table 최하단에 표시한다. Scrollbar 직접 입력과 Body 위의 horizontal wheel 입력은 Header, Body와 Summary를 같은 위치로 동기화한다. Summary가 없으면 동일한 scrollbar가 Body 바로 다음에 표시된다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   columns={columns}
@@ -35,6 +36,7 @@ Visible Column이 수평으로 overflow되면 하나의 native horizontal scroll
 
 도메인 계산이 필요하면 기본 집계 대신 함수를 사용할 수 있다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 summary={{
   columns: {
@@ -49,6 +51,7 @@ summary={{
 
 Object 설정으로 visible summary cell을 병합하거나 집계 결과를 가공한다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 summary={{
   columns: {
@@ -67,6 +70,7 @@ summary={{
 
 `summary.className`과 `summary.style`은 footer row에 적용한다. 컬럼 Object의 `className`과 `style`은 해당 summary cell에만 적용한다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 summary={{
   className: "summary-row",

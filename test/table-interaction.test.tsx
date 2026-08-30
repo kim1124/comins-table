@@ -696,12 +696,18 @@ describe("row grouping interaction contract", () => {
 
   it("commits a local Row drop when the pointerup lands on its rendered placeholder", () => {
     const onChangeData = vi.fn();
+    const onBeforeRowDrag = vi.fn(() => undefined);
+    const onRowDrag = vi.fn();
+    const onAfterDragRow = vi.fn();
     const view = renderTableElement(
       <CominsTable
         columns={columns}
         data={threeRows}
         getRowId={getPersonRowId}
+        onAfterDragRow={onAfterDragRow}
+        onBeforeRowDrag={onBeforeRowDrag}
         onChangeData={onChangeData}
+        onRowDrag={onRowDrag}
         rowProps={{ draggable: true }}
       />,
     );
@@ -742,6 +748,111 @@ describe("row grouping interaction contract", () => {
     }
 
     expect(onChangeData).toHaveBeenCalledWith([threeRows[2], threeRows[0], threeRows[1]]);
+    expect(onBeforeRowDrag).toHaveBeenCalledOnce();
+    expect(onBeforeRowDrag).toHaveBeenCalledWith(expect.objectContaining({
+      row: expect.objectContaining({ id: "c" }),
+    }));
+    expect(onRowDrag).toHaveBeenCalledWith(expect.objectContaining({
+      row: expect.objectContaining({ id: "c" }),
+      target: expect.objectContaining({ dataIndex: 0, rowId: "a", valid: true }),
+    }));
+    expect(onAfterDragRow).toHaveBeenCalledOnce();
+    expect(onAfterDragRow).toHaveBeenCalledWith(expect.objectContaining({
+      reason: "drop",
+      result: "moved",
+      row: expect.objectContaining({ id: "c" }),
+    }));
+  });
+
+  it("lets onBeforeRowDrag cancel a Row gesture before listeners and mutations start", () => {
+    const onAfterDragRow = vi.fn();
+    const onChangeData = vi.fn();
+    const onRowDrag = vi.fn();
+    const view = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={threeRows}
+        getRowId={getPersonRowId}
+        onAfterDragRow={onAfterDragRow}
+        onBeforeRowDrag={() => false}
+        onChangeData={onChangeData}
+        onRowDrag={onRowDrag}
+        rowProps={{ draggable: true }}
+      />,
+    );
+    const source = view.querySelector<HTMLElement>("[data-testid='row-drag-handle-c']")!;
+    const target = view.querySelector<HTMLElement>("[data-testid='row-a']")!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => target),
+    });
+
+    try {
+      act(() => {
+        source.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(
+          createMousePointerEvent("pointerup", { bubbles: true, button: 0, clientX: 10, clientY: 20 }),
+        );
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    expect(onChangeData).not.toHaveBeenCalled();
+    expect(onRowDrag).not.toHaveBeenCalled();
+    expect(onAfterDragRow).not.toHaveBeenCalled();
+  });
+
+  it("finishes a started Row gesture exactly once when the pointer is cancelled", () => {
+    const onAfterDragRow = vi.fn();
+    const onChangeData = vi.fn();
+    const view = renderTableElement(
+      <CominsTable
+        columns={columns}
+        data={threeRows}
+        getRowId={getPersonRowId}
+        onAfterDragRow={onAfterDragRow}
+        onChangeData={onChangeData}
+        rowProps={{ draggable: true }}
+      />,
+    );
+    const source = view.querySelector<HTMLElement>("[data-testid='row-drag-handle-c']")!;
+    const sourceRow = view.querySelector<HTMLElement>("[data-testid='row-c']")!;
+    const originalElementFromPoint = document.elementFromPoint;
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: vi.fn(() => sourceRow),
+    });
+
+    try {
+      act(() => {
+        source.dispatchEvent(
+          createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 }),
+        );
+        window.dispatchEvent(createMousePointerEvent("pointercancel", { bubbles: true }));
+        window.dispatchEvent(createMousePointerEvent("pointercancel", { bubbles: true }));
+      });
+    } finally {
+      Object.defineProperty(document, "elementFromPoint", {
+        configurable: true,
+        value: originalElementFromPoint,
+      });
+    }
+
+    expect(onChangeData).not.toHaveBeenCalled();
+    expect(onAfterDragRow).toHaveBeenCalledOnce();
+    expect(onAfterDragRow).toHaveBeenCalledWith(expect.objectContaining({
+      reason: "pointer-cancel",
+      result: "cancelled",
+    }));
   });
 
   it("moves one draggable Row between flat Tables through a shared Coordinator", async () => {
@@ -822,6 +933,7 @@ describe("row grouping interaction contract", () => {
   });
 
   it("reports a duplicate Cross-Table Row and renders non-blocking target feedback", () => {
+    const onAfterDragRow = vi.fn();
     const onTransfer = vi.fn();
     const onTransferRejected = vi.fn();
     const coordinator = createCominsTableTransferCoordinator<PersonRow>({
@@ -835,6 +947,7 @@ describe("row grouping interaction contract", () => {
           data={[rows[0]!]}
           data-testid="duplicate-transfer-source"
           getRowId={getPersonRowId}
+          onAfterDragRow={onAfterDragRow}
           rowProps={{ draggable: true }}
           tableTransfer={{ coordinator, scope: "people", tableId: "source" }}
         />
@@ -899,6 +1012,12 @@ describe("row grouping interaction contract", () => {
       reason: "duplicate-id",
       sourceTableId: "source",
       targetTableId: "target",
+    }));
+    expect(onAfterDragRow).toHaveBeenCalledOnce();
+    expect(onAfterDragRow).toHaveBeenCalledWith(expect.objectContaining({
+      reason: "duplicate-id",
+      result: "rejected",
+      target: expect.objectContaining({ rowId: "a", tableId: "target", valid: true }),
     }));
     expect(view.querySelector("[data-testid='transfer-rejection-tooltip']")?.textContent)
       .toContain("Duplicate IDcustom:a");
@@ -4716,6 +4835,41 @@ describe("comins-table keyboard interaction", () => {
     expect(element.querySelector("[data-testid='cell-b-age']")?.getAttribute("data-range-selected")).toBe("true");
   });
 
+  it("shows Ctrl/Cmd discontiguous Cell selection without losing Row multi-selection", () => {
+    const onChangeSelection = vi.fn();
+    const element = renderTable({ data: threeRows, onChangeSelection });
+    const firstCell = element.querySelector("[data-testid='cell-a-name']")!;
+    const secondCell = element.querySelector("[data-testid='cell-b-age']")!;
+
+    act(() => {
+      firstCell.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      secondCell.dispatchEvent(new MouseEvent("click", { bubbles: true, ctrlKey: true }));
+    });
+
+    expect(firstCell.getAttribute("data-selected")).toBe("true");
+    expect(secondCell.getAttribute("data-selected")).toBe("true");
+    expect(element.querySelector("[data-testid='row-a']")?.getAttribute("data-selected-row")).toBe("true");
+    expect(element.querySelector("[data-testid='row-b']")?.getAttribute("data-selected-row")).toBe("true");
+    expect(onChangeSelection).toHaveBeenLastCalledWith(expect.objectContaining({
+      cell: { columnId: "age", rowId: "b" },
+      cells: [
+        { columnId: "name", rowId: "a" },
+        { columnId: "age", rowId: "b" },
+      ],
+      range: null,
+      rowIds: ["a", "b"],
+    }));
+
+    act(() => {
+      firstCell.dispatchEvent(new MouseEvent("click", { bubbles: true, metaKey: true }));
+    });
+
+    expect(firstCell.getAttribute("data-selected")).toBeNull();
+    expect(secondCell.getAttribute("data-selected")).toBe("true");
+    expect(element.querySelector("[data-testid='row-a']")?.getAttribute("data-selected-row")).toBeNull();
+    expect(element.querySelector("[data-testid='row-b']")?.getAttribute("data-selected-row")).toBe("true");
+  });
+
   it("selects a cell range with mouse drag and copies/pastes the range", () => {
     const onChangeData = vi.fn();
     const element = renderTable({ data: threeRows, onChangeData });
@@ -5309,6 +5463,59 @@ describe("comins-table keyboard interaction", () => {
     expect(element.querySelector("[data-testid='header-name']")).not.toBeNull();
     expect(element.querySelector("[data-testid='header-age']")).toBeNull();
     expect([...element.querySelectorAll("tbody tr")].map((row) => row.textContent)).toEqual(["Alpha31", "Beta42"]);
+  });
+
+  it("restores temporarily removed Header Groups to their last known column order", () => {
+    const ref = createRef<CominsTableRef<PersonRow>>();
+    const allColumns = [
+      { field: "name", label: "Name" },
+      { field: "age", label: "Age" },
+      { field: "profile.age", label: "Profile Age" },
+    ];
+    const columnGroups = [{ children: ["name", "age"], id: "profile", label: "Profile" }];
+    const renderColumns = (nextColumns: typeof allColumns) => (
+      <CominsTable
+        columnGroups={columnGroups}
+        columns={nextColumns}
+        data={apiRows}
+        getRowId={(row) => row.id}
+        ref={ref}
+      />
+    );
+    const element = renderTableElement(renderColumns(allColumns));
+    const readBodyOrder = () => [...element.querySelectorAll("tbody tr:first-child td")]
+      .map((cell) => cell.getAttribute("data-comins-cell-column-id"));
+
+    expect(readBodyOrder()).toEqual(["name", "age", "profile.age"]);
+
+    act(() => {
+      root?.render(renderColumns([allColumns[2]!]));
+    });
+    expect(readBodyOrder()).toEqual(["profile.age"]);
+
+    act(() => {
+      root?.render(renderColumns(allColumns));
+    });
+    expect(readBodyOrder()).toEqual(["name", "age", "profile.age"]);
+
+    act(() => {
+      const layout = ref.current?.getColumnLayout();
+
+      if (layout) {
+        ref.current?.setColumnLayout({ ...layout, order: ["profile.age", "name", "age"] });
+      }
+    });
+    expect(readBodyOrder()).toEqual(["profile.age", "name", "age"]);
+
+    act(() => {
+      root?.render(renderColumns([allColumns[2]!]));
+    });
+    expect(readBodyOrder()).toEqual(["profile.age"]);
+
+    act(() => {
+      root?.render(renderColumns(allColumns));
+    });
+    expect(readBodyOrder()).toEqual(["profile.age", "name", "age"]);
   });
 
   it("exposes column layout, selection, and sort ref methods", () => {

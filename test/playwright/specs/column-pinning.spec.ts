@@ -147,8 +147,26 @@ test("Column Pinning keeps sticky surfaces aligned and demotes responsively", as
   await expect(rightHeader).toHaveAttribute("data-comins-pinned", "right");
 
   const grouped = page.getByTestId("column-pinning-grouped-viewport").locator("xpath=..");
+  const groupedViewport = page.getByTestId("column-pinning-grouped-viewport");
+  const groupContent = grouped.getByTestId("group-row-East").locator(".comins-row-group-cell-content");
   await expect(grouped.getByTestId("header-group-identity")).toHaveAttribute("data-comins-pinned", "left");
   await expect(grouped.getByTestId("group-row-East")).not.toHaveAttribute("data-comins-pinned");
+
+  await groupedViewport.evaluate((element) => {
+    element.scrollLeft = 0;
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+  const groupContentBefore = await groupContent.boundingBox();
+  expect(groupContentBefore).not.toBeNull();
+
+  await groupedViewport.evaluate((element) => {
+    element.scrollLeft = Math.min(900, element.scrollWidth - element.clientWidth);
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  });
+  await expect.poll(() => groupedViewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(500);
+  const groupContentAfter = await groupContent.boundingBox();
+  expect(groupContentAfter).not.toBeNull();
+  expect(Math.abs(groupContentAfter!.x - groupContentBefore!.x)).toBeLessThanOrEqual(1);
 });
 
 test("Column Pinning keeps every surface at the same end with a reserved vertical scrollbar gutter", async ({ page }) => {
@@ -245,6 +263,7 @@ test("Column Pinning keeps an actively resized pinned Column above scrolling con
   const rightStatusHeader = root.getByTestId("header-status");
   const rightIdHeader = root.getByTestId("header-id");
   const resize = root.getByTestId("resize-name");
+  await resize.scrollIntoViewIfNeeded();
   const beforeHeader = await leftHeader.boundingBox();
   const resizeBox = await resize.boundingBox();
   expect(beforeHeader).not.toBeNull();

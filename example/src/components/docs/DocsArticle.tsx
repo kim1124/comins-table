@@ -1,5 +1,6 @@
 import type { DocsPage } from "../../docs/types";
 import { CodeExample } from "./CodeExample";
+import { FeatureApiTable } from "./FeatureApiTable";
 import { LiveExampleSection } from "./LiveExampleSection";
 
 interface DocsArticleProps {
@@ -16,6 +17,8 @@ export function DocsArticle({ page }: DocsArticleProps) {
       </header>
 
       <section className="docs-article__body">{page.body}</section>
+
+      <FeatureApiTable featureId={page.featureId} />
 
       {page.codeSamples.map((sample) => (
         <CodeExample key={`${page.path}-${sample.title}`} sample={sample} />

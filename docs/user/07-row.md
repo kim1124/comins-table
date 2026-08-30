@@ -4,6 +4,7 @@
 
 Rows support click, double click, keyboard payloads, context menus, selection, and drag movement.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   columns={columns}
@@ -18,6 +19,16 @@ Rows support click, double click, keyboard payloads, context menus, selection, a
 ```
 
 `rowProps.draggable` controls whether row drag movement is enabled for a row. Selection state is emitted through `onChangeSelection`.
+
+## Row Drag lifecycle
+
+`onBeforeRowDrag`, `onRowDrag`, and `onAfterDragRow` expose the handle gesture without taking model ownership away from `onChangeData` or the Cross-Table Coordinator.
+
+- `onBeforeRowDrag(payload)` runs before pointer listeners are registered. Return `false` to cancel the gesture; a cancelled-before-start gesture does not call the later lifecycle callbacks.
+- `onRowDrag(payload)` runs only when `CominsRowDragTarget` identity or validity changes. It is not a raw pointer-move stream.
+- `onAfterDragRow(payload)` runs once for every started gesture with `CominsRowDragResult` (`moved`, `cancelled`, or `rejected`) and a `CominsRowDragReason` such as `drop`, `unchanged`, `invalid-target`, `duplicate-id`, `escape`, or `blur`.
+
+`CominsBeforeRowDragPayload`, `CominsRowDragPayload`, and `CominsAfterDragRowPayload` keep the typed source Row, optional source Group/Table identity, pointer event, and target identity. Returning `false` from the before callback never mutates Rows. Same-Table, cross-Group, and Cross-Table Row gestures use the same lifecycle contract; Cross-Table model updates still belong to the Coordinator.
 
 Opening a Row or Cell context menu preserves the current single or multiple Row selection when the target Row is already selected. Opening it on an unselected Row switches to that Row exclusively; Cell context menus apply the same Row policy before updating Cell focus.
 

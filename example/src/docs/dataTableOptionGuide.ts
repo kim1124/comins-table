@@ -45,6 +45,9 @@ export const dataTableOptionGuide: DataTableOptionGuideSource = [
   {
     items: [
       { description: defineLocalizedText("Paste, Row 이동 또는 다른 Table operation이 다음 data 배열을 만들 때 호출됩니다.", "Called when paste, row movement, or another table operation produces a next data array."), name: "onChangeData" },
+      { description: defineLocalizedText("Row Drag listener 등록 전에 typed source payload를 전달하며 false 반환으로 gesture를 취소합니다.", "Receives the typed source payload before Row Drag listeners register and cancels the gesture when it returns false."), name: "onBeforeRowDrag" },
+      { description: defineLocalizedText("Row Drag target identity 또는 validity가 바뀔 때만 source/target payload를 전달합니다.", "Receives source and target payloads only when Row Drag target identity or validity changes."), name: "onRowDrag" },
+      { description: defineLocalizedText("시작된 Row Drag마다 moved, cancelled 또는 rejected 결과와 reason을 정확히 한 번 전달합니다.", "Receives one moved, cancelled, or rejected result and reason for every started Row Drag."), name: "onAfterDragRow" },
       { description: defineLocalizedText("Cell을 클릭하면 event, Row, Column, index와 value를 전달합니다.", "Receives event, row, column, index, and value when a cell is clicked."), name: "onClickCell" },
       { description: defineLocalizedText("Row를 우클릭하여 단일 Row selection을 적용한 뒤 호출됩니다.", "Called after right-clicking a row and applying single-row selection."), name: "onContextMenuRow" },
       { description: defineLocalizedText("Sort state를 application state와 동기화합니다.", "Synchronizes sort state with application state."), name: "onChangeSort" },

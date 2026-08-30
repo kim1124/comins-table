@@ -48,7 +48,8 @@ jobs:
           fi
 
           git diff --name-only "$base_sha" "$head_sha" \
-            | node scripts/classify-verification-scope.mjs \
+            | COMINS_DIFF_BASE_SHA="$base_sha" COMINS_DIFF_HEAD_SHA="$head_sha" \
+              node scripts/classify-verification-scope.mjs \
             >> "$GITHUB_OUTPUT"
 
   security:

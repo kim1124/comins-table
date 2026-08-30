@@ -1,11 +1,14 @@
 # Table 간 Row 및 Group Drag
 
+<!-- comins-restriction: transfer-duplicate-default-reject -->
+
 [문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/23-cross-table-drag.md) · [Playground](http://127.0.0.1:4002/examples/cross-table-drag)
 
 ![전체 Group bundle 이동과 중복 Row ID 거부를 보여주는 Cross-Table Drag](../assets/comins-table-cross-table-drag.gif)
 
 Cross-Table Drag는 기존 Row 및 Group Drag handle을 다른 Comins Table까지 확장합니다. Application이 Coordinator를 만들고 참여할 모든 Table에 같은 객체, `scope`, 고유한 `tableId`를 전달합니다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const coordinator = createCominsTableTransferCoordinator<Row, Group>({
   onTransfer: ({ source, target }) => {

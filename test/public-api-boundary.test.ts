@@ -24,6 +24,7 @@ describe("comins-table public API boundary", () => {
     expect(packageJson.exports?.["./selection"]).toBeDefined();
     expect(packageJson.exports?.["./styles.css"]).toBe("./styles.css");
     expect(packageJson.files).toContain("styles.css");
+    expect(packageJson.files).toContain("DESIGN.md");
     expect(entry.CominsTable).toBeDefined();
     expect(core.createCominsTableState).toBeDefined();
     expect(clipboard.copyCominsCellRange).toBeDefined();

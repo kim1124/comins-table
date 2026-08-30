@@ -4,6 +4,7 @@
 
 Use `loading` for initial loading and refetch states. The application owns the fetch lifecycle and maps its response into controlled `data`.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const [rows, setRows] = useState<PersonRow[]>([]);
 const [loadingMode, setLoadingMode] = useState<"initial" | "ready" | "refetch">("initial");

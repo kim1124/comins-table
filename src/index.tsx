@@ -24,6 +24,7 @@ import {
   getCominsSortedRowIndexes,
   getCominsVisibleColumns,
   isCominsCellInSelectedRange,
+  isCominsCellSelected,
   moveCominsColumn,
   moveCominsColumnGroup,
   moveCominsRow,
@@ -297,6 +298,20 @@ function getCominsTransferIdentity(id: CominsRowId) {
   return `${typeof id}:${String(id)}`;
 }
 
+function areCominsRowDragTargetsEqual(
+  left: CominsRowDragTarget | null,
+  right: CominsRowDragTarget,
+) {
+  return Boolean(
+    left &&
+    left.dataIndex === right.dataIndex &&
+    left.groupId === right.groupId &&
+    left.rowId === right.rowId &&
+    left.tableId === right.tableId &&
+    left.valid === right.valid,
+  );
+}
+
 const COMINS_MIN_COLUMN_WIDTH = 88;
 function getCominsColumnDropStatus(
   source: CominsColumnMoveHeader,
@@ -330,6 +345,44 @@ export type CominsEventRow<TData> = {
   dataIndex: number;
   id: CominsRowId;
   index: number;
+};
+
+export type CominsRowDragTarget = {
+  dataIndex?: number;
+  groupId?: CominsRowId;
+  rowId?: CominsRowId;
+  tableId?: string;
+  valid: boolean;
+};
+
+export type CominsBeforeRowDragPayload<TData> = {
+  event: React.PointerEvent<HTMLElement>;
+  row: CominsEventRow<TData>;
+  sourceGroupId?: CominsRowId;
+  sourceTableId?: string;
+};
+
+export type CominsRowDragPayload<TData> = Omit<CominsBeforeRowDragPayload<TData>, "event"> & {
+  event: PointerEvent;
+  target: CominsRowDragTarget;
+};
+
+export type CominsRowDragResult = "cancelled" | "moved" | "rejected";
+export type CominsRowDragReason =
+  | "blur"
+  | "drop"
+  | "duplicate-id"
+  | "escape"
+  | "invalid-target"
+  | "pointer-cancel"
+  | "stale-target"
+  | "unchanged";
+
+export type CominsAfterDragRowPayload<TData> = Omit<CominsBeforeRowDragPayload<TData>, "event"> & {
+  event: PointerEvent | null;
+  reason: CominsRowDragReason;
+  result: CominsRowDragResult;
+  target?: CominsRowDragTarget;
 };
 
 export type CominsRowEventPayload<TData, TEvent = React.MouseEvent<HTMLTableRowElement>> = {
@@ -434,6 +487,9 @@ type CominsFlatTableBaseProps<TData> = {
   onKeyDownRow?: (payload: CominsRowKeyboardEventPayload<TData>) => void;
   onLazyLoad?: (request: CominsLazyLoadRequest) => Promise<void> | void;
   onLoadMore?: () => void;
+  onAfterDragRow?: (payload: CominsAfterDragRowPayload<TData>) => void;
+  onBeforeRowDrag?: (payload: CominsBeforeRowDragPayload<TData>) => boolean | void;
+  onRowDrag?: (payload: CominsRowDragPayload<TData>) => void;
   pagination?: Partial<CominsPaginationState>;
   persistHeaderWhenEmpty?: boolean;
   rowHeight?: number;
@@ -585,6 +641,9 @@ export type CominsTreeTableProps<TData> = Omit<
   | "onChangeData"
   | "onLazyLoad"
   | "onLoadMore"
+  | "onAfterDragRow"
+  | "onBeforeRowDrag"
+  | "onRowDrag"
   | "pagination"
   | "rowProps"
   | "rowGrouping"
@@ -612,6 +671,9 @@ export type CominsTreeTableProps<TData> = Omit<
   onChangeData?: (data: CominsTreeNode<TData>[]) => void;
   onLazyLoad?: never;
   onLoadMore?: never;
+  onAfterDragRow?: never;
+  onBeforeRowDrag?: never;
+  onRowDrag?: never;
   pagination?: never;
   rowProps?: Omit<CominsTableRowProps<TData>, "draggable"> & { draggable?: never };
   estimatedRowDetailHeight?: never;
@@ -1428,6 +1490,62 @@ function areRowIdSequencesEqual(left: readonly CominsRowId[], right: readonly Co
   return left.length === right.length && left.every((id, index) => id === right[index]);
 }
 
+function insertDeclaredColumnsIntoOrder(
+  order: readonly string[],
+  declaredOrder: readonly string[],
+) {
+  const next = [...order];
+
+  for (let declaredIndex = 0; declaredIndex < declaredOrder.length; declaredIndex += 1) {
+    const columnId = declaredOrder[declaredIndex];
+
+    if (columnId === undefined || next.includes(columnId)) {
+      continue;
+    }
+
+    const followingColumnId = declaredOrder
+      .slice(declaredIndex + 1)
+      .find((candidate) => next.includes(candidate));
+
+    if (followingColumnId !== undefined) {
+      next.splice(next.indexOf(followingColumnId), 0, columnId);
+      continue;
+    }
+
+    const precedingColumnId = [...declaredOrder.slice(0, declaredIndex)]
+      .reverse()
+      .find((candidate) => next.includes(candidate));
+
+    if (precedingColumnId === undefined) {
+      next.push(columnId);
+    } else {
+      next.splice(next.lastIndexOf(precedingColumnId) + 1, 0, columnId);
+    }
+  }
+
+  return next;
+}
+
+function reconcileColumnOrderHistory(
+  history: readonly string[],
+  currentOrder: readonly string[],
+  declaredOrder: readonly string[],
+) {
+  const merged = insertDeclaredColumnsIntoOrder(history, declaredOrder);
+  const currentIds = new Set(currentOrder);
+  let currentIndex = 0;
+
+  return merged.map((columnId) => {
+    if (!currentIds.has(columnId)) {
+      return columnId;
+    }
+
+    const currentColumnId = currentOrder[currentIndex];
+    currentIndex += 1;
+    return currentColumnId ?? columnId;
+  });
+}
+
 function canPreserveSelection<TData>(
   current: CominsTableState<TData>,
   next: CominsTableState<TData>,
@@ -1438,9 +1556,14 @@ function canPreserveSelection<TData>(
 
   const nextColumnIds = new Set(next.columns.map((column) => column.id));
   const selectedCell = current.selection.cell;
+  const selectedCells = current.selection.cells ?? [];
   const selectedRange = current.selection.range;
 
   if (selectedCell && !nextColumnIds.has(selectedCell.columnId)) {
+    return false;
+  }
+
+  if (selectedCells.some((cell) => !nextColumnIds.has(cell.columnId))) {
     return false;
   }
 
@@ -1634,6 +1757,9 @@ function CominsTableInner<TData, TGroup>(
     onKeyDownRow,
     onLazyLoad,
     onLoadMore,
+    onAfterDragRow,
+    onBeforeRowDrag,
+    onRowDrag,
     pagination,
     persistHeaderWhenEmpty = true,
     rowHeight = 36,
@@ -1780,6 +1906,7 @@ function CominsTableInner<TData, TGroup>(
     }),
   );
   const stateRef = useRef(state);
+  const columnOrderHistoryRef = useRef(state.columnOrder);
   const stateInputRef = useRef({ columnGroups, columns, data: effectiveData, getRowId, pagination: effectivePagination, showHeader });
   const virtualBufferSize = Math.max(0, Math.floor(Number.isFinite(bufferSize) ? Number(bufferSize) : 10));
   const resolvedLazyLoadBatchSize = Math.max(1, Math.floor(lazyLoadBatchSize));
@@ -2213,8 +2340,18 @@ function CominsTableInner<TData, TGroup>(
 
     stateInputRef.current = { columnGroups, columns, data: effectiveData, getRowId, pagination: effectivePagination, showHeader };
     const current = stateRef.current;
+    const declaredColumnOrder = columns.map((column) => String(column.id ?? column.field));
+    const currentLayout = serializeCominsColumnLayout(current);
+    const historicalOrder = reconcileColumnOrderHistory(
+      columnOrderHistoryRef.current,
+      current.columnOrder,
+      current.columns.map((column) => column.id),
+    );
     const nextState = createCominsTableState({
-      columnLayout: serializeCominsColumnLayout(current),
+      columnLayout: {
+        ...currentLayout,
+        order: insertDeclaredColumnsIntoOrder(historicalOrder, declaredColumnOrder),
+      },
       columnGroups,
       columns,
       getRowId,
@@ -2227,6 +2364,12 @@ function CominsTableInner<TData, TGroup>(
     const next = canPreserveSelection(current, nextState)
       ? { ...nextState, selection: current.selection }
       : nextState;
+
+    columnOrderHistoryRef.current = reconcileColumnOrderHistory(
+      historicalOrder,
+      next.columnOrder,
+      declaredColumnOrder,
+    );
 
     if (previousInput.getRowId !== getRowId) {
       const previousRowById = new Map(
@@ -2548,6 +2691,11 @@ function CominsTableInner<TData, TGroup>(
     const current = stateRef.current;
     const next = typeof updater === "function" ? updater(current) : updater;
 
+    columnOrderHistoryRef.current = reconcileColumnOrderHistory(
+      columnOrderHistoryRef.current,
+      next.columnOrder,
+      next.columns.map((column) => column.id),
+    );
     stateRef.current = next;
     setState(next);
     notifyChanges(current, next, options);
@@ -3017,17 +3165,21 @@ function CominsTableInner<TData, TGroup>(
     );
     const current = stateRef.current;
     const cellHidden = current.selection.cell !== null && !visibleRowIds.has(current.selection.cell.rowId);
+    const selectedCells = current.selection.cells;
+    const visibleSelectedCells = selectedCells?.filter((cell) => visibleRowIds.has(cell.rowId));
+    const cellsHidden =
+      selectedCells !== undefined && visibleSelectedCells !== undefined && selectedCells.length !== visibleSelectedCells.length;
     const rangeHidden = current.selection.range !== null && (
       !visibleRowIds.has(current.selection.range.anchor.rowId) ||
       !visibleRowIds.has(current.selection.range.focus.rowId)
     );
 
-    if (!cellHidden && !rangeHidden) {
+    if (!cellHidden && !cellsHidden && !rangeHidden) {
       return;
     }
 
     if (cellHidden) {
-      lastCellAnchorRef.current = null;
+      lastCellAnchorRef.current = visibleSelectedCells?.at(-1) ?? null;
     }
     rangeDragAnchorRef.current = null;
     rangeDragLastAddressRef.current = null;
@@ -3035,7 +3187,8 @@ function CominsTableInner<TData, TGroup>(
       ...current,
       selection: {
         ...current.selection,
-        cell: cellHidden ? null : current.selection.cell,
+        cell: cellHidden ? (visibleSelectedCells?.at(-1) ?? null) : current.selection.cell,
+        cells: cellsHidden ? visibleSelectedCells : current.selection.cells,
         range: rangeHidden || cellHidden ? null : current.selection.range,
       },
     });
@@ -4504,12 +4657,60 @@ function CominsTableInner<TData, TGroup>(
       return;
     }
 
+    const sourceGroupId = groupingActive && rowGrouping
+      ? rowGrouping.getRowGroupId(entry.row, entry.dataIndex)
+      : undefined;
+    const sourceTableId = normalizedTableTransfer?.tableId;
+    const row = createEventRow(entry);
+
+    if (onBeforeRowDrag?.({ event, row, sourceGroupId, sourceTableId }) === false) {
+      return;
+    }
+
     event.preventDefault();
     event.stopPropagation();
 
     const sourceRowId = entry.rowId;
     let crossTarget: CominsCrossTableRowTarget<TData, TGroup> | null = null;
     let autoScroll: ReturnType<typeof createCrossTableAutoScroll>;
+    let finished = false;
+    let lastPointerEvent = event.nativeEvent;
+    let lastTarget: CominsRowDragTarget | null = null;
+    let registeredCleanup: (() => void) | null = null;
+    const notifyTarget = (pointerEvent: PointerEvent, target: CominsRowDragTarget) => {
+      if (areCominsRowDragTargetsEqual(lastTarget, target)) {
+        return;
+      }
+
+      lastTarget = target;
+      onRowDrag?.({
+        event: pointerEvent,
+        row,
+        sourceGroupId,
+        sourceTableId,
+        target,
+      });
+    };
+    const finish = (
+      pointerEvent: PointerEvent | null,
+      result: CominsRowDragResult,
+      reason: CominsRowDragReason,
+    ) => {
+      if (finished) {
+        return;
+      }
+
+      finished = true;
+      onAfterDragRow?.({
+        event: pointerEvent,
+        reason,
+        result,
+        row,
+        sourceGroupId,
+        sourceTableId,
+        ...(lastTarget ? { target: lastTarget } : {}),
+      });
+    };
     const setActiveRowMoveState = (next: CominsRowMoveState | null) => {
       rowMoveStateRef.current = next;
       setRowMoveState(next);
@@ -4614,7 +4815,12 @@ function CominsTableInner<TData, TGroup>(
         valid,
       };
     };
-    const updateTarget = (clientX: number, clientY: number) => {
+    const updateTarget = (
+      clientX: number,
+      clientY: number,
+      pointerEvent: PointerEvent = lastPointerEvent,
+    ) => {
+      lastPointerEvent = pointerEvent;
       const pointElement = document.elementFromPoint(clientX, clientY);
       const target = pointElement
         ?.closest<HTMLElement>("[data-comins-row-data-index], [data-comins-group-index]");
@@ -4631,6 +4837,8 @@ function CominsTableInner<TData, TGroup>(
           const targetDataIndex = Number(target.dataset.cominsRowDataIndex);
 
           if (!Number.isInteger(targetDataIndex)) {
+            setActiveRowMoveState({ sourceRowId, valid: false });
+            notifyTarget(pointerEvent, { tableId: sourceTableId, valid: false });
             return;
           }
 
@@ -4647,6 +4855,15 @@ function CominsTableInner<TData, TGroup>(
             (typeof rowGrouping?.setRowGroupId === "function" && typeof onChangeData === "function");
 
           setActiveRowMoveState({ sourceRowId, targetDataIndex, targetGroupId, valid });
+          notifyTarget(pointerEvent, {
+            dataIndex: targetDataIndex,
+            groupId: targetGroupId,
+            rowId: targetRow === undefined
+              ? undefined
+              : stateRef.current.getRowId(targetRow, targetDataIndex),
+            tableId: sourceTableId,
+            valid,
+          });
           return;
         }
 
@@ -4662,6 +4879,11 @@ function CominsTableInner<TData, TGroup>(
             (typeof rowGrouping.setRowGroupId === "function" && typeof onChangeData === "function");
 
           setActiveRowMoveState({ sourceRowId, targetGroupId, valid });
+          notifyTarget(pointerEvent, {
+            groupId: targetGroupId,
+            tableId: sourceTableId,
+            valid,
+          });
         }
         return;
       }
@@ -4683,6 +4905,12 @@ function CominsTableInner<TData, TGroup>(
           targetTableId: crossTarget.snapshot.endpoint.tableId,
           valid: crossTarget.valid,
         });
+        notifyTarget(pointerEvent, {
+          groupId: crossTarget.targetGroupId,
+          rowId: crossTarget.targetRowId,
+          tableId: crossTarget.snapshot.endpoint.tableId,
+          valid: crossTarget.valid,
+        });
         autoScroll.update(
           crossTarget.snapshot.viewport,
           clientX,
@@ -4695,6 +4923,7 @@ function CominsTableInner<TData, TGroup>(
       clearExternalDropMarker();
       autoScroll.stop();
       setActiveRowMoveState({ sourceRowId, valid: false });
+      notifyTarget(pointerEvent, { valid: false });
     };
     autoScroll = createCrossTableAutoScroll(updateTarget);
     const handlePointerMove = (moveEvent: PointerEvent) => {
@@ -4702,22 +4931,22 @@ function CominsTableInner<TData, TGroup>(
         return;
       }
 
-      updateTarget(moveEvent.clientX, moveEvent.clientY);
+      updateTarget(moveEvent.clientX, moveEvent.clientY, moveEvent);
     };
     const cleanup = () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointercancel", handlePointerCancel);
-      window.removeEventListener("blur", handlePointerCancel);
+      window.removeEventListener("blur", handleWindowBlur);
       window.removeEventListener("keydown", handleKeyDown);
       autoScroll.stop();
 
-      if (activePointerGestureCleanupRef.current === cleanup) {
+      if (activePointerGestureCleanupRef.current === registeredCleanup) {
         activePointerGestureCleanupRef.current = null;
       }
     };
     const handlePointerUp = (upEvent: PointerEvent) => {
-      updateTarget(upEvent.clientX, upEvent.clientY);
+      updateTarget(upEvent.clientX, upEvent.clientY, upEvent);
 
       const moveState = rowMoveStateRef.current;
       const finalCrossTarget = crossTarget;
@@ -4726,6 +4955,7 @@ function CominsTableInner<TData, TGroup>(
       setActiveRowMoveState(null);
 
       if (!moveState?.valid) {
+        finish(upEvent, "rejected", "invalid-target");
         return;
       }
 
@@ -4738,6 +4968,7 @@ function CominsTableInner<TData, TGroup>(
           !targetSnapshot ||
           targetSnapshot.instanceId !== finalCrossTarget.snapshot.instanceId
         ) {
+          finish(upEvent, "rejected", "stale-target");
           return;
         }
 
@@ -4765,6 +4996,7 @@ function CominsTableInner<TData, TGroup>(
 
         if (result && emitCominsTableTransfer(normalizedTableTransfer.coordinator, result)) {
           scheduleTransferFocus(targetSnapshot.endpoint.tableId, "row", sourceRowId);
+          finish(upEvent, "moved", "drop");
         } else if (rejectedConflict.conflict) {
           const rejection: CominsTableTransferRejection<TData, TGroup> = Object.freeze({
             conflict: rejectedConflict.conflict,
@@ -4781,12 +5013,27 @@ function CominsTableInner<TData, TGroup>(
             upEvent.clientY,
           );
           emitCominsTableTransferRejected(normalizedTableTransfer.coordinator, rejection);
+          finish(upEvent, "rejected", "duplicate-id");
+        } else {
+          finish(upEvent, "rejected", "stale-target");
         }
         return;
       }
 
       if (groupingActive && rowGrouping && moveState.targetGroupId !== undefined) {
-        const sourceGroupId = rowGrouping.getRowGroupId(entry.row, entry.dataIndex);
+        const current = stateRef.current;
+        const next = moveCominsRowToGroup(current, {
+          getRowGroupId: rowGrouping.getRowGroupId,
+          setRowGroupId: rowGrouping.setRowGroupId,
+          sourceRowId,
+          targetGroupId: moveState.targetGroupId,
+          targetRowId: moveState.targetDataIndex === undefined
+            ? undefined
+            : current.rowIds[moveState.targetDataIndex],
+        });
+        const changed =
+          current.rows.length !== next.rows.length ||
+          current.rows.some((currentRow, index) => currentRow !== next.rows[index]);
 
         if (
           sourceGroupId !== moveState.targetGroupId &&
@@ -4795,39 +5042,54 @@ function CominsTableInner<TData, TGroup>(
           pendingGroupDisclosureFocusRef.current = moveState.targetGroupId;
         }
 
-        commitState((current) => moveCominsRowToGroup(current, {
-          getRowGroupId: rowGrouping.getRowGroupId,
-          setRowGroupId: rowGrouping.setRowGroupId,
-          sourceRowId,
-          targetGroupId: moveState.targetGroupId!,
-          targetRowId: moveState.targetDataIndex === undefined
-            ? undefined
-            : current.rowIds[moveState.targetDataIndex],
-        }));
+        commitState(next);
+        finish(upEvent, changed ? "moved" : "cancelled", changed ? "drop" : "unchanged");
         return;
       }
 
       if (moveState.targetDataIndex !== undefined) {
-        commitState((current) => moveCominsRow(current, sourceRowId, moveState.targetDataIndex!));
+        const current = stateRef.current;
+        const next = moveCominsRow(current, sourceRowId, moveState.targetDataIndex);
+        const changed =
+          current.rows.length !== next.rows.length ||
+          current.rows.some((currentRow, index) => currentRow !== next.rows[index]);
+
+        commitState(next);
+        finish(upEvent, changed ? "moved" : "cancelled", changed ? "drop" : "unchanged");
+        return;
       }
+
+      finish(upEvent, "rejected", "invalid-target");
     };
-    const handlePointerCancel = () => {
+    const cancel = (
+      pointerEvent: PointerEvent | null,
+      reason: Extract<CominsRowDragReason, "blur" | "escape" | "pointer-cancel">,
+    ) => {
       cleanup();
       clearExternalDropMarker();
       setActiveRowMoveState(null);
+      finish(pointerEvent, "cancelled", reason);
+    };
+    const handlePointerCancel = (cancelEvent: PointerEvent) => {
+      cancel(cancelEvent, "pointer-cancel");
+    };
+    const handleWindowBlur = () => {
+      cancel(null, "blur");
     };
     const handleKeyDown = (keyEvent: KeyboardEvent) => {
       if (keyEvent.key === "Escape") {
-        handlePointerCancel();
+        keyEvent.preventDefault();
+        cancel(null, "escape");
       }
     };
 
-    updateTarget(event.clientX, event.clientY);
-    registerActivePointerGesture(cleanup);
+    registeredCleanup = () => cancel(null, "pointer-cancel");
+    updateTarget(event.clientX, event.clientY, event.nativeEvent);
+    registerActivePointerGesture(registeredCleanup);
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
     window.addEventListener("pointercancel", handlePointerCancel);
-    window.addEventListener("blur", handlePointerCancel);
+    window.addEventListener("blur", handleWindowBlur);
     window.addEventListener("keydown", handleKeyDown);
   };
   const beginRowGroupHandlePointerDrag = (
@@ -6187,10 +6449,7 @@ function CominsTableInner<TData, TGroup>(
                     address,
                     groupingProjection?.visibleLeafRowIds ?? state.rowIds,
                   );
-                  const isCellSelected =
-                    cellSelection &&
-                    state.selection.cell?.rowId === entry.rowId &&
-                    state.selection.cell.columnId === column.id;
+                  const isCellSelected = cellSelection && isCominsCellSelected(state, address);
                   const cellPayload = createCellComponentPayload(
                     entry,
                     rowRuntimeProps.disabled,
@@ -6361,7 +6620,12 @@ function CominsTableInner<TData, TGroup>(
                             toggle: event.ctrlKey || event.metaKey,
                           });
 
-                          return cellSelection ? selectCell(nextRows, address) : nextRows;
+                          return cellSelection
+                            ? selectCell(nextRows, address, {
+                                multi: event.ctrlKey || event.metaKey,
+                                toggle: event.ctrlKey || event.metaKey,
+                              })
+                            : nextRows;
                         });
                         (event as React.MouseEvent<HTMLTableCellElement> & { __cominsCellSelectionHandled?: boolean })
                           .__cominsCellSelectionHandled = true;

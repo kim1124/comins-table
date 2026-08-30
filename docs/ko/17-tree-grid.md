@@ -1,9 +1,12 @@
 # Tree Grid
 
+<!-- comins-restriction: tree-no-pagination -->
+
 [문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/17-tree-grid.md) · [Playground](http://127.0.0.1:4002/examples/tree-grid)
 
 Tree Grid는 기존 컬럼 모델을 유지하면서 제어형 중첩 Row를 출력한다. 실제 업무 Row는 `item`에 넣으며, `{ field: "name" }` 같은 기존 컬럼과 cell formatter는 계속 `item` 객체를 대상으로 동작한다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const tableRef = useRef<CominsTableRef<PersonRow>>(null);
 const [data, setData] = useState([
@@ -52,6 +55,7 @@ Tree 정렬은 sibling 집합별 재귀 정렬이다. 부모는 항상 자신이
 
 `CominsTableRef`는 `expand(nodeIds?)`와 `fold(nodeIds?)`를 제공한다. readonly id 배열을 전달하면 여러 branch를 한 번의 controlled `onChangeData` 호출로 변경한다. 인수를 생략하면 모든 branch를 대상으로 하며 빈 배열은 아무 작업도 하지 않는다. 중복 id, 존재하지 않는 id, leaf id는 무시한다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 tableRef.current?.expand(["engineering", "platform"]);
 tableRef.current?.fold(["platform"]);

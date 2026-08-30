@@ -20,7 +20,8 @@ const columnGroupIdByColumnId = new Map(
 export function ColumnGroupFeature() {
   const { locale, text } = usePlaygroundLocale();
   const groupTableRef = useRef<CominsTableRef<PersonRow>>(null);
-  const [rows] = useState(() => createExampleRows(30));
+  const [groupRows, setGroupRows] = useState(() => createExampleRows(30));
+  const [dynamicRows] = useState(() => createExampleRows(30));
   const richHeaderFixture = useMemo(
     () =>
       typeof window !== "undefined" &&
@@ -185,12 +186,14 @@ export function ColumnGroupFeature() {
               className="example-table header-example-table"
               columnGroups={renderedHeaderColumnGroups}
               columns={renderedGroupColumns}
-              data={rows}
+              data={groupRows}
               data-testid="header-groups-viewport"
               getRowId={(row) => row.id}
               onChangeColumnLayout={setGroupLayout}
+              onChangeData={setGroupRows}
               pagination={{ pageIndex: 0, pageSize: 30 }}
               ref={groupTableRef}
+              rowProps={{ draggable: true }}
               theme={{ density: "compact" }}
             />
           </FeatureSampleSection>
@@ -233,7 +236,7 @@ export function ColumnGroupFeature() {
                 className="example-table header-example-table"
                 columnGroups={localizedHeaderColumnGroups}
                 columns={dynamicColumns}
-                data={rows}
+                data={dynamicRows}
                 data-testid="dynamic-group-viewport"
                 getRowId={(row) => row.id}
                 pagination={{ pageIndex: 0, pageSize: 30 }}

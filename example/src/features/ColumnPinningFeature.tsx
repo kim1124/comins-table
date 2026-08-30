@@ -122,8 +122,8 @@ export function ColumnPinningFeature() {
 
       <FeatureSampleSection
         description={text(defineLocalizedText(
-          "Pinned Header Group은 visible child 전체를 하나의 block으로 유지합니다. Group Row는 full-width 단일 Cell이므로 sticky fragment로 분리되지 않습니다.",
-          "A pinned Header Group keeps all visible children in one block. Full-width Group Rows remain single cells and are not split into sticky fragments.",
+          "Pinned Header Group은 visible child 전체를 하나의 block으로 유지합니다. Group Row는 full-width 단일 Cell을 유지하고 내부 title과 control만 viewport 시작점에 고정됩니다.",
+          "A pinned Header Group keeps all visible children in one block. Full-width Group Rows remain single cells while their inner title and controls stay at the viewport start.",
         ))}
         id="column-pinning-grouped"
         title={text(defineLocalizedText("Header Group과 Row Grouping", "Header Group and Row Grouping"))}

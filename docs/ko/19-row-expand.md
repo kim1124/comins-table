@@ -12,6 +12,7 @@ owner Row만 대상으로 유지된다.
 
 ## Public Types
 
+<!-- comins-doc-example: fragment -->
 ```ts
 export type CominsRowDetailParams<TData> = {
   row: CominsEventRow<TData>;
@@ -38,6 +39,7 @@ prop도 동작하지 않는다.
 
 ## Controlled State
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const [expandedRowIds, setExpandedRowIds] = useState<readonly string[]>([]);
 
@@ -60,6 +62,7 @@ const [expandedRowIds, setExpandedRowIds] = useState<readonly string[]>([]);
 라이브러리는 여러 Detail을 동시에 열 수 있도록 복수 ID를 받는다. accordion처럼
 하나만 확장하려면 controlled state에 기록하기 전에 callback 값을 정규화한다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const [expandedRowIds, setExpandedRowIds] = useState<readonly CominsRowId[]>([]);
 
@@ -86,6 +89,7 @@ positive 숫자만 fixed이며 해당 Detail은 그 inline height를 유지한�
 잘못된 숫자이거나, `"auto"`이면 automatic measurement를 사용하므로 렌더링된
 Detail에는 inline height가 없다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   estimatedRowDetailHeight={300}

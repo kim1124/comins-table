@@ -4,6 +4,7 @@
 
 Cells support formatting, custom rendering, event callbacks, props, and component slots.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const columns: Array<CominsTableColumn<PersonRow>> = [
   {

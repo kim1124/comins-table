@@ -1,5 +1,7 @@
 # Comins Table Documentation
 
+[Design contract](../DESIGN.md) · [Componentization guide](design/componentization.md) · [Canonical Feature Manifest](feature-manifest.json)
+
 Comins Table documentation is organized by feature and language. Every guide links a runnable local Playground route and the matching guide in the other language.
 
 ## Choose a language

@@ -326,6 +326,7 @@
   background: inherit;
   color: inherit;
   font-weight: 600;
+  overflow: visible;
   text-align: left;
 }
 
@@ -333,7 +334,10 @@
   align-items: center;
   display: flex;
   gap: 4px;
+  left: var(--comins-table-cell-padding-x);
   min-width: 0;
+  position: sticky;
+  width: max-content;
 }
 
 .comins-row-group-content {

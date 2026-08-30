@@ -206,6 +206,28 @@ test("playground verifies 2-depth parent resize ratio and minimum clamp", async 
   expect(diagnostics).toEqual([]);
 });
 
+test("Header Group example persists Row Drag order through controlled data", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/examples/column-groups");
+
+  const groupExample = page.getByTestId("header-example-groups");
+  const source = groupExample.getByTestId("row-drag-handle-c");
+  const target = groupExample.getByTestId("row-a");
+  await source.scrollIntoViewIfNeeded();
+  const sourceBox = await source.boundingBox();
+  const targetBox = await target.boundingBox();
+  expect(sourceBox).not.toBeNull();
+  expect(targetBox).not.toBeNull();
+
+  await page.mouse.move(sourceBox!.x + sourceBox!.width / 2, sourceBox!.y + sourceBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(targetBox!.x + targetBox!.width / 2, targetBox!.y + targetBox!.height / 2, { steps: 12 });
+  await page.mouse.up();
+
+  await expect(groupExample.locator("tr[data-comins-row-data-index]").first()).toHaveAttribute("data-testid", "row-c");
+  expect(diagnostics).toEqual([]);
+});
+
 test("playground verifies 2-depth child resize stays inside its parent group", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/");
@@ -435,6 +457,10 @@ test("playground verifies dynamic column visibility for column groups", async ({
     exact: true,
     name: "Header 그룹 1 표시",
   });
+  const visibleColumnOrder = () =>
+    dynamicExample.getByTestId("dynamic-group-table").locator("th[data-comins-column-id]").evaluateAll((headers) =>
+      headers.map((header) => header.getAttribute("data-comins-column-id")));
+  const orderBeforeGroupHide = await visibleColumnOrder();
   await expect(profileGroupToggle).toBeChecked();
   await profileGroupToggle.click();
   await expect(dynamicExample.getByTestId("dynamic-group-table").getByTestId("header-group-profile")).toHaveCount(0);
@@ -442,6 +468,7 @@ test("playground verifies dynamic column visibility for column groups", async ({
   await profileGroupToggle.click();
   await expect(dynamicExample.getByTestId("dynamic-group-table").getByTestId("header-name")).toBeVisible();
   await expect(dynamicExample.getByTestId("dynamic-group-table").getByTestId("header-age")).toHaveCount(0);
+  await expect(visibleColumnOrder()).resolves.toEqual(orderBeforeGroupHide);
   await dynamicExample.getByTestId("column-group-column-select-trigger").click();
   await expect(page.getByRole("checkbox", { exact: true, name: "Column2" })).not.toBeChecked();
   await expect(page.getByRole("checkbox", { exact: true, name: "Column3" })).not.toBeChecked();

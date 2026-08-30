@@ -53,6 +53,7 @@ function assertNoBundledThirdPartySources(filename, paths) {
 
   const isCominsTable = manifest.name === 'comins-table';
   if (isCominsTable) {
+    if (!paths.includes('DESIGN.md')) throw new Error('missing design contract');
     if (
       manifest.dependencies?.[radixIcons] !== radixVersion
       || Object.hasOwn(manifest.optionalDependencies ?? {}, radixIcons)

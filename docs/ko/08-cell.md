@@ -4,6 +4,7 @@
 
 Cell 값은 `field`로 읽고, `cell.format`, `cell.components`, `cell.renderer`로 ReactNode를 렌더링할 수 있다. Nested path도 지원한다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   cellSelection={false}
@@ -41,6 +42,7 @@ Cell range를 확장해도 해당 Row selection은 해제하지 않는다. 선�
 
 `cell.renderer`는 사용자 커스텀 컴포넌트를 직접 렌더링한다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 {
   field: "name",
@@ -55,6 +57,7 @@ Cell range를 확장해도 해당 Row selection은 해제하지 않는다. 선�
 
 `cell.components`는 DataTable이 제공하는 lightweight built-in 컴포넌트만 Cell 안에 렌더링한다. `components`가 있으면 기본 value/format 텍스트는 표시하지 않는다. `renderer`가 있으면 format과 components를 모두 대체한다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 {
   field: "enabled",
@@ -93,6 +96,7 @@ Virtual List Row 선택 기준:
 - Search는 하나의 Row만 선택된 상태에서만 사용할 수 있다.
 - Item과 More 이벤트는 컴포넌트 내부에서 처리되며 `onClickCell` 또는 `onClickRow`를 호출하지 않는다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 {
   field: "items",

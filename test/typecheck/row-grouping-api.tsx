@@ -72,7 +72,18 @@ const ordinary = {
   data: [],
   getRowId: (row) => row.id,
   infiniteScroll: true,
+  onAfterDragRow: ({ reason, result, row, target }) => {
+    reason satisfies string;
+    result satisfies "cancelled" | "moved" | "rejected";
+    row.data satisfies Row;
+    target?.valid satisfies boolean | undefined;
+  },
+  onBeforeRowDrag: ({ row }) => row.data.groupId !== "locked",
   onLoadMore: () => undefined,
+  onRowDrag: ({ row, target }) => {
+    row.id satisfies string | number;
+    target.valid satisfies boolean;
+  },
   pagination: { pageSize: 10 },
   rowProps: { draggable: true },
 } satisfies CominsTableProps<Row>;

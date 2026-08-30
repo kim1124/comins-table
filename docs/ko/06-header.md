@@ -4,6 +4,7 @@
 
 Header는 표시/숨김, DOM props, label, column boundary resize, column move, keyboard sort, `aria-sort`, animated sort indicator, layout save/load를 제공한다. Layout save/load는 ref method로 처리한다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const tableRef = useRef<CominsTableRef<Row>>(null);
 
@@ -35,6 +36,7 @@ tableRef.current?.clearSort();
 
 기본값은 기존 단일 정렬이다. `multiSort`를 명시하면 `Shift` 조작으로 우선순위가 있는 복수 정렬 조건을 만들 수 있고 `onChangeSortModel`로 전체 모델을 확인할 수 있다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const [sortModel, setSortModel] = useState<CominsSortModel>([]);
 
@@ -69,6 +71,7 @@ Multi-column Sort 중에는 첫 번째 조건에만 `aria-sort="ascending" | "de
 
 2 Depth Header는 기존 flat `columns`를 유지하고, 별도 `columnGroups`로 부모 header를 정의한다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   columns={[
@@ -103,6 +106,7 @@ Multi-column Sort 중에는 첫 번째 조건에만 `aria-sort="ascending" | "de
 
 Header custom UI는 `header.renderer` 또는 `header.components`로 렌더링한다. `renderer`가 있으면 label과 components를 모두 대체한다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 {
   field: "name",
@@ -113,6 +117,7 @@ Header custom UI는 `header.renderer` 또는 `header.components`로 렌더링한
 }
 ```
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 {
   field: "role",
@@ -138,6 +143,7 @@ Header components는 배열 순서대로 렌더링되며 `direction`으로 label
 
 Phase 2 Header components는 `button`, `input`, `checkbox`, `radio`, `select`, `toggle`, `progress`, `menu`를 지원한다. `menu`는 Header 전용이며 `document.body` portal과 fixed position으로 버튼 바로 아래에 popover를 표시한다. `popup`은 built-in으로 제공하지 않는다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 {
   field: "status",
