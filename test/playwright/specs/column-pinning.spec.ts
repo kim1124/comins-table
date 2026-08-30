@@ -263,6 +263,7 @@ test("Column Pinning keeps an actively resized pinned Column above scrolling con
   const rightStatusHeader = root.getByTestId("header-status");
   const rightIdHeader = root.getByTestId("header-id");
   const resize = root.getByTestId("resize-name");
+  await resize.scrollIntoViewIfNeeded();
   const beforeHeader = await leftHeader.boundingBox();
   const resizeBox = await resize.boundingBox();
   expect(beforeHeader).not.toBeNull();
