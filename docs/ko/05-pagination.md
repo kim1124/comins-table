@@ -4,6 +4,7 @@
 
 Pagination은 `pagination` prop 또는 `setCominsPagination` core helper로 제어한다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   columns={[{ field: "name", label: "Name" }]}

@@ -7,6 +7,7 @@
 Column Pinning keeps configured Columns visible while the Body, Header, and Summary scroll horizontally. Set `pinned: "left"` or `pinned: "right"` on a Column or two-level Header Group.
 The exported `CominsColumnPinned` type is the `"left" | "right"` union used by Column definitions, Group definitions, and persisted runtime layout state.
 
+<!-- comins-doc-example: compile=column-pinning -->
 ```tsx
 const columns = [
   { field: "name", label: "Name", pinned: "left", width: 180 },
@@ -43,6 +44,6 @@ Header, Body, Skeleton, and Summary cells use the same effective zones and offse
 
 Horizontal overflow uses one native scrollbar at the bottom of the complete Table. Summary remains above the scrollbar, and Body horizontal wheel input or direct scrollbar input synchronizes every rendering surface without changing pin offsets.
 
-Synthetic Group Rows, Row Details, empty/loading Rows, and other full-width structural Rows remain one non-sticky spanning cell. Tree Grid does not apply Column Pinning.
+Synthetic Group Rows, Row Details, empty/loading Rows, and other full-width structural Rows remain one spanning Cell. The Group Row Cell stays full-width while its inner title and controls remain sticky at the Body viewport start during horizontal scrolling. Tree Grid does not apply Column Pinning.
 
 See the [`/examples/column-pinning`](http://127.0.0.1:4002/examples/column-pinning) Playground route.

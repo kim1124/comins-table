@@ -2,8 +2,9 @@
 
 [Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/10-selection.md) · [Playground](http://127.0.0.1:4002/examples/selection-clipboard)
 
-Selection supports row selection, single-cell selection, and range selection.
+Selection supports Row selection, single and discontiguous Cell selection, and rectangular range selection.
 
+<!-- comins-doc-example: fragment -->
 ```ts
 import {
   getCominsSelectedCellRange,
@@ -15,10 +16,11 @@ import {
 } from "comins-table/selection";
 ```
 
-`selectRow`, `selectCell`, and `selectCellRange` update the core state. `getCominsSelectedCellRange` reads the active range.
+`selectRow`, `selectCell`, and `selectCellRange` update the core state. `CominsCellSelectionOptions` adds `multi` and `toggle` behavior to `selectCell`; `getCominsSelectedCellRange` reads only the active rectangular range.
 
 React users can subscribe to `onChangeSelection` on `CominsTable`.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   cellSelection
@@ -28,7 +30,9 @@ React users can subscribe to `onChangeSelection` on `CominsTable`.
 />
 ```
 
-Plain click replaces the selected Row, Ctrl/Cmd+click toggles Rows, and Shift+click selects the visible Row range from the last anchor. Dragging between Cells creates a Cell range when `cellSelection` is enabled.
+Plain click replaces the selected Row and Cell. Ctrl/Cmd+click toggles both the Row and the addressed Cell, while Shift+click selects the visible Row range and rectangular Cell range from the last anchors. Dragging between Cells creates a rectangular range when `cellSelection` is enabled.
+
+`CominsSelectionState.cell` remains the active focus and single-Cell Clipboard address. `CominsSelectionState.cells` contains the discontiguous Cell set used by Ctrl/Cmd interaction; it is optional for compatibility with application-created legacy state. `range` remains separate, and selecting a range clears the discontiguous set. Discontiguous Cells are visual selection only in 0.1.9 and are not converted into a Clipboard matrix.
 
 See the controlled React example at [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard). It displays the complete `onChangeSelection` payload and uses `copyable` and `pasteable` guards for a protected Column.
 

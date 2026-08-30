@@ -1,5 +1,7 @@
 # Row Grouping
 
+<!-- comins-restriction: grouping-single-depth -->
+
 [문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/20-row-grouping.md) · [Playground](http://127.0.0.1:4002/examples/row-grouping)
 
 ![Application-owned Row Grouping의 펼침, 접기와 Group 순서 변경](../assets/comins-table-row-grouping.gif)
@@ -12,6 +14,7 @@ Explicit Group CRUD, Group/Row Drag, custom Group content/style, Row Detail, 집
 
 `CominsRowGroupingConfig<TData, TGroup>`은 application Row와 Group type을 유지합니다. Custom content는 `CominsRowGroupRenderParams<TData, TGroup>`를 받아 `group`, aggregate, expansion과 현재 `groupIndex`를 typed 상태로 사용합니다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 type Group = { id: string; label: string };
 type Row = { amount: number; groupId: string; id: string; name: string };
@@ -73,6 +76,7 @@ Group Drag는 `data`를 변경하지 않으며 Row Drag는 `groups` 순서를 �
 
 `expandedGroupIds`가 유일한 expansion source of truth입니다. `onChangeExpandedGroupIds`가 없으면 disclosure는 disabled read-only입니다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const tableRef = useRef<CominsTableRef<Row>>(null);
 
@@ -90,6 +94,7 @@ ID를 생략하면 현재 Group 전체가 대상입니다. 빈 ID 배열은 no-o
 
 Table은 outer Row/Cell, ARIA, disclosure, Group Drag handle, drop feedback, focus와 virtualization height를 소유합니다. `getGroupRowProps`는 outer Group Row에 typed `className`과 `style`을 추가하고, `renderGroupContent`는 내부의 기본 label/count/aggregate content만 교체합니다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 rowGrouping={{
   // controlled Group fields omitted

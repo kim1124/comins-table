@@ -4,6 +4,7 @@
 
 Columns can enable sorting, width constraints, resizing, and custom header content.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const columns: Array<CominsTableColumn<PersonRow>> = [
   { field: "name", id: "name", label: "Name", sort: true, width: 160 },
@@ -17,6 +18,7 @@ Use `onChangeSort` to observe the primary sort rule and `onChangeColumnLayout` f
 
 Single-column sorting remains the default. Enable ordered multi-column sorting explicitly with `multiSort` and observe the complete model through `onChangeSortModel`.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const [sortModel, setSortModel] = useState<CominsSortModel>([]);
 const tableRef = useRef<CominsTableRef<PersonRow>>(null);
@@ -65,6 +67,7 @@ The live [`/api/ref`](http://127.0.0.1:4002/api/ref) example applies `setSortMod
 
 Two-level headers use `columnGroups`.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   columns={columns}

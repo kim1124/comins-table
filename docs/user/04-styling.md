@@ -4,12 +4,14 @@
 
 Import `comins-table/styles.css` to use the default shell, table layout, themes, and built-in component skin.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 import "comins-table/styles.css";
 ```
 
 The root class is `comins-table`. The default CSS exposes tokens such as `--comins-table-row-height`, `--comins-table-header-height`, `--comins-table-cell-height`, `--comins-table-group-row-background`, `--comins-table-group-row-color`, and `--comins-table-accent`.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   columns={columns}

@@ -8,6 +8,7 @@ Comins Table is designed around a controlled CSR data flow.
 - `onChangeData` receives the next row array after table-owned mutations such as paste or row movement.
 - Application actions can call `addCominsRows`, `updateCominsRows`, `deleteCominsRows`, and `queryCominsRows` from `comins-table/core` when a framework-independent state transition is useful.
 
+<!-- comins-doc-example: fragment -->
 ```ts
 import {
   addCominsRows,

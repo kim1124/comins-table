@@ -363,6 +363,7 @@ export type CominsPaginationState = {
 
 export type CominsSelectionState = {
   cell: CominsCellAddress | null;
+  cells?: CominsCellAddress[];
   range: CominsCellRange | null;
   rowIds: CominsRowId[];
 };
@@ -506,6 +507,11 @@ export type CominsPasteRowOptions<TData> =
     };
 
 export type CominsRowSelectionOptions = {
+  multi?: boolean;
+  toggle?: boolean;
+};
+
+export type CominsCellSelectionOptions = {
   multi?: boolean;
   toggle?: boolean;
 };
@@ -812,6 +818,7 @@ function normalizeColumnOrder<TData>(
 function createEmptySelection(): CominsSelectionState {
   return {
     cell: null,
+    cells: [],
     range: null,
     rowIds: [],
   };
@@ -1572,12 +1579,36 @@ export function selectRows<TData>(state: CominsTableState<TData>, rowIds: readon
   };
 }
 
-export function selectCell<TData>(state: CominsTableState<TData>, cell: CominsCellAddress) {
+function areCellAddressesEqual(left: CominsCellAddress, right: CominsCellAddress) {
+  return left.rowId === right.rowId && left.columnId === right.columnId;
+}
+
+export function selectCell<TData>(
+  state: CominsTableState<TData>,
+  cell: CominsCellAddress,
+  options: CominsCellSelectionOptions = {},
+) {
+  const current = state.selection.cells ?? (state.selection.cell ? [state.selection.cell] : []);
+  const selected = current.some((candidate) => areCellAddressesEqual(candidate, cell));
+  const cells = options.multi
+    ? options.toggle && selected
+      ? current.filter((candidate) => !areCellAddressesEqual(candidate, cell))
+      : selected
+        ? current
+        : [...current, cell]
+    : options.toggle && selected
+      ? []
+      : [cell];
+  const activeCell = cells.some((candidate) => areCellAddressesEqual(candidate, cell))
+    ? cell
+    : (cells.at(-1) ?? null);
+
   return {
     ...state,
     selection: {
       ...state.selection,
-      cell,
+      cell: activeCell,
+      cells,
       range: null,
     },
   };
@@ -1589,6 +1620,7 @@ export function selectCellRange<TData>(state: CominsTableState<TData>, range: Co
     selection: {
       ...state.selection,
       cell: range.focus,
+      cells: [],
       range,
     },
   };
@@ -1616,7 +1648,13 @@ export function isCominsRowSelected<TData>(state: CominsTableState<TData>, rowId
 }
 
 export function isCominsCellSelected<TData>(state: CominsTableState<TData>, cell: CominsCellAddress) {
-  return state.selection.cell?.rowId === cell.rowId && state.selection.cell.columnId === cell.columnId;
+  const selectedCells = state.selection.cells;
+
+  if (selectedCells && selectedCells.length > 0) {
+    return selectedCells.some((candidate) => areCellAddressesEqual(candidate, cell));
+  }
+
+  return state.selection.cell !== null && areCellAddressesEqual(state.selection.cell, cell);
 }
 
 export function getCominsSelectedCellRange<TData>(

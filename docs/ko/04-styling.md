@@ -4,6 +4,7 @@
 
 Table 전체 스타일은 `className`, `style`, `theme`로 제어한다. Row 스타일은 `rowProps`, column/cell 스타일은 `columns[].cell.props`로 둔다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   className="example-table"
@@ -59,6 +60,7 @@ Table 전체 스타일은 `className`, `style`, `theme`로 제어한다. Row 스
 `comins-table/styles.css`는 기본 table shell과 theme override용 CSS custom properties를 포함한다.
 1차 Theme API는 새 preset prop을 추가하지 않고 기존 `theme.className`, `theme.style`, `theme.density`를 사용한다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   columns={columns}

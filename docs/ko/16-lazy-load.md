@@ -4,6 +4,7 @@
 
 `lazyLoad`는 request 시점을 Comins Table에 위임하고, application이 Row 배열과 원격 상태를 소유하는 controlled API다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const [rows, setRows] = useState<PersonRow[]>([]);
 const [total, setTotal] = useState(0);

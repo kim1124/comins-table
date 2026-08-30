@@ -1,0 +1,1456 @@
+{
+  "schemaVersion": 1,
+  "features": [
+    {
+      "id": "basic",
+      "status": "shipped",
+      "category": "getting-started",
+      "apiSymbols": [
+        "CominsTable",
+        "CominsTableProps"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/01-quick-start.md"
+        ],
+        "ko": [
+          "docs/ko/01-quick-start.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/docs/getting-started"
+      ],
+      "tests": [
+        "test/public-api.test.tsx",
+        "test/playwright/specs/basic-playground.spec.ts"
+      ]
+    },
+    {
+      "id": "basic-crud",
+      "status": "shipped",
+      "category": "getting-started",
+      "apiSymbols": [
+        "addCominsRows",
+        "updateCominsRows",
+        "deleteCominsRows"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/02-data-and-crud.md"
+        ],
+        "ko": [
+          "docs/ko/02-data-and-crud.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/crud"
+      ],
+      "tests": [
+        "test/basic-core.test.ts",
+        "test/playwright/specs/crud-playground.spec.ts"
+      ]
+    },
+    {
+      "id": "size",
+      "status": "shipped",
+      "category": "styling-layout",
+      "apiSymbols": [
+        "CominsTableProps"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/04-styling.md"
+        ],
+        "ko": [
+          "docs/ko/04-styling.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/size"
+      ],
+      "tests": [
+        "test/basic-core.test.ts",
+        "test/playwright/specs/playground-layout-polish.spec.ts"
+      ]
+    },
+    {
+      "id": "theme",
+      "status": "shipped",
+      "category": "styling-layout",
+      "apiSymbols": [
+        "CominsTableTheme"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/04-styling.md"
+        ],
+        "ko": [
+          "docs/ko/04-styling.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/theme"
+      ],
+      "tests": [
+        "test/basic-core.test.ts",
+        "test/playwright/specs/theme-playground.spec.ts"
+      ]
+    },
+    {
+      "id": "loading",
+      "status": "shipped",
+      "category": "getting-started",
+      "apiSymbols": [
+        "CominsTableProps"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/13-loading-empty.md"
+        ],
+        "ko": [
+          "docs/ko/13-loading-empty.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/loading"
+      ],
+      "tests": [
+        "test/public-api.test.tsx",
+        "test/playwright/specs/loading-empty-state.spec.ts"
+      ]
+    },
+    {
+      "id": "header",
+      "status": "shipped",
+      "category": "header-layout",
+      "apiSymbols": [
+        "CominsTableColumn",
+        "CominsSortModel"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/06-header.md"
+        ],
+        "ko": [
+          "docs/ko/06-header.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/header"
+      ],
+      "tests": [
+        "test/table-interaction.test.tsx",
+        "test/playwright/specs/header-basic.spec.ts"
+      ]
+    },
+    {
+      "id": "column-groups",
+      "status": "shipped",
+      "category": "header-layout",
+      "apiSymbols": [
+        "CominsTableColumnGroup"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/06-header.md"
+        ],
+        "ko": [
+          "docs/ko/06-header.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/column-groups"
+      ],
+      "tests": [
+        "test/basic-core.test.ts",
+        "test/playwright/specs/header-quality.spec.ts"
+      ]
+    },
+    {
+      "id": "column-pinning",
+      "status": "shipped",
+      "category": "header-layout",
+      "apiSymbols": [
+        "CominsColumnPinned",
+        "CominsColumnLayout"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/22-column-pinning.md"
+        ],
+        "ko": [
+          "docs/ko/22-column-pinning.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/column-pinning"
+      ],
+      "tests": [
+        "test/column-pinning.test.ts",
+        "test/playwright/specs/column-pinning.spec.ts"
+      ]
+    },
+    {
+      "id": "cell",
+      "status": "shipped",
+      "category": "row-cell-selection",
+      "apiSymbols": [
+        "CominsTableCellConfig",
+        "CominsCellEventPayload"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/08-cell.md"
+        ],
+        "ko": [
+          "docs/ko/08-cell.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/cell"
+      ],
+      "tests": [
+        "test/component-renderer-api.test.tsx",
+        "test/playwright/specs/cell-row-examples.spec.ts"
+      ]
+    },
+    {
+      "id": "selection-clipboard",
+      "status": "shipped",
+      "category": "row-cell-selection",
+      "apiSymbols": [
+        "CominsSelectionState",
+        "CominsCellSelectionOptions",
+        "CominsCellRange",
+        "copyCominsCellRange"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/09-clipboard.md",
+          "docs/user/10-selection.md"
+        ],
+        "ko": [
+          "docs/ko/09-clipboard.md",
+          "docs/ko/10-selection.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/selection-clipboard"
+      ],
+      "tests": [
+        "test/selection-core.test.ts",
+        "test/playwright/specs/selection-clipboard.spec.ts"
+      ]
+    },
+    {
+      "id": "component",
+      "status": "shipped",
+      "category": "rendering",
+      "apiSymbols": [
+        "CominsCellComponent",
+        "CominsHeaderComponent"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/08-cell.md"
+        ],
+        "ko": [
+          "docs/ko/08-cell.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/component"
+      ],
+      "tests": [
+        "test/component-renderer-api.test.tsx",
+        "test/playwright/specs/component-renderer.spec.ts"
+      ]
+    },
+    {
+      "id": "row",
+      "status": "shipped",
+      "category": "row-cell-selection",
+      "apiSymbols": [
+        "CominsTableRowProps",
+        "CominsRowDragPayload",
+        "CominsAfterDragRowPayload",
+        "moveCominsRow"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/07-row.md"
+        ],
+        "ko": [
+          "docs/ko/07-row.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/row"
+      ],
+      "tests": [
+        "test/basic-core.test.ts",
+        "test/playwright/specs/row-basic.spec.ts"
+      ]
+    },
+    {
+      "id": "row-expand",
+      "status": "shipped",
+      "category": "structured-rows",
+      "apiSymbols": [
+        "CominsRowDetailProps",
+        "CominsTableRef"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/19-row-expand.md"
+        ],
+        "ko": [
+          "docs/ko/19-row-expand.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/row-expand"
+      ],
+      "tests": [
+        "test/public-api.test.tsx",
+        "test/playwright/specs/row-expand.spec.ts"
+      ]
+    },
+    {
+      "id": "row-grouping",
+      "status": "shipped",
+      "category": "structured-rows",
+      "apiSymbols": [
+        "CominsRowGroupingConfig",
+        "moveCominsRowGroup",
+        "moveCominsRowToGroup"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/20-row-grouping.md"
+        ],
+        "ko": [
+          "docs/ko/20-row-grouping.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/row-grouping"
+      ],
+      "tests": [
+        "test/grouping.test.ts",
+        "test/playwright/specs/row-grouping.spec.ts"
+      ]
+    },
+    {
+      "id": "cross-table-drag",
+      "status": "shipped",
+      "category": "structured-rows",
+      "apiSymbols": [
+        "CominsTableTransferConfig",
+        "createCominsTableTransferCoordinator"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/23-cross-table-drag.md"
+        ],
+        "ko": [
+          "docs/ko/23-cross-table-drag.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/cross-table-drag"
+      ],
+      "tests": [
+        "test/table-transfer.test.ts",
+        "test/playwright/specs/cross-table-drag.spec.ts"
+      ]
+    },
+    {
+      "id": "column-filtering",
+      "status": "shipped",
+      "category": "header-layout",
+      "apiSymbols": [
+        "CominsColumnFilteringConfig",
+        "CominsColumnFilterModel"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/21-column-filtering.md"
+        ],
+        "ko": [
+          "docs/ko/21-column-filtering.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/column-filtering"
+      ],
+      "tests": [
+        "test/filtering.test.ts",
+        "test/playwright/specs/column-filtering.spec.ts"
+      ]
+    },
+    {
+      "id": "summary-row",
+      "status": "shipped",
+      "category": "structured-rows",
+      "apiSymbols": [
+        "CominsTableSummaryConfig",
+        "getCominsSummaryValues"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/18-summary-row.md"
+        ],
+        "ko": [
+          "docs/ko/18-summary-row.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/summary-row"
+      ],
+      "tests": [
+        "test/summary-core.test.ts",
+        "test/playwright/specs/summary-row.spec.ts"
+      ]
+    },
+    {
+      "id": "tree-grid",
+      "status": "shipped",
+      "category": "structured-rows",
+      "apiSymbols": [
+        "CominsTreeNode",
+        "CominsTreeTableProps"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/17-tree-grid.md"
+        ],
+        "ko": [
+          "docs/ko/17-tree-grid.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/tree-grid"
+      ],
+      "tests": [
+        "test/tree-core.test.ts",
+        "test/playwright/specs/tree-grid.spec.ts"
+      ]
+    },
+    {
+      "id": "context-menu",
+      "status": "shipped",
+      "category": "row-cell-selection",
+      "apiSymbols": [
+        "CominsRowEventPayload",
+        "CominsCellEventPayload"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/07-row.md"
+        ],
+        "ko": [
+          "docs/ko/07-row.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/context-menu"
+      ],
+      "tests": [
+        "test/table-interaction.test.tsx",
+        "test/playwright/specs/context-menu.spec.ts"
+      ]
+    },
+    {
+      "id": "export",
+      "status": "shipped",
+      "category": "api-utilities",
+      "apiSymbols": [
+        "exportCominsRowsToCsv",
+        "exportCominsRowsToJson"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/14-export.md"
+        ],
+        "ko": [
+          "docs/ko/14-export.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/examples/export"
+      ],
+      "tests": [
+        "test/export-core.test.ts",
+        "test/playwright/specs/export-helper.spec.ts"
+      ]
+    },
+    {
+      "id": "ref-api",
+      "status": "shipped",
+      "category": "api-utilities",
+      "apiSymbols": [
+        "CominsTableRef"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/03-core-state.md"
+        ],
+        "ko": [
+          "docs/ko/03-core-state.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/api/ref"
+      ],
+      "tests": [
+        "test/public-api.test.tsx",
+        "test/playwright/specs/ref-api.spec.ts"
+      ]
+    },
+    {
+      "id": "pagination",
+      "status": "shipped",
+      "category": "loading-performance",
+      "apiSymbols": [
+        "CominsPaginationState",
+        "setCominsPagination"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/05-pagination.md"
+        ],
+        "ko": [
+          "docs/ko/05-pagination.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/performance/pagination"
+      ],
+      "tests": [
+        "test/basic-core.test.ts",
+        "test/playwright/specs/basic-playground.spec.ts"
+      ]
+    },
+    {
+      "id": "infinite-scroll",
+      "status": "shipped",
+      "category": "loading-performance",
+      "apiSymbols": [
+        "CominsTableProps"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/15-infinite-scroll.md"
+        ],
+        "ko": [
+          "docs/ko/15-infinite-scroll.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/performance/infinite-scroll"
+      ],
+      "tests": [
+        "test/public-api.test.tsx",
+        "test/playwright/specs/infinite-scroll.spec.ts"
+      ]
+    },
+    {
+      "id": "lazy-load",
+      "status": "shipped",
+      "category": "loading-performance",
+      "apiSymbols": [
+        "CominsLazyLoadRequest",
+        "CominsLazyLoadReason"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/16-lazy-load.md"
+        ],
+        "ko": [
+          "docs/ko/16-lazy-load.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/performance/lazy-load"
+      ],
+      "tests": [
+        "test/public-api.test.tsx",
+        "test/playwright/specs/lazy-load.spec.ts"
+      ]
+    },
+    {
+      "id": "body",
+      "status": "shipped",
+      "category": "loading-performance",
+      "apiSymbols": [
+        "CominsVirtualRows",
+        "getCominsVirtualRows"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/11-virtualization.md"
+        ],
+        "ko": [
+          "docs/ko/11-virtualization.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/performance/virtualization"
+      ],
+      "tests": [
+        "test/virtual-layout.test.ts",
+        "test/playwright/specs/virtualization.spec.ts"
+      ]
+    },
+    {
+      "id": "server-side-row-model",
+      "status": "unsupported",
+      "category": "loading-performance",
+      "apiSymbols": [],
+      "guides": {
+        "en": [],
+        "ko": []
+      },
+      "playgroundRoutes": [],
+      "tests": [
+        "test/public-api-boundary.test.ts"
+      ],
+      "evidence": [
+        "README.md",
+        "example/src/features/AdvancedFeature.tsx"
+      ]
+    },
+    {
+      "id": "viewport-datasource",
+      "status": "unsupported",
+      "category": "loading-performance",
+      "apiSymbols": [],
+      "guides": {
+        "en": [],
+        "ko": []
+      },
+      "playgroundRoutes": [],
+      "tests": [
+        "test/public-api-boundary.test.ts"
+      ],
+      "evidence": [
+        "README.md",
+        "example/src/features/AdvancedFeature.tsx"
+      ]
+    },
+    {
+      "id": "visual-fill-handle",
+      "status": "unsupported",
+      "category": "row-cell-selection",
+      "apiSymbols": [
+        "fillCominsCellRange"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/09-clipboard.md"
+        ],
+        "ko": [
+          "docs/ko/09-clipboard.md"
+        ]
+      },
+      "playgroundRoutes": [],
+      "tests": [
+        "test/public-api-boundary.test.ts"
+      ],
+      "evidence": [
+        "README.md"
+      ]
+    },
+    {
+      "id": "pivot",
+      "status": "unsupported",
+      "category": "structured-rows",
+      "apiSymbols": [],
+      "guides": {
+        "en": [],
+        "ko": []
+      },
+      "playgroundRoutes": [],
+      "tests": [
+        "test/public-api-boundary.test.ts"
+      ],
+      "evidence": [
+        "README.md",
+        "example/src/features/AdvancedFeature.tsx"
+      ]
+    },
+    {
+      "id": "charts",
+      "status": "unsupported",
+      "category": "rendering",
+      "apiSymbols": [],
+      "guides": {
+        "en": [],
+        "ko": []
+      },
+      "playgroundRoutes": [],
+      "tests": [
+        "test/public-api-boundary.test.ts"
+      ],
+      "evidence": [
+        "README.md",
+        "example/src/features/AdvancedFeature.tsx"
+      ]
+    },
+    {
+      "id": "ai-assistant",
+      "status": "unsupported",
+      "category": "api-utilities",
+      "apiSymbols": [],
+      "guides": {
+        "en": [],
+        "ko": []
+      },
+      "playgroundRoutes": [],
+      "tests": [
+        "test/public-api-boundary.test.ts"
+      ],
+      "evidence": [
+        "README.md",
+        "example/src/features/AdvancedFeature.tsx"
+      ]
+    },
+    {
+      "id": "ssr",
+      "status": "unsupported",
+      "category": "runtime-boundary",
+      "apiSymbols": [],
+      "guides": {
+        "en": [],
+        "ko": []
+      },
+      "playgroundRoutes": [],
+      "tests": [
+        "test/public-api-boundary.test.ts"
+      ],
+      "evidence": [
+        "README.md"
+      ]
+    }
+  ],
+  "cssTokens": {
+    "public-stable": [
+      "--comins-table-accent",
+      "--comins-table-accent-foreground",
+      "--comins-table-accent-soft",
+      "--comins-table-background",
+      "--comins-table-border",
+      "--comins-table-cell-border",
+      "--comins-table-cell-height",
+      "--comins-table-focus",
+      "--comins-table-foreground",
+      "--comins-table-group-row-background",
+      "--comins-table-group-row-color",
+      "--comins-table-header-background",
+      "--comins-table-header-border",
+      "--comins-table-header-color",
+      "--comins-table-header-split-border",
+      "--comins-table-range-background",
+      "--comins-table-row-border",
+      "--comins-table-row-disabled-background",
+      "--comins-table-row-disabled-color",
+      "--comins-table-row-even-background",
+      "--comins-table-row-height",
+      "--comins-table-row-odd-background",
+      "--comins-table-row-selected-background",
+      "--comins-table-scrollbar-corner",
+      "--comins-table-scrollbar-thumb",
+      "--comins-table-scrollbar-track",
+      "--comins-table-tooltip-danger-background",
+      "--comins-table-tooltip-danger-border",
+      "--comins-table-tooltip-danger-color",
+      "--comins-table-tooltip-danger-muted",
+      "--comins-table-tooltip-shadow"
+    ],
+    "public-experimental": [
+      "--comins-table-accent-strong",
+      "--comins-table-cell-background",
+      "--comins-table-cell-color",
+      "--comins-table-cell-padding-x",
+      "--comins-table-cell-padding-y",
+      "--comins-table-component-accent",
+      "--comins-table-component-accent-foreground",
+      "--comins-table-component-accent-soft",
+      "--comins-table-component-accent-strong",
+      "--comins-table-component-border",
+      "--comins-table-component-button-foreground",
+      "--comins-table-component-focus",
+      "--comins-table-component-foreground",
+      "--comins-table-component-muted",
+      "--comins-table-component-surface",
+      "--comins-table-component-surface-muted",
+      "--comins-table-component-virtual-list-height",
+      "--comins-table-detail-background",
+      "--comins-table-detail-border",
+      "--comins-table-detail-padding",
+      "--comins-table-drop-invalid",
+      "--comins-table-drop-invalid-background",
+      "--comins-table-drop-marker",
+      "--comins-table-drop-valid",
+      "--comins-table-drop-valid-background",
+      "--comins-table-header-height",
+      "--comins-table-muted",
+      "--comins-table-resize-handle",
+      "--comins-table-selected-range-background",
+      "--comins-table-skeleton-background",
+      "--comins-table-skeleton-highlight",
+      "--comins-table-surface",
+      "--comins-table-surface-muted",
+      "--comins-table-virtual-list-item-height"
+    ],
+    "internal": [
+      "--comins-table-row-custom-background"
+    ]
+  },
+  "restrictions": {
+    "client-only": [
+      "docs/user/01-quick-start.md",
+      "docs/ko/01-quick-start.md"
+    ],
+    "tree-no-pagination": [
+      "docs/user/17-tree-grid.md",
+      "docs/ko/17-tree-grid.md"
+    ],
+    "grouping-single-depth": [
+      "docs/user/20-row-grouping.md",
+      "docs/ko/20-row-grouping.md"
+    ],
+    "filtering-no-remote-loading": [
+      "docs/user/21-column-filtering.md",
+      "docs/ko/21-column-filtering.md"
+    ],
+    "transfer-duplicate-default-reject": [
+      "docs/user/23-cross-table-drag.md",
+      "docs/ko/23-cross-table-drag.md"
+    ],
+    "fill-helper-no-visual-handle": [
+      "docs/user/09-clipboard.md",
+      "docs/ko/09-clipboard.md"
+    ]
+  },
+  "documentationExamples": {
+    "quick-start": {
+      "guide": "docs/user/01-quick-start.md",
+      "fixture": "test/typecheck/docs/quick-start.tsx"
+    },
+    "core-state": {
+      "guide": "docs/user/03-core-state.md",
+      "fixture": "test/typecheck/docs/core-state.ts"
+    },
+    "row-grouping": {
+      "guide": "docs/user/20-row-grouping.md",
+      "fixture": "test/typecheck/docs/row-grouping.tsx"
+    },
+    "column-filtering": {
+      "guide": "docs/user/21-column-filtering.md",
+      "fixture": "test/typecheck/docs/column-filtering.tsx"
+    },
+    "column-pinning": {
+      "guide": "docs/user/22-column-pinning.md",
+      "fixture": "test/typecheck/docs/column-pinning.tsx"
+    },
+    "cross-table-drag": {
+      "guide": "docs/user/23-cross-table-drag.md",
+      "fixture": "test/typecheck/docs/cross-table-drag.tsx"
+    }
+  },
+  "publicApi": {
+    "classifications": {
+      "documented": [
+        "CominsAfterDragRowPayload",
+        "CominsBeforeRowDragPayload",
+        "CominsCellSelectionOptions",
+        "CominsColumnFilterConfig",
+        "CominsColumnFilterKind",
+        "CominsColumnFilterModel",
+        "CominsColumnFilterOperator",
+        "CominsColumnFilterRule",
+        "CominsColumnFilteringConfig",
+        "CominsColumnPinned",
+        "CominsEventRow",
+        "CominsRowDetailHeight",
+        "CominsRowDetailParams",
+        "CominsRowDetailProps",
+        "CominsRowDragPayload",
+        "CominsRowDragReason",
+        "CominsRowDragResult",
+        "CominsRowDragTarget",
+        "CominsRowGroupMoveOptions",
+        "CominsRowGroupRenderParams",
+        "CominsRowGroupingConfig",
+        "CominsRowId",
+        "CominsSortModel",
+        "CominsTable",
+        "CominsTableColumn",
+        "CominsTableRef",
+        "CominsTreeNode",
+        "addCominsRows",
+        "applyCominsColumnLayout",
+        "clearCominsSelection",
+        "copyCominsCell",
+        "copyCominsCellRange",
+        "copyCominsRow",
+        "createCominsTableState",
+        "createCominsTableTransferCoordinator",
+        "deleteCominsRows",
+        "exportCominsRowsToCsv",
+        "exportCominsRowsToJson",
+        "fillCominsCellRange",
+        "getCominsSelectedCellRange",
+        "isCominsCellSelected",
+        "isCominsRowSelected",
+        "moveCominsRowGroup",
+        "moveCominsRowToGroup",
+        "pasteCominsCell",
+        "pasteCominsCellRange",
+        "pasteCominsRow",
+        "queryCominsRows",
+        "selectCell",
+        "selectCellRange",
+        "selectRow",
+        "selectRows",
+        "serializeCominsColumnLayout",
+        "setCominsPagination",
+        "setCominsSortModel",
+        "setCominsSortState",
+        "transferCominsGroupBetweenTables",
+        "transferCominsRowBetweenTables",
+        "updateCominsRows"
+      ],
+      "reference": [
+        "CominsButtonComponentConfig",
+        "CominsCellAddress",
+        "CominsCellComponent",
+        "CominsCellComponentConfig",
+        "CominsCellComponentPayload",
+        "CominsCellEventPayload",
+        "CominsCellFormatParams",
+        "CominsCellKeyboardEventPayload",
+        "CominsCellRange",
+        "CominsCheckboxComponentConfig",
+        "CominsClipboardGuard",
+        "CominsColumnGroupRuntimeState",
+        "CominsColumnLayout",
+        "CominsColumnProps",
+        "CominsColumnRuntimeState",
+        "CominsColumnValueResolver",
+        "CominsComponentAlign",
+        "CominsComponentColumnPayload",
+        "CominsComponentDirection",
+        "CominsComponentPlacement",
+        "CominsComponentPrimitiveValue",
+        "CominsComponentRowPayload",
+        "CominsCopiedCell",
+        "CominsCopiedCellRange",
+        "CominsCopiedCellRangeCell",
+        "CominsCopiedRow",
+        "CominsEventColumn",
+        "CominsExportColumn",
+        "CominsExportFormat",
+        "CominsExportRowsOptions",
+        "CominsExportValueSource",
+        "CominsFillCellRangeOptions",
+        "CominsGroupBetweenTablesInput",
+        "CominsHeaderCell",
+        "CominsHeaderColumnCell",
+        "CominsHeaderComponent",
+        "CominsHeaderComponentConfig",
+        "CominsHeaderComponentPayload",
+        "CominsHeaderGroupCell",
+        "CominsInputCommitEvent",
+        "CominsInputComponentConfig",
+        "CominsLazyLoadReason",
+        "CominsLazyLoadRequest",
+        "CominsMenuComponentConfig",
+        "CominsPaginationState",
+        "CominsPasteRowOptions",
+        "CominsProgressComponentConfig",
+        "CominsRadioComponentConfig",
+        "CominsRowBetweenTablesInput",
+        "CominsRowEventPayload",
+        "CominsRowGroupAggregation",
+        "CominsRowGroupDropPosition",
+        "CominsRowGroupMoveDetails",
+        "CominsRowGroupProps",
+        "CominsRowGroupingSourceRow",
+        "CominsRowKeyboardEventPayload",
+        "CominsRowSelectionOptions",
+        "CominsRowUpdate",
+        "CominsSelectComponentConfig",
+        "CominsSelectionState",
+        "CominsSetRowGroupIdParams",
+        "CominsSortDirection",
+        "CominsSortState",
+        "CominsSummaryAggregator",
+        "CominsSummaryBuiltin",
+        "CominsSummaryColumn",
+        "CominsSummaryColumnConfig",
+        "CominsSummaryFormatPayload",
+        "CominsTableCellConfig",
+        "CominsTableColumnGroup",
+        "CominsTableComponentOption",
+        "CominsTableComponentProps",
+        "CominsTableDensity",
+        "CominsTableGroupTransferDetails",
+        "CominsTableHeaderConfig",
+        "CominsTableMenuItem",
+        "CominsTableMenuItems",
+        "CominsTableOptions",
+        "CominsTableProps",
+        "CominsTableRowProps",
+        "CominsTableRowTransferDetails",
+        "CominsTableRuntimeColumn",
+        "CominsTableRuntimeColumnGroup",
+        "CominsTableState",
+        "CominsTableStateInput",
+        "CominsTableSummaryConfig",
+        "CominsTableTheme",
+        "CominsTableTransferConfig",
+        "CominsTableTransferConflict",
+        "CominsTableTransferConflictPolicy",
+        "CominsTableTransferConflictResolver",
+        "CominsTableTransferCoordinator",
+        "CominsTableTransferCoordinatorOptions",
+        "CominsTableTransferDetails",
+        "CominsTableTransferDropPosition",
+        "CominsTableTransferEndpoint",
+        "CominsTableTransferGroupEndpoint",
+        "CominsTableTransferIntent",
+        "CominsTableTransferRejection",
+        "CominsTableTransferRejectionFeedback",
+        "CominsTableTransferResolvedConflict",
+        "CominsTableTransferResult",
+        "CominsTableTransferRowEndpoint",
+        "CominsToggleComponentConfig",
+        "CominsTreeExpansionOptions",
+        "CominsTreeTableProps",
+        "CominsVirtualListComponentConfig",
+        "CominsVirtualListItem",
+        "CominsVirtualListItems",
+        "CominsVirtualListSearchFilterPayload",
+        "CominsVirtualRows",
+        "CominsVirtualRowsOptions",
+        "CominsVisibleTreeRow",
+        "clearCominsCellRange",
+        "clearCominsSortState",
+        "cominsTablePackage",
+        "flattenCominsTree",
+        "formatCominsCellValue",
+        "getCominsCellClassName",
+        "getCominsCellStyle",
+        "getCominsCellValue",
+        "getCominsHeaderRows",
+        "getCominsPageRows",
+        "getCominsSortedRowIndexes",
+        "getCominsSummaryValues",
+        "getCominsTreeLeafItems",
+        "getCominsVirtualRows",
+        "getCominsVisibleColumns",
+        "isCominsCellDisabled",
+        "isCominsCellInSelectedRange",
+        "moveCominsColumn",
+        "moveCominsColumnGroup",
+        "moveCominsRow",
+        "replaceCominsRows",
+        "setCominsColumnGroupHidden",
+        "setCominsColumnGroupWidth",
+        "setCominsColumnHidden",
+        "setCominsColumnWidth",
+        "setCominsHeaderVisible",
+        "setCominsTableTheme",
+        "sortCominsRows",
+        "sortCominsTreeSiblings",
+        "toggleCominsTreeNode",
+        "updateCominsTreeItem"
+      ],
+      "deprecated": []
+    },
+    "entrypoints": {
+      "comins-table": {
+        "source": "src/index.tsx",
+        "exports": [
+          "CominsAfterDragRowPayload",
+          "CominsBeforeRowDragPayload",
+          "CominsButtonComponentConfig",
+          "CominsCellAddress",
+          "CominsCellComponent",
+          "CominsCellComponentConfig",
+          "CominsCellComponentPayload",
+          "CominsCellEventPayload",
+          "CominsCellFormatParams",
+          "CominsCellKeyboardEventPayload",
+          "CominsCellRange",
+          "CominsCellSelectionOptions",
+          "CominsCheckboxComponentConfig",
+          "CominsClipboardGuard",
+          "CominsColumnFilterConfig",
+          "CominsColumnFilterKind",
+          "CominsColumnFilterModel",
+          "CominsColumnFilterOperator",
+          "CominsColumnFilterRule",
+          "CominsColumnFilteringConfig",
+          "CominsColumnGroupRuntimeState",
+          "CominsColumnLayout",
+          "CominsColumnPinned",
+          "CominsColumnProps",
+          "CominsColumnRuntimeState",
+          "CominsColumnValueResolver",
+          "CominsComponentAlign",
+          "CominsComponentColumnPayload",
+          "CominsComponentDirection",
+          "CominsComponentPlacement",
+          "CominsComponentPrimitiveValue",
+          "CominsComponentRowPayload",
+          "CominsCopiedCell",
+          "CominsCopiedCellRange",
+          "CominsCopiedCellRangeCell",
+          "CominsCopiedRow",
+          "CominsEventColumn",
+          "CominsEventRow",
+          "CominsExportColumn",
+          "CominsExportFormat",
+          "CominsExportRowsOptions",
+          "CominsExportValueSource",
+          "CominsFillCellRangeOptions",
+          "CominsGroupBetweenTablesInput",
+          "CominsHeaderCell",
+          "CominsHeaderColumnCell",
+          "CominsHeaderComponent",
+          "CominsHeaderComponentConfig",
+          "CominsHeaderComponentPayload",
+          "CominsHeaderGroupCell",
+          "CominsInputCommitEvent",
+          "CominsInputComponentConfig",
+          "CominsLazyLoadReason",
+          "CominsLazyLoadRequest",
+          "CominsMenuComponentConfig",
+          "CominsPaginationState",
+          "CominsPasteRowOptions",
+          "CominsProgressComponentConfig",
+          "CominsRadioComponentConfig",
+          "CominsRowBetweenTablesInput",
+          "CominsRowDetailHeight",
+          "CominsRowDetailParams",
+          "CominsRowDetailProps",
+          "CominsRowDragPayload",
+          "CominsRowDragReason",
+          "CominsRowDragResult",
+          "CominsRowDragTarget",
+          "CominsRowEventPayload",
+          "CominsRowGroupAggregation",
+          "CominsRowGroupDropPosition",
+          "CominsRowGroupMoveDetails",
+          "CominsRowGroupMoveOptions",
+          "CominsRowGroupProps",
+          "CominsRowGroupRenderParams",
+          "CominsRowGroupingConfig",
+          "CominsRowGroupingSourceRow",
+          "CominsRowId",
+          "CominsRowKeyboardEventPayload",
+          "CominsRowSelectionOptions",
+          "CominsRowUpdate",
+          "CominsSelectComponentConfig",
+          "CominsSelectionState",
+          "CominsSetRowGroupIdParams",
+          "CominsSortDirection",
+          "CominsSortModel",
+          "CominsSortState",
+          "CominsSummaryAggregator",
+          "CominsSummaryBuiltin",
+          "CominsSummaryColumn",
+          "CominsSummaryColumnConfig",
+          "CominsSummaryFormatPayload",
+          "CominsTable",
+          "CominsTableCellConfig",
+          "CominsTableColumn",
+          "CominsTableColumnGroup",
+          "CominsTableComponentOption",
+          "CominsTableComponentProps",
+          "CominsTableDensity",
+          "CominsTableGroupTransferDetails",
+          "CominsTableHeaderConfig",
+          "CominsTableMenuItem",
+          "CominsTableMenuItems",
+          "CominsTableOptions",
+          "CominsTableProps",
+          "CominsTableRef",
+          "CominsTableRowProps",
+          "CominsTableRowTransferDetails",
+          "CominsTableRuntimeColumn",
+          "CominsTableRuntimeColumnGroup",
+          "CominsTableState",
+          "CominsTableStateInput",
+          "CominsTableSummaryConfig",
+          "CominsTableTheme",
+          "CominsTableTransferConfig",
+          "CominsTableTransferConflict",
+          "CominsTableTransferConflictPolicy",
+          "CominsTableTransferConflictResolver",
+          "CominsTableTransferCoordinator",
+          "CominsTableTransferCoordinatorOptions",
+          "CominsTableTransferDetails",
+          "CominsTableTransferDropPosition",
+          "CominsTableTransferEndpoint",
+          "CominsTableTransferGroupEndpoint",
+          "CominsTableTransferIntent",
+          "CominsTableTransferRejection",
+          "CominsTableTransferRejectionFeedback",
+          "CominsTableTransferResolvedConflict",
+          "CominsTableTransferResult",
+          "CominsTableTransferRowEndpoint",
+          "CominsToggleComponentConfig",
+          "CominsTreeExpansionOptions",
+          "CominsTreeNode",
+          "CominsTreeTableProps",
+          "CominsVirtualListComponentConfig",
+          "CominsVirtualListItem",
+          "CominsVirtualListItems",
+          "CominsVirtualListSearchFilterPayload",
+          "CominsVirtualRows",
+          "CominsVirtualRowsOptions",
+          "CominsVisibleTreeRow",
+          "addCominsRows",
+          "applyCominsColumnLayout",
+          "clearCominsCellRange",
+          "clearCominsSelection",
+          "clearCominsSortState",
+          "cominsTablePackage",
+          "copyCominsCell",
+          "copyCominsCellRange",
+          "copyCominsRow",
+          "createCominsTableState",
+          "createCominsTableTransferCoordinator",
+          "deleteCominsRows",
+          "exportCominsRowsToCsv",
+          "exportCominsRowsToJson",
+          "fillCominsCellRange",
+          "flattenCominsTree",
+          "formatCominsCellValue",
+          "getCominsCellClassName",
+          "getCominsCellStyle",
+          "getCominsCellValue",
+          "getCominsHeaderRows",
+          "getCominsPageRows",
+          "getCominsSelectedCellRange",
+          "getCominsSortedRowIndexes",
+          "getCominsSummaryValues",
+          "getCominsTreeLeafItems",
+          "getCominsVirtualRows",
+          "getCominsVisibleColumns",
+          "isCominsCellDisabled",
+          "isCominsCellInSelectedRange",
+          "isCominsCellSelected",
+          "isCominsRowSelected",
+          "moveCominsColumn",
+          "moveCominsColumnGroup",
+          "moveCominsRow",
+          "moveCominsRowGroup",
+          "moveCominsRowToGroup",
+          "pasteCominsCell",
+          "pasteCominsCellRange",
+          "pasteCominsRow",
+          "queryCominsRows",
+          "replaceCominsRows",
+          "selectCell",
+          "selectCellRange",
+          "selectRow",
+          "selectRows",
+          "serializeCominsColumnLayout",
+          "setCominsColumnGroupHidden",
+          "setCominsColumnGroupWidth",
+          "setCominsColumnHidden",
+          "setCominsColumnWidth",
+          "setCominsHeaderVisible",
+          "setCominsPagination",
+          "setCominsSortModel",
+          "setCominsSortState",
+          "setCominsTableTheme",
+          "sortCominsRows",
+          "sortCominsTreeSiblings",
+          "toggleCominsTreeNode",
+          "transferCominsGroupBetweenTables",
+          "transferCominsRowBetweenTables",
+          "updateCominsRows",
+          "updateCominsTreeItem"
+        ]
+      },
+      "comins-table/core": {
+        "source": "src/core.ts",
+        "exports": [
+          "CominsButtonComponentConfig",
+          "CominsCellAddress",
+          "CominsCellComponent",
+          "CominsCellComponentConfig",
+          "CominsCellComponentPayload",
+          "CominsCellFormatParams",
+          "CominsCellRange",
+          "CominsCellSelectionOptions",
+          "CominsCheckboxComponentConfig",
+          "CominsClipboardGuard",
+          "CominsColumnGroupRuntimeState",
+          "CominsColumnLayout",
+          "CominsColumnPinned",
+          "CominsColumnProps",
+          "CominsColumnRuntimeState",
+          "CominsColumnValueResolver",
+          "CominsComponentAlign",
+          "CominsComponentColumnPayload",
+          "CominsComponentDirection",
+          "CominsComponentPlacement",
+          "CominsComponentPrimitiveValue",
+          "CominsComponentRowPayload",
+          "CominsCopiedCell",
+          "CominsCopiedCellRange",
+          "CominsCopiedCellRangeCell",
+          "CominsCopiedRow",
+          "CominsEventColumn",
+          "CominsExportColumn",
+          "CominsExportFormat",
+          "CominsExportRowsOptions",
+          "CominsExportValueSource",
+          "CominsFillCellRangeOptions",
+          "CominsHeaderCell",
+          "CominsHeaderColumnCell",
+          "CominsHeaderComponent",
+          "CominsHeaderComponentConfig",
+          "CominsHeaderComponentPayload",
+          "CominsHeaderGroupCell",
+          "CominsInputCommitEvent",
+          "CominsInputComponentConfig",
+          "CominsMenuComponentConfig",
+          "CominsPaginationState",
+          "CominsPasteRowOptions",
+          "CominsProgressComponentConfig",
+          "CominsRadioComponentConfig",
+          "CominsRowGroupMoveOptions",
+          "CominsRowId",
+          "CominsRowSelectionOptions",
+          "CominsRowUpdate",
+          "CominsSelectComponentConfig",
+          "CominsSelectionState",
+          "CominsSortDirection",
+          "CominsSortModel",
+          "CominsSortState",
+          "CominsTableCellConfig",
+          "CominsTableColumn",
+          "CominsTableColumnGroup",
+          "CominsTableComponentOption",
+          "CominsTableComponentProps",
+          "CominsTableDensity",
+          "CominsTableHeaderConfig",
+          "CominsTableMenuItem",
+          "CominsTableMenuItems",
+          "CominsTableOptions",
+          "CominsTableRuntimeColumn",
+          "CominsTableRuntimeColumnGroup",
+          "CominsTableState",
+          "CominsTableStateInput",
+          "CominsTableTheme",
+          "CominsToggleComponentConfig",
+          "CominsVirtualListComponentConfig",
+          "CominsVirtualListItem",
+          "CominsVirtualListItems",
+          "CominsVirtualListSearchFilterPayload",
+          "CominsVirtualRows",
+          "CominsVirtualRowsOptions",
+          "addCominsRows",
+          "applyCominsColumnLayout",
+          "clearCominsCellRange",
+          "clearCominsSelection",
+          "clearCominsSortState",
+          "copyCominsCell",
+          "copyCominsCellRange",
+          "copyCominsRow",
+          "createCominsTableState",
+          "deleteCominsRows",
+          "exportCominsRowsToCsv",
+          "exportCominsRowsToJson",
+          "fillCominsCellRange",
+          "formatCominsCellValue",
+          "getCominsCellClassName",
+          "getCominsCellStyle",
+          "getCominsCellValue",
+          "getCominsHeaderRows",
+          "getCominsPageRows",
+          "getCominsSelectedCellRange",
+          "getCominsSortedRowIndexes",
+          "getCominsVirtualRows",
+          "getCominsVisibleColumns",
+          "isCominsCellDisabled",
+          "isCominsCellInSelectedRange",
+          "isCominsCellSelected",
+          "isCominsRowSelected",
+          "moveCominsColumn",
+          "moveCominsColumnGroup",
+          "moveCominsRow",
+          "moveCominsRowToGroup",
+          "pasteCominsCell",
+          "pasteCominsCellRange",
+          "pasteCominsRow",
+          "queryCominsRows",
+          "replaceCominsRows",
+          "selectCell",
+          "selectCellRange",
+          "selectRow",
+          "selectRows",
+          "serializeCominsColumnLayout",
+          "setCominsColumnGroupHidden",
+          "setCominsColumnGroupWidth",
+          "setCominsColumnHidden",
+          "setCominsColumnWidth",
+          "setCominsHeaderVisible",
+          "setCominsPagination",
+          "setCominsSortModel",
+          "setCominsSortState",
+          "setCominsTableTheme",
+          "sortCominsRows",
+          "updateCominsRows"
+        ]
+      },
+      "comins-table/clipboard": {
+        "source": "src/clipboard.ts",
+        "exports": [
+          "CominsClipboardGuard",
+          "CominsCopiedCell",
+          "CominsCopiedCellRange",
+          "CominsCopiedCellRangeCell",
+          "CominsCopiedRow",
+          "CominsFillCellRangeOptions",
+          "CominsPasteRowOptions",
+          "copyCominsCell",
+          "copyCominsCellRange",
+          "copyCominsRow",
+          "fillCominsCellRange",
+          "pasteCominsCell",
+          "pasteCominsCellRange",
+          "pasteCominsRow"
+        ]
+      },
+      "comins-table/selection": {
+        "source": "src/selection.ts",
+        "exports": [
+          "CominsCellAddress",
+          "CominsCellRange",
+          "CominsCellSelectionOptions",
+          "CominsRowSelectionOptions",
+          "CominsSelectionState",
+          "clearCominsCellRange",
+          "clearCominsSelection",
+          "getCominsSelectedCellRange",
+          "isCominsCellInSelectedRange",
+          "isCominsCellSelected",
+          "isCominsRowSelected",
+          "selectCell",
+          "selectCellRange",
+          "selectRow"
+        ]
+      }
+    }
+  }
+}

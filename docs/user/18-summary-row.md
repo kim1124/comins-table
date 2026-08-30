@@ -6,6 +6,7 @@ Summary Row renders fixed footer values against the table's current visible-colu
 
 When visible Columns overflow horizontally, the single native horizontal scrollbar is rendered after Summary Row at the bottom of the complete Table. Direct scrollbar input and horizontal wheel input over Body keep Header, Body, and Summary aligned. Without Summary, the same scrollbar directly follows Body.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   columns={columns}
@@ -35,6 +36,7 @@ The built-in aggregate names are `count`, `sum`, `avg`, `min`, and `max`. `count
 
 A function may replace a built-in aggregate when the result needs domain-specific calculation:
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 summary={{
   columns: {
@@ -49,6 +51,7 @@ The aggregator receives the runtime `column`, all aggregated `rows`, and the raw
 
 Use the object form to span visible summary cells or customize the aggregated output:
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 summary={{
   columns: {
@@ -67,6 +70,7 @@ summary={{
 
 `summary.className` and `summary.style` apply to the footer row. A column descriptor's `className` and `style` apply only to that summary cell.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 summary={{
   className: "summary-row",

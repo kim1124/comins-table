@@ -134,6 +134,28 @@ describe("Playground localization coverage", () => {
     });
   });
 
+  it("classifies event and method reference rows without mixing regular props", () => {
+    featureRegistry.forEach((source) => {
+      const apiOptions = source.options.filter((option) => option.apiKind);
+      const apiKeys = apiOptions.map((option) => `${option.apiKind}:${option.name}`);
+
+      expect(new Set(apiKeys).size).toBe(apiKeys.length);
+      expect(apiOptions.every((option) => option.apiKind === "event" || option.apiKind === "method")).toBe(true);
+    });
+
+    const rowFeature = findFeature("row", "ko");
+    expect(rowFeature.options.filter((option) => option.apiKind).map((option) => option.name)).toEqual(
+      expect.arrayContaining([
+        "onBeforeRowDrag",
+        "onRowDrag",
+        "onAfterDragRow",
+        "onClickRow",
+        "setMoveTargetRow",
+      ]),
+    );
+    expect(findFeature("size", "ko").options.some((option) => option.apiKind)).toBe(false);
+  });
+
   it("keeps every feature and option-guide description as an explicit localized pair", () => {
     const api = new API();
     const files = [

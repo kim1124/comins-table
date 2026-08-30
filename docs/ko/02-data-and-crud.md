@@ -4,6 +4,7 @@
 
 Core helper는 framework와 분리된 상태 모델을 제공한다. React component에서는 외부 `useState` 또는 store state 배열을 `data` prop에 직접 연결한다.
 
+<!-- comins-doc-example: fragment -->
 ```ts
 import {
   addCominsRows,

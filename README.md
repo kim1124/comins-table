@@ -23,6 +23,8 @@ Comins Table is standalone and does not wrap another table or grid implementatio
 
 ### Feature catalog
 
+This catalog is a consumer-oriented summary, not the complete status registry. Use the [Canonical Feature Manifest](https://github.com/kim1124/comins-table/blob/main/docs/feature-manifest.json) and the language indexes for every shipped, unsupported, and evidence-linked feature.
+
 | Area | Shipped capabilities | Live examples | Guides |
 | --- | --- | --- | --- |
 | Getting started | Controlled data, CRUD, Core state, loading, and empty states | [`Getting Started`](http://127.0.0.1:4002/docs/getting-started), [`CRUD`](http://127.0.0.1:4002/examples/crud) | [Quick Start](https://github.com/kim1124/comins-table/blob/main/docs/user/01-quick-start.md), [Data And CRUD](https://github.com/kim1124/comins-table/blob/main/docs/user/02-data-and-crud.md) |
@@ -46,12 +48,15 @@ Comins Table is standalone and does not wrap another table or grid implementatio
 | SSR | Client boundary required; server rendering is not currently supported |
 | Runtime network behavior | No package-owned requests, remote assets, telemetry, or error reporting |
 
+The Chrome and Edge row is the compatibility contract. The automated browser gate is evidence from Playwright-bundled Chromium only; it is not a claim that Firefox, Safari, or every installed Edge build was tested.
+
 ## Installation
 
 ```bash
 npm install comins-table react react-dom
 ```
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 import { CominsTable, type CominsTableColumn } from "comins-table";
 import "comins-table/styles.css";
@@ -74,6 +79,7 @@ Open [`http://127.0.0.1:4002/docs/getting-started`](http://127.0.0.1:4002/docs/g
 
 ## Quick Start
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 import { useState } from "react";
 import { CominsTable, type CominsTableColumn } from "comins-table";
@@ -132,6 +138,7 @@ Where restoration is supported, use the supported Ref API: `setSelectedRow` and 
 
 Set `multiSort` to opt into ordered multi-column sorting. Normal Header click or `Enter`/`Space` keeps single sorting; hold `Shift` while using the same input to add, update, or remove one rule without replacing the others. Active Headers display their 1-based priority.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   columns={columns}
@@ -163,7 +170,7 @@ Use `getColumnLayout()` and `setColumnLayout()` through the Ref API, or `seriali
 
 ### Column Pinning
 
-Set `pinned: "left"` or `pinned: "right"` on a Column or Header Group to keep its atomic block visible during horizontal scrolling and lock its configured position. Direct resize of an effective pinned block stops before it would consume the 48px center budget and demote itself; independent container resize can still temporarily demote inner pinned blocks without changing the persisted layout intent. Header, Body, Skeleton, and Summary use the same offsets; Group Rows and Row Details remain full-width non-sticky cells. See the [Column Pinning guide](https://github.com/kim1124/comins-table/blob/main/docs/user/22-column-pinning.md) and [`/examples/column-pinning`](http://127.0.0.1:4002/examples/column-pinning).
+Set `pinned: "left"` or `pinned: "right"` on a Column or Header Group to keep its atomic block visible during horizontal scrolling and lock its configured position. Direct resize of an effective pinned block stops before it would consume the 48px center budget and demote itself; independent container resize can still temporarily demote inner pinned blocks without changing the persisted layout intent. Header, Body, Skeleton, and Summary use the same offsets. Group Rows and Row Details remain full-width spanning cells; Row Group inner content stays visible at the Body viewport start while horizontally scrolling. See the [Column Pinning guide](https://github.com/kim1124/comins-table/blob/main/docs/user/22-column-pinning.md) and [`/examples/column-pinning`](http://127.0.0.1:4002/examples/column-pinning).
 
 When columns overflow horizontally, Comins Table renders one native horizontal scrollbar at the bottom of the complete Table. A configured Summary Row stays above that scrollbar, while Body trackpad or Shift-wheel input and direct scrollbar input keep Header, Body, and Summary `scrollLeft` synchronized.
 
@@ -171,12 +178,15 @@ When columns overflow horizontally, Comins Table renders one native horizontal s
 
 Rows expose click, double-click, keyboard, and context-menu callbacks. Cells expose the corresponding Cell callbacks plus `format`, `renderer`, and props hooks.
 
-A normal Row interaction selects one Row, `Ctrl`/`Cmd` toggles a Row, and `Shift` extends the visible Row range from the selection anchor. Cell selection supports a single Cell, `Ctrl`/`Cmd` multi-selection, and `Shift` or pointer-drag ranges. Built-in component interactions remain isolated from `onClickCell` and `onClickRow` callback payloads so component actions do not also trigger the owning Cell or Row action.
+A normal Row interaction selects one Row, `Ctrl`/`Cmd` toggles a Row, and `Shift` extends the visible Row range from the selection anchor. Cell selection supports a single Cell, visible `Ctrl`/`Cmd` discontiguous selection, and `Shift` or pointer-drag rectangular ranges. `CominsSelectionState.cell` remains the active Clipboard address while `cells` records the discontiguous set; 0.1.9 does not copy that set as a Clipboard matrix. Built-in component interactions remain isolated from `onClickCell` and `onClickRow` callback payloads so component actions do not also trigger the owning Cell or Row action.
+
+Row Drag exposes `onBeforeRowDrag`, `onRowDrag`, and `onAfterDragRow`. The before callback can cancel prior to listener registration, target updates emit only on identity or validity changes, and the after callback reports one `moved`, `cancelled`, or `rejected` result per started gesture. Data changes remain controlled through `onChangeData` or the Cross-Table Coordinator.
 
 ### Row Expand
 
 See the [Row Expand guide](https://github.com/kim1124/comins-table/blob/main/docs/user/19-row-expand.md) and run the [`/examples/row-expand`](http://127.0.0.1:4002/examples/row-expand) Playground route.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const [expandedRowIds, setExpandedRowIds] = useState<readonly string[]>([]);
 
@@ -263,8 +273,11 @@ The package stylesheet exposes module-local `--comins-table-*` CSS variables and
 
 Use `theme.className`, `theme.style`, Row and Group Row class/style hooks, Cell props, and renderer output for application-specific presentation. Keep virtualized `rowHeight` aligned with `--comins-table-row-height` when overriding height tokens.
 
+The [Design Contract](https://github.com/kim1124/comins-table/blob/main/DESIGN.md) classifies every Table token as public stable, public experimental, or internal. The [Componentization Guide](https://github.com/kim1124/comins-table/blob/main/docs/design/componentization.md) defines when to use a formatter, renderer, built-in component, future typed slot, token, or instance override.
+
 ## Ref API
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const tableRef = useRef<CominsTableRef<UserRow>>(null);
 
@@ -295,7 +308,7 @@ After the repository setup under Installation, the local Playground starts at [`
 
 ## Documentation
 
-Start with the [English Quick Start](https://github.com/kim1124/comins-table/blob/main/docs/user/01-quick-start.md), [documentation index](https://github.com/kim1124/comins-table/blob/main/docs/README.md), [English feature guides](https://github.com/kim1124/comins-table/blob/main/docs/user/README.md), or [Korean feature guides](https://github.com/kim1124/comins-table/blob/main/docs/ko/README.md). Each category links the detailed usage contract, runnable Playground route, related features, and the matching guide in the other language.
+Start with the [English Quick Start](https://github.com/kim1124/comins-table/blob/main/docs/user/01-quick-start.md), [documentation index](https://github.com/kim1124/comins-table/blob/main/docs/README.md), [English feature guides](https://github.com/kim1124/comins-table/blob/main/docs/user/README.md), or [Korean feature guides](https://github.com/kim1124/comins-table/blob/main/docs/ko/README.md). Use the [Design Contract](https://github.com/kim1124/comins-table/blob/main/DESIGN.md), [Componentization Guide](https://github.com/kim1124/comins-table/blob/main/docs/design/componentization.md), and [Canonical Feature Manifest](https://github.com/kim1124/comins-table/blob/main/docs/feature-manifest.json) for visual stability, extension ownership, complete feature status, and evidence mapping. Each category links the detailed usage contract, runnable Playground route, related features, and the matching guide in the other language.
 
 Use the [source repository](https://github.com/kim1124/comins-table) for development context, review the [changelog](https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md) for version history, and follow the [security policy](https://github.com/kim1124/comins-table/blob/main/SECURITY.md) for vulnerability reporting.
 

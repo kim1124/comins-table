@@ -4,6 +4,7 @@
 
 `exportCominsRowsToCsv`와 `exportCominsRowsToJson`은 table UI와 분리된 dependency-free helper다. 현재 `rows`와 export column 정의를 입력받아 CSV 또는 JSON 문자열을 반환한다.
 
+<!-- comins-doc-example: fragment -->
 ```ts
 const exportColumns = [
   { id: "name", label: "Column1", value: (row) => row.name },

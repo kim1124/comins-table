@@ -90,6 +90,7 @@ describe('repository hygiene', () => {
     };
     expect(packageJson.files).toEqual([
       'dist',
+      'DESIGN.md',
       'README.md',
       'styles.css',
       'CHANGELOG.md',

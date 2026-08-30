@@ -4,6 +4,7 @@
 
 Lazy Load delegates request timing to Comins Table while the application owns rows and remote state.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const [rows, setRows] = useState<PersonRow[]>([]);
 const [total, setTotal] = useState(0);

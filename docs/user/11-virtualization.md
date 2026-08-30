@@ -4,6 +4,7 @@
 
 Set `virtualized` for large row sets.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   columns={columns}

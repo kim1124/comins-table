@@ -88,3 +88,46 @@ test("ref api page documents ref type and visible-index semantics", async ({ pag
 
   expect(diagnostics).toEqual([]);
 });
+
+test("event and method tables appear in the explanation area above related examples", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await initializePlaygroundLocale(page, "ko");
+  await page.goto("/examples/row");
+
+  const rowTable = page.getByTestId("feature-api-table");
+  await expect(rowTable.getByRole("columnheader")).toHaveText([
+    "이벤트명 또는 메서드명",
+    "설명",
+    "사용 방법",
+  ]);
+  await expect(rowTable).toContainText("onBeforeRowDrag");
+  await expect(rowTable).toContainText("onRowDrag");
+  await expect(rowTable).toContainText("onAfterDragRow");
+  await expect(rowTable.locator("tr[data-api-kind='event']")).not.toHaveCount(0);
+  await expect(rowTable.locator("tr[data-api-kind='method']")).not.toHaveCount(0);
+  expect(await rowTable.evaluate((table) => {
+    const code = document.querySelector(".docs-code");
+    const example = document.querySelector(".docs-live");
+    return Boolean(
+      code
+      && example
+      && (table.compareDocumentPosition(code) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && (table.compareDocumentPosition(example) & Node.DOCUMENT_POSITION_FOLLOWING)
+    );
+  })).toBe(true);
+
+  await initializePlaygroundLocale(page, "en");
+  await page.goto("/api/ref");
+  const refTable = page.getByTestId("feature-api-table");
+  await expect(refTable.getByRole("columnheader")).toHaveText([
+    "Event or method",
+    "Description",
+    "Usage",
+  ]);
+  await expect(refTable).toContainText("setSelectedRows");
+  await expect(refTable).toContainText("getColumnLayout");
+
+  await page.goto("/examples/size");
+  await expect(page.getByTestId("feature-api-table")).toHaveCount(0);
+  expect(diagnostics).toEqual([]);
+});

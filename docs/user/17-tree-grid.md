@@ -1,9 +1,12 @@
 # Tree Grid
 
+<!-- comins-restriction: tree-no-pagination -->
+
 [Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/17-tree-grid.md) · [Playground](http://127.0.0.1:4002/examples/tree-grid)
 
 Tree Grid renders controlled nested rows while preserving the existing column model. Put the business row in `item`; existing columns such as `{ field: "name" }` and cell formatters continue to receive that object.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 import { useRef, useState } from "react";
 import { CominsTable, type CominsTableRef, type CominsTreeNode } from "comins-table";
@@ -67,6 +70,7 @@ Tree sorting is recursive: each sibling set is sorted while a parent remains bef
 
 `CominsTableRef` exposes `expand(nodeIds?)` and `fold(nodeIds?)`. Pass a readonly id array to update multiple branches in one controlled `onChangeData` emission. Omitting the argument targets every branch; an empty array is a no-op. Duplicate, unknown, and leaf ids are ignored.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 tableRef.current?.expand(["engineering", "platform"]);
 tableRef.current?.fold(["platform"]);

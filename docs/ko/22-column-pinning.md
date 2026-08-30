@@ -7,6 +7,7 @@
 Column Pinning은 Body, Header와 Summary가 수평 Scroll될 때 configured Column을 계속 표시합니다. Column 또는 2단계 Header Group에 `pinned: "left"` 또는 `pinned: "right"`를 지정합니다.
 Export된 `CominsColumnPinned` type은 Column 정의, Group 정의와 저장된 runtime layout state에서 사용하는 `"left" | "right"` union입니다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const columns = [
   { field: "name", label: "Name", pinned: "left", width: 180 },
@@ -43,6 +44,6 @@ Header, Body, Skeleton과 Summary Cell은 같은 effective zone과 offset을 사
 
 수평 overflow는 전체 Table 최하단의 native scrollbar 하나를 사용합니다. Summary는 scrollbar 위에 유지되며 Body의 horizontal wheel 입력 또는 scrollbar 직접 입력이 pin offset을 변경하지 않고 모든 rendering surface를 동기화합니다.
 
-Synthetic Group Row, Row Detail, empty/loading Row와 다른 full-width structural Row는 하나의 non-sticky spanning Cell을 유지합니다. Tree Grid에는 Column Pinning을 적용하지 않습니다.
+Synthetic Group Row, Row Detail, empty/loading Row와 다른 full-width structural Row는 하나의 spanning Cell을 유지합니다. Group Row Cell은 full-width를 유지하지만 내부 title과 control은 가로 스크롤 중 Body viewport 시작점에 sticky로 남습니다. Tree Grid에는 Column Pinning을 적용하지 않습니다.
 
 Playground의 [`/examples/column-pinning`](http://127.0.0.1:4002/examples/column-pinning) route에서 확인할 수 있습니다.

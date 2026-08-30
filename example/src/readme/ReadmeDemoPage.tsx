@@ -476,7 +476,7 @@ export function ReadmeDemoPage() {
     <section className="readme-demo" data-feature={feature} data-testid="readme-demo">
       <header className="readme-demo__header">
         <div>
-          <p className="readme-demo__eyebrow">Comins Table 0.1.8</p>
+          <p className="readme-demo__eyebrow">Comins Table 0.1.9</p>
           <h1>{copy.title}</h1>
           <p>{copy.description}</p>
         </div>

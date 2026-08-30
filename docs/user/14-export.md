@@ -4,6 +4,7 @@
 
 Export helpers are pure functions. They do not read table UI state automatically.
 
+<!-- comins-doc-example: fragment -->
 ```ts
 import {
   exportCominsRowsToCsv,

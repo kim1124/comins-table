@@ -4,6 +4,7 @@
 
 Pass `pagination` to control page index and page size.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   columns={columns}

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { getDataTableOptionGuide } from "../example/src/docs/dataTableOptionGuide";
 import { playgroundFeatureRouteManifest } from "../example/src/docs/featureRouteManifest";
+import { checkDocumentationContract } from "../scripts/check-documentation-contract.mjs";
 
 const englishDataTableOptionGuide = getDataTableOptionGuide("en");
 
@@ -42,6 +43,9 @@ const implementedTerms = [
   "onChangeSortModel",
   "onClickCell",
   "onClickRow",
+  "onBeforeRowDrag",
+  "onRowDrag",
+  "onAfterDragRow",
   "createCominsTableState",
   "addCominsRows",
   "updateCominsRows",
@@ -180,6 +184,21 @@ describe("comins-table user documentation contract", () => {
 
     for (const term of implementedTerms) {
       expect(merged, `${term} should be documented`).toContain(term);
+    }
+  });
+
+  it("matches the canonical feature, evidence, route, and public API inventory", () => {
+    expect(checkDocumentationContract(process.cwd()).violations).toEqual([]);
+  });
+
+  it("documents pinned Column Layout persistence consistently", () => {
+    for (const path of [
+      "docs/user/03-core-state.md",
+      "docs/ko/03-core-state.md",
+      "docs/user/22-column-pinning.md",
+      "docs/ko/22-column-pinning.md",
+    ]) {
+      expect(readWorkspaceFile(path), path).toContain("`pinned`");
     }
   });
 

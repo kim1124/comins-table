@@ -4,6 +4,7 @@
 
 `CominsTable`은 `loading`, `loadingComponent`, `emptyComponent`, `persistHeaderWhenEmpty`, `skeletonRowCount`로 로딩과 빈 데이터 표시를 제어한다. Application은 fetch lifecycle을 소유하고 응답을 controlled `data`에 매핑한다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const [rows, setRows] = useState<PersonRow[]>([]);
 const [loadingMode, setLoadingMode] = useState<"initial" | "ready" | "refetch">("initial");

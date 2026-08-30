@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.1.9 - 2026-08-31
+
+- Added the packaged `DESIGN.md`, componentization guidance, a canonical Feature Manifest, full public-export and CSS-token classification, structured feature restrictions, and annotated/typechecked documentation examples.
+- Added Ctrl/Cmd discontiguous Cell selection while preserving the active Cell and rectangular range contracts, plus Row Drag lifecycle callbacks for before-start cancellation, semantic target changes, and final moved/cancelled/rejected results.
+- Preserved the last known Column order when dynamic Header Group Columns are hidden and restored, kept Row Group content visible during horizontally pinned scrolling, and connected Header Group and Rows Playground drag examples to controlled data and lifecycle feedback.
+- Standardized Playground toggle contrast, added deterministic collapse-all-Details coverage, and retained the existing Summary Row visible-column `colSpan` contract and example.
+- Added localized event and method reference tables above related Playground examples.
+- Clarified the browser compatibility contract versus Chromium-only automated evidence and expanded documentation/package gates so unclassified exports, tokens, examples, restrictions, or missing packaged design guidance fail closed.
+
 ## 0.1.8 - 2026-08-28
 
 - Added responsive left/right Column Pinning for leaf Columns and atomic Header Groups, including persisted pin intent, position locking, resize-aware sticky offsets, wider-side inner-block demotion with a 48px center budget, opaque Header/Body/Skeleton/Summary surfaces, and Summary `colSpan` zone splitting while keeping full-width structural Rows non-sticky.

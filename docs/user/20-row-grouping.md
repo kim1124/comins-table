@@ -1,5 +1,7 @@
 # Row Grouping
 
+<!-- comins-restriction: grouping-single-depth -->
+
 [Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/20-row-grouping.md) · [Playground](http://127.0.0.1:4002/examples/row-grouping)
 
 ![Application-owned Row Grouping expands, collapses, and reorders full-width Group Rows](../assets/comins-table-row-grouping.gif)
@@ -12,6 +14,7 @@ Run the [`/examples/row-grouping`](http://127.0.0.1:4002/examples/row-grouping) 
 
 `CominsRowGroupingConfig<TData, TGroup>` preserves the application Row and Group types. Custom content receives `CominsRowGroupRenderParams<TData, TGroup>` so `group`, aggregates, expansion, and the current `groupIndex` remain typed.
 
+<!-- comins-doc-example: compile=row-grouping -->
 ```tsx
 type Group = { id: string; label: string };
 type Row = { amount: number; groupId: string; id: string; name: string };
@@ -73,6 +76,7 @@ Group Drag never changes `data`. Row Drag never changes the `groups` order.
 
 `expandedGroupIds` is the only expansion source of truth. Disclosure buttons are disabled when `onChangeExpandedGroupIds` is omitted.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const tableRef = useRef<CominsTableRef<Row>>(null);
 
@@ -90,6 +94,7 @@ Each Group Row contains one native `<th scope="rowgroup">` whose `colSpan` equal
 
 The Table owns the outer Row and Cell, ARIA, disclosure, Group Drag handle, drop feedback, focus, and virtualization height. `getGroupRowProps` adds a typed `className` and `style` to the outer Group Row, while `renderGroupContent` replaces only the inner default label/count/aggregate content.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 rowGrouping={{
   // controlled Group fields omitted

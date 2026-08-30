@@ -4,6 +4,7 @@
 
 Enable controlled append loading with `infiniteScroll`.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable
   columns={columns}

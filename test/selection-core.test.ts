@@ -61,6 +61,28 @@ describe("comins-table selection core", () => {
     expect(state.selection.cell).toBeNull();
   });
 
+  it("supports Ctrl/Cmd-style discontiguous Cell toggles without changing the active range", () => {
+    let state = createState();
+    const nameA = { columnId: "name", rowId: "a" } as const;
+    const ageB = { columnId: "age", rowId: "b" } as const;
+
+    state = selectCell(state, nameA);
+    state = selectCell(state, ageB, { multi: true, toggle: true });
+
+    expect(state.selection.cells).toEqual([nameA, ageB]);
+    expect(state.selection.cell).toEqual(ageB);
+    expect(state.selection.range).toBeNull();
+    expect(isCominsCellSelected(state, nameA)).toBe(true);
+    expect(isCominsCellSelected(state, ageB)).toBe(true);
+
+    state = selectCell(state, nameA, { multi: true, toggle: true });
+
+    expect(state.selection.cells).toEqual([ageB]);
+    expect(state.selection.cell).toEqual(ageB);
+    expect(isCominsCellSelected(state, nameA)).toBe(false);
+    expect(isCominsCellSelected(state, ageB)).toBe(true);
+  });
+
   it("clears selection for row identity changes but keeps it for value-only updates", () => {
     let state = createState();
 

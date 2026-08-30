@@ -1,5 +1,7 @@
 # Column Filtering
 
+<!-- comins-restriction: filtering-no-remote-loading -->
+
 [Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/21-column-filtering.md) · [Playground](http://127.0.0.1:4002/examples/column-filtering)
 
 ![Controlled Column Filtering updates grouped Rows and Summary values](../assets/comins-table-column-filtering.gif)
@@ -10,6 +12,7 @@ Run the [`/examples/column-filtering`](http://127.0.0.1:4002/examples/column-fil
 
 ## Controlled model
 
+<!-- comins-doc-example: compile=column-filtering -->
 ```tsx
 type Row = {
   active: boolean;
@@ -65,6 +68,7 @@ Date filtering uses UTC calendar days. Model values should be exact `YYYY-MM-DD`
 
 Use `filter.getValue` when the comparison value differs from the normal nested `field` value:
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 {
   field: "owner",

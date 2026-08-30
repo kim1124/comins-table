@@ -81,5 +81,26 @@ test("rowProps draggable false disables only row dragging", async ({ page }) => 
   await expect(page.getByTestId("row-event-alert")).toContainText("행 클릭");
   await expect(page.getByTestId("row-event-alert")).toContainText("b");
 
+  const dragSource = eventsExample.getByTestId("row-drag-handle-c");
+  const dragTarget = eventsExample.getByTestId("row-a");
+  await dragSource.scrollIntoViewIfNeeded();
+  const dragSourceBox = await dragSource.boundingBox();
+  const dragTargetBox = await dragTarget.boundingBox();
+  expect(dragSourceBox).not.toBeNull();
+  expect(dragTargetBox).not.toBeNull();
+  await page.mouse.move(
+    dragSourceBox!.x + dragSourceBox!.width / 2,
+    dragSourceBox!.y + dragSourceBox!.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    dragTargetBox!.x + dragTargetBox!.width / 2,
+    dragTargetBox!.y + dragTargetBox!.height / 2,
+    { steps: 12 },
+  );
+  await page.mouse.up();
+  await expect(page.getByTestId("row-event-alert")).toContainText("Row 드래그 완료");
+  await expect(page.getByTestId("row-event-alert")).toContainText("c / moved / drop");
+
   expect(diagnostics).toEqual([]);
 });

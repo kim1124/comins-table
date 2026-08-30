@@ -31,6 +31,7 @@ export type FeatureId =
   | "ref-api";
 
 export type FeatureOption = {
+  apiKind?: "event" | "method";
   description: string;
   example: string;
   name: string;

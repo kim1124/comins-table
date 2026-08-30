@@ -8,6 +8,7 @@
 
 100000 rows 검증은 Chrome DevTools Performance Monitor 기준으로 JS heap, DOM Node, JS event listener 증가가 스크롤 후 안정적으로 회수되는지 확인한다. 문서 예제의 목적은 브라우저에 100000개 Row를 모두 DOM으로 그리지 않고, viewport 근처 Row만 유지하는 계약을 설명하는 것이다. 수동 성능 검증에서는 GC 이후 값을 기준으로 비교하고, 기본 예제 페이지로 이동했을 때 DOM Node와 listener 수가 비정상적으로 남지 않는지 확인한다.
 
+<!-- comins-doc-example: fragment -->
 ```tsx
 const data: Row[] = Array.from({ length: 100000 }, (_value, index) => ({
   id: `row-${index}`,

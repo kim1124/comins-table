@@ -13,6 +13,7 @@ export {
 export type {
   CominsCellAddress,
   CominsCellRange,
+  CominsCellSelectionOptions,
   CominsRowSelectionOptions,
   CominsSelectionState,
 } from "./core";
