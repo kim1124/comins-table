@@ -359,7 +359,7 @@ test("playground exposes a dedicated Phase 1 component example page", async ({ p
   await page.goto("/");
 
   await page.goto("/examples/component");
-  await expect(page.getByTestId("feature-option-container").first()).toContainText("Column2");
+  await expect(page.getByTestId("feature-option-container").first()).toContainText("name");
   await expect(page.getByTestId("feature-option-description").first()).toContainText("cell.components");
   await expect(page.getByTestId("feature-option-description").first()).toContainText("header.components");
   await expect(page.getByText("Header와 Cell에서 클릭 이벤트를 받는 버튼 컴포넌트 예제입니다.")).toHaveCount(0);

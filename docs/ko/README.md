@@ -37,15 +37,15 @@
 | --- | --- | --- |
 | Row callback, Drag와 Context Menu | [Row](07-row.md) | [`/examples/row`](http://127.0.0.1:4002/examples/row), [`/examples/context-menu`](http://127.0.0.1:4002/examples/context-menu) |
 | Format, Renderer와 Component | [Cell](08-cell.md) | [`/examples/cell`](http://127.0.0.1:4002/examples/cell), [`/examples/component`](http://127.0.0.1:4002/examples/component) |
-| 복사와 붙여넣기 | [Clipboard](09-clipboard.md) | [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard) |
-| Row, Cell과 Range 선택 | [Selection](10-selection.md) | [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard) |
+| OS 복사와 내부 붙여넣기 | [Clipboard](09-clipboard.md) | [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard) |
+| Row·Cell 독립 선택과 조회 | [Selection](10-selection.md) | [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard) |
 | Controlled Detail Row | [Row Expand](19-row-expand.md) | [`/examples/row-expand`](http://127.0.0.1:4002/examples/row-expand) |
 
 ## 구조화된 Row
 
 | 기능 | 가이드 | Playground |
 | --- | --- | --- |
-| 계층 데이터 | [Tree Grid](17-tree-grid.md) | [`/examples/tree-grid`](http://127.0.0.1:4002/examples/tree-grid) |
+| 계층 데이터와 하위 트리 이동 | [Tree Grid](17-tree-grid.md) | [`/examples/tree-grid`](http://127.0.0.1:4002/examples/tree-grid) |
 | 집계 Footer | [Summary Row](18-summary-row.md) | [`/examples/summary-row`](http://127.0.0.1:4002/examples/summary-row) |
 | Application-owned Group | [Row Grouping](20-row-grouping.md) | [`/examples/row-grouping`](http://127.0.0.1:4002/examples/row-grouping) |
 | Row와 Group 이동 | [Cross-Table Drag](23-cross-table-drag.md) | [`/examples/cross-table-drag`](http://127.0.0.1:4002/examples/cross-table-drag) |
@@ -55,7 +55,9 @@
 | 기능 | 가이드 | Playground |
 | --- | --- | --- |
 | 외부 Page state | [Pagination](05-pagination.md) | [`/performance/pagination`](http://127.0.0.1:4002/performance/pagination) |
-| 고정 높이 Windowing | [Virtualization](11-virtualization.md) | [`/performance/virtualization`](http://127.0.0.1:4002/performance/virtualization) |
+| 고정·가변 높이 Windowing | [Virtualization](11-virtualization.md) | [`/performance/virtualization`](http://127.0.0.1:4002/performance/virtualization) |
+| 업무 Row 자동 높이 | [Row 자동 높이](24-auto-row-height.md) | [`/performance/auto-row-height`](http://127.0.0.1:4002/performance/auto-row-height) |
+| 구간 조회와 캐시 관리 | [Viewport Datasource](25-viewport-datasource.md) | [`/performance/viewport-datasource`](http://127.0.0.1:4002/performance/viewport-datasource) |
 | Application-owned Append Loading | [Infinite Scroll](15-infinite-scroll.md) | [`/performance/infinite-scroll`](http://127.0.0.1:4002/performance/infinite-scroll) |
 | Table 요청 Batch | [Lazy Load](16-lazy-load.md) | [`/performance/lazy-load`](http://127.0.0.1:4002/performance/lazy-load) |
 

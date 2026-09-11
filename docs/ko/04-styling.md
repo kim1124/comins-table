@@ -113,6 +113,6 @@ Table 전체 스타일은 `className`, `style`, `theme`로 제어한다. Row 스
 - `--comins-table-focus`
 
 `tr` 높이는 virtualized row window 계산과 직접 연결된다.
-Virtualized table에서 행 높이를 바꿀 때는 CSS의 `--comins-table-row-height`, `--comins-table-cell-height`만 바꾸지 말고 `rowHeight` prop도 같은 숫자로 맞춰야 한다.
+동일한 고정 높이로 가상화할 때는 CSS의 `--comins-table-row-height`, `--comins-table-cell-height`와 `rowHeight` prop을 맞춘다. Row별 숫자 높이나 자동 높이는 `getRowHeight`로 지정하며 CSS 높이만으로 가상 배치를 변경하지 않는다. [Row 자동 높이](24-auto-row-height.md)를 참고한다.
 
 `rowProps.disabled`가 `true`인 row는 `--comins-table-row-disabled-background`, `--comins-table-row-disabled-color`로 기본 비활성 스타일을 받는다. Row/cell별 커스텀 class나 style을 추가할 수 있지만, 비활성 row가 조작 불가 상태임을 시각적으로 구분할 수 있어야 한다.

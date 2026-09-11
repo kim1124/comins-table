@@ -343,13 +343,9 @@ test("playground renders component-heavy one hundred thousand row sample @perf",
 
   const section = page.locator('[data-feature-option="component-large-virtualization"]');
   await expect(section).toBeVisible();
-  await expect(section.getByRole("columnheader", { name: "Column1" })).toBeVisible();
-  await expect(section.getByRole("columnheader", { name: "Column2" })).toBeVisible();
-  await expect(section.getByRole("columnheader", { name: "Column3" })).toBeVisible();
-  await expect(section.getByRole("columnheader", { name: "Column4" })).toBeVisible();
-  await expect(section.getByRole("columnheader", { name: "Column5" })).toBeVisible();
-  await expect(section.getByRole("columnheader", { name: "Column6" })).toBeVisible();
-  await expect(section.getByRole("columnheader", { name: "Column7" })).toBeVisible();
+  for (const [id, field] of [["name", "name"], ["active", "active"], ["button", "name"], ["select", "role"], ["progress", "age"], ["virtual-list", "name"], ["radio", "role"]]) {
+    await expect(section.getByTestId(`header-${id}`)).toHaveText(field);
+  }
 
   const viewport = section.getByTestId("data-table-viewport-component-large");
   await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);

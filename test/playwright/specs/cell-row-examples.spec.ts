@@ -12,7 +12,7 @@ test("cell page demonstrates formatting styling and events", async ({ page }) =>
   await expect(page.getByTestId("cell-selection-state")).toHaveCount(0);
   await expect(page.locator(".comins-table__component")).toHaveCount(0);
   await expect(page.locator(".comins-table__header-table th")).toHaveCount(6);
-  await expect(page.getByTestId("header-locked")).toContainText("Column5");
+  await expect(page.getByTestId("header-locked")).toContainText("locked");
   await expect(page.getByTestId("cell-b-age")).toHaveText("Data 2");
   await expect(page.getByTestId("cell-b-age")).not.toHaveCSS("background-color", "rgb(17, 24, 39)");
   await expect(page.getByTestId("cell-b-age")).not.toHaveCSS("color", "rgb(248, 250, 252)");
@@ -202,13 +202,13 @@ test("style demo classes do not leak into non-styling examples", async ({ page }
   await page.goto("/");
   await page.goto("/examples/crud");
 
-  const crudOwnerCell = page.getByTestId("cell-a-role");
+  const crudOwnerCell = page.getByTestId("cell-a-column3");
   await expect(crudOwnerCell).not.toHaveClass(/cell-owner/u);
   await expect(crudOwnerCell).not.toHaveCSS("background-color", "rgb(88, 28, 135)");
   await expect(crudOwnerCell).not.toHaveCSS("color", "rgb(248, 250, 252)");
   await expect(crudOwnerCell).not.toHaveCSS("border-left-color", "rgb(251, 191, 36)");
 
-  const crudOwnerName = page.getByTestId("cell-a-name");
+  const crudOwnerName = page.getByTestId("cell-a-column1");
   await expect(page.getByTestId("row-a")).not.toHaveClass(/row-owner/u);
   await expect(crudOwnerName).not.toHaveCSS("font-family", /Georgia/u);
   await expect(crudOwnerName).not.toHaveCSS("text-transform", "uppercase");

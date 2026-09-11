@@ -245,7 +245,7 @@ const englishDocsPages: DocsPage[] = [
       "The application owns expandedRowIds and writes onChangeExpandedRowIds back to the same controlled state.",
       'Only a finite positive height is fixed and retains inline height. Missing, invalid, and "auto" Details use measured automatic height without an inline height. Before matching-width measurement, a valid estimatedRowDetailHeight wins; otherwise the resolved `rowHeight` is the estimate.',
       "Sorting, pagination, loading, movement, selection, clipboard, and callbacks continue to address owner business Rows. Detail regions remain semantic sibling Rows.",
-      "Tree Grid, general owner auto-height, and nested managed Details remain unsupported.",
+      "Tree Grid Details and nested managed Details remain unsupported. Owner automatic height uses getRowHeight.",
     ]),
     category: "Row / Context",
     codeSamples: rowExpandSamples,
@@ -398,6 +398,8 @@ const englishDocsPages: DocsPage[] = [
     summary: "Review the append-mode lazy-load contract against a DummyJSON-style remote API.",
     title: "Lazy Load",
   }),
+  featurePage({ body: paragraphs(["Select automatic measurement with getRowHeight={() => 'auto'}. Renderers need no per-row height calculation."]), category: "Body / Performance", codeSamples: [], featureId: "auto-row-height", label: "Auto row height", path: "/performance/auto-row-height", summary: "Variable heights for content-driven rows.", title: "Auto row height" }),
+  featurePage({ body: paragraphs(["useCominsViewport connects known rowCount, queryKey, and getRows to controlled Table data. Only requested regions are loaded."]), category: "Body / Performance", codeSamples: [], featureId: "viewport-datasource", label: "Viewport loading", path: "/performance/viewport-datasource", summary: "Range loading with a bounded cache and automatic height.", title: "Viewport loading" }),
   featurePage({
     body: paragraphs([
       "Large datasets use `virtualized` together with a stable `getRowId`.",
@@ -540,7 +542,7 @@ const koreanDocsCopy: Record<string, KoreanDocsCopy> = {
       "Application은 `expandedRowIds`를 소유하고 `onChangeExpandedRowIds` 결과를 같은 controlled state에 반영합니다.",
       "유한한 양수 높이만 fixed이며 inline height를 유지합니다. 값이 없거나 invalid 또는 `auto`인 Detail은 inline height 없이 자동 측정합니다. matching-width 측정 전에는 유효한 finite positive `estimatedRowDetailHeight`를 우선 사용하고, 그 외에는 resolved `rowHeight`를 estimate로 사용합니다.",
       "정렬, pagination, loading, 이동, 선택과 callback은 owner business Row를 기준으로 유지됩니다.",
-      "Tree Grid, 일반 owner auto-height와 중첩 managed Detail은 지원하지 않습니다.",
+      "Tree Grid Detail과 중첩 managed Detail은 지원하지 않습니다. Owner 자동 높이는 getRowHeight를 사용합니다.",
     ],
     category: "Row / Context",
     label: "Row Expand",
@@ -654,9 +656,11 @@ const koreanDocsCopy: Record<string, KoreanDocsCopy> = {
     ],
     category: "Body / 성능",
     label: "Lazy Load",
-    summary: "DummyJSON 형태 remote API에 대한 append-mode Lazy Load 계약을 확인합니다.",
+    summary: "1,000건의 예제 데이터를 100건씩 가져오는 append-mode Lazy Load 계약을 확인합니다.",
     title: "Lazy Load",
   },
+  "/performance/auto-row-height": { body: ["getRowHeight={() => 'auto'}로 콘텐츠 높이를 측정합니다. Renderer별 높이 계산은 필요하지 않습니다."], category: "Body / 성능", label: "자동 높이", summary: "콘텐츠에 맞춘 Row 높이와 가변 가상화", title: "자동 높이" },
+  "/performance/viewport-datasource": { body: ["useCominsViewport에 전체 건수, queryKey, getRows를 연결하여 필요한 구간만 조회합니다."], category: "Body / 성능", label: "Viewport 조회", summary: "제한된 캐시를 사용하는 구간 조회와 자동 높이", title: "Viewport 조회" },
   "/performance/pagination": {
     body: [
       "pagination prop은 현재 pageIndex와 pageSize를 CominsTable에 전달합니다.",

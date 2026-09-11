@@ -8,6 +8,7 @@ import {
 } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Button } from "../components/ui/button";
+import { TreeDragSample } from "./TreeDragSample";
 import { createBaseColumns } from "../fixtures/columns";
 import type { PersonRow } from "../fixtures/people";
 import { createTenThousandNodeTree, createThirtyNodeTree } from "../fixtures/treeGrid";
@@ -25,7 +26,7 @@ export function TreeGridFeature() {
   const [rendererData, setRendererData] = useState(createThirtyNodeTree);
   const controlRef = useRef<CominsTableRef<PersonRow>>(null);
   const componentColumns: Array<CominsTableColumn<PersonRow>> = [
-    { field: "name", label: "Node", minWidth: 180 },
+    { field: "name", label: "name", minWidth: 180 },
     {
       cell: {
         components: [
@@ -44,7 +45,7 @@ export function TreeGridFeature() {
         ],
       },
       field: "active",
-      label: text(defineLocalizedText("활성", "Active")),
+      label: "active",
       minWidth: 120,
     },
     {
@@ -70,7 +71,7 @@ export function TreeGridFeature() {
         ],
       },
       field: "role",
-      label: text(defineLocalizedText("역할", "Role")),
+      label: "role",
       minWidth: 140,
     },
   ];
@@ -84,14 +85,15 @@ export function TreeGridFeature() {
         ),
       },
       field: "name",
-      label: text(defineLocalizedText("사용자 정의 Node", "Custom Node")),
+      label: "name",
       minWidth: 220,
     },
-    { field: "age", label: text(defineLocalizedText("나이", "Age")), minWidth: 100 },
+    { field: "age", label: "age", minWidth: 100 },
   ];
 
   return (
     <section className="feature-panel feature-panel--tree-grid">
+      <TreeDragSample />
       <FeatureSampleSection
         description={text(defineLocalizedText(
           "defaultExpandAll의 기본값 true로 3개 Department, 9개 Team, 18개 Member를 모두 출력합니다.",

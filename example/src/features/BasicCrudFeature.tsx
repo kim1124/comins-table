@@ -3,55 +3,42 @@ import { useMemo, useState } from "react";
 import { CominsTable, type CominsTableColumn, type CominsSelectionState } from "../../../src";
 import { ActionButton, FeatureControls } from "../components/FeatureControls";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
-import { createBaseColumns } from "../fixtures/columns";
-import { createExampleRows, type PersonRow } from "../fixtures/people";
+import { createExampleRows } from "../fixtures/people";
 import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
+
+type CrudRow = { column1: string; column2: number; column3: string; column4: string; column5?: boolean; column6?: string };
+function createCrudRows(count: number): CrudRow[] {
+  return createExampleRows(count).map(row => ({ column1: row.name, column2: row.age, column3: row.role, column4: row.id, column5: row.active, column6: row.locked }));
+}
 
 export function BasicCrudFeature() {
   const { text } = usePlaygroundLocale();
-  const [rows, setRows] = useState<PersonRow[]>(() => createExampleRows(30));
+  const [rows, setRows] = useState<CrudRow[]>(() => createCrudRows(30));
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const [selectedRowJson, setSelectedRowJson] = useState("");
   const [error, setError] = useState("");
   const [nextRowIndex, setNextRowIndex] = useState(1);
-  const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(
-    () => [
-      ...createBaseColumns(),
-      {
-        cell: {
-          format: ({ row }) => `Data ${row.index + 1}`,
-        },
-        field: "id" as const,
-        label: "Column4",
-        minWidth: 100,
-        width: 140,
-      },
-      {
-        cell: {
-          format: ({ row }) => `Data ${row.index + 1}`,
-        },
-        field: "active" as const,
-        label: "Column5",
-        minWidth: 100,
-        width: 120,
-      },
-      { field: "locked" as const, label: "Column6", minWidth: 100, width: 160 },
-    ],
-    [],
-  );
+  const columns = useMemo<Array<CominsTableColumn<CrudRow>>>(() => [
+    { field: "column1", label: "column1", minWidth: 120, sort: true },
+    { field: "column2", label: "column2", minWidth: 100, sort: true },
+    { field: "column3", label: "column3", minWidth: 100 },
+    { field: "column4", label: "column4", minWidth: 120 },
+    { field: "column5", label: "column5", minWidth: 100 },
+    { field: "column6", label: "column6", minWidth: 100 },
+  ], []);
   const syncSelection = (selection: CominsSelectionState) => {
     setSelectedRowIds(selection.rowIds.map(String));
   };
   const addRow = () => {
     setRows((current) => [
       {
-        active: true,
-        age: 30 + nextRowIndex,
-        id: `new-${nextRowIndex}`,
-        locked: `Data ${nextRowIndex}`,
-        name: `Data ${nextRowIndex}`,
-        role: nextRowIndex % 2 === 0 ? "Viewer" : "Owner",
+        column5: true,
+        column2: 30 + nextRowIndex,
+        column4: `new-${nextRowIndex}`,
+        column6: `Data ${nextRowIndex}`,
+        column1: `Data ${nextRowIndex}`,
+        column3: nextRowIndex % 2 === 0 ? "Viewer" : "Owner",
       },
       ...current,
     ]);
@@ -65,10 +52,10 @@ export function BasicCrudFeature() {
     }
 
     try {
-      const parsed = JSON.parse(selectedRowJson) as Partial<PersonRow>;
+      const parsed = JSON.parse(selectedRowJson) as Partial<CrudRow>;
 
       setRows((current) =>
-        current.map((row) => (row.id === activeRowId ? { ...row, ...parsed, id: activeRowId } : row)),
+        current.map((row) => (row.column4 === activeRowId ? { ...row, ...parsed, column4: activeRowId } : row)),
       );
       setError("");
     } catch {
@@ -82,13 +69,13 @@ export function BasicCrudFeature() {
     }
 
     const deleteIds = new Set(selectedRowIds);
-    setRows((current) => current.filter((row) => !deleteIds.has(row.id)));
+    setRows((current) => current.filter((row) => !deleteIds.has(row.column4)));
     setActiveRowId((current) => (current && deleteIds.has(current) ? null : current));
     setSelectedRowIds([]);
     setSelectedRowJson("");
     setError("");
   };
-  const selectActiveRow = (row: PersonRow, rowId: string) => {
+  const selectActiveRow = (row: CrudRow, rowId: string) => {
     setActiveRowId(rowId);
     setSelectedRowJson(JSON.stringify(row, null, 2));
     setError("");
@@ -118,7 +105,7 @@ export function BasicCrudFeature() {
               </ActionButton>
               <ActionButton
                 onClick={() => {
-                  setRows(createExampleRows(30));
+                  setRows(createCrudRows(30));
                   setActiveRowId(null);
                   setSelectedRowIds([]);
                   setSelectedRowJson("");
@@ -153,7 +140,7 @@ export function BasicCrudFeature() {
               columns={columns}
               data={rows}
               data-testid="data-table-viewport"
-              getRowId={(row) => row.id}
+              getRowId={(row) => row.column4}
               onChangeSelection={syncSelection}
               onClickCell={({ row }) => selectActiveRow(row.data, String(row.id))}
               onClickRow={({ row }) => {

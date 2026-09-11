@@ -8,11 +8,11 @@ export const headerColumnGroups = [
 ];
 
 export const dynamicColumnOptions = [
-  { label: "Column1", value: "name" },
-  { label: "Column2", value: "age" },
-  { label: "Column3", value: "active" },
-  { label: "Column4", value: "locked" },
-  { label: "Column5", value: "role" },
+  { label: "name", value: "name" },
+  { label: "age", value: "age" },
+  { label: "active", value: "active" },
+  { label: "locked", value: "locked" },
+  { label: "role", value: "role" },
 ];
 
 export function cloneDefaultLayout(): CominsColumnLayout {
@@ -33,33 +33,33 @@ export function cloneGroupLayout(): CominsColumnLayout {
 
 export function createHeaderGroupColumns(): Array<CominsTableColumn<PersonRow>> {
   return [
-    { field: "name", label: "Column1", minWidth: 100, sort: true, width: 160 },
+    { field: "name", label: "name", minWidth: 100, sort: true, width: 160 },
     {
       cell: {
         format: ({ row }) => `Data ${row.index + 1}`,
       },
       field: "age",
-      label: "Column2",
+      label: "age",
       minWidth: 100,
       sort: true,
-      width: 120,
+      width: 160,
     },
     {
       cell: {
         format: ({ row }) => `Data ${row.index + 1}`,
       },
       field: "active",
-      label: "Column3",
+      label: "active",
       minWidth: 100,
-      width: 130,
+      width: 140,
     },
-    { field: "locked", label: "Column4", minWidth: 100, width: 140 },
+    { field: "locked", label: "locked", minWidth: 100, width: 140 },
     {
       cell: {
         format: ({ row }) => `Data ${row.index + 1}`,
       },
       field: "role",
-      label: "Column5",
+      label: "role",
       minWidth: 100,
       width: 140,
     },

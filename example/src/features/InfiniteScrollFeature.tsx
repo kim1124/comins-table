@@ -27,27 +27,27 @@ export function InfiniteScrollFeature() {
     () => [
       {
         field: "name",
-        label: "Column1",
+        label: "name",
         minWidth: 100,
         width: 180,
       },
       {
         cell: { format: ({ value }) => `Data ${value}` },
         field: "age",
-        label: "Column2",
+        label: "age",
         minWidth: 100,
         width: 120,
       },
       {
         cell: { format: ({ value }) => String(value) },
         field: "role",
-        label: "Column3",
+        label: "role",
         minWidth: 100,
         width: 140,
       },
       {
         field: "locked",
-        label: "Column4",
+        label: "locked",
         minWidth: 160,
         width: 240,
       },

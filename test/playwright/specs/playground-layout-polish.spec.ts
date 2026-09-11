@@ -354,7 +354,7 @@ test("pagination page owns the table paging example above virtualization", async
     .locator(".docs-sidebar__group", { hasText: "Body / Performance" })
     .getByRole("link")
     .allTextContents();
-  expect(performanceLinks).toEqual(["Pagination", "Infinite Scroll", "Lazy Load", "Virtualization"]);
+  expect(performanceLinks).toEqual(["Pagination", "Infinite Scroll", "Lazy Load", "Auto row height", "Viewport loading", "Virtualization"]);
   expect(diagnostics).toEqual([]);
 });
 

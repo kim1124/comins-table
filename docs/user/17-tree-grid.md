@@ -88,10 +88,36 @@ The Playground includes a fixed-row-height virtualized tree with exactly `10000`
 
 ## Tree Grid V1 limits
 
-Tree Grid V1 supports the current fixed `rowHeight` virtualized layout. Pagination, lazy loading, infinite scrolling, row drag, and row-level copy/paste are intentionally unavailable because they require a hierarchy-aware data-source or move contract. Cell and range clipboard operations remain scoped to visible `item` rows.
+Tree Grid supports fixed and automatic Row heights. Pagination, lazy loading, infinite scrolling, Viewport Datasource, cross-table Tree movement and row-level copy/paste remain unavailable. Cell and range clipboard operations remain scoped to visible `item` rows.
 
 Tree expansion is not flat Row Expand or Row Grouping. Row Expand renders a Detail region below one flat source Row. Row Grouping derives a hierarchy from flat Row values and keeps separate controlled group expansion state; it cannot be combined with the Tree Grid prop branch.
 
 Run the runnable example with `npm run dev`, then open `/examples/tree-grid`.
 
 Column Filtering is also a flat-data projection and cannot be combined with the Tree Grid prop branch. Applications that require Tree filtering must produce their own controlled nested data.
+
+## Tree Row Drag
+
+Tree dragging is disabled when `treeRowDrag` is omitted. Set `treeRowDrag={{}}` to reorder siblings at every depth. `allowReparent` defaults to `false`. `allowReparent: true` also permits moving an entire subtree into another parent or back to the root. `rowProps.draggable` and `rowProps.disabled` further constrain individual sources. `onChangeData` is required; the original tree and items are not mutated.
+
+<!-- comins-doc-example: fragment -->
+```tsx
+<CominsTable
+  tree
+  data={nodes}
+  columns={columns}
+  getRowId={(item) => item.id}
+  onChangeData={setNodes}
+  treeRowDrag={{ allowReparent: true }}
+/>
+```
+
+`CominsTreeRowDragConfig<TData>.canDrop` receives a `CominsTreeDropContext` with source, target, destination and `before`/`after`/`inside` position. It can restrict moves but cannot permit cycles or invalid destinations. Closed descendants move with their source and keep their expansion state. A leaf can become a parent; the former parent remains a business node after its last child leaves. This changes leaf-only Summary membership.
+
+A collapsed parent accepts an inside drop without automatically expanding. Sorting disables manual Tree movement until cleared. The handle supports pointer edge scrolling and Space to begin, arrow keys to choose a destination, Enter to commit, and Escape to cancel. Right/left choose nesting/outdent when reparenting is enabled. Destination and result are announced, and drop markers do not change Row geometry.
+
+Tree callbacks use `CominsBeforeTreeRowDragPayload`, `CominsTreeRowDragPayload` and `CominsAfterTreeRowDragPayload`; their events include keyboard gestures. Returning false before a gesture starts cancels it without an after callback. A started gesture ends once. Target metadata includes `tree.parentId`, `tree.beforeRowId` and `tree.position`.
+
+`moveCominsTreeNode(nodes, rowId, destination, getRowId, { allowReparent })` exposes the immutable operation. `CominsTreeMoveDestination` uses `parentId: null` for the root and `beforeRowId: null` for the sibling-list end. It returns the original reference for unchanged or invalid moves and rejects duplicate IDs. IDs must remain stable when positions change.
+
+The Playground Tree drag sample starts with `allowReparent` and automatic Row heights enabled so both behaviors can be exercised immediately. These example defaults do not change the package defaults.

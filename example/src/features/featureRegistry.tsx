@@ -1,5 +1,7 @@
 import { BasicCrudFeature } from "./BasicCrudFeature";
 import { BasicFeature } from "./BasicFeature";
+import { AutoRowHeightFeature } from "./AutoRowHeightFeature";
+import { ViewportFeature } from "./ViewportFeature";
 import { BodyFeature } from "./BodyFeature";
 import { CellFeature } from "./CellFeature";
 import { ColumnGroupFeature } from "./ColumnGroupFeature";
@@ -192,12 +194,26 @@ export const featureRegistry: FeatureDefinitionSource[] = [
     label: defineLocalizedText("Lazy Load", "Lazy Load"),
     options: [
       { description: defineLocalizedText("Append mode Lazy Loading을 활성화합니다.", "Enables append-mode lazy loading."), example: "lazyLoad", name: "lazyLoad" },
-      { description: defineLocalizedText("Request 한 번에 가져오는 Row 수입니다.", "Number of rows fetched per request."), example: "lazyLoadBatchSize={30}", name: "lazyLoadBatchSize" },
+      { description: defineLocalizedText("Request 한 번에 가져오는 Row 수입니다.", "Number of rows fetched per request."), example: "lazyLoadBatchSize={100}", name: "lazyLoadBatchSize" },
       { description: defineLocalizedText("Loading을 시작하는 하단 기준 거리입니다.", "Distance from the bottom that triggers loading."), example: "lazyLoadThreshold={140}", name: "lazyLoadThreshold" },
       { description: defineLocalizedText("현재 지원하는 append mode입니다.", "The currently supported append mode."), example: 'lazyLoadMode="append"', name: "lazyLoadMode" },
       { apiKind: "event", description: defineLocalizedText("Offset, limit, reason과 signal을 받고 controlled data를 갱신합니다.", "Receives offset, limit, reason, and signal, then updates controlled data."), example: "onLazyLoad={loadRows}", name: "onLazyLoad" },
     ],
-    summary: defineLocalizedText("DummyJSON 형태 remote API에 연결한 append-mode Lazy Load 예제입니다.", "Append-mode lazy-load example connected to a DummyJSON-style remote API."),
+    summary: defineLocalizedText("1,000건을 100건씩 비동기 로딩하는 append-mode Lazy Load 예제입니다.", "Append-mode lazy-load example loading 1,000 sample rows asynchronously in batches of 100."),
+  },
+  {
+    Component: AutoRowHeightFeature, id: "auto-row-height",
+    label: defineLocalizedText("자동 높이", "Auto row height"),
+    description: defineLocalizedText("콘텐츠에 맞춘 Row 높이와 가변 가상화를 확인합니다.", "Measure content with variable row virtualization."),
+    summary: defineLocalizedText("Row 자동 높이와 동적 크기 변경", "Automatic row height and content resizing"),
+    options: [{ name: "getRowHeight", example: '() => "auto"', description: defineLocalizedText("숫자 또는 auto로 Row 높이를 선택합니다.", "Return a number or auto to select row sizing.") }],
+  },
+  {
+    Component: ViewportFeature, id: "viewport-datasource",
+    label: defineLocalizedText("Viewport 조회", "Viewport loading"),
+    description: defineLocalizedText("화면 주변 구간만 조회하고 제한된 캐시에 보관합니다.", "Fetch visible regions and keep a bounded cache."),
+    summary: defineLocalizedText("백만 건 구간 조회와 자동 높이", "Million-row viewport loading and automatic height"),
+    options: [{ name: "useCominsViewport", example: "{ rowCount, queryKey, getRows }", description: defineLocalizedText("구간 조회 함수를 controlled Table 상태에 연결합니다.", "Connect a range fetcher to controlled Table state.") }],
   },
   {
     Component: CellFeature,
@@ -221,6 +237,10 @@ export const featureRegistry: FeatureDefinitionSource[] = [
     id: "selection-clipboard",
     label: defineLocalizedText("선택과 Clipboard", "Selection & Clipboard"),
     options: [
+      { description: defineLocalizedText("Cell 선택과 Row 선택을 독립적으로 유지합니다.", "Keeps Cell and Row selection independent."), example: "rowSelectionOnClick={false}", name: "rowSelectionOnClick" },
+      { description: defineLocalizedText("여러 Cell → Row → 단일 Cell 우선순위로 OS 복사를 활성화합니다.", "Enables OS copy with multiple Cells, Rows, then single Cell priority."), example: "clipboard", name: "clipboard" },
+      { apiKind: "method", description: defineLocalizedText("선택 Row와 Cell 값을 각각 조회합니다.", "Reads selected Rows and Cell values separately."), example: "ref.current.getSelectedRows() / getSelectedCells() / getSelection()", name: "getSelectedRows / getSelectedCells / getSelection" },
+      { apiKind: "method", description: defineLocalizedText("선택 대상을 OS 클립보드에 복사합니다.", "Copies the selected target to the OS clipboard."), example: "ref.current.copySelection('auto')", name: "copySelection" },
       { apiKind: "event", description: defineLocalizedText("전체 Row, Cell과 Range selection state를 전달합니다.", "Reports the complete Row, Cell, and Range selection state."), example: "onChangeSelection={setSelection}", name: "onChangeSelection" },
       { description: defineLocalizedText("Cell과 Range selection interaction을 활성화합니다.", "Enables Cell and Range selection interaction."), example: "cellSelection", name: "cellSelection" },
       { apiKind: "event", description: defineLocalizedText("Keyboard paste 결과를 consumer state에 반영합니다.", "Commits keyboard paste results back to consumer state."), example: "onChangeData={setRows}", name: "onChangeData" },

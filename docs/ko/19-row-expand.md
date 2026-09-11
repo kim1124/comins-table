@@ -146,9 +146,9 @@ scroll된다.
 
 ## Virtualization And Performance
 
-Data Row와 접힌 Detail owner는 고정 높이 산술 경로를 유지한다. 유효하게 펼쳐진
-Detail로 인해 data Slot이 rowHeight보다 높아지는 경우에만 private height index가
-활성화된다.
+같은 고정 높이의 Data Row와 접힌 Detail owner는 산술 경로를 유지한다.
+Row별 지정 높이, 일반 Row 자동 높이 또는 펼쳐진 Detail은 private height index를 사용한다.
+owner 자동 높이는 `getRowHeight`로 지정하며 Detail 높이와 독립적으로 처리한다.
 
 owner와 선택적 Detail은 하나의 private virtual Slot이다. 따라서 viewport보다 큰
 Detail도 outer body viewport가 해당 영역을 통과하는 동안 mount 상태를 유지하며,
@@ -161,14 +161,12 @@ frame이 최종 Border를 제공한다.
 bounded panel, large list 또는 nested application widget에는 finite fixed height를
 우선 사용하고 큰 inner content에는 별도 scroll이나 virtualization을 적용한다.
 실제로 측정 높이가 필요한 bounded content에만 `"auto"`를 사용한다. 하나의 shared
-`ResizeObserver`가 mount된 automatic Detail block만 observe하며 fixed Detail은
+`ResizeObserver`가 mount된 자동 Row와 Detail block을 observe하며 고정 높이는
 측정 allocation을 만들지 않는다.
 
 ## Unsupported Boundaries
 
 - Tree Grid Row Detail은 지원하지 않는다.
-- owner data Row 전체의 general automatic height는 지원하지 않는다.
-  `rowHeight`가 계속 owner Row 계약이다.
 - Nested managed Detail은 지원하지 않는다. 하나의 Detail 안에 일반 application
   content를 렌더링할 수 있지만 Comins Table은 두 번째 Detail hierarchy를 관리하지
   않는다.

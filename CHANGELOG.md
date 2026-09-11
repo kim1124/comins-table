@@ -1,6 +1,35 @@
 # Comins Table
 
-## Unreleased
+## 0.1.10 (Unreleased)
+
+### Added
+
+- Controlled Tree Row drag at every depth through `treeRowDrag`, with opt-in `allowReparent`, immutable `moveCominsTreeNode` subtree moves, drop validation, drag lifecycle callbacks, and pointer/keyboard navigation through virtualized Rows.
+- Numeric per-Row and automatic business Row heights through `getRowHeight` and `estimatedRowHeight`, shared mounted-row measurement, variable-height virtualization, and scroll-anchor preservation. Flat, Grouped business, and Tree Rows are supported; expanded Row Details are measured independently.
+- Known-count Viewport Datasource loading through `useCominsViewport`, with controlled snapshot/reducer APIs, bounded data and height caches, cancellable range requests, stale-response protection, explicit retry, absolute-index callbacks, and loaded Cell editing. Automatic heights, distant scrolling, and cache eviction/remeasurement are supported; server queries and edit persistence remain application-owned.
+- Independent Row/Cell selection through `rowSelectionOnClick={false}`, plus `getSelectedRows()`, `getSelectedCells()`, and `getSelection()` Ref APIs. Reads return available data without requesting unloaded Viewport Rows.
+- Opt-in OS keyboard copy through `clipboard` and explicit `copySelection("auto" | "cells" | "rows")`. Automatic copy prioritizes multiple Cells, selected Rows, then a single Cell. Discontiguous selection produces a TSV rectangle with empty unselected positions; internal paste skips those positions.
+- Matching English/Korean guides and Playground routes for automatic height and Viewport loading, with public type checks, browser geometry coverage, and focused performance budgets.
+
+### Changed
+
+- Aligned Playground Column labels with data keys. CRUD uses `column1` through `column6` and preserves its `column4` Row ID when editing.
+- Expanded the Lazy Load example to 1,000 deterministic Rows in batches of 100, with simulated asynchronous delay and cancellation.
+- Equalized initial sibling Header Group widths, enabled movement in the Column Pinning Group example, moved movement restrictions into Row Grouping controls, and aligned Summary label/value spans with visible Columns and pin boundaries.
+- Enabled parent changes and automatic height by default in the Tree drag Playground example. Package defaults remain opt-in: `treeRowDrag` is omitted, `allowReparent` is false, automatic height requires `getRowHeight`, `rowSelectionOnClick` is true, and `clipboard` is false.
+
+### Fixed
+
+- Kept populated-table loading overlays visible when reloading after scrolling.
+- Restored Tree drag focus after controlled data and virtual-window updates, and Header Menu Escape handling from menu items. Connected Playground Group disclosure state and added Context Menu keyboard navigation and focus recovery.
+- Corrected Boolean Cell formatting and kept fixed-height Viewport Renderer content within its chosen height.
+- Fixed Cell pointer and Shift-range focus so keyboard copy uses selected values instead of page text, while preserving native interaction with Renderer controls. Keyboard copy refreshes the internal paste buffer for the latest selection.
+
+### Compatibility notes
+
+- Existing fixed-height rendering, Row-click selection, and internal clipboard behavior remain the defaults. OS clipboard import/paste is not included; Ctrl/Cmd+V continues to use the Table's internal buffer.
+- Viewport requires a known count, stable globally unique Row IDs, and arbitrary index-range access. It does not combine with Tree, Row Grouping, Row Detail, Row Drag, append loading, pagination, built-in sorting/filtering, or automatic Summary aggregation.
+- Tree parent changes remain explicit, active sorting disables manual Tree movement, and cross-table Tree movement and Tree Row copy/paste remain unsupported.
 
 ## 0.1.9 - 2026-08-31
 

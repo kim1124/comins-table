@@ -43,6 +43,8 @@ const canonicalFeatureIds = [
   "body",
   "infinite-scroll",
   "lazy-load",
+  "auto-row-height",
+  "viewport-datasource",
   "cell",
   "selection-clipboard",
   "component",
@@ -418,7 +420,7 @@ describe("Playground localization coverage", () => {
     expect(getFeatureIdViolations(runtimeIds)).toEqual([]);
     expect(getFeatureIdViolations(popped)).toContain('Missing canonical Feature ID "ref-api".');
     expect(getFeatureIdViolations(sorted)).toContain(
-      'Feature ID at index 2 must be "size" but received "body".',
+      'Feature ID at index 0 must be "basic" but received "auto-row-height".',
     );
     expect(getFeatureIdViolations(extra)).toContain('Unknown Feature ID "extra-runtime-feature".');
   });

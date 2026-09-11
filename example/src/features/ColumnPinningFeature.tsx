@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import {
   CominsTable,
   type CominsColumnLayout,
+  type CominsRowId,
   type CominsTableColumn,
   type CominsTableRef,
 } from "../../../src";
@@ -45,21 +46,24 @@ export function ColumnPinningFeature() {
   const { text } = usePlaygroundLocale();
   const tableRef = useRef<CominsTableRef<PinningRow>>(null);
   const savedLayoutRef = useRef<CominsColumnLayout | null>(null);
+  const [rows, setRows] = useState(pinningRows);
+  const [groups, setGroups] = useState([{ id: "East" }, { id: "West" }]);
   const [narrow, setNarrow] = useState(false);
+  const [expandedGroupIds, setExpandedGroupIds] = useState<CominsRowId[]>(["East", "West"]);
   const [layout, setLayout] = useState<CominsColumnLayout | null>(null);
   const columns = useMemo<Array<CominsTableColumn<PinningRow>>>(() => [
-    { field: "name", label: text(defineLocalizedText("이름", "Name")), pinned: "left", sort: true, width: 180 },
-    { field: "region", label: text(defineLocalizedText("지역", "Region")), sort: true, width: 140 },
-    { field: "owner", label: text(defineLocalizedText("담당", "Owner")), sort: true, width: 160 },
-    { field: "team", label: text(defineLocalizedText("팀", "Team")), sort: true, width: 160 },
-    { field: "category", label: text(defineLocalizedText("분류", "Category")), sort: true, width: 160 },
-    { field: "priority", label: text(defineLocalizedText("우선순위", "Priority")), sort: true, width: 130 },
-    { field: "amount", label: text(defineLocalizedText("금액", "Amount")), sort: true, width: 140 },
-    { field: "progress", label: text(defineLocalizedText("진행률", "Progress")), sort: true, width: 140 },
-    { field: "createdAt", label: text(defineLocalizedText("생성일", "Created")), sort: true, width: 180 },
-    { field: "updatedAt", label: text(defineLocalizedText("수정일", "Updated")), sort: true, width: 180 },
-    { field: "status", label: text(defineLocalizedText("상태", "Status")), pinned: "right", sort: true, width: 140 },
-    { field: "id", label: "ID", pinned: "right", width: 170 },
+    { field: "name", label: "name", pinned: "left", sort: true, width: 180 },
+    { field: "region", label: "region", sort: true, width: 140 },
+    { field: "owner", label: "owner", sort: true, width: 160 },
+    { field: "team", label: "team", sort: true, width: 160 },
+    { field: "category", label: "category", sort: true, width: 160 },
+    { field: "priority", label: "priority", sort: true, width: 130 },
+    { field: "amount", label: "amount", sort: true, width: 140 },
+    { field: "progress", label: "progress", sort: true, width: 140 },
+    { field: "createdAt", label: "createdAt", sort: true, width: 180 },
+    { field: "updatedAt", label: "updatedAt", sort: true, width: 180 },
+    { field: "status", label: "status", pinned: "right", sort: true, width: 140 },
+    { field: "id", label: "id", pinned: "right", width: 170 },
   ], [text]);
 
   return (
@@ -104,7 +108,7 @@ export function ColumnPinningFeature() {
           <CominsTable
             className="example-table"
             columns={columns}
-            data={pinningRows}
+            data={rows}
             data-testid="column-pinning-viewport"
             getRowId={(row) => row.id}
             onChangeColumnLayout={setLayout}
@@ -112,7 +116,7 @@ export function ColumnPinningFeature() {
             summary={{
               columns: {
                 amount: "sum",
-                name: { aggregate: "count", colSpan: 2 },
+                name: { aggregate: "count", colSpan: 6 },
               },
             }}
             theme={{ density: "compact" }}
@@ -134,16 +138,21 @@ export function ColumnPinningFeature() {
             { children: ["name", "region"], id: "identity", label: text(defineLocalizedText("식별 정보", "Identity")), pinned: "left" },
           ]}
           columns={columns}
-          data={pinningRows}
+          data={rows}
           data-testid="column-pinning-grouped-viewport"
           getRowId={(row) => row.id}
+          onChangeData={setRows}
+          rowProps={{ draggable: true }}
           rowGrouping={{
-            expandedGroupIds: ["East", "West"],
+            expandedGroupIds,
             getGroupId: (group: { id: string }) => group.id,
             getGroupLabel: (group) => group.id,
             getRowGroupId: (row) => row.region,
-            groups: [{ id: "East" }, { id: "West" }],
-            onChangeExpandedGroupIds: () => undefined,
+            groups,
+            groupDraggable: true,
+            onChangeGroups: setGroups,
+            setRowGroupId: ({ row, toGroupId }) => ({ ...row, region: String(toGroupId) }),
+            onChangeExpandedGroupIds: setExpandedGroupIds,
           }}
           theme={{ density: "compact" }}
         />

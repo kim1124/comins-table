@@ -45,3 +45,7 @@ The first request uses `reason: "initial"`. Bottom-threshold requests use `reaso
 `hasMoreRows`, `loading`, and `loadingMore` are controlled. They stop exhausted or duplicate scroll requests and select skeleton, overlay, or bottom-loading presentation. The current `lazyLoadMode` is `"append"`.
 
 Abort the active application fetch when its supplied signal aborts, on refresh, or on unmount. The application must prevent stale responses from replacing newer controlled rows and owns error, retry, and empty-result policy.
+
+## Playground dataset
+
+The Playground simulates loading 1,000 deterministic Rows in batches of 100 with a 250ms delay, cancellation, refresh, and an end-of-data state. It does not require an external data service. These are example settings; the package default `lazyLoadBatchSize` remains 30. Lazy Load appends to the supplied array; use [Viewport Datasource](25-viewport-datasource.md) for arbitrary range loading with bounded caches.

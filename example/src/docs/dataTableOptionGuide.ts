@@ -9,10 +9,19 @@ type DataTableOptionGuideSource = ReadonlyArray<{
 export const dataTableOptionGuide: DataTableOptionGuideSource = [
   {
     items: [
+      { description: defineLocalizedText("기본 Row 높이는 숫자 rowHeight이며 getRowHeight는 Row별 숫자 또는 auto를 반환합니다. 자동 모드의 Renderer 높이는 Table이 측정합니다.", "rowHeight is the numeric default; getRowHeight returns a per-row number or auto. The Table measures Renderer content in automatic mode."), name: "rowHeight / getRowHeight" },
+      { description: defineLocalizedText("미측정 Row의 임시 높이입니다. 실제 콘텐츠 높이의 제한이 아닙니다.", "Temporary height for unmeasured Rows, without limiting actual content height."), name: "estimatedRowHeight" },
+      { description: defineLocalizedText("모든 깊이의 형제 이동을 활성화합니다. allowReparent로 부모 변경을 허용하고 canDrop으로 목적지를 제한합니다.", "Enables sibling moves at every depth. allowReparent permits parent changes; canDrop restricts destinations."), name: "treeRowDrag" },
+      { description: defineLocalizedText("전체 건수를 아는 구간 조회 모드입니다. useCominsViewport의 tableProps로 data, 요청, 변경 callback을 연결합니다.", "Known-total range loading. Connect controlled data and callbacks using useCominsViewport tableProps."), name: "viewportDatasource / useCominsViewport" },
+      { description: defineLocalizedText("절대 인덱스 구간, revision, requestId와 AbortSignal을 받는 구간 요청 callback입니다.", "Range request callback receiving absolute indexes, revision, requestId and AbortSignal."), name: "onViewportRequest" },
       { description: defineLocalizedText("Table이 렌더링하는 controlled Row 배열입니다. 배열을 교체하면 Row를 다시 렌더링합니다.", "The controlled row array rendered by the table. Replacing the array re-renders rows."), name: "data" },
       { description: defineLocalizedText("Label, field, ID, sort, props, format, Header와 Cell 동작을 정의합니다.", "Defines label, field, id, sort, props, format, header, and cell behavior."), name: "columns" },
       { description: defineLocalizedText("Selection, Row 이동과 callback payload에 사용하는 안정적인 Row ID resolver입니다.", "Stable row id resolver used by selection, row movement, and callback payloads."), name: "getRowId" },
       { description: defineLocalizedText("Cell selection event와 Cell selection styling을 활성화합니다.", "Enables cell selection events and cell selection styling."), name: "cellSelection" },
+      { description: defineLocalizedText("false이면 Cell 조작이 Row 선택을 바꾸지 않습니다. 기본값 true.", "When false, Cell interaction leaves Row selection unchanged. Defaults to true."), name: "rowSelectionOnClick" },
+      { description: defineLocalizedText("OS 복사를 활성화합니다. 여러 Cell → Row → 단일 Cell 순서이며 기본값 false입니다.", "Enables OS copying with multiple Cells, Rows, then single Cell priority. Defaults to false."), name: "clipboard" },
+      { description: defineLocalizedText("선택 Row, Cell 값, 선택 상태를 각각 조회합니다.", "Reads selected Rows, Cell values, and selection state independently."), name: "getSelectedRows / getSelectedCells / getSelection" },
+      { description: defineLocalizedText("auto, cells, rows 대상으로 OS 클립보드에 복사합니다.", "Copies auto, cells, or rows to the OS clipboard."), name: "copySelection" },
       { description: defineLocalizedText("대규모 Row 수를 위한 window rendering 경로를 활성화합니다.", "Enables the large-row-count window rendering path."), name: "virtualized" },
       { description: defineLocalizedText("가상화 viewport 위아래에 유지할 Row 수입니다. 기본값은 10입니다.", "Number of rows retained above and below the virtualized viewport. Defaults to 10."), name: "buffer-size" },
       { description: defineLocalizedText("Body viewport가 하단 threshold에 도달하면 controlled append loading을 요청합니다.", "Requests controlled append loading when the body viewport reaches the bottom threshold."), name: "infiniteScroll" },
@@ -24,7 +33,7 @@ export const dataTableOptionGuide: DataTableOptionGuideSource = [
       { description: defineLocalizedText("Lazy Load append request를 시작하는 하단 threshold입니다.", "Bottom threshold that triggers the lazy-load append request."), name: "lazyLoadThreshold" },
       { description: defineLocalizedText("현재 Lazy Load mode는 append만 지원합니다.", "The current lazy-load mode supports append only."), name: "lazyLoadMode" },
       { description: defineLocalizedText("Column별 고정 Summary 값을 설정합니다. Tree Grid에서는 leaf item만 집계합니다.", "Configures fixed summary values by column. In Tree Grid, only leaf items are aggregated."), name: "summary" },
-      { description: defineLocalizedText("Controlled nested Tree Grid data를 활성화합니다. Pagination, Lazy Loading, Infinite Scrolling, Row drag 또는 Row 단위 copy/paste와 함께 사용할 수 없습니다.", "Enables controlled nested Tree Grid data. It cannot be combined with pagination, lazy loading, infinite scrolling, row drag, or row-level copy/paste."), name: "tree" },
+      { description: defineLocalizedText("Controlled nested Tree Grid data를 활성화합니다. Pagination, Lazy Loading, Infinite Scrolling 또는 Row 단위 copy/paste와 함께 사용할 수 없습니다. Tree 이동은 treeRowDrag로 활성화합니다.", "Enables controlled nested Tree Grid data. It cannot be combined with pagination, lazy loading, infinite scrolling, or row-level copy/paste. Enable Tree movement with treeRowDrag."), name: "tree" },
       { description: defineLocalizedText("명시적 expand 값이 없는 Tree Grid Node의 초기 fallback 펼침 상태를 설정합니다. 기본값은 true입니다.", "Sets the initial fallback expansion for Tree Grid nodes without an explicit expand value. Defaults to true."), name: "defaultExpandAll" },
       { description: defineLocalizedText("Shift+click과 Shift+Enter/Space로 순서가 있는 다중 Column sort model을 구성합니다. 기본값은 false입니다.", "Enables Shift+click and Shift+Enter/Space to build an ordered multi-column sort model. Defaults to false."), name: "multiSort" },
       { description: defineLocalizedText("기본 Header 이동 Handle 표시 여부를 제어합니다. false여도 Header 전체 drag gesture는 유지됩니다.", "Controls default Header move-handle visibility. The whole-header drag gesture remains when false."), name: "showColumnMoveHandle" },
@@ -87,7 +96,7 @@ export const dataTableOptionGuide: DataTableOptionGuideSource = [
   {
     items: [
       { description: defineLocalizedText("외부 useState 또는 store 배열을 data에 직접 연결합니다. Table에서 발생한 변경은 onChangeData를 통해 전달됩니다.", "Connect an external useState or store array directly to data. Table-originated changes flow through onChangeData."), name: "data + onChangeData" },
-      { description: defineLocalizedText("현재 Core는 CSR을 대상으로 합니다. Server-side Row model과 viewport datasource model은 이후 범위입니다.", "The current core targets CSR. Server-side row models and viewport datasource models are deferred."), name: "CSR" },
+      { description: defineLocalizedText("현재 Core는 CSR을 대상으로 합니다. Viewport Datasource는 별도 controlled 구간 조회를 지원합니다.", "The current core targets CSR. Viewport Datasource supports a separate controlled range-loading mode."), name: "CSR" },
       { description: defineLocalizedText("Drag UX 계약이 정의될 때까지 시각적 Fill Handle UI는 이후 범위입니다. 현재는 fillCominsCellRange Core helper만 제공합니다.", "Visual Fill Handle UI is deferred until the drag UX contract is defined. Only the fillCominsCellRange core helper ships now."), name: "Visual Fill Handle UI" },
       { description: defineLocalizedText("Pivot, Chart 연동과 AI Assistant는 로드맵 항목입니다.", "Pivoting, charts integration, and AI assistant are roadmap items."), name: "Advanced Feature Roadmap" },
     ],

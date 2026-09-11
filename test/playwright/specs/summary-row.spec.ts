@@ -22,14 +22,17 @@ test("Summary Row route demonstrates aggregates, colSpan, format, and styling", 
   );
 
   const colSpan = page.locator("[data-feature-option='summary-colspan']");
-  await expect(colSpan.getByTestId("summary-cell-item")).toHaveAttribute("colspan", "2");
+  await expect(colSpan.getByTestId("summary-cell-item")).toHaveAttribute("colspan", "3");
   await expect(colSpan.getByTestId("summary-cell-quantity")).toHaveCount(0);
 
   const formatted = page.locator("[data-feature-option='summary-format']");
+  await expect(formatted.getByTestId("summary-cell-item")).toHaveAttribute("colspan", "3");
   await expect(formatted.getByTestId("summary-cell-amount")).toHaveText("₩2,300");
   await expect(formatted.getByTestId("summary-cell-score")).toHaveText("80.0점");
 
   const styled = page.locator("[data-feature-option='summary-style']");
+  await expect(styled.getByTestId("summary-cell-item")).toHaveAttribute("colspan", "3");
+  await expect(styled.getByTestId("summary-cell-amount")).toHaveAttribute("colspan", "2");
   await expect(styled.locator(".comins-table__summary-row")).toHaveClass(/summary-row-highlight/u);
   await expect(styled.getByTestId("summary-cell-amount")).toHaveClass(/summary-cell-emphasis/u);
 });

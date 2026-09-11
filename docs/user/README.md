@@ -37,15 +37,15 @@
 | --- | --- | --- |
 | Row callbacks, drag, and Context Menu | [Row](07-row.md) | [`/examples/row`](http://127.0.0.1:4002/examples/row), [`/examples/context-menu`](http://127.0.0.1:4002/examples/context-menu) |
 | Formatting, renderers, and components | [Cell](08-cell.md) | [`/examples/cell`](http://127.0.0.1:4002/examples/cell), [`/examples/component`](http://127.0.0.1:4002/examples/component) |
-| Copy and paste | [Clipboard](09-clipboard.md) | [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard) |
-| Row, Cell, and Range selection | [Selection](10-selection.md) | [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard) |
+| OS copy and internal paste | [Clipboard](09-clipboard.md) | [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard) |
+| Independent Row/Cell selection and getters | [Selection](10-selection.md) | [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard) |
 | Controlled Detail Rows | [Row Expand](19-row-expand.md) | [`/examples/row-expand`](http://127.0.0.1:4002/examples/row-expand) |
 
 ## Structured Rows
 
 | Feature | Guide | Playground |
 | --- | --- | --- |
-| Hierarchical data | [Tree Grid](17-tree-grid.md) | [`/examples/tree-grid`](http://127.0.0.1:4002/examples/tree-grid) |
+| Hierarchical data and subtree drag | [Tree Grid](17-tree-grid.md) | [`/examples/tree-grid`](http://127.0.0.1:4002/examples/tree-grid) |
 | Aggregated footer | [Summary Row](18-summary-row.md) | [`/examples/summary-row`](http://127.0.0.1:4002/examples/summary-row) |
 | Application-owned Groups | [Row Grouping](20-row-grouping.md) | [`/examples/row-grouping`](http://127.0.0.1:4002/examples/row-grouping) |
 | Row and Group transfer | [Cross-Table Drag](23-cross-table-drag.md) | [`/examples/cross-table-drag`](http://127.0.0.1:4002/examples/cross-table-drag) |
@@ -55,7 +55,9 @@
 | Feature | Guide | Playground |
 | --- | --- | --- |
 | External page state | [Pagination](05-pagination.md) | [`/performance/pagination`](http://127.0.0.1:4002/performance/pagination) |
-| Fixed-height windowing | [Virtualization](11-virtualization.md) | [`/performance/virtualization`](http://127.0.0.1:4002/performance/virtualization) |
+| Fixed and variable-height windowing | [Virtualization](11-virtualization.md) | [`/performance/virtualization`](http://127.0.0.1:4002/performance/virtualization) |
+| Automatic business Row height | [Automatic Row Height](24-auto-row-height.md) | [`/performance/auto-row-height`](http://127.0.0.1:4002/performance/auto-row-height) |
+| Bounded range loading | [Viewport Datasource](25-viewport-datasource.md) | [`/performance/viewport-datasource`](http://127.0.0.1:4002/performance/viewport-datasource) |
 | Application-owned append loading | [Infinite Scroll](15-infinite-scroll.md) | [`/performance/infinite-scroll`](http://127.0.0.1:4002/performance/infinite-scroll) |
 | Table-requested batches | [Lazy Load](16-lazy-load.md) | [`/performance/lazy-load`](http://127.0.0.1:4002/performance/lazy-load) |
 

@@ -35,7 +35,7 @@ Route에는 locale prefix를 추가하지 않는다. API 및 prop 이름, code s
 - `/examples/column-pinning`: 좌우 Column 및 Header Group 고정, 중앙 가로 스크롤, responsive demotion과 Summary 정렬
 - `/examples/body`: legacy URL 호환용 redirect. 실제 화면은 `/performance/virtualization`으로 이동한다.
 - `/examples/cell`: `cell.format`, `cell.props`, `cell.renderer`, cell event Alert, clipboard guard
-- `/examples/selection-clipboard`: controlled React data, `onChangeSelection`, Row/Cell/Range 선택, Ctrl/Cmd+C, Ctrl/Cmd+V, Column clipboard guard
+- `/examples/selection-clipboard`: `rowSelectionOnClick={false}`로 Row·Cell·Range 독립 선택, 선택 조회 API, 명시적인 Cell/Row 복사와 `onChangeSelection` 표시. `clipboard`로 OS 복사를 활성화하며 Ctrl/Cmd+V는 Column guard를 적용한 내부 버퍼를 사용한다.
 - `/examples/component`: Header와 Cell에 적용되는 built-in component와 custom renderer. Component 예제는 렌더링 결과 중심으로 표시한다.
 - `/examples/row`: drag handle reorder, `rowProps.draggable`, row disabled, row custom formatting, row event Alert, row keyboard copy/paste
 - `/examples/row-expand`: semantic Detail Row, controlled expanded ID, fixed/auto height, 480px Table frame 안의 960px tall Detail scroll
@@ -49,8 +49,10 @@ Route에는 locale prefix를 추가하지 않는다. API 및 prop 이름, code s
 - `/api/props`: 현재 구현된 props, events, ref/core 항목
 - `/api/ref`: 현재 구현된 ref method와 core helper 경계
 - `/performance/infinite-scroll`: 소비자가 rows와 요청 lifecycle을 소유하고 `onLoadMore`, `hasMoreRows`, `loadingMore`를 연결하는 Controlled Infinite Scroll 예제
-- `/performance/lazy-load`: append-mode `lazyLoad`, `onLazyLoad`, Loading / Empty / Infinite Scroll 연동 예제
+- `/performance/lazy-load`: 1,000개 예제 데이터를 100개씩 불러오는 append-mode 비동기 로딩, 취소, 재조회, 마지막 데이터 상태
 - `/performance/virtualization`: 10만 Row 기본 로드, virtualized large-row 사용 기준과 검증 주의사항
+- `/performance/auto-row-height`: 일반 Row의 자동·숫자 높이, 동적 Renderer 변경과 가변 높이 가상화
+- `/performance/viewport-datasource`: 알려진 전체 건수의 구간 조회, 캐시·취소·재시도·절대 인덱스, 자동 높이 결합
 
 왼쪽 메뉴는 구현된 기능만 노출한다.
 `/examples/basic`, `/examples/body`는 기존 링크 호환을 위해 route만 유지하고 왼쪽 메뉴에는 노출하지 않는다.
@@ -63,6 +65,11 @@ Route에는 locale prefix를 추가하지 않는다. API 및 prop 이름, code s
 - Loading은 Infinite Scroll과 같은 원격 사용자 API를 매핑한다. Initial은 0 Row skeleton, ready/refetch는 30개 매핑 Row, refetch는 기존 Row 위 overlay, Empty는 범위를 벗어난 실제 빈 응답을 사용한다.
 - Header Group parent를 끄더라도 child MultiSelect 선택은 유지되며 parent를 다시 켜면 선택된 child가 복원된다.
 - 960px tall Row Detail은 480px Table frame 안에서 semantic Detail Row로 유지된다. Table body가 scroll을 소유하므로 Detail 다음 owner Row까지 접근할 수 있다.
+- CRUD의 Column 이름과 데이터 키는 `column1`–`column6`이며 `column4` Row ID를 보존한다. 다른 데이터 Column도 field 이름을 표시한다.
+- Lazy Load는 1,000개 Row를 100개씩 250ms 지연·취소와 함께 시뮬레이션하며, 원격 API를 쓰는 Loading/Infinite Scroll 예제와 구분한다.
+- Header Group의 형제 Column은 같은 너비로 시작한다. Grouped Pinning은 이동을 허용하고 Row Grouping 자체 control에서 이동 제한을 확인한다.
+- Summary 예제는 결과 Column 직전까지 label을 병합하며 pin 경계를 유지한다.
+- Tree 이동 예제는 부모 변경과 자동 높이를 활성화한 상태로 시작한다. 라이브러리 기본값은 opt-in을 유지한다.
 
 ## Page 계약
 

@@ -545,8 +545,10 @@ describe("comins-table user documentation contract", () => {
       "Data Rows and collapsed Detail owners keep the arithmetic fixed-height path.",
     );
     expect(normalizedKoreanDocs).toContain(
-      "Data Row와 접힌 Detail owner는 고정 높이 산술 경로를 유지한다. 유효하게 펼쳐진 Detail로 인해 data Slot이 rowHeight보다 높아지는 경우에만 private height index가 활성화된다.",
+      "같은 고정 높이의 Data Row와 접힌 Detail owner는 산술 경로를 유지한다. Row별 지정 높이, 일반 Row 자동 높이 또는 펼쳐진 Detail은 private height index를 사용한다.",
     );
+    expect(normalizedKoreanDocs).toContain("owner 자동 높이는 `getRowHeight`로 지정하며 Detail 높이와 독립적으로 처리한다.");
+    expect(normalizedKoreanDocs).not.toContain("경우에만 private height index가 활성화된다");
   });
 
   it("rejects a duplicate Props group in the exported option guide", () => {

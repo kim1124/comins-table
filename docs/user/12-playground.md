@@ -45,13 +45,15 @@ Implemented routes include:
 - `/performance/infinite-scroll`
 - `/performance/lazy-load`
 - `/performance/virtualization`
+- `/performance/auto-row-height`
+- `/performance/viewport-datasource`
 - `/selection/cell-range`
 
 Route changes unmount the previous page and example subtree. The playground is meant to demonstrate implemented APIs, not roadmap-only features.
 
 The `/examples/header` route includes an explicit Multi-column Sort sample. Use a normal Header click or `Enter`/`Space` for single sorting, and hold `Shift` with the same input to add or update ordered rules while inspecting the live `CominsSortModel` output.
 
-The `/examples/selection-clipboard` route demonstrates controlled React Rows, visible `onChangeSelection` state, Row/Cell/Range selection, Ctrl/Cmd+C, Ctrl/Cmd+V, and per-Column clipboard guards.
+The `/examples/selection-clipboard` route demonstrates independent Row/Cell/Range selection with `rowSelectionOnClick={false}`, separate selection getters, explicit Cell/Row copy actions, and visible `onChangeSelection` state. It enables `clipboard` for OS copy; Ctrl/Cmd+V uses the internal buffer, respecting per-Column guards.
 
 ## Example data and state policy
 
@@ -62,3 +64,8 @@ The `/examples/selection-clipboard` route demonstrates controlled React Rows, vi
 - Header Group examples combine child Column MultiSelect selection with parent Group visibility Checkboxes. Disabling a parent preserves the selected children for restoration.
 - The 960px tall Row Detail stays semantic content inside a 480px Table frame. The Table body owns scrolling so following owner Rows remain reachable.
 - Basic, Style, Component, and Renderer Tree examples start expanded and support fold/re-expand through controlled `onChangeData`; only the ref-control example starts folded.
+- CRUD labels and data keys are `column1`–`column6`, with `column4` kept as the Row ID. Other data Columns display their field names.
+- Lazy Load simulates 1,000 Rows in batches of 100 with 250ms delay and cancellation; it is separate from the remote Loading/Infinite Scroll examples.
+- Header Group siblings start with equal widths. Grouped Pinning permits moves; Row Grouping demonstrates movement restrictions with its own controls.
+- Summary examples span labels up to their result Columns while respecting pin boundaries.
+- The Tree drag example enables parent changes and automatic heights initially; library defaults remain opt-in.

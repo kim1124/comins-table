@@ -20,11 +20,11 @@ const summaryRows: SummaryExampleRow[] = [
 export function SummaryRowFeature() {
   const { locale, text } = usePlaygroundLocale();
   const summaryColumns: Array<CominsTableColumn<SummaryExampleRow>> = [
-    { field: "item", label: text(defineLocalizedText("항목", "Item")), minWidth: 120 },
-    { field: "quantity", label: text(defineLocalizedText("수량", "Quantity")), minWidth: 100 },
-    { field: "unitPrice", label: text(defineLocalizedText("단가", "Unit Price")), minWidth: 120 },
-    { field: "amount", label: text(defineLocalizedText("금액", "Amount")), minWidth: 120 },
-    { field: "score", label: text(defineLocalizedText("점수", "Score")), minWidth: 100 },
+    { field: "item", label: "item", minWidth: 120 },
+    { field: "quantity", label: "quantity", minWidth: 100 },
+    { field: "unitPrice", label: "unitPrice", minWidth: 120 },
+    { field: "amount", label: "amount", minWidth: 120 },
+    { field: "score", label: "score", minWidth: 100 },
   ];
   return (
     <section className="feature-panel feature-panel--summary-row">
@@ -73,7 +73,7 @@ export function SummaryRowFeature() {
               amount: "sum",
               item: {
                 aggregate: () => locale === "ko" ? "총합" : "Grand Total",
-                colSpan: 2,
+                colSpan: 3,
               },
               score: "avg",
             },
@@ -97,6 +97,7 @@ export function SummaryRowFeature() {
           getRowId={(row) => row.id}
           summary={{
             columns: {
+              item: { aggregate: () => text(defineLocalizedText("포맷 적용", "Formatted")), colSpan: 3 },
               amount: {
                 aggregate: "sum",
                 format: ({ value }) => <strong>{`₩${Number(value).toLocaleString("en-US")}`}</strong>,
@@ -133,11 +134,12 @@ export function SummaryRowFeature() {
               amount: {
                 aggregate: "sum",
                 className: "summary-cell-emphasis",
+                colSpan: 2,
                 style: { textAlign: "right" },
               },
               item: {
                 aggregate: () => locale === "ko" ? "스타일 적용 합계" : "Styled Total",
-                colSpan: 2,
+                colSpan: 3,
               },
             },
             style: { fontWeight: 800 },

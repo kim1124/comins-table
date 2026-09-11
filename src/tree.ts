@@ -10,6 +10,25 @@ export type CominsTreeExpansionOptions = {
   defaultExpandAll?: boolean;
 };
 
+export type CominsTreeMoveDestination = {
+  parentId: CominsRowId | null;
+  beforeRowId: CominsRowId | null;
+};
+
+export type CominsTreeDropPosition = "before" | "after" | "inside";
+
+export type CominsTreeDropContext<TItem> = {
+  source: CominsVisibleTreeRow<TItem>;
+  target: CominsVisibleTreeRow<TItem>;
+  destination: CominsTreeMoveDestination;
+  position: CominsTreeDropPosition;
+};
+
+export type CominsTreeRowDragConfig<TItem> = {
+  allowReparent?: boolean;
+  canDrop?: (context: CominsTreeDropContext<TItem>) => boolean;
+};
+
 export type CominsVisibleTreeRow<TItem> = {
   depth: number;
   expanded: boolean;
@@ -89,6 +108,46 @@ function updateCominsTreeNodeAtPath<TItem>(
       children: updateCominsTreeNodeAtPath(node.children, remainingPath, update),
     };
   });
+}
+
+/** Move a complete subtree. Invalid and unchanged moves retain the input reference. */
+export function moveCominsTreeNode<TItem>(
+  nodes: readonly CominsTreeNode<TItem>[],
+  rowId: CominsRowId,
+  destination: CominsTreeMoveDestination,
+  getRowId: (item: TItem, index: number) => CominsRowId,
+  options: { allowReparent?: boolean } = {},
+): readonly CominsTreeNode<TItem>[] {
+  const index = createCominsTreeNodeIndex(nodes, getRowId);
+  const sourcePath = index.byId.get(rowId);
+  const parentPath = destination.parentId === null ? [] : index.byId.get(destination.parentId);
+  const beforePath = destination.beforeRowId === null ? undefined : index.byId.get(destination.beforeRowId);
+  if (!sourcePath || !parentPath || (destination.beforeRowId !== null && !beforePath)) return nodes;
+  const samePath = (a: readonly number[], b: readonly number[]) => a.length === b.length && a.every((value, i) => value === b[i]);
+  const sourceParent = sourcePath.slice(0, -1);
+  if (!options.allowReparent && !samePath(sourceParent, parentPath)) return nodes;
+  if (sourcePath.length <= parentPath.length && sourcePath.every((value, i) => value === parentPath[i])) return nodes;
+  if (beforePath && !samePath(beforePath.slice(0, -1), parentPath)) return nodes;
+  if (destination.beforeRowId === rowId) return nodes;
+  const siblingsAt = (tree: readonly CominsTreeNode<TItem>[], path: readonly number[]) => {
+    let siblings = tree;
+    for (const part of path) siblings = siblings[part]?.children ?? [];
+    return siblings;
+  };
+  const sourceSiblings = siblingsAt(nodes, sourceParent);
+  const sourceIndex = sourcePath[sourcePath.length - 1]!;
+  const source = sourceSiblings[sourceIndex]!;
+  const targetIndex = beforePath?.[beforePath.length - 1] ?? siblingsAt(nodes, parentPath).length;
+  if (samePath(sourceParent, parentPath) && (targetIndex === sourceIndex || targetIndex === sourceIndex + 1)) return nodes;
+  const removed = sourceSiblings.filter((_node, i) => i !== sourceIndex);
+  const detached = sourceParent.length === 0 ? removed : updateCominsTreeNodeAtPath(nodes, sourceParent, node => ({ ...node, children: removed }));
+  const nextIndex = createCominsTreeNodeIndex(detached, getRowId);
+  const nextParent = destination.parentId === null ? [] : nextIndex.byId.get(destination.parentId);
+  const nextBefore = destination.beforeRowId === null ? undefined : nextIndex.byId.get(destination.beforeRowId);
+  if (!nextParent) return nodes;
+  const children = [...siblingsAt(detached, nextParent)];
+  children.splice(nextBefore?.[nextBefore.length - 1] ?? children.length, 0, source);
+  return nextParent.length === 0 ? children : updateCominsTreeNodeAtPath(detached, nextParent, node => ({ ...node, children }));
 }
 
 export function flattenCominsTree<TItem>(

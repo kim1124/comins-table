@@ -92,6 +92,7 @@ describe("README preview contract", () => {
       "## Rows, Cells, And Selection",
       "## Row Grouping",
       "## Cross-Table Row And Group Drag",
+      "## Automatic Heights and Viewport Loading",
       "## Column Filtering",
       "## Virtualization And Loading",
       "## Summary Row",
@@ -129,10 +130,12 @@ describe("README preview contract", () => {
     expect(support).toContain("| Runtime network behavior | No package-owned requests, remote assets, telemetry, or error reporting |");
 
     const boundaries = getReadmeSection(readme, "Current Boundaries");
-    for (const boundary of ["Server-side Row models", "pivoting", "charts", "AI assistance", "remote Tree loading", "hierarchy pagination", "Tree Row drag", "Tree Row copy/paste", "visual fill handle", "Firefox", "Safari", "SSR"]) {
+    for (const boundary of ["Server-side Row models", "pivoting", "charts", "AI assistance", "remote Tree loading", "hierarchy pagination", "Tree Row copy/paste", "visual fill handle", "Firefox", "Safari", "SSR"]) {
       expect(boundaries).toContain(boundary);
     }
 
+    expect(boundaries).not.toContain("Tree Row drag");
+    expect(getReadmeSection(readme, "Automatic Heights and Viewport Loading")).toContain("treeRowDrag");
     const tree = getReadmeSection(readme, "Tree Grid");
     expect(tree).toContain("`expand(nodeIds?)`");
     expect(tree).toContain("`fold(nodeIds?)`");

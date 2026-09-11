@@ -416,7 +416,14 @@ function CominsHeaderMenuComponent<TData, TValue>({
               requestOpen(false, event);
               component.onSelect?.({ ...payload, event, item, value: item.value } as never);
             }}
-            onKeyDown={stopComponentEvent}
+            onKeyDown={(event) => {
+              stopComponentEvent(event);
+              if (event.key === "Escape") {
+                event.preventDefault();
+                requestOpen(false, event);
+                triggerRef.current?.focus();
+              }
+            }}
             onMouseDown={stopComponentEvent}
             onPointerDown={stopComponentEvent}
             role="menuitem"

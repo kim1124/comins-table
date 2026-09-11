@@ -76,7 +76,7 @@ test("playground verifies header resize, column position change, and layout rest
   await expect(page.getByTestId("column-move-ghost")).toBeVisible();
   await page.mouse.move(nameBox!.x + nameBox!.width / 2, nameBox!.y + nameBox!.height / 2);
   await page.mouse.up();
-  await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("Column2");
+  await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("age");
   await expect(page.getByTestId("layout-order")).toHaveCount(0);
 
   const handle = basicExample.getByTestId("resize-age");
@@ -92,7 +92,7 @@ test("playground verifies header resize, column position change, and layout rest
   await expect(page.getByTestId("layout-width-age")).toHaveCount(0);
 
   await basicExample.getByRole("button", { exact: true, name: "초기화" }).click();
-  await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("Column1");
+  await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("name");
 
   expect(diagnostics).toEqual([]);
 });
@@ -344,8 +344,8 @@ test("playground verifies header-wide show and hide removes the whole header are
     return Boolean(hit?.closest("[data-testid='header-visibility-column-select-option-age']"));
   });
   expect(hitTest).toBe(true);
-  await page.getByRole("checkbox", { exact: true, name: "Column2" }).click();
-  await page.getByRole("checkbox", { exact: true, name: "Column4" }).click();
+  await page.getByRole("checkbox", { exact: true, name: "age" }).click();
+  await page.getByRole("checkbox", { exact: true, name: "locked" }).click();
   await page.keyboard.press("Escape");
 
   await expect(columnSelect).toContainText("3개 컬럼");
@@ -367,8 +367,8 @@ test("playground verifies header-wide show and hide removes the whole header are
   await expect(visibilityExample.locator(".comins-table__header")).toBeVisible();
   await expect(visibilityExample.getByTestId("header-age")).toHaveCount(0);
   await columnSelect.click();
-  await page.getByRole("checkbox", { exact: true, name: "Column2" }).click();
-  await page.getByRole("checkbox", { exact: true, name: "Column4" }).click();
+  await page.getByRole("checkbox", { exact: true, name: "age" }).click();
+  await page.getByRole("checkbox", { exact: true, name: "locked" }).click();
   await page.keyboard.press("Escape");
   await expect(columnSelect).toContainText("5개 컬럼");
   await expect(visibilityExample.getByTestId("header-age")).toBeVisible();
@@ -439,11 +439,11 @@ test("playground verifies dynamic column visibility for column groups", async ({
 
   await dynamicExample.getByTestId("column-group-column-select-trigger").click();
   await expect(page.getByTestId("column-group-column-select-content")).toBeVisible();
-  await expect(page.getByRole("checkbox", { exact: true, name: "Column2" })).toBeChecked();
+  await expect(page.getByRole("checkbox", { exact: true, name: "age" })).toBeChecked();
   await page.getByTestId("column-group-column-select-option-age").click();
   await page.getByTestId("column-group-column-select-option-active").click();
-  await expect(page.getByRole("checkbox", { exact: true, name: "Column2" })).not.toBeChecked();
-  await expect(page.getByRole("checkbox", { exact: true, name: "Column3" })).not.toBeChecked();
+  await expect(page.getByRole("checkbox", { exact: true, name: "age" })).not.toBeChecked();
+  await expect(page.getByRole("checkbox", { exact: true, name: "active" })).not.toBeChecked();
   await page.keyboard.press("Escape");
 
   await expect(dynamicExample.getByTestId("column-group-column-select-trigger")).toContainText("3개 컬럼");
@@ -470,8 +470,8 @@ test("playground verifies dynamic column visibility for column groups", async ({
   await expect(dynamicExample.getByTestId("dynamic-group-table").getByTestId("header-age")).toHaveCount(0);
   await expect(visibleColumnOrder()).resolves.toEqual(orderBeforeGroupHide);
   await dynamicExample.getByTestId("column-group-column-select-trigger").click();
-  await expect(page.getByRole("checkbox", { exact: true, name: "Column2" })).not.toBeChecked();
-  await expect(page.getByRole("checkbox", { exact: true, name: "Column3" })).not.toBeChecked();
+  await expect(page.getByRole("checkbox", { exact: true, name: "age" })).not.toBeChecked();
+  await expect(page.getByRole("checkbox", { exact: true, name: "active" })).not.toBeChecked();
   await page.keyboard.press("Escape");
 
   expect(diagnostics).toEqual([]);

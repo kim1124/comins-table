@@ -86,38 +86,40 @@ export function ColumnFilteringFeature() {
     {
       field: "name",
       filter: { kind: "text" },
-      label: text(defineLocalizedText("이름", "Name")),
+      label: "name",
       minWidth: 150,
       sort: true,
     },
     {
       field: "amount",
       filter: { kind: "number" },
-      label: text(defineLocalizedText("금액", "Amount")),
+      label: "amount",
       minWidth: 120,
       sort: true,
     },
     {
       field: "joinedAt",
       filter: { kind: "date" },
-      label: text(defineLocalizedText("등록일", "Joined")),
+      label: "joinedAt",
       minWidth: 140,
       sort: true,
     },
     {
       field: "active",
       filter: { kind: "boolean" },
-      format: ({ value }) => value
-        ? text(defineLocalizedText("활성", "Active"))
-        : text(defineLocalizedText("비활성", "Inactive")),
-      label: text(defineLocalizedText("활성 여부", "Enabled")),
+      cell: {
+        format: ({ value }) => value
+          ? text(defineLocalizedText("활성", "Active"))
+          : text(defineLocalizedText("비활성", "Inactive")),
+      },
+      label: "active",
       minWidth: 125,
       sort: true,
     },
     {
       field: "status",
       filter: { kind: "text" },
-      label: text(defineLocalizedText("상태", "Status")),
+      label: "status",
       minWidth: 125,
       sort: true,
     },
