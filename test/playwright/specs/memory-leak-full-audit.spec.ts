@@ -321,7 +321,7 @@ test("full audit releases Row Expand Detail observers and counters within 10 per
     updateCount();
   });
 
-  await runMemoryScenario(page, testInfo, "row-expand-detail-lifecycle", async (currentPage) => {
+  const exerciseRowDetails: MemoryScenarioExercise = async (currentPage) => {
     await openFeature(currentPage, "Row Expand", "row-expand");
     const documentToken = await currentPage.evaluate(() => {
       const scope = window as typeof window & {
@@ -424,7 +424,18 @@ test("full audit releases Row Expand Detail observers and counters within 10 per
 
     expect(final.observedDetailTargets).toBe(0);
     return { final, intermediate };
-  }, 120_000);
+  };
+
+  // Include the same Detail interactions in warmup so first-use allocations
+  // are present in both snapshots, as in the other memory scenarios.
+  await runMemoryScenario(
+    page,
+    testInfo,
+    "row-expand-detail-lifecycle",
+    exerciseRowDetails,
+    120_000,
+    exerciseRowDetails,
+  );
 });
 
 async function exerciseComponentColumns(currentPage: Page) {
