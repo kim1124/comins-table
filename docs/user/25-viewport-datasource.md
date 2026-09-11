@@ -1,5 +1,7 @@
 # Viewport Datasource
 
+![Distant Viewport loading with a bounded cache and query reset](../assets/comins-table-viewport-datasource.gif)
+
 [English guides](README.md) · [한국어](../ko/25-viewport-datasource.md) · [Playground](http://127.0.0.1:4002/performance/viewport-datasource)
 
 Viewport loading fetches the current scroll region without downloading earlier pages or allocating an array for the entire dataset. The application must know the total count and support stable, arbitrary index ranges. It owns networking, authentication, sorting, filtering and persistence. The Table determines which region is needed.

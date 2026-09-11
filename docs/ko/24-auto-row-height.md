@@ -1,5 +1,7 @@
 # Row 자동 높이
 
+![Renderer 확장과 너비 변경에 반응하는 자동 높이](../assets/comins-table-auto-row-height.gif)
+
 [한글 가이드](README.md) · [English](../user/24-auto-row-height.md) · [Playground](http://127.0.0.1:4002/performance/auto-row-height)
 
 `rowHeight`는 숫자형 기본 높이(36)를 유지합니다. `getRowHeight`를 한 번 지정하여 전체 업무 Row를 자동 측정하거나, 특정 Row에서 유한한 양수를 반환하여 높이를 지정합니다. callback 생략 또는 `undefined` 반환은 `rowHeight`를 사용하며 유효하지 않은 숫자는 기본값으로 대체합니다. 관련 타입은 `CominsRowHeight`, `CominsRowHeightParams<TData>`입니다.

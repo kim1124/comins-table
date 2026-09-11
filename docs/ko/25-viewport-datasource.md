@@ -1,5 +1,7 @@
 # Viewport Datasource
 
+![제한된 캐시를 유지하는 원거리 Viewport 조회와 검색 초기화](../assets/comins-table-viewport-datasource.gif)
+
 [한글 가이드](README.md) · [English](../user/25-viewport-datasource.md) · [Playground](http://127.0.0.1:4002/performance/viewport-datasource)
 
 앞선 페이지를 모두 다운로드하거나 전체 건수만큼 배열을 만들지 않고 현재 스크롤 주변 구간을 조회합니다. 애플리케이션은 전체 건수를 알고 안정적인 임의 인덱스 구간 조회를 지원해야 합니다. 네트워크·인증·정렬·필터·저장은 앱이 소유하며 Table이 필요한 구간을 결정합니다.

@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { version } from "../../../package.json";
 
 import {
   CominsTable,
@@ -10,7 +11,11 @@ import {
   type CominsTreeNode,
 } from "../../../src";
 
+import { AutoHeightDemo, ViewportDemo } from "./ReadmeScaleDemos";
+
 type ReadmeFeatureId =
+  | "auto-row-height"
+  | "viewport-datasource"
   | "column-filtering"
   | "column-pinning"
   | "cross-table-drag"
@@ -44,10 +49,20 @@ const featureOrder: readonly ReadmeFeatureId[] = [
   "row-grouping",
   "column-filtering",
   "tree-grid",
+  "auto-row-height",
+  "viewport-datasource",
   "cross-table-drag",
 ];
 
 const featureCopy: Record<ReadmeFeatureId, { description: string; label: string; title: string }> = {
+  "auto-row-height": {
+    description: "Expand renderer content and resize the table. Visible row heights adjust across 100,000 rows.",
+    label: "Auto height", title: "Automatic Row Heights",
+  },
+  "viewport-datasource": {
+    description: "Scroll directly to a distant region of 1,000,000 rows. Load and cache only the requested blocks.",
+    label: "Viewport", title: "Viewport Datasource",
+  },
   "column-filtering": {
     description: "Apply controlled Header filters while explicit Groups and Summary values update in place.",
     label: "Filtering",
@@ -64,9 +79,9 @@ const featureCopy: Record<ReadmeFeatureId, { description: string; label: string;
     title: "Controlled Data Table",
   },
   "tree-grid": {
-    description: "Expand hierarchical Rows while renderers, Summary values, and controlled data stay aligned.",
+    description: "Move an entire subtree to a new parent. Controlled data, indentation, and children stay together.",
     label: "Tree",
-    title: "Tree Grid and Summary",
+    title: "Tree Row Drag",
   },
   "cross-table-drag": {
     description: "Move complete Group bundles between controlled Tables and reject duplicate Row IDs with feedback.",
@@ -118,17 +133,17 @@ function resolveInitialFeature(): ReadmeFeatureId {
 function TableOverviewDemo() {
   const [rows, setRows] = useState(baseRows);
   const columns = useMemo<Array<CominsTableColumn<PreviewRow>>>(() => [
-    { field: "name", label: "Name", minWidth: 170, sort: true },
-    { field: "team", label: "Team", minWidth: 145, sort: true },
-    { field: "amount", label: "Amount", minWidth: 125, sort: true },
+    { field: "name", label: "name", minWidth: 170, sort: true },
+    { field: "team", label: "team", minWidth: 145, sort: true },
+    { field: "amount", label: "amount", minWidth: 125, sort: true },
     {
       cell: { format: ({ value }) => `${String(value)}%` },
       field: "progress",
-      label: "Progress",
+      label: "progress",
       minWidth: 125,
       sort: true,
     },
-    { field: "status", label: "Status", minWidth: 130, sort: true },
+    { field: "status", label: "status", minWidth: 130, sort: true },
   ], []);
 
   return (
@@ -158,8 +173,7 @@ function createOverviewTree(): Array<CominsTreeNode<PreviewRow>> {
     {
       children: [
         { item: baseRows[0] },
-        { item: baseRows[2] },
-        { item: baseRows[4] },
+        { item: baseRows[2], children: [{ item: baseRows[4] }] },
       ],
       item: { ...baseRows[0], id: "tree-platform", name: "Platform portfolio", team: "Core" },
     },
@@ -188,17 +202,17 @@ function TreeGridOverviewDemo() {
         ),
       },
       field: "name",
-      label: "Node",
+      label: "name",
       minWidth: 280,
       sort: true,
     },
-    { field: "amount", label: "Amount", minWidth: 130, sort: true },
-    { field: "progress", label: "Progress", minWidth: 130, sort: true },
-    { field: "status", label: "Status", minWidth: 140, sort: true },
+    { field: "amount", label: "amount", minWidth: 130, sort: true },
+    { field: "progress", label: "progress", minWidth: 130, sort: true },
+    { field: "status", label: "status", minWidth: 140, sort: true },
   ], []);
 
   return (
-    <div className="readme-demo__tree-grid">
+    <div className="readme-demo__tree-grid readme-demo__tree-grid--caption">
       <div className="readme-demo__tree-controls">
         <button onClick={() => tableRef.current?.expand()} type="button">Expand all</button>
         <button onClick={() => tableRef.current?.fold()} type="button">Fold all</button>
@@ -212,26 +226,30 @@ function TreeGridOverviewDemo() {
         defaultExpandAll={false}
         getRowId={getRowId}
         onChangeData={setRows}
-        summary={{ columns: { amount: "sum", name: { aggregate: () => "Leaves", colSpan: 2 }, progress: "avg" } }}
         theme={{ density: "compact" }}
         tree
+        treeRowDrag={{ allowReparent: true }}
+        getRowHeight={() => "auto"}
       />
+      <output className="readme-demo__caption" data-testid="readme-tree-destination">
+        Gamma + Epsilon: {rows.find(root => root.children?.some(child => child.item.id === "record-c"))?.item.name}
+      </output>
     </div>
   );
 }
 
 function ColumnPinningDemo() {
   const columns = useMemo<Array<CominsTableColumn<PreviewRow>>>(() => [
-    { field: "name", label: "Name", pinned: "left", sort: true, width: 170 },
-    { field: "region", label: "Region", sort: true, width: 130 },
-    { field: "owner", label: "Owner", sort: true, width: 150 },
-    { field: "team", label: "Team", sort: true, width: 150 },
-    { field: "category", label: "Category", sort: true, width: 155 },
-    { field: "priority", label: "Priority", sort: true, width: 125 },
-    { field: "amount", label: "Amount", sort: true, width: 130 },
-    { field: "progress", label: "Progress", sort: true, width: 130 },
-    { field: "createdAt", label: "Created", sort: true, width: 160 },
-    { field: "status", label: "Status", pinned: "right", sort: true, width: 135 },
+    { field: "name", label: "name", pinned: "left", sort: true, width: 170 },
+    { field: "region", label: "region", sort: true, width: 130 },
+    { field: "owner", label: "owner", sort: true, width: 150 },
+    { field: "team", label: "team", sort: true, width: 150 },
+    { field: "category", label: "category", sort: true, width: 155 },
+    { field: "priority", label: "priority", sort: true, width: 125 },
+    { field: "amount", label: "amount", sort: true, width: 130 },
+    { field: "progress", label: "progress", sort: true, width: 130 },
+    { field: "createdAt", label: "createdAt", sort: true, width: 160 },
+    { field: "status", label: "status", pinned: "right", sort: true, width: 135 },
   ], []);
 
   return (
@@ -261,10 +279,10 @@ function RowGroupingDemo() {
     "experience",
   ]);
   const columns = useMemo<Array<CominsTableColumn<PreviewRow>>>(() => [
-    { field: "name", label: "Name", minWidth: 170, sort: true },
-    { field: "team", label: "Team", minWidth: 145, sort: true },
-    { field: "amount", label: "Amount", minWidth: 120, sort: true },
-    { field: "status", label: "Status", minWidth: 130, sort: true },
+    { field: "name", label: "name", minWidth: 170, sort: true },
+    { field: "team", label: "team", minWidth: 145, sort: true },
+    { field: "amount", label: "amount", minWidth: 120, sort: true },
+    { field: "status", label: "status", minWidth: 130, sort: true },
   ], []);
 
   return (
@@ -320,10 +338,10 @@ function ColumnFilteringDemo() {
     "experience",
   ]);
   const columns = useMemo<Array<CominsTableColumn<PreviewRow>>>(() => [
-    { field: "name", filter: { kind: "text" }, label: "Name", minWidth: 160, sort: true },
-    { field: "amount", filter: { kind: "number" }, label: "Amount", minWidth: 120, sort: true },
-    { field: "createdAt", filter: { kind: "date" }, label: "Created", minWidth: 140, sort: true },
-    { field: "status", filter: { kind: "text" }, label: "Status", minWidth: 130, sort: true },
+    { field: "name", filter: { kind: "text" }, label: "name", minWidth: 160, sort: true },
+    { field: "amount", filter: { kind: "number" }, label: "amount", minWidth: 120, sort: true },
+    { field: "createdAt", filter: { kind: "date" }, label: "createdAt", minWidth: 140, sort: true },
+    { field: "status", filter: { kind: "text" }, label: "status", minWidth: 130, sort: true },
   ], []);
 
   return (
@@ -355,8 +373,8 @@ function ColumnFilteringDemo() {
 }
 
 const transferColumns: Array<CominsTableColumn<PreviewRow>> = [
-  { field: "name", label: "Name", minWidth: 135 },
-  { field: "status", label: "Status", minWidth: 100 },
+  { field: "name", label: "name", minWidth: 135 },
+  { field: "status", label: "status", minWidth: 100 },
 ];
 
 const leftTransferGroups: PreviewGroup[] = [
@@ -459,6 +477,8 @@ function CrossTableDragDemo() {
 }
 
 const featureDemos: Record<ReadmeFeatureId, () => ReactNode> = {
+  "auto-row-height": AutoHeightDemo,
+  "viewport-datasource": ViewportDemo,
   "column-filtering": ColumnFilteringDemo,
   "column-pinning": ColumnPinningDemo,
   "cross-table-drag": CrossTableDragDemo,
@@ -476,7 +496,7 @@ export function ReadmeDemoPage() {
     <section className="readme-demo" data-feature={feature} data-testid="readme-demo">
       <header className="readme-demo__header">
         <div>
-          <p className="readme-demo__eyebrow">Comins Table 0.1.9</p>
+          <p className="readme-demo__eyebrow">Comins Table {version}</p>
           <h1>{copy.title}</h1>
           <p>{copy.description}</p>
         </div>

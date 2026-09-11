@@ -1,5 +1,7 @@
 # Automatic Row Height
 
+![Renderer expansion and width changes update automatic heights](../assets/comins-table-auto-row-height.gif)
+
 [English guides](README.md) · [한국어](../ko/24-auto-row-height.md) · [Playground](http://127.0.0.1:4002/performance/auto-row-height)
 
 `rowHeight` remains the numeric default (36). Set `getRowHeight` once to measure every business Row automatically, or return a positive finite number for selected Rows. An omitted callback or `undefined` result uses `rowHeight`. Invalid numeric values fall back to the default. `CominsRowHeight` and `CominsRowHeightParams<TData>` describe this API.

@@ -231,6 +231,9 @@ describe("comins-table user documentation contract", () => {
       ["21-column-filtering.md", "comins-table-column-filtering.gif"],
       ["22-column-pinning.md", "comins-table-column-pinning.gif"],
       ["23-cross-table-drag.md", "comins-table-cross-table-drag.gif"],
+      ["17-tree-grid.md", "comins-table-tree-row-drag.gif"],
+      ["24-auto-row-height.md", "comins-table-auto-row-height.gif"],
+      ["25-viewport-datasource.md", "comins-table-viewport-datasource.gif"],
     ]) {
       expect(readWorkspaceFile(`docs/user/${guide}`)).toContain(`../assets/${asset}`);
       expect(readWorkspaceFile(`docs/ko/${guide}`)).toContain(`../assets/${asset}`);

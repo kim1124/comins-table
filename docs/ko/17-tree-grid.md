@@ -1,5 +1,7 @@
 # Tree Grid
 
+![하위 노드와 함께 부모를 변경하는 Tree Row 이동](../assets/comins-table-tree-row-drag.gif)
+
 <!-- comins-restriction: tree-no-pagination -->
 
 [문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/17-tree-grid.md) · [Playground](http://127.0.0.1:4002/examples/tree-grid)

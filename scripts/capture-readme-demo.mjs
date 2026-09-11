@@ -274,6 +274,85 @@ async function captureCrossTableDrag(page, captureFrame) {
   await captureFrame(12);
 }
 
+async function movePreviewSubtree(page, captureFrame) {
+  const tree = page.getByTestId("readme-demo-tree-grid-table");
+  await dragWithCapture(page, tree.getByTestId("row-drag-handle-record-c"), tree.getByTestId("row-tree-experience"), captureFrame);
+  await waitForReadmeState(async () => (await page.getByTestId("readme-tree-destination").textContent()).includes("Experience portfolio"), "Tree subtree move failed");
+  assert(await tree.getByTestId("row-record-e").isVisible(), "Tree descendant lost after move");
+  const childBox = await tree.getByTestId("row-record-e").boundingBox();
+  const viewportBox = await tree.boundingBox();
+  assert(childBox && viewportBox && childBox.y + childBox.height <= viewportBox.y + viewportBox.height, "Tree descendant outside capture");
+}
+
+async function captureTreeDrag(page, captureFrame) {
+  await captureFrame(8);
+  await page.getByRole("button", { name: "Expand all" }).click();
+  await captureFrame(8);
+  await movePreviewSubtree(page, captureFrame);
+  await captureFrame(12);
+  await page.getByRole("button", { name: "Fold all" }).click();
+  await captureFrame(8);
+  await page.getByRole("button", { name: "Expand all" }).click();
+  await captureFrame(8);
+}
+
+async function expandPreviewContent(page, captureFrame) {
+  const row = page.getByTestId("readme-demo-auto-row-height-table").getByTestId("row-0");
+  const initial = await row.evaluate(element => element.getBoundingClientRect().height);
+  await page.getByTestId("readme-content-toggle").click();
+  await waitForReadmeState(async () => await row.evaluate(element => element.getBoundingClientRect().height) > initial + 30, "Automatic row height did not grow");
+  await captureFrame(4);
+}
+
+async function captureAutoHeight(page, captureFrame) {
+  const viewport = page.getByTestId("readme-demo-auto-row-height-table");
+  await captureFrame(8);
+  await expandPreviewContent(page, captureFrame);
+  await captureFrame(8);
+  const row = viewport.getByTestId("row-0");
+  const wideHeight = await row.evaluate(element => element.getBoundingClientRect().height);
+  await page.getByTestId("readme-width-toggle").click();
+  await waitForReadmeState(async () => await row.evaluate(element => element.getBoundingClientRect().height) > wideHeight, "Automatic height did not react to width");
+  await captureFrame(10);
+  await page.getByTestId("readme-content-toggle").click();
+  await captureFrame(8);
+  await viewport.hover();
+  for (let step = 0; step < 4; step += 1) {
+    await page.mouse.wheel(0, 180);
+    await captureFrame(3);
+  }
+  await captureFrame(8);
+}
+
+async function scrollPreviewViewport(page, captureFrame) {
+  const viewport = page.getByTestId("readme-demo-viewport-datasource-table");
+  const box = await viewport.boundingBox();
+  const metrics = await viewport.evaluate(element => ({ height: element.clientHeight, gutter: element.offsetWidth - element.clientWidth }));
+  assert(box && metrics.gutter > 0, "Viewport scrollbar unavailable");
+  const x = box.x + box.width - metrics.gutter / 2;
+  await page.mouse.move(x, box.y + 14);
+  await page.mouse.down();
+  for (let step = 1; step <= 12; step += 1) {
+    await page.mouse.move(x, box.y + 14 + (metrics.height * 0.65 - 14) * step / 12);
+    await captureFrame();
+  }
+  await page.mouse.up();
+  await waitForReadmeState(async () => Number(await viewport.locator("[data-comins-row-data-index]").first().getAttribute("data-comins-absolute-index")) > 400_000, "Viewport distant rows unavailable");
+}
+
+async function captureViewport(page, captureFrame) {
+  const viewport = page.getByTestId("readme-demo-viewport-datasource-table");
+  await viewport.getByTestId("row-0").waitFor();
+  await captureFrame(10);
+  await scrollPreviewViewport(page, captureFrame);
+  await captureFrame(12);
+  await page.getByTestId("readme-viewport-query").click();
+  await captureFrame(4);
+  await viewport.getByTestId("row-0").waitFor();
+  await waitForReadmeState(async () => (await viewport.getByTestId("row-0").textContent()).includes("Query 2"), "Viewport query reset failed");
+  await captureFrame(12);
+}
+
 async function switchOverviewFeature(page, feature) {
   await page.getByTestId(`readme-demo-view-${feature}`).click();
   await waitForReadmeState(
@@ -347,6 +426,18 @@ async function captureOverview(page, captureFrame) {
     "Overview Tree Grid expansion unavailable",
   );
   await captureFrame(6);
+  await movePreviewSubtree(page, captureFrame);
+  await captureFrame(4);
+
+  await switchOverviewFeature(page, "auto-row-height");
+  await captureFrame(3);
+  await expandPreviewContent(page, captureFrame);
+
+  await switchOverviewFeature(page, "viewport-datasource");
+  await page.getByTestId("readme-demo-viewport-datasource-table").getByTestId("row-0").waitFor();
+  await captureFrame(4);
+  await scrollPreviewViewport(page, captureFrame);
+  await captureFrame(6);
 
   await switchOverviewFeature(page, "cross-table-drag");
   const left = page.getByTestId("readme-demo-transfer-left");
@@ -367,6 +458,9 @@ async function captureOverview(page, captureFrame) {
 }
 
 const featureDefinitions = [
+  { assetName: "comins-table-tree-row-drag.gif", feature: "tree-grid", run: captureTreeDrag },
+  { assetName: "comins-table-auto-row-height.gif", feature: "auto-row-height", run: captureAutoHeight },
+  { assetName: "comins-table-viewport-datasource.gif", feature: "viewport-datasource", run: captureViewport },
   {
     assetName: "comins-table-overview.gif",
     feature: "table-overview",
@@ -508,9 +602,10 @@ async function generateReadmeGifs() {
     ], { cwd: repositoryRoot, stdio: ["ignore", "pipe", "ignore"] });
     await waitForServer();
 
-    browser = await chromium.launch({ headless: true });
+    browser = await chromium.launch({ headless: false });
     const page = await browser.newPage({ deviceScaleFactor: 1, viewport: { height: 760, width: 1000 } });
     for (const definition of featureDefinitions) {
+      process.stdout.write(`readme-gif: capturing ${definition.feature}\n`);
       await encodeFeatureGif(definition, page);
     }
   } catch (error) {

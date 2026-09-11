@@ -1,5 +1,7 @@
 # Tree Grid
 
+![Tree subtree drag with parent changes](../assets/comins-table-tree-row-drag.gif)
+
 <!-- comins-restriction: tree-no-pagination -->
 
 [Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/17-tree-grid.md) · [Playground](http://127.0.0.1:4002/examples/tree-grid)
