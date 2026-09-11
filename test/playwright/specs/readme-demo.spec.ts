@@ -1,4 +1,7 @@
 import { expect, test, type ConsoleMessage, type Locator, type Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
+
+const { version } = JSON.parse(readFileSync(new URL("../../../package.json", import.meta.url), "utf8"));
 
 function collectBrowserDiagnostics(page: Page) {
   const diagnostics: string[] = [];
@@ -34,6 +37,7 @@ test("README overview moves through representative controlled Table scenes", asy
   const tableRoot = table.locator("xpath=..");
 
   await expect(demo).toHaveAttribute("data-feature", "table-overview");
+  await expect(demo.locator(".readme-demo__eyebrow")).toHaveText(`Comins Table ${version}`);
   await expect(table.locator("tr[data-comins-row-data-index]")).toHaveCount(6);
   await tableRoot.getByTestId("header-amount").click();
   await expect(tableRoot.getByTestId("header-amount")).toHaveAttribute("aria-sort", "ascending");
@@ -47,11 +51,72 @@ test("README overview moves through representative controlled Table scenes", asy
   await page.getByRole("button", { name: "Expand all" }).click();
   await expect(tree.locator("tr[data-comins-row-data-index]")).toHaveCount(8);
 
-  for (const feature of ["column-pinning", "row-grouping", "column-filtering", "cross-table-drag"]) {
+  for (const feature of ["column-pinning", "row-grouping", "column-filtering", "cross-table-drag", "auto-row-height", "viewport-datasource"]) {
     await page.getByTestId(`readme-demo-view-${feature}`).click();
     await expect(demo).toHaveAttribute("data-feature", feature);
     await expect(page.getByTestId(`readme-demo-${feature}`)).toBeVisible();
   }
+  expect(diagnostics).toEqual([]);
+});
+
+test("README Tree drag moves a subtree and preserves its child after folding", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/readme-demo?feature=tree-grid");
+  const tree = page.getByTestId("readme-demo-tree-grid-table");
+  await page.getByRole("button", { name: "Expand all" }).click();
+  await expect(tree.locator("tr[data-comins-row-data-index]")).toHaveCount(8);
+  await dragPointer(page, tree.getByTestId("row-drag-handle-record-c"), tree.getByTestId("row-tree-experience"));
+  await expect(page.getByTestId("readme-tree-destination")).toContainText("Gamma + Epsilon: Experience portfolio");
+  await expect(tree.getByTestId("row-record-e")).toBeVisible();
+  const childBox = (await tree.getByTestId("row-record-e").boundingBox())!;
+  const viewportBox = (await tree.boundingBox())!;
+  expect(childBox.y + childBox.height).toBeLessThanOrEqual(viewportBox.y + viewportBox.height);
+  await page.getByRole("button", { name: "Fold all" }).click();
+  await expect(tree.locator("tr[data-comins-row-data-index]")).toHaveCount(2);
+  await page.getByRole("button", { name: "Expand all" }).click();
+  await expect(tree.locator("tr[data-comins-row-data-index]")).toHaveCount(8);
+  await expect(tree.getByTestId("row-record-e")).toBeVisible();
+  expect(diagnostics).toEqual([]);
+});
+
+test("README automatic heights follow renderer content and available width", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/readme-demo?feature=auto-row-height");
+  const viewport = page.getByTestId("readme-demo-auto-row-height-table");
+  const first = viewport.getByTestId("row-0");
+  await expect(first).toBeVisible();
+  const height = () => first.evaluate(element => element.getBoundingClientRect().height);
+  const initial = await height();
+  await page.getByTestId("readme-content-toggle").click();
+  await expect.poll(height).toBeGreaterThan(initial + 30);
+  const expanded = await height();
+  await page.getByTestId("readme-width-toggle").click();
+  await expect.poll(height).toBeGreaterThan(expanded);
+  await page.getByTestId("readme-content-toggle").click();
+  await expect.poll(height).toBeLessThan(expanded);
+  await viewport.hover();
+  await page.mouse.wheel(0, 900);
+  await expect.poll(() => viewport.evaluate(element => element.scrollTop)).toBeGreaterThan(500);
+  expect(await viewport.locator("tr[data-comins-row-data-index]").count()).toBeLessThan(40);
+  expect(diagnostics).toEqual([]);
+});
+
+test("README Viewport wheel loads distant indices with bounded cache and query reset", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/readme-demo?feature=viewport-datasource");
+  const viewport = page.getByTestId("readme-demo-viewport-datasource-table");
+  await expect(viewport.getByTestId("row-0")).toContainText("Query 1");
+  await viewport.hover();
+  await page.mouse.wheel(0, 1_000_000);
+  await expect.poll(async () => Number(await viewport.locator("[data-comins-row-data-index]").first().getAttribute("data-comins-absolute-index"))).toBeGreaterThan(400_000);
+  const cache = page.getByTestId("readme-viewport-cache");
+  await expect(cache).toContainText("/ 1,000,000 rows");
+  const cached = Number((await cache.innerText()).match(/Cached ([\d,]+)/)![1]!.replaceAll(",", ""));
+  expect(cached).toBeGreaterThan(0);
+  expect(cached).toBeLessThanOrEqual(400);
+  await page.getByTestId("readme-viewport-query").click();
+  await expect(viewport.getByTestId("row-0")).toContainText("Query 2");
+  await expect.poll(() => viewport.evaluate(element => element.scrollTop)).toBe(0);
   expect(diagnostics).toEqual([]);
 });
 

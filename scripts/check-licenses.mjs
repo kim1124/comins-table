@@ -75,6 +75,9 @@ const README_GIFS = [
   'docs/assets/comins-table-cross-table-drag.gif',
   'docs/assets/comins-table-overview.gif',
   'docs/assets/comins-table-row-grouping.gif',
+  'docs/assets/comins-table-auto-row-height.gif',
+  'docs/assets/comins-table-tree-row-drag.gif',
+  'docs/assets/comins-table-viewport-datasource.gif',
 ];
 const ASSET_EVIDENCE = 'THIRD_PARTY_ASSETS.json';
 const RESERVED_FONT_NAMES = [

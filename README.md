@@ -7,7 +7,7 @@ Comins Table is a controlled React data table for data-heavy application screens
 [![Verify](https://github.com/kim1124/comins-table/actions/workflows/verify.yml/badge.svg?branch=main)](https://github.com/kim1124/comins-table/actions/workflows/verify.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-![Comins Table controlled Rows, Column Pinning, Row Grouping, Filtering, Tree Grid, and Cross-Table Drag overview](https://raw.githubusercontent.com/kim1124/comins-table/main/docs/assets/comins-table-overview.gif)
+![Comins Table 0.1.10: Tree subtree drag, automatic heights, Viewport loading, and controlled table interactions](https://raw.githubusercontent.com/kim1124/comins-table/main/docs/assets/comins-table-overview.gif)
 
 ## Why Comins Table
 
@@ -239,6 +239,24 @@ Use `getRowHeight={() => "auto"}` for content-driven business Row heights, or re
 
 Viewport bounds cached data and measured heights; distant scrolling does not fetch every earlier page or require a full dataset array. Unloaded heights are estimated, so scrollbar size can change as content is measured. Selection getters and copy operate on loaded data without fetching missing Rows. The application owns network requests and edit persistence. Tree, Row Grouping, Row Detail, Row Drag, append loading, pagination, built-in sorting/filtering, and automatic Summary aggregation are unavailable in Viewport mode.
 
+### Tree subtree movement
+
+Move Gamma and its child Epsilon to another parent, then fold and expand the hierarchy.
+
+![Tree subtree drag with controlled parent changes](https://raw.githubusercontent.com/kim1124/comins-table/main/docs/assets/comins-table-tree-row-drag.gif)
+
+### Content-driven heights
+
+Expand a Cell Renderer and narrow the Table. Row heights adjust automatically across 100,000 virtualized Rows.
+
+![Automatic row heights respond to renderer content and table width](https://raw.githubusercontent.com/kim1124/comins-table/main/docs/assets/comins-table-auto-row-height.gif)
+
+### Load the visible region
+
+Drag the scrollbar to a distant region of 1,000,000 Rows, inspect the bounded cache, and change the query. This recording uses a simulated asynchronous source with a 250 ms delay.
+
+![Viewport datasource loads a distant range and resets the query](https://raw.githubusercontent.com/kim1124/comins-table/main/docs/assets/comins-table-viewport-datasource.gif)
+
 See [automatic height](https://github.com/kim1124/comins-table/blob/main/docs/user/24-auto-row-height.md), [Viewport Datasource](https://github.com/kim1124/comins-table/blob/main/docs/user/25-viewport-datasource.md), and [Tree drag](https://github.com/kim1124/comins-table/blob/main/docs/user/17-tree-grid.md) for examples, defaults, and combination limits.
 
 ## Column Filtering
@@ -360,7 +378,7 @@ npm run verify
 npm run docs:readme-gif
 ```
 
-`npm run docs:readme-gif` is a maintainer command that captures the real hidden Playground fixtures and regenerates the overview animation plus four detailed feature animations.
+`npm run docs:readme-gif` is a maintainer command that captures the real hidden Playground fixtures and regenerates the overview animation plus seven detailed feature animations, including Tree subtree drag, automatic height, and Viewport loading.
 
 ## Trusted Publishing
 

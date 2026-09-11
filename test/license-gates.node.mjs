@@ -43,6 +43,9 @@ const readmeGifs = [
   'docs/assets/comins-table-cross-table-drag.gif',
   'docs/assets/comins-table-overview.gif',
   'docs/assets/comins-table-row-grouping.gif',
+  'docs/assets/comins-table-auto-row-height.gif',
+  'docs/assets/comins-table-tree-row-drag.gif',
+  'docs/assets/comins-table-viewport-datasource.gif',
 ];
 const radixName = '@radix-ui/react-icons';
 const radixVersion = '1.3.2';

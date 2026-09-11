@@ -2787,7 +2787,59 @@ body {
 
 .readme-demo__tree-controls {
   display: flex;
+  align-items: center;
   gap: 8px;
+}
+
+.readme-demo__tree-grid--caption,
+.readme-demo__scale-grid {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  min-height: 0;
+}
+
+.readme-demo__scale-table {
+  min-height: 0;
+  max-width: 100%;
+}
+
+.readme-demo__scale-table .comins-table__body-viewport {
+  scrollbar-gutter: stable;
+  scrollbar-color: auto;
+  overflow-y: scroll;
+}
+
+.readme-demo__scale-table .comins-table__body-viewport::-webkit-scrollbar {
+  width: 16px;
+}
+
+.readme-demo__scale-table .comins-table__body-viewport::-webkit-scrollbar-thumb {
+  min-height: 28px;
+  background: #64748b;
+  border: 3px solid #f1f5f9;
+  border-radius: 8px;
+}
+
+.readme-demo__wrapped-content {
+  white-space: normal;
+  line-height: 22px;
+}
+
+.readme-demo__caption {
+  color: #475569;
+  font-size: 13px;
+}
+
+.readme-demo__content-button {
+  margin-bottom: 4px;
+  padding: 3px 8px;
+  color: #065f46;
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  border-radius: 5px;
+  font: inherit;
+  cursor: pointer;
 }
 
 .readme-demo__tree-controls button {

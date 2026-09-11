@@ -1,6 +1,20 @@
 {
   "name": "comins-table",
   "version": "0.1.10",
+  "keywords": [
+    "react",
+    "typescript",
+    "data-table",
+    "data-grid",
+    "react-table",
+    "virtualization",
+    "tree-grid",
+    "row-grouping",
+    "column-pinning",
+    "editable-table",
+    "clipboard",
+    "viewport-datasource"
+  ],
   "license": "MIT",
   "type": "module",
   "repository": {
