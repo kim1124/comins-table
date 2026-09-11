@@ -2568,7 +2568,9 @@ describe("comins-table keyboard interaction", () => {
       )!;
 
       setElementRect(content, 800, 300);
-      viewportHeight = 50_000;
+      // A normal viewport change still exposes an uncommitted scroll scale,
+      // without mounting thousands of candidate Rows in the DOM test environment.
+      viewportHeight = 864;
       act(() => {
         startTransition(() => {
           resize.emit(viewport, viewportHeight);
