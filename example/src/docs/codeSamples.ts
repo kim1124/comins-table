@@ -21,7 +21,7 @@ const codeSampleTitles = {
   "Controlled selection and clipboard": defineLocalizedText("Controlled 선택과 Clipboard", "Controlled selection and clipboard"),
   "Core props": defineLocalizedText("Core props", "Core props"),
   "CSS override": defineLocalizedText("CSS 재정의", "CSS override"),
-  "DummyJSON Lazy Load": defineLocalizedText("DummyJSON Lazy Load", "DummyJSON Lazy Load"),
+  "Sample Lazy Load": defineLocalizedText("1,000건 지연 로딩", "1,000-row Lazy Load"),
   "External pagination state": defineLocalizedText("외부 Pagination 상태", "External pagination state"),
   "Header move and persistence": defineLocalizedText("Header 이동과 저장", "Header move and persistence"),
   "Height container": defineLocalizedText("높이 컨테이너", "Height container"),
@@ -59,8 +59,8 @@ export const installSamples: DocsCodeSample[] = [
 import "comins-table/styles.css";
 
 const columns = [
-  { id: "name", field: "name", label: "Name", sort: true },
-  { id: "role", field: "role", label: "Role" },
+  { id: "name", field: "name", label: "name", sort: true },
+  { id: "role", field: "role", label: "role" },
 ];
 
 const data = [
@@ -78,16 +78,19 @@ export function Example() {
 
 export const crudSamples: DocsCodeSample[] = [
   {
-    code: `const [rows, setRows] = useState(createExampleRows(100));
-const [selection, setSelection] = useState({ rowIndexes: [] });
+    code: `const [rows, setRows] = useState([
+  { column1: "Data 1", column2: 31, column3: "Owner", column4: "a", column5: true, column6: "Data 1" },
+]);
+const columns = ["column1", "column2", "column3", "column4", "column5", "column6"]
+  .map((field) => ({ field, label: field }));
 
 <CominsTable
   columns={columns}
   data={rows}
-  getRowId={(row) => row.id}
+  getRowId={(row) => row.column4}
   onChangeData={setRows}
-  onChangeSelection={setSelection}
-  selection={selection}
+  onChangeSelection={(selection) => setSelectedRowIds(selection.rowIds)}
+  onClickRow={({ row }) => setSelectedRowJson(JSON.stringify(row.data, null, 2))}
 />;`,
     language: "tsx",
     title: "Controlled CRUD state",
@@ -183,9 +186,9 @@ async function loadRows(mode: "initial" | "ready" | "refetch", empty = false) {
 export const headerSamples: DocsCodeSample[] = [
   {
     code: `const columns = [
-  { id: "name", field: "name", label: "Name", sort: true },
-  { id: "role", field: "role", label: "Role" },
-  { id: "team", field: "team", label: "Team" },
+  { id: "name", field: "name", label: "name", sort: true },
+  { id: "role", field: "role", label: "role" },
+  { id: "team", field: "team", label: "team" },
 ];
 
 const layout = tableRef.current?.getColumnLayout();
@@ -216,9 +219,9 @@ tableRef.current?.setSortModel([
 export const headerGroupSamples: DocsCodeSample[] = [
   {
     code: `const columns = [
-  { id: "name", field: "name", label: "Name" },
-  { id: "role", field: "role", label: "Role" },
-  { id: "team", field: "team", label: "Team" },
+  { id: "name", field: "name", label: "name" },
+  { id: "role", field: "role", label: "role" },
+  { id: "team", field: "team", label: "team" },
 ];
 
 const columnGroups = [
@@ -257,13 +260,13 @@ const overrides = useState({});
 
 <CominsTable
   columns={[
-    { field: "name", label: "Column1" },
-    { field: "active", label: "Column2", cell: { components: [{ type: "checkbox" }] } },
-    { field: "name", label: "Column3", cell: { components: [{ type: "button" }] } },
-    { field: "role", label: "Column4", cell: { renderer: ({ row }) => <select defaultValue={row.role}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> } },
-    { field: "age", label: "Column5", cell: { components: [{ type: "progress" }] } },
-    { field: "name", label: "Column6", cell: { components: [{ type: "virtual-list", items }] } },
-    { field: "role", label: "Column7", cell: { components: [{ type: "radio", options }] } },
+    { field: "name", label: "name" },
+    { field: "active", label: "active", cell: { components: [{ type: "checkbox" }] } },
+    { field: "name", label: "name", cell: { components: [{ type: "button" }] } },
+    { field: "role", label: "role", cell: { renderer: ({ row }) => <select defaultValue={row.role}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> } },
+    { field: "age", label: "age", cell: { components: [{ type: "progress" }] } },
+    { field: "name", label: "name", cell: { components: [{ type: "virtual-list", items }] } },
+    { field: "role", label: "role", cell: { components: [{ type: "radio", options }] } },
   ]}
   data={rows}
   getRowId={(_row, index) => index}
@@ -370,57 +373,39 @@ const appendRows = useCallback(async () => {
 
 export const lazyLoadSamples: DocsCodeSample[] = [
   {
-    code: `const [rows, setRows] = useState<PersonRow[]>([]);
-const [total, setTotal] = useState(0);
+    code: `const sampleRows = createExampleRows(1000);
+const [rows, setRows] = useState<PersonRow[]>([]);
 const [loading, setLoading] = useState(false);
 const [loadingMore, setLoadingMore] = useState(false);
 
-const loadRows = useCallback(async ({ offset, limit, reason, signal }) => {
+const loadRows = async (request: CominsLazyLoadRequest) => {
+  const { offset, limit, reason, signal } = request;
   reason === "scroll" ? setLoadingMore(true) : setLoading(true);
-  const params = new URLSearchParams({
-    delay: "700",
-    limit: String(limit),
-    select: "id,firstName,lastName,age,email,role",
-    skip: String(offset),
-  });
   try {
-    const response = await fetch(\`https://dummyjson.com/users?\${params}\`, { signal });
-    const result = await response.json();
-    const nextRows = result.users.map(toPersonRow);
-    setRows((current) => reason === "scroll" ? [...current, ...nextRows] : nextRows);
-    setTotal(result.total);
+    // The Playground simulates delay and cancellation; production can await fetch here.
+    const nextRows = await loadSampleRows(request, signal);
+    if (signal.aborted) return;
+    setRows(current => reason === "scroll" ? [...current, ...nextRows] : nextRows);
   } finally {
     reason === "scroll" ? setLoadingMore(false) : setLoading(false);
   }
-}, []);
-
-const refreshRows = () => {
-  const controller = new AbortController();
-  setRows([]);
-  setTotal(0);
-  void loadRows({ limit: 30, offset: 0, reason: "refresh", signal: controller.signal });
 };
 
-<Button onClick={refreshRows}>Refresh</Button>
 <CominsTable
   columns={columns}
   data={rows}
-  emptyComponent={<span>No rows to display.</span>}
-  getRowId={(row) => row.id}
-  hasMoreRows={rows.length < total}
+  getRowId={row => row.id}
+  hasMoreRows={rows.length < sampleRows.length}
   lazyLoad
-  lazyLoadBatchSize={30}
-  lazyLoadMode="append"
+  lazyLoadBatchSize={100}
   lazyLoadThreshold={140}
   loading={loading}
   loadingMore={loadingMore}
   onLazyLoad={loadRows}
-  pagination={{ pageIndex: 0, pageSize: 90 }}
-  skeletonRowCount={5}
   virtualized
 />;`,
     language: "tsx",
-    title: "DummyJSON Lazy Load",
+    title: "Sample Lazy Load",
   },
 ];
 
@@ -470,7 +455,8 @@ export const cellSamples: DocsCodeSample[] = [
 
 export const selectionClipboardSamples: DocsCodeSample[] = [
   {
-    code: `const [rows, setRows] = useState(initialRows);
+    code: `const tableRef = useRef<CominsTableRef<PersonRow>>(null);
+const [rows, setRows] = useState(initialRows);
 const [selection, setSelection] = useState<CominsSelectionState>({
   cell: null,
   range: null,
@@ -478,8 +464,8 @@ const [selection, setSelection] = useState<CominsSelectionState>({
 });
 
 const columns = [
-  { field: "name", label: "Name" },
-  { field: "age", label: "Age" },
+  { field: "name", label: "name" },
+  { field: "age", label: "age" },
   {
     field: "locked",
     label: "Protected",
@@ -489,6 +475,9 @@ const columns = [
 
 <CominsTable
   cellSelection
+  rowSelectionOnClick={false}
+  clipboard
+  ref={tableRef}
   columns={columns}
   data={rows}
   getRowId={(row) => row.id}
@@ -496,6 +485,13 @@ const columns = [
   onChangeSelection={setSelection}
 />;
 
+<button onClick={() => tableRef.current?.setSelectedRows([0, 1, 2, 3, 4])}>Select 5 Rows</button>;
+// Row reads stay independent of Cell selection and the copy target.
+const selectedRows = tableRef.current?.getSelectedRows();
+const selectedCells = tableRef.current?.getSelectedCells();
+const snapshot = tableRef.current?.getSelection();
+// In a user gesture, handle browser permission failures:
+const copy = () => tableRef.current?.copySelection("auto").catch(showClipboardError);
 <pre>{JSON.stringify(selection, null, 2)}</pre>;`,
     language: "tsx",
     title: "Controlled selection and clipboard",
@@ -621,9 +617,9 @@ const tableTransfer = (tableId: string) => ({
 export const columnPinningSamples: DocsCodeSample[] = [
   {
     code: `const columns = [
-  { field: "name", label: "Name", pinned: "left", width: 180 },
-  { field: "amount", label: "Amount", width: 140 },
-  { field: "status", label: "Status", pinned: "right", width: 140 },
+  { field: "name", label: "name", pinned: "left", width: 180 },
+  { field: "amount", label: "amount", width: 140 },
+  { field: "status", label: "status", pinned: "right", width: 140 },
 ] satisfies Array<CominsTableColumn<Row>>;
 
 const columnGroups = [
@@ -745,9 +741,9 @@ export const contextMenuSamples: DocsCodeSample[] = [
 export const exportSamples: DocsCodeSample[] = [
   {
     code: `const exportColumns = [
-  { id: "name", label: "Column1", value: (row) => row.name },
-  { id: "age", label: "Column2", value: (_row, index) => \`Data \${index + 1}\` },
-  { id: "role", label: "Column3", value: (row) => row.role },
+  { id: "name", label: "name", value: (row) => row.name },
+  { id: "age", label: "age", value: (_row, index) => \`Data \${index + 1}\` },
+  { id: "role", label: "role", value: (row) => row.role },
 ];
 
 const csv = exportCominsRowsToCsv({ columns: exportColumns, rows });

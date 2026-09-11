@@ -70,6 +70,8 @@ test("keeps every Sidebar group and route name in English for both locales", asy
     "Pagination",
     "Infinite Scroll",
     "Lazy Load",
+    "Auto row height",
+    "Viewport loading",
     "Virtualization",
   ];
 
@@ -233,12 +235,12 @@ test("localizes virtual and remote-loading examples without resetting loaded or 
 
   await page.goto("/performance/lazy-load");
   await page.getByTestId("playground-locale-toggle").getByRole("button", { exact: true, name: "한" }).click();
-  await expect(page.getByTestId("lazy-load-state")).toContainText("불러옴 30 / 90");
-  await expect(page.getByTestId("row-dummy-1")).toBeVisible();
+  await expect(page.getByTestId("lazy-load-state")).toContainText("불러옴 100 / 1000");
+  await expect(page.getByTestId("row-a")).toBeVisible();
   const lazyMountId = await page.getByTestId("mount-id").textContent();
   await page.getByTestId("playground-locale-toggle").getByRole("button", { exact: true, name: "EN" }).click();
-  await expect(page.getByTestId("lazy-load-state")).toContainText("Loaded 30 / 90");
-  await expect(page.getByTestId("row-dummy-1")).toBeVisible();
+  await expect(page.getByTestId("lazy-load-state")).toContainText("Loaded 100 / 1000");
+  await expect(page.getByTestId("row-a")).toBeVisible();
   await expect(page.getByTestId("mount-id")).toHaveText(lazyMountId ?? "");
 
   await page.goto("/performance/virtualization");

@@ -31,3 +31,7 @@ const nextRows = queryCominsRows(deleted);
 ```
 
 Use `onClickRow` and `onClickCell` when the UI needs to open an editor, context panel, or details view from row or cell interaction payloads.
+
+## Playground data
+
+The CRUD example uses `column1` through `column6` for both data keys and Column labels, with `column4` as its stable Row ID. Editing preserves that ID. These are example field names; the library accepts application-defined fields and labels. For range-loaded data and loaded Cell edits, use [Viewport Datasource](25-viewport-datasource.md) instead of the array CRUD helpers.

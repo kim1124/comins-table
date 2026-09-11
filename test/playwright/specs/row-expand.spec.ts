@@ -337,7 +337,7 @@ test("keeps a viewport-tall Detail in continuous outer scroll and one non-sticky
 
   await fixedCard.getByRole("button", { exact: true, name: "Move Status first and hide Age" }).click();
   await expect(fixedDetailCell).toHaveAttribute("colspan", "4");
-  await expect(fixedCard.locator(".comins-table__header-table th[data-comins-column-id]").first()).toContainText("Status");
+  await expect(fixedCard.locator(".comins-table__header-table th[data-comins-column-id]").first()).toContainText("status");
   await expect(fixedDetailCell).toHaveCount(1);
   await expect(fixedDetailCell).toHaveCSS("position", "static");
 

@@ -150,9 +150,7 @@ horizontally with the body.
 
 ## Virtualization And Performance
 
-Data Rows and collapsed Detail owners keep the arithmetic fixed-height path.
-The private height index is activated only when an effective expanded Detail
-makes a data Slot taller than rowHeight.
+Uniform fixed-height Rows keep the arithmetic path. Row-specific or automatic heights and expanded Details use the private height index. See [automatic Row height](24-auto-row-height.md).
 
 The owner and its optional Detail are one private virtual Slot. This keeps a
 Detail taller than the viewport mounted while the outer body viewport scrolls
@@ -165,14 +163,11 @@ Table frame supplies the terminal border without a duplicate Cell border.
 Prefer a finite fixed height for bounded panels, large lists, or nested
 application widgets, and give large inner content its own scroll or
 virtualization. Use `"auto"` for bounded content that genuinely needs measured
-height. One shared `ResizeObserver` observes mounted automatic Detail blocks
-only; fixed Details do not allocate measurements.
+height. One shared `ResizeObserver` observes mounted automatic Rows and Detail blocks; fixed heights do not allocate measurements.
 
 ## Unsupported Boundaries
 
 - Tree Grid Row Details are unsupported.
-- General automatic height for owner data Rows is unsupported; `rowHeight`
-  remains the owner Row contract.
 - Nested managed Details are unsupported. An application may render ordinary
   content inside one Detail, but Comins Table does not manage a second Detail
   hierarchy.

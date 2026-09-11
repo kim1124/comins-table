@@ -3,6 +3,7 @@ import type { CominsRowId } from "./core";
 export const COMINS_MAX_PHYSICAL_TOTAL_HEIGHT = 1_500_000;
 
 export type CominsDataVirtualSlot<TData> = {
+  absoluteIndex?: number;
   dataIndex: number;
   detail?: {
     estimated: boolean;
@@ -11,6 +12,8 @@ export type CominsDataVirtualSlot<TData> = {
   };
   key: string;
   kind: "data";
+  rowHeight?: number;
+  autoHeight?: boolean;
   row: TData;
   rowId: CominsRowId;
   visibleIndex: number;
@@ -23,8 +26,16 @@ export type CominsGroupVirtualSlot = {
   kind: "group";
 };
 
+export type CominsPlaceholderVirtualSlot = {
+  kind: "placeholder";
+  key: string;
+  absoluteIndex: number;
+  height: number;
+};
+
 export type CominsVirtualSlot<TData> =
   | CominsDataVirtualSlot<TData>
+  | CominsPlaceholderVirtualSlot
   | CominsGroupVirtualSlot;
 
 export type CominsVirtualRange = {
@@ -52,6 +63,7 @@ export function createCominsDataVirtualSlot<TData>(input: {
   detail: CominsDataVirtualSlot<TData>["detail"] | null;
   row: TData;
   rowHeight: number;
+  autoHeight?: boolean;
   rowId: CominsRowId;
   visibleIndex: number;
 }): CominsDataVirtualSlot<TData> {
@@ -61,6 +73,8 @@ export function createCominsDataVirtualSlot<TData>(input: {
     key: getCominsDataSlotKey(input.rowId),
     kind: "data",
     row: input.row,
+    rowHeight: input.rowHeight,
+    autoHeight: input.autoHeight,
     rowId: input.rowId,
     visibleIndex: input.visibleIndex,
   };
@@ -197,9 +211,9 @@ export function getCominsSlotHeight<TData>(
   slot: CominsVirtualSlot<TData>,
   rowHeight: number,
 ) {
-  return slot.kind === "group"
+  return slot.kind !== "data"
     ? slot.height
-    : rowHeight + (slot.detail?.height ?? 0);
+    : (slot.rowHeight ?? rowHeight) + (slot.detail?.height ?? 0);
 }
 
 export function getCominsScrollScale(
@@ -226,7 +240,7 @@ export function getCominsScrollScale(
 }
 
 export function getCominsMixedVirtualRange(input: {
-  heightIndex: CominsHeightIndex;
+  heightIndex: Pick<CominsHeightIndex, "getTotalHeight" | "getPrefixHeight" | "findIndexAtOffset">;
   overscan: number;
   physicalScrollTop: number;
   viewportHeight: number;

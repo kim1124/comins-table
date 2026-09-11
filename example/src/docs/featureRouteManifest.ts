@@ -30,5 +30,7 @@ export const playgroundFeatureRouteManifest: readonly PlaygroundFeatureRoute[] =
   { featureId: "pagination", path: "/performance/pagination" },
   { featureId: "infinite-scroll", path: "/performance/infinite-scroll" },
   { featureId: "lazy-load", path: "/performance/lazy-load" },
+  { featureId: "auto-row-height", path: "/performance/auto-row-height" },
+  { featureId: "viewport-datasource", path: "/performance/viewport-datasource" },
   { featureId: "body", path: "/performance/virtualization" },
 ];

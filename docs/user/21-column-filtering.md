@@ -94,7 +94,7 @@ The client-side projection order is:
 2. Build Row Group membership when configured.
 3. Apply the existing Row sorting policy.
 4. Apply flat pagination or virtualization.
-5. Render leaf Rows and fixed-height Details.
+5. Render leaf Rows and Details using their fixed or automatic height policies.
 
 Summary Row aggregation uses filtered leaf Rows before flat pagination. Header sorting does not modify or reorder the Filter model. An out-of-range flat `pageIndex` is clamped to the final page produced by the filtered Row count.
 
@@ -113,6 +113,6 @@ Selected Row IDs and expanded Row Detail IDs that are filtered out stay dormant 
 
 ## Boundaries
 
-Column Filtering is a CSR flat-data feature. It cannot be combined with Tree Grid, Infinite Scroll, Lazy Load, `loadingMore`, or Row Drag. Passing a `columnFiltering` configuration disables Row Drag even when the model is empty, because movement through a potentially partial projection is ambiguous. Grouped Filtering also inherits the Row Grouping prohibition on pagination.
+Column Filtering is a CSR flat-data feature. It cannot be combined with Tree Grid, Viewport Datasource, Infinite Scroll, Lazy Load, `loadingMore`, or Row Drag. Passing a `columnFiltering` configuration disables Row Drag even when the model is empty, because movement through a potentially partial projection is ambiguous. Grouped Filtering also inherits the Row Grouping prohibition on pagination.
 
 Server-side filtering, custom Filter editor renderers, OR groups, multi-rule-per-Column evaluation, locale-aware text collation, fuzzy search, relative dates, Tree filtering, and remote datasource filtering are outside this release. Applications can still implement these policies by producing their own controlled `data` before passing it to Comins Table.

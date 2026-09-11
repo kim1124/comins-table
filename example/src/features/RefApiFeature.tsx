@@ -40,9 +40,9 @@ export function RefApiFeature() {
   const [savedLayout, setSavedLayout] = useState<CominsColumnLayout | null>(null);
   const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(
     () => [
-      { field: "name", label: "Name", minWidth: 100, sort: true },
-      { field: "age", label: "Age", minWidth: 100, sort: true },
-      { field: "role", label: "Role", minWidth: 100, sort: true },
+      { field: "name", label: "name", minWidth: 100, sort: true },
+      { field: "age", label: "age", minWidth: 100, sort: true },
+      { field: "role", label: "role", minWidth: 100, sort: true },
     ],
     [],
   );

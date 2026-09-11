@@ -63,19 +63,19 @@ export function RowExpandFeature() {
   const { locale, text } = usePlaygroundLocale();
   const fixedColumns = useMemo<Array<CominsTableColumn<RowExpandExampleRow>>>(
     () => [
-      { field: "name", label: text(defineLocalizedText("이름", "Name")), minWidth: 180, sort: true, width: 260 },
-      { field: "age", label: text(defineLocalizedText("나이", "Age")), minWidth: 140, sort: true, width: 220 },
-      { field: "role", label: text(defineLocalizedText("역할", "Role")), minWidth: 180, sort: true, width: 240 },
-      { field: "status", label: text(defineLocalizedText("상태", "Status")), minWidth: 180, sort: true, width: 240 },
-      { field: "id", label: text(defineLocalizedText("안정적인 ID", "Stable ID")), minWidth: 220, width: 280 },
+      { field: "name", label: "name", minWidth: 180, sort: true, width: 260 },
+      { field: "age", label: "age", minWidth: 140, sort: true, width: 220 },
+      { field: "role", label: "role", minWidth: 180, sort: true, width: 240 },
+      { field: "status", label: "status", minWidth: 180, sort: true, width: 240 },
+      { field: "id", label: "id", minWidth: 220, width: 280 },
     ],
     [text],
   );
   const autoColumns = useMemo<Array<CominsTableColumn<RowExpandExampleRow>>>(
     () => [
-      { field: "name", label: text(defineLocalizedText("이름", "Name")), minWidth: 180, sort: true, width: 220 },
-      { field: "role", label: text(defineLocalizedText("역할", "Role")), minWidth: 180, width: 220 },
-      { field: "status", label: text(defineLocalizedText("상태", "Status")), minWidth: 180, width: 220 },
+      { field: "name", label: "name", minWidth: 180, sort: true, width: 220 },
+      { field: "role", label: "role", minWidth: 180, width: 220 },
+      { field: "status", label: "status", minWidth: 180, width: 220 },
     ],
     [text],
   );

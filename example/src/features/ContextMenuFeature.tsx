@@ -178,6 +178,7 @@ export function ContextMenuFeature() {
           <ContextMenu
             aria-label={text(defineLocalizedText("데이터 테이블 컨텍스트 메뉴", "Data table context menu"))}
             items={contextMenuItems}
+            onClose={() => setContextMenu(null)}
             style={{ left: contextMenu.x, top: contextMenu.y }}
           />
         ) : null}

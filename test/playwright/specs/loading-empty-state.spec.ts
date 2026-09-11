@@ -73,7 +73,7 @@ test("loading example maps remote initial, refetch, empty, and ready responses w
     await expect(
       page.getByTestId("loading-skeleton-row").first().locator(".comins-table__skeleton-block").first(),
     ).toHaveCSS("animation-name", "comins-table-skeleton-shimmer");
-    await expect(page.getByRole("columnheader", { exact: true, name: "Column1" })).toBeVisible();
+    await expect(page.getByRole("columnheader", { exact: true, name: "name" })).toBeVisible();
     requests[0]!.release();
     await requests[0]!.settled;
     await expect(page.getByTestId("row-dummy-1")).toBeVisible();
@@ -99,7 +99,7 @@ test("loading example maps remote initial, refetch, empty, and ready responses w
     await requests[2]!.settled;
     await expect(page.getByTestId("loading-state-viewport").locator("tbody tr[data-comins-row-data-index]")).toHaveCount(0);
     await expect(page.getByTestId("data-table-empty-state")).toContainText("표시할 데이터가 없습니다.");
-    await expect(page.getByRole("columnheader", { exact: true, name: "Column1" })).toBeVisible();
+    await expect(page.getByRole("columnheader", { exact: true, name: "name" })).toBeVisible();
 
     await page.getByRole("button", { exact: true, name: "데이터 표시" }).click();
     await expect.poll(() => requests.length).toBe(4);

@@ -25,6 +25,6 @@ The root class is `comins-table`. The default CSS exposes tokens such as `--comi
 />
 ```
 
-When changing virtualized row height, keep `rowHeight` aligned with `--comins-table-row-height`. Styling can use `theme.className`, `theme.style`, Row and Group Row `className`/`style`, Cell `props`, and Header or Cell renderer output.
+For uniform fixed-height virtualization, keep `rowHeight` aligned with `--comins-table-row-height`. Use `getRowHeight` for per-Row numeric or automatic heights; CSS height alone does not update virtual geometry. See [Automatic Row Height](24-auto-row-height.md). Styling can use `theme.className`, `theme.style`, Row and Group Row `className`/`style`, Cell `props`, and Header or Cell renderer output.
 
 The shipped themes are `comins-table-theme--basic`, `comins-table-theme--dark`, `comins-table-theme--skyblue`, `comins-table-theme--mint`, `comins-table-theme--gray`, and `comins-table-theme--orange`.

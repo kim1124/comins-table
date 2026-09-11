@@ -8,13 +8,13 @@ export const defaultColumnLayout = {
 
 export function createBaseColumns(): Array<CominsTableColumn<PersonRow>> {
   return [
-    { field: "name", label: "Column1", minWidth: 100, sort: true },
+    { field: "name", label: "name", minWidth: 100, sort: true },
     {
       cell: {
         format: ({ row }) => `Data ${row.index + 1}`,
       },
       field: "age",
-      label: "Column2",
+      label: "age",
       minWidth: 100,
       sort: true,
     },
@@ -23,7 +23,7 @@ export function createBaseColumns(): Array<CominsTableColumn<PersonRow>> {
         format: ({ row }) => `Data ${row.index + 1}`,
       },
       field: "role",
-      label: "Column3",
+      label: "role",
       minWidth: 100,
     },
   ];
@@ -40,7 +40,7 @@ export function createGuardedColumns(): Array<CominsTableColumn<PersonRow>> {
         },
       },
       field: "locked",
-      label: "Column4",
+      label: "locked",
       minWidth: 100,
     },
   ];

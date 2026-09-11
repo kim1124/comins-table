@@ -8,6 +8,8 @@ import type { FeatureId } from "../example/src/features/types";
 const specDirectory = join(process.cwd(), "test/playwright/specs");
 
 const featureSpecCoverage = {
+  "auto-row-height": ["viewport-datasource.spec.ts"],
+  "viewport-datasource": ["viewport-datasource.spec.ts", "viewport-physical-scrollbar.spec.ts"],
   basic: ["basic-playground.spec.ts"],
   "basic-crud": ["crud-playground.spec.ts", "user-playground-docs.spec.ts"],
   size: ["playground-layout-polish.spec.ts"],

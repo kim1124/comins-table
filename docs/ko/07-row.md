@@ -26,7 +26,7 @@ Row interaction은 React event prop으로 받는다. 이벤트 payload는 `event
 />
 ```
 
-Row copy/paste는 focused row에서 `Ctrl+C`, `Ctrl+V`로 동작하며 paste mode는 `insert-after`다.
+기본 `clipboard={false}`의 Row copy/paste는 focused row에서 `Ctrl+C`, `Ctrl+V`로 동작하며 paste mode는 `insert-after`다.
 Row 위치 이동은 cell range drag와 충돌하지 않도록 첫 번째 cell 안의 Row drag handle을 기준으로 수행한다.
 
 ## Row Drag lifecycle
@@ -72,7 +72,7 @@ tableRef.current?.setMoveTargetRow(2, 0);
 
 [`/api/ref`](http://127.0.0.1:4002/api/ref) live 예제는 `setMoveTargetRow(2, 0)`이 active sort를 해제하고 visible Row 이동 결과를 controlled `onChangeData`로 반영하는 흐름을 보여준다.
 
-선택 기준:
+기본 `rowSelectionOnClick={true}`의 선택 기준:
 
 - 최초 렌더링 시 row selection은 없다.
 - 일반 click은 단일 row를 선택한다.
@@ -108,3 +108,5 @@ Playground 검증 기준:
 - 사용자가 selection 색상 또는 초기화 문제를 지적한 경우 browser proof에는 selected row의 `data-selected-row`, `background-color`, 관련 event 결과를 포함한다.
 
 `columnFiltering`을 설정하면 일부만 보일 수 있는 projection에서 이동 의미가 모호하므로 Row Drag와 `setMoveTargetRow`를 비활성화한다. 지원되는 Row Grouping 결합의 Group Drag는 별도 Group-model operation으로 유지한다.
+
+`rowSelectionOnClick={false}`이면 Cell 조작 중에도 Row 선택을 유지합니다. `getSelectedRows`, `getSelectedCells`, `getSelection`으로 Row 데이터·Cell 값·선택 ID를 각각 조회합니다. Viewport 선택 setter는 절대 인덱스를 받고 미로딩 Row를 건너뛰며 Row 이동은 지원하지 않습니다. [Selection](10-selection.md)을 참고합니다. Tree 이동은 별도 `treeRowDrag` 설정과 Tree lifecycle payload 타입을 사용하며 [Tree Grid](17-tree-grid.md)에 설명합니다.

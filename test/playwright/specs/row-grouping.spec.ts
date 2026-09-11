@@ -71,7 +71,7 @@ test("Row Grouping keeps explicit Groups ordered and Group Rows synthetic", asyn
 
   const visibleLeafIds = () => single.locator("tr[data-comins-row-data-index]").evaluateAll((elements) =>
     elements.map((element) => element.getAttribute("data-testid")));
-  const nameHeader = single.locator("xpath=..").getByRole("columnheader", { name: /Name/u });
+  const nameHeader = single.locator("xpath=..").getByRole("columnheader", { name: /^name$/u });
   await nameHeader.click();
   await expect.poll(visibleLeafIds).toEqual(["row-group-a", "row-group-d", "row-group-g", "row-group-c"]);
   await expect.poll(groupIds).toEqual(["east", "empty", "west"]);

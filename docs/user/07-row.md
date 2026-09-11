@@ -30,7 +30,7 @@ Rows support click, double click, keyboard payloads, context menus, selection, a
 
 `CominsBeforeRowDragPayload`, `CominsRowDragPayload`, and `CominsAfterDragRowPayload` keep the typed source Row, optional source Group/Table identity, pointer event, and target identity. Returning `false` from the before callback never mutates Rows. Same-Table, cross-Group, and Cross-Table Row gestures use the same lifecycle contract; Cross-Table model updates still belong to the Coordinator.
 
-Opening a Row or Cell context menu preserves the current single or multiple Row selection when the target Row is already selected. Opening it on an unselected Row switches to that Row exclusively; Cell context menus apply the same Row policy before updating Cell focus.
+With the default `rowSelectionOnClick={true}`, opening a Row or Cell context menu preserves the current single or multiple Row selection when the target Row is already selected. Opening it on an unselected Row switches to that Row exclusively; Cell context menus apply the same Row policy before updating Cell focus.
 
 The Playground context menu enables View and Create with zero selected Rows, enables every action with one selected Row, and disables only Update when multiple Rows are selected. Delete is enabled whenever at least one Row is selected.
 
@@ -44,8 +44,10 @@ The Playground context menu enables View and Create with zero selected Rows, ena
 
 Selecting a menu item shows its action name in the Playground Alert; the example does not mutate application data.
 
-The ref methods `setSelectedRow`, `setSelectedRows`, and `setMoveTargetRow` use the visible row index after sorting and pagination.
+For ordinary array-backed Tables, `setSelectedRow`, `setSelectedRows`, and `setMoveTargetRow` use the visible row index after sorting and pagination. Viewport selection setters use absolute indexes and skip unloaded Rows; Row movement is unavailable. Set `rowSelectionOnClick={false}` to preserve Row selection during Cell interaction. Read Row data, Cell values, or the ID snapshot with `getSelectedRows`, `getSelectedCells`, or `getSelection`; see [Selection](10-selection.md).
 
 The live [`/api/ref`](http://127.0.0.1:4002/api/ref) example shows `setMoveTargetRow(2, 0)` clearing active sorting and committing the moved visible Row order through controlled `onChangeData`.
 
 When `columnFiltering` is configured, Row Drag and `setMoveTargetRow` are disabled because movement through a potentially partial projection is ambiguous. Group Drag remains a separate Group-model operation in the supported Row Grouping combination.
+
+Tree Row movement uses the separate `treeRowDrag` configuration and Tree lifecycle payload types; see [Tree Grid](17-tree-grid.md).

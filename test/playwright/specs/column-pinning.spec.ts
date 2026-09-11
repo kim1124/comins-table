@@ -137,10 +137,10 @@ test("Column Pinning keeps sticky surfaces aligned and demotes responsively", as
 
   const summaryCells = root.locator(".comins-table__summary-cell");
   await expect(root.getByTestId("summary-cell-name")).toContainText("12");
-  await expect(summaryCells).toHaveCount(12);
+  await expect(summaryCells).toHaveCount(8);
   expect(await summaryCells.evaluateAll((cells) =>
     cells.map((cell) => cell.getAttribute("data-comins-pinned"))))
-    .toEqual(["left", null, null, null, null, null, null, null, null, null, "right", "right"]);
+    .toEqual(["left", null, null, null, null, null, "right", "right"]);
 
   await page.getByRole("button", { name: "Use narrow container" }).click();
   await expect(leftHeader).not.toHaveAttribute("data-comins-pinned", "left");

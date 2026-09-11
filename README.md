@@ -14,12 +14,16 @@ Comins Table is a controlled React data table for data-heavy application screens
 | Area | Shipped capabilities |
 | --- | --- |
 | Controlled data | Application-owned `data`, CRUD helpers, `onChangeData`, pagination, sorting, and layout callbacks |
-| Rendering and scale | Fixed-height virtualization with a tested 100,000-row route, infinite scroll, append-mode lazy loading, loading, and empty states |
+| Rendering and scale | Fixed and automatic Row heights, variable-height virtualization, a tested 100,000-row route, bounded Viewport range loading, infinite scroll, append-mode lazy loading, loading, and empty states |
 | Interaction | Accessible single and opt-in multi-column Header sorting, controlled Column Filtering, resize, responsive Column Pinning, 6-pixel horizontal column reorder, Cross-Table Row/Group Drag, Row and Cell selection, ranges, clipboard, and context menu callbacks |
-| Data structure | Controlled client-side flat Row Grouping, flat Row Expand Details, Summary Row aggregation, and controlled Tree Grid expand/fold |
+| Data structure | Controlled client-side flat Row Grouping, flat Row Expand Details, Summary Row aggregation, and Tree Grid expand/fold and subtree drag |
 | Custom UI | Cell/Header renderers, built-in button/input/checkbox/radio/select/toggle/progress/menu/Virtual List components, and CSS-variable themes |
 
 Comins Table is standalone and does not wrap another table or grid implementation.
+
+### Version 0.1.10
+
+This source version adds Tree Row drag, automatic business Row heights with variable-height virtualization, and known-count Viewport Datasource loading. Row and Cell selection can be managed independently, with separate Ref getters and opt-in OS clipboard copying. See the [0.1.10 changelog](https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md) for the complete change list.
 
 ### Feature catalog
 
@@ -31,7 +35,7 @@ This catalog is a consumer-oriented summary, not the complete status registry. U
 | Header and layout | Sort, multi-sort, resize, move, Header Groups, Filtering, and Pinning | [`Header`](http://127.0.0.1:4002/examples/header), [`Filtering`](http://127.0.0.1:4002/examples/column-filtering), [`Pinning`](http://127.0.0.1:4002/examples/column-pinning) | [Header](https://github.com/kim1124/comins-table/blob/main/docs/user/06-header.md), [Filtering](https://github.com/kim1124/comins-table/blob/main/docs/user/21-column-filtering.md), [Pinning](https://github.com/kim1124/comins-table/blob/main/docs/user/22-column-pinning.md) |
 | Rows, cells, and selection | Row and Cell callbacks, selection, Clipboard, Context Menu, and Row Expand | [`Selection`](http://127.0.0.1:4002/examples/selection-clipboard), [`Row Expand`](http://127.0.0.1:4002/examples/row-expand) | [Row](https://github.com/kim1124/comins-table/blob/main/docs/user/07-row.md), [Cell](https://github.com/kim1124/comins-table/blob/main/docs/user/08-cell.md), [Selection](https://github.com/kim1124/comins-table/blob/main/docs/user/10-selection.md) |
 | Structured rows | Summary Row, Tree Grid, Row Grouping, and Cross-Table Row/Group Drag | [`Summary`](http://127.0.0.1:4002/examples/summary-row), [`Tree`](http://127.0.0.1:4002/examples/tree-grid), [`Grouping`](http://127.0.0.1:4002/examples/row-grouping), [`Transfer`](http://127.0.0.1:4002/examples/cross-table-drag) | [Summary](https://github.com/kim1124/comins-table/blob/main/docs/user/18-summary-row.md), [Tree](https://github.com/kim1124/comins-table/blob/main/docs/user/17-tree-grid.md), [Grouping](https://github.com/kim1124/comins-table/blob/main/docs/user/20-row-grouping.md), [Transfer](https://github.com/kim1124/comins-table/blob/main/docs/user/23-cross-table-drag.md) |
-| Loading and performance | Pagination, fixed-height virtualization, Infinite Scroll, and Lazy Load | [`Pagination`](http://127.0.0.1:4002/performance/pagination), [`Virtualization`](http://127.0.0.1:4002/performance/virtualization) | [Pagination](https://github.com/kim1124/comins-table/blob/main/docs/user/05-pagination.md), [Virtualization](https://github.com/kim1124/comins-table/blob/main/docs/user/11-virtualization.md), [Lazy Load](https://github.com/kim1124/comins-table/blob/main/docs/user/16-lazy-load.md) |
+| Loading and performance | Pagination, fixed/variable-height virtualization, automatic heights, Viewport Datasource, Infinite Scroll, and Lazy Load | [`Virtualization`](http://127.0.0.1:4002/performance/virtualization), [`Automatic height`](http://127.0.0.1:4002/performance/auto-row-height), [`Viewport`](http://127.0.0.1:4002/performance/viewport-datasource) | [Virtualization](https://github.com/kim1124/comins-table/blob/main/docs/user/11-virtualization.md), [Automatic height](https://github.com/kim1124/comins-table/blob/main/docs/user/24-auto-row-height.md), [Viewport](https://github.com/kim1124/comins-table/blob/main/docs/user/25-viewport-datasource.md), [Lazy Load](https://github.com/kim1124/comins-table/blob/main/docs/user/16-lazy-load.md) |
 | Rendering and styling | Built-in components, custom renderers, themes, CSS variables, and export helpers | [`Components`](http://127.0.0.1:4002/examples/component), [`Theme`](http://127.0.0.1:4002/examples/theme), [`Export`](http://127.0.0.1:4002/examples/export) | [Cell](https://github.com/kim1124/comins-table/blob/main/docs/user/08-cell.md), [Styling](https://github.com/kim1124/comins-table/blob/main/docs/user/04-styling.md), [Export](https://github.com/kim1124/comins-table/blob/main/docs/user/14-export.md) |
 | API and utilities | Ref controls, framework-independent Core helpers, Clipboard, and selection helpers | [`Ref API`](http://127.0.0.1:4002/api/ref), [`Props`](http://127.0.0.1:4002/api/props) | [Core State](https://github.com/kim1124/comins-table/blob/main/docs/user/03-core-state.md), [Clipboard](https://github.com/kim1124/comins-table/blob/main/docs/user/09-clipboard.md) |
 
@@ -126,9 +130,9 @@ export function UsersTable() {
 
 ## Controlled Model
 
-Comins Table is a CSR-focused controlled component for application-owned data. The application owns the `data` array.
+Comins Table is a CSR-focused controlled component for application-owned data. The application owns the Row array or Viewport snapshot passed through `data`.
 
-For table-owned data mutations, `onChangeData` emits the next flat Row array or Tree Grid node array; pass that array back through `data` to retain the mutation. Other controlled models use their matching callback and value prop rather than `onChangeData`.
+For table-owned data mutations, `onChangeData` emits the next flat Row array or Tree Grid node array; pass that array back through `data` to retain the mutation. Viewport mode uses a controlled block snapshot instead of a full array; `useCominsViewport` connects that snapshot and its callbacks. Other controlled models use their matching callback and value prop rather than `onChangeData`.
 
 Selection, column layout, and sort are internal view state. `onChangeSelection`, `onChangeColumnLayout`, `onChangeSort`, and `onChangeSortModel` observe those changes so an application can coordinate or persist them externally; the table updates the corresponding view state even when a callback is omitted.
 
@@ -178,7 +182,9 @@ When columns overflow horizontally, Comins Table renders one native horizontal s
 
 Rows expose click, double-click, keyboard, and context-menu callbacks. Cells expose the corresponding Cell callbacks plus `format`, `renderer`, and props hooks.
 
-A normal Row interaction selects one Row, `Ctrl`/`Cmd` toggles a Row, and `Shift` extends the visible Row range from the selection anchor. Cell selection supports a single Cell, visible `Ctrl`/`Cmd` discontiguous selection, and `Shift` or pointer-drag rectangular ranges. `CominsSelectionState.cell` remains the active Clipboard address while `cells` records the discontiguous set; 0.1.9 does not copy that set as a Clipboard matrix. Built-in component interactions remain isolated from `onClickCell` and `onClickRow` callback payloads so component actions do not also trigger the owning Cell or Row action.
+A normal Row interaction selects one Row, `Ctrl`/`Cmd` toggles a Row, and `Shift` extends the visible Row range from the selection anchor. Cell selection supports a single Cell, visible `Ctrl`/`Cmd` discontiguous selection, and `Shift` or pointer-drag rectangular ranges. `CominsSelectionState.cell` is the active Cell, `cells` records the discontiguous set, and `range` records the rectangle. Built-in component interactions remain isolated from `onClickCell` and `onClickRow` callback payloads so component actions do not also trigger the owning Cell or Row action.
+
+Set `rowSelectionOnClick={false}` to preserve selected Rows while clicking or right-clicking Cells. Application checkboxes or `setSelectedRows` can control the Row selection independently. `getSelectedRows()`, `getSelectedCells()`, and `getSelection()` read Row data, raw Cell values, and the selection snapshot separately. The default `rowSelectionOnClick={true}` keeps the existing Row-click behavior.
 
 Row Drag exposes `onBeforeRowDrag`, `onRowDrag`, and `onAfterDragRow`. The before callback can cancel prior to listener registration, target updates emit only on identity or validity changes, and the after callback reports one `moved`, `cancelled`, or `rejected` result per started gesture. Data changes remain controlled through `onChangeData` or the Cross-Table Coordinator.
 
@@ -203,7 +209,7 @@ const [expandedRowIds, setExpandedRowIds] = useState<readonly string[]>([]);
 
 Row Expand is controlled by stable owner business Row IDs. An interactive disclosure requires the application to feed the next value from `onChangeExpandedRowIds` back into `expandedRowIds`; when that callback is omitted, the disclosure is disabled and read-only. A finite positive CSS pixel height is fixed and retains its inline height. Missing values, invalid numeric values, and `"auto"` use measured automatic height with no inline height. Before an automatic Detail has a matching-width measurement, a valid finite positive `estimatedRowDetailHeight` is used; otherwise the resolved `rowHeight` is the estimate. Details render as semantic owner-following Rows, stay outside selection and clipboard addressing, and preserve dormant IDs across sorting and pagination.
 
-Tree Grid Row Details, general automatic height for owner data Rows, and nested Details managed by Comins Table remain unsupported.
+Owner data Rows can use `getRowHeight` independently of Detail height. Tree Grid Row Details and nested Details managed by Comins Table remain unsupported.
 
 ## Row Grouping
 
@@ -213,7 +219,7 @@ See the [Row Grouping guide](https://github.com/kim1124/comins-table/blob/main/d
 
 Each synthetic Group Row is one full-width colspan Cell with a distinct neutral-gray background. Use `getGroupRowProps` for a typed per-Group `className` or `style`, and override `--comins-table-group-row-background` and `--comins-table-group-row-color` for theme-level styling. The Table owns disclosure and Drag controls while `renderGroupContent` can replace its inner label, count, aggregate, badge, or business-action content. Header sorting never reorders Groups; the existing Row sort policy runs independently inside every Group. Built-in `count`, `sum`, `avg`, `min`, and `max` aggregations remain available.
 
-Synthetic Group Rows never masquerade as `TData`: ordinary Row/Cell callbacks, selection, Clipboard, Cell renderers, formatters, and Row Detail remain leaf-only. Row Grouping supports fixed-height virtualization and grouped leaf Row Detail, but cannot be combined with pagination, infinite/lazy loading, or Tree Grid. Multi-depth grouping remains deferred.
+Synthetic Group Rows never masquerade as `TData`: ordinary Row/Cell callbacks, selection, Clipboard, Cell renderers, formatters, and Row Detail remain leaf-only. Row Grouping supports fixed or automatic business Row heights, variable-height virtualization, and grouped leaf Row Detail; Group headings keep the fixed `rowHeight`. It cannot be combined with pagination, infinite/lazy loading, Viewport Datasource, or Tree Grid. Multi-depth grouping remains deferred.
 
 ## Cross-Table Row And Group Drag
 
@@ -224,6 +230,16 @@ Create a `createCominsTableTransferCoordinator()` and pass the same Coordinator,
 Duplicate IDs reject by default. A rejected duplicate displays a post-drop, pointer-adjacent `Duplicate ID` Tooltip and a restrained target Table outline without intercepting pointer events. The target can replace the Tooltip body through `rejectionFeedback.renderTooltip`, change its duration, disable default feedback, and customize its CSS variables. `Coordinator.onTransferRejected` receives the structured duplicate conflict for application Toasts or logging.
 
 The target can reject through `canTransfer` or explicitly return `"overwrite"` from `resolveConflict`; Group overwrite replaces the complete target Group bundle and never merges it. The Coordinator emits one immutable source/target result, and the application applies both controlled models atomically. Cross-Table Transfer is unavailable with Tree Grid, Column Filtering, Infinite Scroll, and Lazy Load.
+
+## Automatic Heights and Viewport Loading
+
+Use `getRowHeight={() => "auto"}` for content-driven business Row heights, or return a positive number for an individual Row. Omitting the callback keeps the numeric `rowHeight` default of 36. `estimatedRowHeight` supplies an initial estimate, not a height limit. Custom Renderers do not need per-Cell height calculations; use normal-flow content and enable wrapping where required. Automatic heights work with Flat, Grouped business, and Tree Rows, including `treeRowDrag` where that mode supports dragging.
+
+`useCominsViewport({ rowCount, queryKey, getRows })` loads blocks around the scroll region and connects them to the Table through `tableProps`. It enables virtualization and can be combined with `getRowHeight={() => "auto"}`. The application supplies a known total count, globally stable Row IDs, and arbitrary `[startIndex, endIndex)` range requests. Change `queryKey` when server sorting, filtering, or index order changes.
+
+Viewport bounds cached data and measured heights; distant scrolling does not fetch every earlier page or require a full dataset array. Unloaded heights are estimated, so scrollbar size can change as content is measured. Selection getters and copy operate on loaded data without fetching missing Rows. The application owns network requests and edit persistence. Tree, Row Grouping, Row Detail, Row Drag, append loading, pagination, built-in sorting/filtering, and automatic Summary aggregation are unavailable in Viewport mode.
+
+See [automatic height](https://github.com/kim1124/comins-table/blob/main/docs/user/24-auto-row-height.md), [Viewport Datasource](https://github.com/kim1124/comins-table/blob/main/docs/user/25-viewport-datasource.md), and [Tree drag](https://github.com/kim1124/comins-table/blob/main/docs/user/17-tree-grid.md) for examples, defaults, and combination limits.
 
 ## Column Filtering
 
@@ -237,7 +253,7 @@ Column Filtering cannot be combined with Tree Grid, Infinite/Lazy Loading, `load
 
 ## Virtualization And Loading
 
-Set `virtualized`, `rowHeight`, and `"buffer-size"` for fixed-height windowed rendering. The performance Playground includes a tested 100,000-row route while keeping only the current window and buffer mounted.
+Set `virtualized`, `rowHeight`, and `"buffer-size"` for fixed-height windowed rendering; add `getRowHeight` for numeric per-Row or measured automatic heights. The performance Playground includes a tested 100,000-row route while keeping only the current window and buffer mounted. With ordinary virtualization, the application still supplies the full array. Viewport Datasource additionally bounds loaded data; Infinite Scroll and Lazy Load append to an application-owned array.
 
 `infiniteScroll` requests application-owned append loading near the body viewport boundary. `lazyLoad` supports asynchronous append-mode batches with an `AbortSignal`. When `loading` is true, an empty table renders skeleton Rows and a populated table keeps its Rows visible under a loading overlay. `emptyComponent` controls the no-data content.
 
@@ -255,6 +271,8 @@ Set `tree` and provide controlled `{ item, expand, children }` nodes. `defaultEx
 
 Tree Grid reuses `cell.components` and `cell.renderer`, so component cells and custom React renderers work against each node's `item`. The Tree Grid Playground includes an exactly 10,000-node virtual example.
 
+Set `treeRowDrag={{}}` and connect `onChangeData` to reorder siblings at every depth. `treeRowDrag={{ allowReparent: true }}` also moves entire subtrees between parents or back to the root. Parent changes default to disabled. `canDrop` and Row guards restrict destinations and sources; cycles are rejected and sorting disables manual movement. `moveCominsTreeNode` exposes the immutable move helper. Handles support pointer dragging and Space, arrow keys, Enter, and Escape. The Playground drag example starts with parent changes and automatic heights enabled; these are example settings.
+
 ## Components And Renderers
 
 Cell components include `button`, `input`, `checkbox`, `radio`, `select`, `toggle`, `progress`, and `virtual-list`; Header components also support `menu`. Use `cell.renderer` or `header.renderer` when the built-in component types are not sufficient.
@@ -262,6 +280,10 @@ Cell components include `button`, `input`, `checkbox`, `radio`, `select`, `toggl
 Virtual List Item activation follows the normal Row selection modifiers. More selects its owning Row exclusively before expanding the virtualized list. Search is available only while exactly one Row is selected. Keyboard activation keeps the More button focused after expansion. Item and More actions remain isolated from the Row and Cell click callbacks.
 
 ## Clipboard And Export
+
+Set `clipboard` to enable OS keyboard copy. It defaults to `false`, preserving the existing internal copy buffer. With OS copy enabled, the default priority is multiple selected Cells → selected Rows → one selected Cell. Five selected Rows and three selected Cells copy the three Cells while retaining all five selected Rows. Discontiguous Cells produce a TSV rectangle with unselected positions empty; internal paste skips those positions.
+
+Call `copySelection("auto" | "cells" | "rows")` from a button or context menu to choose the target explicitly. This Ref method writes to the OS clipboard regardless of the `clipboard` prop, returns `Promise<string | null>`, and rejects if writing is unavailable or denied. Native text editing keeps its own copy behavior. Ctrl/Cmd+V uses the Table's internal buffer; importing arbitrary OS clipboard content is outside this version. See the [Clipboard guide](https://github.com/kim1124/comins-table/blob/main/docs/user/09-clipboard.md) for guards, TSV escaping, and loaded-data limits.
 
 `copyCominsRow`, `copyCominsCell`, and `copyCominsCellRange` read Row or Cell selections. `pasteCominsRow`, `pasteCominsCell`, and `pasteCominsCellRange` apply clipboard data while respecting `props.copyable`, `props.pasteable`, and disabled guards. `fillCominsCellRange` remains a framework-independent core helper; no visual fill handle is presented as shipped UI.
 
@@ -271,7 +293,7 @@ Use `exportCominsRowsToCsv` and `exportCominsRowsToJson` with the exact rows and
 
 The package stylesheet exposes module-local `--comins-table-*` CSS variables and does not apply a global reset. The six shipped theme classes are `comins-table-theme--basic`, `comins-table-theme--dark`, `comins-table-theme--skyblue`, `comins-table-theme--mint`, `comins-table-theme--gray`, and `comins-table-theme--orange`.
 
-Use `theme.className`, `theme.style`, Row and Group Row class/style hooks, Cell props, and renderer output for application-specific presentation. Keep virtualized `rowHeight` aligned with `--comins-table-row-height` when overriding height tokens.
+Use `theme.className`, `theme.style`, Row and Group Row class/style hooks, Cell props, and renderer output for application-specific presentation. For uniform fixed-height virtualization, keep `rowHeight` aligned with `--comins-table-row-height` when overriding height tokens. Use `getRowHeight` for variable or automatic business Row heights; CSS height alone does not update the virtual layout.
 
 The [Design Contract](https://github.com/kim1124/comins-table/blob/main/DESIGN.md) classifies every Table token as public stable, public experimental, or internal. The [Componentization Guide](https://github.com/kim1124/comins-table/blob/main/docs/design/componentization.md) defines when to use a formatter, renderer, built-in component, future typed slot, token, or instance override.
 
@@ -293,6 +315,11 @@ tableRef.current?.setSortModel([
 tableRef.current?.clearSort();
 tableRef.current?.setSelectedRow(0);
 tableRef.current?.setSelectedRows([0, 1]);
+tableRef.current?.getSelectedRows();
+tableRef.current?.getSelectedCells();
+tableRef.current?.getSelection();
+// In a user-initiated handler; handle unavailable or denied clipboard access:
+await tableRef.current?.copySelection("rows");
 tableRef.current?.setMoveTargetRow(3, 1);
 tableRef.current?.expand(["department-1", "team-1-1"]);
 tableRef.current?.fold(["team-1-1"]);
@@ -300,7 +327,9 @@ tableRef.current?.expand(); // all Tree Grid branches
 tableRef.current?.fold(); // all Tree Grid branches
 ```
 
-`setSelectedRow`, `setSelectedRows`, and `setMoveTargetRow` use the visible Row index after current sorting and pagination. `getColumnLayout`, `setColumnLayout`, `getSortState`, `setSortState`, `getSortModel`, `setSortModel`, and `clearSort` read and update the current Header view state. `expand(nodeIds?)` and `fold(nodeIds?)` accept readonly Tree Grid node-id arrays; flat tables ignore them.
+For ordinary array-backed Tables, `setSelectedRow`, `setSelectedRows`, and `setMoveTargetRow` use the visible Row index after current sorting and pagination. Viewport selection setters use absolute dataset indexes and skip unloaded Rows; movement is unavailable. `getColumnLayout`, `setColumnLayout`, `getSortState`, `setSortState`, `getSortModel`, `setSortModel`, and `clearSort` read and update the current Header view state. `expand(nodeIds?)` and `fold(nodeIds?)` accept readonly Tree Grid node-id arrays; flat tables ignore them.
+
+`getSelectedRows()` returns loaded selected business data in data order. `getSelectedCells()` returns `{ rowId, columnId, value }` for available selected Cells; ranges use projected display order. `getSelection()` copies the selection IDs and addresses, including Row IDs retained after Viewport cache eviction. Row objects and Cell values remain application-owned references.
 
 ## Playground
 
@@ -314,7 +343,7 @@ Use the [source repository](https://github.com/kim1124/comins-table) for develop
 
 ## Current Boundaries
 
-Comins Table currently ships a CSR controlled data model. Server-side Row models and filtering, custom Filter editor renderers, Tree filtering, pivoting, charts, AI assistance, remote Tree loading, hierarchy pagination, Tree Row drag, Tree Row copy/paste, Tree Grid Row Details, general automatic owner Row height, nested managed Details, Firefox, Safari, and SSR are not shipped or supported.
+Comins Table provides CSR arrays and known-count Viewport range loading. Server-side Row models and built-in server filtering, custom Filter editor renderers, Tree filtering, pivoting, charts, AI assistance, remote Tree loading, hierarchy pagination, Tree Row copy/paste, Tree Grid Row Details, nested managed Details, Firefox, Safari, and SSR are not shipped or supported.
 
 The visual fill handle is not shipped or supported. `fillCominsCellRange` remains available as a core helper without a drag-handle UI.
 

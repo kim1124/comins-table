@@ -66,9 +66,9 @@ export function HeaderFeature() {
   const columns = useMemo(() => createBaseColumns(), []);
   const multiSortColumns = useMemo(
     () => [
-      { field: "role", label: text(defineLocalizedText("역할", "Role")), minWidth: 120, sort: true },
-      { field: "age", label: text(defineLocalizedText("나이", "Age")), minWidth: 100, sort: true },
-      { field: "name", label: text(defineLocalizedText("이름", "Name")), minWidth: 140, sort: true },
+      { field: "role", label: "role", minWidth: 120, sort: true },
+      { field: "age", label: "age", minWidth: 100, sort: true },
+      { field: "name", label: "name", minWidth: 140, sort: true },
     ],
     [text],
   );

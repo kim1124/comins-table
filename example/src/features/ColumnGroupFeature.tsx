@@ -39,7 +39,7 @@ export function ColumnGroupFeature() {
                   ...column,
                   label: (
                     <span>
-                      <span>{text(defineLocalizedText("Column1", "Column1"))}</span>{" "}
+                      <span>{text(defineLocalizedText("name", "name"))}</span>{" "}
                       <button
                         aria-label={text(defineLocalizedText("Rich column label action", "Rich column label action"))}
                         onClick={() =>

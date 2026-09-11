@@ -3,48 +3,22 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CominsTable, type CominsTableColumn, type CominsLazyLoadRequest } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Button } from "../components/ui/button";
-import type { PersonRow } from "../fixtures/people";
+import { createExampleRows, type PersonRow } from "../fixtures/people";
 import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
-type DummyUser = {
-  age: number;
-  email: string;
-  firstName: string;
-  id: number;
-  lastName: string;
-  role?: string;
-};
+const BATCH_SIZE = 100;
+const SAMPLE_ROWS = createExampleRows(1000);
 
-type DummyUsersResponse = {
-  limit: number;
-  skip: number;
-  total: number;
-  users: DummyUser[];
-};
-
-const DUMMY_USERS_URL = "https://dummyjson.com/users";
-const BATCH_SIZE = 30;
-
-function toPersonRow(user: DummyUser): PersonRow {
-  return {
-    active: user.id % 2 === 0,
-    age: user.age,
-    id: `dummy-${user.id}`,
-    locked: user.email,
-    name: `${user.firstName} ${user.lastName}`,
-    role: user.role ?? (user.id % 2 === 0 ? "Owner" : "Viewer"),
-  };
-}
-
-function buildLazyLoadUrl(request: CominsLazyLoadRequest) {
-  const params = new URLSearchParams({
-    delay: "700",
-    limit: String(request.limit),
-    select: "id,firstName,lastName,age,email,role",
-    skip: String(request.offset),
+function loadSampleRows(request: CominsLazyLoadRequest, signal: AbortSignal): Promise<PersonRow[]> {
+  return new Promise((resolve, reject) => {
+    const abort = () => { clearTimeout(timer); reject(new DOMException("Aborted", "AbortError")); };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", abort);
+      resolve(SAMPLE_ROWS.slice(request.offset, request.offset + request.limit).map(row => ({ ...row })));
+    }, 250);
+    if (signal.aborted) abort();
+    else signal.addEventListener("abort", abort, { once: true });
   });
-
-  return `${DUMMY_USERS_URL}?${params.toString()}`;
 }
 
 export function LazyLoadFeature() {
@@ -52,15 +26,15 @@ export function LazyLoadFeature() {
   const activeRequestRef = useRef<AbortController | null>(null);
   const requestVersionRef = useRef(0);
   const [rows, setRows] = useState<PersonRow[]>([]);
-  const [total, setTotal] = useState(0);
+  const total = SAMPLE_ROWS.length;
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(
     () => [
-      { field: "name", label: "Column1", minWidth: 100, width: 180 },
-      { field: "age", label: "Column2", minWidth: 100, width: 120 },
-      { field: "role", label: "Column3", minWidth: 100, width: 140 },
-      { field: "locked", label: "Column4", minWidth: 160, width: 240 },
+      { field: "name", label: "name", minWidth: 100, width: 180 },
+      { field: "age", label: "age", minWidth: 100, width: 120 },
+      { field: "role", label: "role", minWidth: 100, width: 140 },
+      { field: "locked", label: "locked", minWidth: 160, width: 240 },
     ],
     [],
   );
@@ -85,16 +59,13 @@ export function LazyLoadFeature() {
       }
 
       try {
-        const response = await fetch(buildLazyLoadUrl(request), { signal: controller.signal });
-        const result = (await response.json()) as DummyUsersResponse;
+        const nextRows = await loadSampleRows(request, controller.signal);
 
         if (controller.signal.aborted || requestVersionRef.current !== requestVersion) {
           return;
         }
 
-        const nextRows = result.users.map(toPersonRow);
         setRows((current) => request.reason === "scroll" ? [...current, ...nextRows] : nextRows);
-        setTotal(result.total);
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
           // The consumer owns retry/error presentation; the Playground keeps the last successful rows.
@@ -128,7 +99,6 @@ export function LazyLoadFeature() {
     const controller = new AbortController();
 
     setRows([]);
-    setTotal(0);
     void loadRows({
       limit: BATCH_SIZE,
       offset: 0,
@@ -141,8 +111,8 @@ export function LazyLoadFeature() {
     <section className="feature-panel">
       <FeatureSampleSection
         description={text(defineLocalizedText(
-          "Lazy Load는 request 시점을 전달하고 application이 controlled Row 배열과 loading 상태를 갱신하는 append-mode public API입니다.",
-          "Lazy Load is an append-mode public API that emits request timing while the application updates controlled rows and loading state.",
+          "1,000건의 예제 데이터를 100건씩 불러옵니다. 요청 지연과 취소를 포함한 비동기 로딩을 시뮬레이션하며, application이 data와 loading 상태를 관리합니다.",
+          "Load 1,000 sample rows in batches of 100. This example simulates asynchronous loading with delay and cancellation; the application owns data and loading state.",
         ))}
         id="lazy-load"
         title={text(defineLocalizedText("지연 로딩", "Lazy Load"))}
@@ -167,8 +137,8 @@ export function LazyLoadFeature() {
           lazyLoadBatchSize={BATCH_SIZE}
           lazyLoadThreshold={140}
           loadingComponent={<span>{text(defineLocalizedText(
-            "원격 데이터를 다시 불러오는 중입니다.",
-            "Reloading remote data.",
+            "예제 데이터를 다시 불러오는 중입니다.",
+            "Reloading sample data.",
           ))}</span>}
           loading={loading}
           loadingMore={loadingMore}

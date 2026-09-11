@@ -87,6 +87,7 @@ function getVirtualGroupingRowId(row: VirtualGroupingRow) {
 export function RowGroupingFeature() {
   const { text } = usePlaygroundLocale();
   const tableRef = useRef<CominsTableRef<RowGroupingExampleRow>>(null);
+  const [movementAllowed, setMovementAllowed] = useState(true);
   const [groupingRows, setGroupingRows] = useState(initialGroupingRows);
   const [regionGroups, setRegionGroups] = useState(initialRegionGroups);
   const [singleExpandedGroupIds, setSingleExpandedGroupIds] = useState<CominsRowId[]>([]);
@@ -96,20 +97,20 @@ export function RowGroupingFeature() {
   const [virtualExpandedGroupIds, setVirtualExpandedGroupIds] = useState<CominsRowId[]>([]);
   const columns = useMemo<Array<CominsTableColumn<RowGroupingExampleRow>>>(
     () => [
-      { field: "name", label: text(defineLocalizedText("이름", "Name")), minWidth: 180, sort: true },
-      { field: "region", label: text(defineLocalizedText("지역", "Region")), minWidth: 130, sort: true },
-      { field: "team", label: text(defineLocalizedText("팀", "Team")), minWidth: 140, sort: true },
-      { field: "amount", label: text(defineLocalizedText("금액", "Amount")), minWidth: 120, sort: true },
-      { field: "status", label: text(defineLocalizedText("상태", "Status")), minWidth: 130, sort: true },
+      { field: "name", label: "name", minWidth: 180, sort: true },
+      { field: "region", label: "region", minWidth: 130, sort: true },
+      { field: "team", label: "team", minWidth: 140, sort: true },
+      { field: "amount", label: "amount", minWidth: 120, sort: true },
+      { field: "status", label: "status", minWidth: 130, sort: true },
     ],
     [text],
   );
   const virtualRows = useMemo(() => createVirtualGroupingRows(100_000), []);
   const virtualColumns = useMemo<Array<CominsTableColumn<VirtualGroupingRow>>>(
     () => [
-      { field: "name", label: text(defineLocalizedText("이름", "Name")), minWidth: 260, sort: true },
-      { field: "amount", label: text(defineLocalizedText("금액", "Amount")), minWidth: 140, sort: true },
-      { field: "id", label: text(defineLocalizedText("ID", "ID")), minWidth: 220 },
+      { field: "name", label: "name", minWidth: 260, sort: true },
+      { field: "amount", label: "amount", minWidth: 140, sort: true },
+      { field: "id", label: "id", minWidth: 220 },
     ],
     [text],
   );
@@ -157,6 +158,10 @@ export function RowGroupingFeature() {
             </>
           )}
         />
+        <label className="feature-checkbox-control">
+          <input type="checkbox" checked={movementAllowed} onChange={event => setMovementAllowed(event.target.checked)} />
+          {text(defineLocalizedText("Row·Group 이동 허용", "Allow Row and Group movement"))}
+        </label>
         <pre className="state-output" data-testid="row-grouping-single-state">
           {JSON.stringify(singleExpandedGroupIds, null, 2)}
         </pre>
@@ -178,13 +183,13 @@ export function RowGroupingFeature() {
             getGroupId: getExampleGroupId,
             getGroupLabel: getExampleGroupLabel,
             getRowGroupId: (row) => row.region,
-            groupDraggable: true,
+            groupDraggable: movementAllowed,
             groups: regionGroups,
             onChangeExpandedGroupIds: setSingleExpandedGroupIds,
             onChangeGroups: (nextGroups) => setRegionGroups(nextGroups),
             setRowGroupId: ({ row, toGroupId }) => ({ ...row, region: String(toGroupId) }),
           }}
-          rowProps={{ draggable: true }}
+          rowProps={{ draggable: movementAllowed }}
           theme={{ density: "compact" }}
         />
       </FeatureSampleSection>

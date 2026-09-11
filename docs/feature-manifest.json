@@ -222,7 +222,10 @@
         "CominsSelectionState",
         "CominsCellSelectionOptions",
         "CominsCellRange",
-        "copyCominsCellRange"
+        "copyCominsCellRange",
+        "CominsCopyTarget",
+        "CominsSelectedCell",
+        "CominsSelectionCopy"
       ],
       "guides": {
         "en": [
@@ -239,7 +242,9 @@
       ],
       "tests": [
         "test/selection-core.test.ts",
-        "test/playwright/specs/selection-clipboard.spec.ts"
+        "test/playwright/specs/selection-clipboard.spec.ts",
+        "test/selection-read-copy.test.ts",
+        "test/selection-ref.test.tsx"
       ]
     },
     {
@@ -419,7 +424,9 @@
       "category": "structured-rows",
       "apiSymbols": [
         "CominsTreeNode",
-        "CominsTreeTableProps"
+        "CominsTreeTableProps",
+        "moveCominsTreeNode",
+        "CominsTreeRowDragConfig"
       ],
       "guides": {
         "en": [
@@ -434,7 +441,9 @@
       ],
       "tests": [
         "test/tree-core.test.ts",
-        "test/playwright/specs/tree-grid.spec.ts"
+        "test/playwright/specs/tree-grid.spec.ts",
+        "test/tree-row-drag-core.test.ts",
+        "test/playwright/specs/tree-row-drag.spec.ts"
       ]
     },
     {
@@ -623,20 +632,29 @@
     },
     {
       "id": "viewport-datasource",
-      "status": "unsupported",
-      "category": "loading-performance",
-      "apiSymbols": [],
-      "guides": {
-        "en": [],
-        "ko": []
-      },
-      "playgroundRoutes": [],
-      "tests": [
-        "test/public-api-boundary.test.ts"
+      "status": "shipped",
+      "category": "body-performance",
+      "apiSymbols": [
+        "useCominsViewport",
+        "CominsViewportTableProps",
+        "createCominsViewportData",
+        "reduceCominsViewportData"
       ],
-      "evidence": [
-        "README.md",
-        "example/src/features/AdvancedFeature.tsx"
+      "guides": {
+        "en": [
+          "docs/user/25-viewport-datasource.md"
+        ],
+        "ko": [
+          "docs/ko/25-viewport-datasource.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/performance/viewport-datasource"
+      ],
+      "tests": [
+        "test/viewport-data.test.ts",
+        "test/viewport-table.test.tsx",
+        "test/playwright/specs/viewport-datasource.spec.ts"
       ]
     },
     {
@@ -731,6 +749,30 @@
       ],
       "evidence": [
         "README.md"
+      ]
+    },
+    {
+      "id": "auto-row-height",
+      "status": "shipped",
+      "category": "body-performance",
+      "apiSymbols": [
+        "CominsRowHeight",
+        "CominsRowHeightParams"
+      ],
+      "guides": {
+        "en": [
+          "docs/user/24-auto-row-height.md"
+        ],
+        "ko": [
+          "docs/ko/24-auto-row-height.md"
+        ]
+      },
+      "playgroundRoutes": [
+        "/performance/auto-row-height"
+      ],
+      "tests": [
+        "test/typecheck/viewport-auto-height-api.tsx",
+        "test/playwright/specs/viewport-datasource.spec.ts"
       ]
     }
   ],
@@ -864,7 +906,9 @@
     "classifications": {
       "documented": [
         "CominsAfterDragRowPayload",
+        "CominsAfterTreeRowDragPayload",
         "CominsBeforeRowDragPayload",
+        "CominsBeforeTreeRowDragPayload",
         "CominsCellSelectionOptions",
         "CominsColumnFilterConfig",
         "CominsColumnFilterKind",
@@ -873,6 +917,7 @@
         "CominsColumnFilterRule",
         "CominsColumnFilteringConfig",
         "CominsColumnPinned",
+        "CominsCopyTarget",
         "CominsEventRow",
         "CominsRowDetailHeight",
         "CominsRowDetailParams",
@@ -884,12 +929,26 @@
         "CominsRowGroupMoveOptions",
         "CominsRowGroupRenderParams",
         "CominsRowGroupingConfig",
+        "CominsRowHeight",
+        "CominsRowHeightParams",
         "CominsRowId",
+        "CominsSelectedCell",
+        "CominsSelectionCopy",
         "CominsSortModel",
         "CominsTable",
         "CominsTableColumn",
         "CominsTableRef",
+        "CominsTreeDropContext",
+        "CominsTreeMoveDestination",
         "CominsTreeNode",
+        "CominsTreeRowDragConfig",
+        "CominsTreeRowDragPayload",
+        "CominsViewportData",
+        "CominsViewportDatasource",
+        "CominsViewportOptions",
+        "CominsViewportPatch",
+        "CominsViewportRequest",
+        "CominsViewportTableProps",
         "addCominsRows",
         "applyCominsColumnLayout",
         "clearCominsSelection",
@@ -898,6 +957,7 @@
         "copyCominsRow",
         "createCominsTableState",
         "createCominsTableTransferCoordinator",
+        "createCominsViewportData",
         "deleteCominsRows",
         "exportCominsRowsToCsv",
         "exportCominsRowsToJson",
@@ -907,10 +967,12 @@
         "isCominsRowSelected",
         "moveCominsRowGroup",
         "moveCominsRowToGroup",
+        "moveCominsTreeNode",
         "pasteCominsCell",
         "pasteCominsCellRange",
         "pasteCominsRow",
         "queryCominsRows",
+        "reduceCominsViewportData",
         "selectCell",
         "selectCellRange",
         "selectRow",
@@ -921,7 +983,8 @@
         "setCominsSortState",
         "transferCominsGroupBetweenTables",
         "transferCominsRowBetweenTables",
-        "updateCominsRows"
+        "updateCominsRows",
+        "useCominsViewport"
       ],
       "reference": [
         "CominsButtonComponentConfig",
@@ -1028,8 +1091,15 @@
         "CominsTableTransferResult",
         "CominsTableTransferRowEndpoint",
         "CominsToggleComponentConfig",
+        "CominsTreeDropPosition",
         "CominsTreeExpansionOptions",
         "CominsTreeTableProps",
+        "CominsViewportBlock",
+        "CominsViewportDataEvent",
+        "CominsViewportDataOptions",
+        "CominsViewportRange",
+        "CominsViewportRequestState",
+        "CominsViewportRevision",
         "CominsVirtualListComponentConfig",
         "CominsVirtualListItem",
         "CominsVirtualListItems",
@@ -1076,7 +1146,9 @@
         "source": "src/index.tsx",
         "exports": [
           "CominsAfterDragRowPayload",
+          "CominsAfterTreeRowDragPayload",
           "CominsBeforeRowDragPayload",
+          "CominsBeforeTreeRowDragPayload",
           "CominsButtonComponentConfig",
           "CominsCellAddress",
           "CominsCellComponent",
@@ -1111,6 +1183,7 @@
           "CominsCopiedCellRange",
           "CominsCopiedCellRangeCell",
           "CominsCopiedRow",
+          "CominsCopyTarget",
           "CominsEventColumn",
           "CominsEventRow",
           "CominsExportColumn",
@@ -1151,11 +1224,15 @@
           "CominsRowGroupRenderParams",
           "CominsRowGroupingConfig",
           "CominsRowGroupingSourceRow",
+          "CominsRowHeight",
+          "CominsRowHeightParams",
           "CominsRowId",
           "CominsRowKeyboardEventPayload",
           "CominsRowSelectionOptions",
           "CominsRowUpdate",
           "CominsSelectComponentConfig",
+          "CominsSelectedCell",
+          "CominsSelectionCopy",
           "CominsSelectionState",
           "CominsSetRowGroupIdParams",
           "CominsSortDirection",
@@ -1205,9 +1282,26 @@
           "CominsTableTransferResult",
           "CominsTableTransferRowEndpoint",
           "CominsToggleComponentConfig",
+          "CominsTreeDropContext",
+          "CominsTreeDropPosition",
           "CominsTreeExpansionOptions",
+          "CominsTreeMoveDestination",
           "CominsTreeNode",
+          "CominsTreeRowDragConfig",
+          "CominsTreeRowDragPayload",
           "CominsTreeTableProps",
+          "CominsViewportBlock",
+          "CominsViewportData",
+          "CominsViewportDataEvent",
+          "CominsViewportDataOptions",
+          "CominsViewportDatasource",
+          "CominsViewportOptions",
+          "CominsViewportPatch",
+          "CominsViewportRange",
+          "CominsViewportRequest",
+          "CominsViewportRequestState",
+          "CominsViewportRevision",
+          "CominsViewportTableProps",
           "CominsVirtualListComponentConfig",
           "CominsVirtualListItem",
           "CominsVirtualListItems",
@@ -1226,6 +1320,7 @@
           "copyCominsRow",
           "createCominsTableState",
           "createCominsTableTransferCoordinator",
+          "createCominsViewportData",
           "deleteCominsRows",
           "exportCominsRowsToCsv",
           "exportCominsRowsToJson",
@@ -1252,10 +1347,12 @@
           "moveCominsRow",
           "moveCominsRowGroup",
           "moveCominsRowToGroup",
+          "moveCominsTreeNode",
           "pasteCominsCell",
           "pasteCominsCellRange",
           "pasteCominsRow",
           "queryCominsRows",
+          "reduceCominsViewportData",
           "replaceCominsRows",
           "selectCell",
           "selectCellRange",
@@ -1277,7 +1374,8 @@
           "transferCominsGroupBetweenTables",
           "transferCominsRowBetweenTables",
           "updateCominsRows",
-          "updateCominsTreeItem"
+          "updateCominsTreeItem",
+          "useCominsViewport"
         ]
       },
       "comins-table/core": {

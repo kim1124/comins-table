@@ -113,7 +113,7 @@ test("header boundary resize is isolated from immediate column move and animated
   await page.mouse.move(nameBox!.x + nameBox!.width / 2, nameBox!.y + nameBox!.height / 2);
   await page.mouse.up();
 
-  await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("Column2");
+  await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("age");
   await expect(page.getByTestId("layout-order")).toHaveCount(0);
 
   const firstBodyCell = basicExample.locator(".comins-table__body-table tbody tr").first().locator("td").first();
@@ -256,7 +256,7 @@ test("source placeholder background stays muted while its drop marker remains vi
   await page.mouse.move(ageBox!.x + ageBox!.width / 2 + 8, ageBox!.y + ageBox!.height / 2);
   const placeholderLabel = ageHeader.locator(".comins-column-placeholder-label");
   await expect(placeholderLabel).toBeVisible();
-  await expect(placeholderLabel).toHaveText("Column2");
+  await expect(placeholderLabel).toHaveText("age");
   await expect(placeholderLabel).toHaveAttribute("aria-hidden", "true");
   await expect(ageHeader.locator(".comins-table__header-content")).toHaveCSS("opacity", "0");
   await expect(ageHeader.getByTestId("resize-age")).toHaveCSS("opacity", "0");
@@ -305,8 +305,8 @@ test("source placeholder background stays muted while its drop marker remains vi
   await page.mouse.down();
   await page.mouse.move(profileBox!.x + profileBox!.width / 2 + 8, profileBox!.y + profileBox!.height / 2);
   await expect(profileHeader.locator(".comins-column-placeholder-label")).toHaveText("Header 그룹 1");
-  await expect(nameHeader.locator(".comins-column-placeholder-label")).toHaveText("Column1");
-  await expect(ageGroupHeader.locator(".comins-column-placeholder-label")).toHaveText("Column2");
+  await expect(nameHeader.locator(".comins-column-placeholder-label")).toHaveText("name");
+  await expect(ageGroupHeader.locator(".comins-column-placeholder-label")).toHaveText("age");
   await expect(profileHeader).toHaveAttribute("data-column-drop-target", "true");
   await expect(profileHeader.locator(".comins-column-drop-marker")).toBeVisible();
   const groupBackgrounds = await Promise.all(
@@ -354,12 +354,12 @@ test("interactive Header content is inert during column move and restores after 
   await beginMove();
 
   await expect(source).not.toHaveAttribute("tabindex", "0");
-  await expect(source).toHaveAttribute("aria-label", "Column2");
+  await expect(source).toHaveAttribute("aria-label", "name");
   await expect(source).not.toHaveAttribute("aria-labelledby");
   await expect(headerContent).toHaveAttribute("inert", "");
   await expect(headerContent).toHaveAttribute("aria-hidden", "true");
   await expect(source.locator(".comins-column-placeholder-label")).toHaveAttribute("aria-hidden", "true");
-  await expect(example.getByRole("columnheader", { exact: true, name: "Column2" })).toHaveCount(1);
+  await expect(example.getByRole("columnheader", { exact: true, name: "name" })).toHaveCount(1);
 
   expect(await headerButton.evaluate((element) => {
     element.focus();
@@ -587,8 +587,8 @@ test("real rich group labels isolate every child subtree and restore after every
     );
     await expect(source).toHaveAttribute("data-column-placeholder", "true");
     await expect(source).toHaveAttribute("aria-label", "Header 그룹 1 action");
-    await expect(children[0]).toHaveAttribute("aria-label", "Column1 action");
-    await expect(children[1]).toHaveAttribute("aria-label", "Column2");
+    await expect(children[0]).toHaveAttribute("aria-label", "name action");
+    await expect(children[1]).toHaveAttribute("aria-label", "age");
     for (const content of [sourceContent, ...childContents]) {
       await expect(content).toHaveAttribute("inert", "");
       await expect(content).toHaveAttribute("aria-hidden", "true");
@@ -748,7 +748,7 @@ test("column move handle activates immediately and moved cells settle with a pos
     (window as typeof window & { __cominsColumnMoveAnimationStates?: string[] }).__cominsColumnMoveAnimationStates ?? [],
   )).toContain("true");
   await expect(nameHeader).not.toHaveAttribute("data-column-move-animating", "true", { timeout: 1_000 });
-  await expect(example.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("Column2");
+  await expect(example.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("age");
   expect(diagnostics).toEqual([]);
 });
 
@@ -774,13 +774,13 @@ test("column move shows a ghost and insertion marker while dragging", async ({ p
   await page.mouse.move(nameBox!.x + nameBox!.width / 2, nameBox!.y + nameBox!.height / 2);
 
   await expect(page.getByTestId("column-move-ghost")).toBeVisible();
-  await expect(page.getByTestId("column-move-ghost")).toContainText("Column2");
+  await expect(page.getByTestId("column-move-ghost")).toContainText("age");
   await expect(nameHeader).toHaveAttribute("data-column-drop-target", "true");
   await expect(nameHeader.locator(".comins-column-drop-marker")).toBeVisible();
 
   await page.mouse.up();
   await expect(page.getByTestId("column-move-ghost")).toHaveCount(0);
-  await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("Column2");
+  await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("age");
 
   expect(diagnostics).toEqual([]);
 });

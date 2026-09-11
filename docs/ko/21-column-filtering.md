@@ -94,7 +94,7 @@ Client-side projection 순서는 다음과 같습니다.
 2. 설정된 경우 Row Group membership을 구성합니다.
 3. 기존 Row 정렬 정책을 적용합니다.
 4. Flat pagination 또는 virtualization을 적용합니다.
-5. Leaf Row와 fixed-height Detail을 렌더링합니다.
+5. Leaf Row와 Detail 각각의 고정·자동 높이 정책에 따라 렌더링합니다.
 
 Summary Row 집계는 flat pagination 전에 filtered leaf Row를 사용합니다. Header 정렬은 Filter model을 변경하거나 재배치하지 않습니다. Flat `pageIndex`가 Filter 결과 범위를 벗어나면 마지막 page로 clamp합니다.
 
@@ -113,6 +113,6 @@ Filter로 숨겨진 selected Row ID와 expanded Row Detail ID는 dormant 상태�
 
 ## 경계
 
-Column Filtering은 CSR flat-data 기능입니다. Tree Grid, Infinite Scroll, Lazy Load, `loadingMore` 또는 Row Drag와 결합할 수 없습니다. Model이 비어 있어도 `columnFiltering` 설정이 존재하면 Row Drag를 비활성화합니다. 잠재적으로 일부만 보이는 projection에서 Row 이동 의미가 모호하기 때문입니다. Grouped Filtering은 Row Grouping의 pagination 금지 조건도 그대로 적용합니다.
+Column Filtering은 CSR flat-data 기능입니다. Tree Grid, Viewport Datasource, Infinite Scroll, Lazy Load, `loadingMore` 또는 Row Drag와 결합할 수 없습니다. Model이 비어 있어도 `columnFiltering` 설정이 존재하면 Row Drag를 비활성화합니다. 잠재적으로 일부만 보이는 projection에서 Row 이동 의미가 모호하기 때문입니다. Grouped Filtering은 Row Grouping의 pagination 금지 조건도 그대로 적용합니다.
 
 Server-side filtering, custom Filter editor renderer, OR group, Column별 multi-rule 평가, locale-aware text collation, fuzzy search, relative date, Tree filtering과 remote datasource filtering은 이번 release 범위 밖입니다. 필요한 경우 application이 자체 정책으로 controlled `data`를 만든 뒤 Comins Table에 전달할 수 있습니다.

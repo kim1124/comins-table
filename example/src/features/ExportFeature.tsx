@@ -10,9 +10,9 @@ import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-loc
 type ExportMode = "csv" | "json";
 
 const exportColumns: Array<CominsExportColumn<PersonRow>> = [
-  { id: "name", label: "Column1", value: (row) => row.name },
-  { id: "age", label: "Column2", value: (_row, rowIndex) => `Data ${rowIndex + 1}` },
-  { id: "role", label: "Column3", value: (row) => row.role },
+  { id: "name", label: "name", value: (row) => row.name },
+  { id: "age", label: "age", value: (_row, rowIndex) => `Data ${rowIndex + 1}` },
+  { id: "role", label: "role", value: (row) => row.role },
 ];
 
 export function ExportFeature() {

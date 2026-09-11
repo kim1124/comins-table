@@ -16,6 +16,8 @@ export type FeatureId =
   | "body"
   | "infinite-scroll"
   | "lazy-load"
+  | "auto-row-height"
+  | "viewport-datasource"
   | "cell"
   | "selection-clipboard"
   | "component"

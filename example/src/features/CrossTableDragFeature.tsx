@@ -3,6 +3,7 @@ import { useState } from "react";
 import {
   CominsTable,
   createCominsTableTransferCoordinator,
+  type CominsRowId,
   type CominsTableTransferConflictPolicy,
   type CominsTableTransferRejection,
 } from "../../../src";
@@ -24,8 +25,8 @@ type TransferGroup = {
 };
 
 const transferColumns = [
-  { field: "name", label: "Name", minWidth: 180 },
-  { field: "status", label: "Status", minWidth: 120 },
+  { field: "name", label: "name", minWidth: 180 },
+  { field: "status", label: "status", minWidth: 120 },
 ];
 const initialFlatLeft: TransferRow[] = [
   { groupId: "", id: "flat-a", name: "Alpha", status: "Ready" },
@@ -65,6 +66,7 @@ export function CrossTableDragFeature() {
   const [groupedRightRows, setGroupedRightRows] = useState(initialGroupedRightRows);
   const [groupedLeftGroups, setGroupedLeftGroups] = useState(initialGroupedLeftGroups);
   const [groupedRightGroups, setGroupedRightGroups] = useState(initialGroupedRightGroups);
+  const [collapsedGroupIds, setCollapsedGroupIds] = useState<Record<string, CominsRowId[]>>({});
   const renderRejectionTooltip = (
     rejection:
       | CominsTableTransferRejection<TransferRow>
@@ -103,6 +105,14 @@ export function CrossTableDragFeature() {
         (sourceIsLeft ? setGroupedLeftGroups : setGroupedRightGroups)(result.source.groups ?? []);
         (targetIsLeft ? setGroupedLeftRows : setGroupedRightRows)(result.target.data);
         (targetIsLeft ? setGroupedLeftGroups : setGroupedRightGroups)(result.target.groups ?? []);
+        setCollapsedGroupIds((current) => {
+          const next = { ...current };
+          for (const table of [result.source, result.target]) {
+            const ids = new Set(table.groups?.map((group) => group.id));
+            next[table.tableId] = (current[table.tableId] ?? []).filter((id) => ids.has(String(id)));
+          }
+          return next;
+        });
       },
     }),
   );
@@ -120,14 +130,17 @@ export function CrossTableDragFeature() {
     scope: "group-example",
     tableId,
   } as const);
-  const grouping = (groups: TransferGroup[]) => ({
-    expandedGroupIds: groups.map((group) => group.id),
+  const grouping = (tableId: string, groups: TransferGroup[]) => ({
+    expandedGroupIds: groups.map((group) => group.id).filter((id) => !collapsedGroupIds[tableId]?.includes(id)),
     getGroupId: (group: TransferGroup) => group.id,
     getGroupLabel: (group: TransferGroup) => group.label,
     getRowGroupId: (row: TransferRow) => row.groupId,
     groupDraggable: true,
     groups,
-    onChangeExpandedGroupIds: () => undefined,
+    onChangeExpandedGroupIds: (expandedIds: CominsRowId[]) => setCollapsedGroupIds((current) => ({
+      ...current,
+      [tableId]: groups.map((group) => group.id).filter((id) => !expandedIds.includes(id)),
+    })),
     setRowGroupId: ({ row, toGroupId }: { row: TransferRow; toGroupId: string | number }) => ({
       ...row,
       groupId: String(toGroupId),
@@ -174,12 +187,12 @@ export function CrossTableDragFeature() {
         <div className="cross-table-grid">
           <div>
             <strong>{text(defineLocalizedText("왼쪽 Group Table", "group-left"))}</strong>
-            <CominsTable className="example-table" columns={transferColumns} data={groupedLeftRows} data-testid="cross-table-group-left" getRowId={(row) => row.id} rowGrouping={grouping(groupedLeftGroups)} rowProps={{ draggable: true }} tableTransfer={groupedTransfer("group-left")} />
+            <CominsTable className="example-table" columns={transferColumns} data={groupedLeftRows} data-testid="cross-table-group-left" getRowId={(row) => row.id} rowGrouping={grouping("group-left", groupedLeftGroups)} rowProps={{ draggable: true }} tableTransfer={groupedTransfer("group-left")} />
             <pre className="state-output" data-testid="cross-table-group-left-state">{JSON.stringify({ groups: groupedLeftGroups.map((group) => group.id), rows: groupedLeftRows.map((row) => ({ groupId: row.groupId, id: row.id })) })}</pre>
           </div>
           <div>
             <strong>{text(defineLocalizedText("오른쪽 Group Table", "group-right"))}</strong>
-            <CominsTable className="example-table" columns={transferColumns} data={groupedRightRows} data-testid="cross-table-group-right" getRowId={(row) => row.id} rowGrouping={grouping(groupedRightGroups)} rowProps={{ draggable: true }} tableTransfer={groupedTransfer("group-right")} />
+            <CominsTable className="example-table" columns={transferColumns} data={groupedRightRows} data-testid="cross-table-group-right" getRowId={(row) => row.id} rowGrouping={grouping("group-right", groupedRightGroups)} rowProps={{ draggable: true }} tableTransfer={groupedTransfer("group-right")} />
             <pre className="state-output" data-testid="cross-table-group-right-state">{JSON.stringify({ groups: groupedRightGroups.map((group) => group.id), rows: groupedRightRows.map((row) => ({ groupId: row.groupId, id: row.id })) })}</pre>
           </div>
         </div>

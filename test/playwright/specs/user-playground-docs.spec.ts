@@ -92,9 +92,9 @@ test("basic crud page demonstrates row updates and reset without pagination cont
   await expect(page.getByTestId("row-new-1")).toBeVisible();
 
   await page.getByTestId("row-b").click();
-  await page.getByLabel("Selected row JSON").fill('{"id":"b","name":"Data 2","age":43,"role":"Editor","active":true}');
+  await page.getByLabel("Selected row JSON").fill('{"column4":"b","column1":"Data 2","column2":43,"column3":"Editor","column5":true}');
   await page.getByRole("button", { exact: true, name: "Update" }).click();
-  await expect(page.getByTestId("cell-b-name")).toContainText("Data 2");
+  await expect(page.getByTestId("cell-b-column1")).toContainText("Data 2");
 
   await page.getByRole("button", { exact: true, name: "Delete" }).click();
   await expect(page.getByTestId("row-b")).toHaveCount(0);

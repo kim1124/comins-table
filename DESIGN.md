@@ -36,6 +36,8 @@ Rest, hover, active, `focus-visible`, selected, disabled, loading, invalid, drag
 
 `theme.density` selects the built-in Row and Header measurements. Applications may override the documented height and padding tokens, but fixed-height virtualization still requires the resolved `rowHeight` contract to match the logical Row height. Pinned zones preserve a center-content budget and may demote inner pinned blocks when the container becomes too narrow; this is a rendering decision and does not change persisted pin intent.
 
+For variable business Row heights, `getRowHeight` owns the layout policy. Returning `"auto"` measures normal-flow Cell content; `estimatedRowHeight` supplies the initial estimate without imposing a limit on the Renderer. Group headings retain their fixed `rowHeight`, and Row Details keep their independent height policy. CSS height overrides alone do not update virtual geometry. Viewport loading estimates unloaded heights and may adjust the scrollbar as content is measured.
+
 ## CSS token stability
 
 The canonical machine-readable inventory is `docs/feature-manifest.json`. Stability means:

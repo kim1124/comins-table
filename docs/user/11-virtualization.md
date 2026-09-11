@@ -21,10 +21,20 @@ Header and Body remain separate table elements. Body owns vertical scrolling and
 
 `"buffer-size"` controls how many rows remain mounted around the viewport. `rowHeight` must match the visual row height when CSS overrides `--comins-table-row-height`.
 
-Data Rows and collapsed Detail owners keep the arithmetic fixed-height path.
-The private height index is activated only when an effective expanded Detail
-makes a data Slot taller than rowHeight.
+Uniform fixed-height Rows keep the arithmetic path. Row-specific or automatic heights and expanded Details use the private height index. See [automatic Row height](24-auto-row-height.md).
 
-Virtualization reduces DOM work, but the application still owns the full `data` array in the current CSR model.
+For ordinary array-backed Tables, virtualization reduces DOM work while the application still owns the full `data` array. Viewport mode additionally limits loaded data with a block cache.
 
 Column Filtering derives source indexes before the virtual range. A Filter change therefore updates the logical projection while the application continues to own the unchanged full `data` array and stable Row IDs.
+
+For bounded remote data, use [Viewport Datasource](25-viewport-datasource.md); the full CSR array contract remains available.
+
+## Choosing a data-loading mode
+
+| Mode | Data kept by the application | Scroll behavior |
+| --- | --- | --- |
+| Array + `virtualized` | Full Row array | Mount only the current window and buffer |
+| Infinite Scroll / Lazy Load | Rows accumulated by append requests | Reach later data by loading successive batches |
+| Viewport Datasource | Bounded blocks through `useCominsViewport` | Request arbitrary ranges using a known total count |
+
+Automatic heights can be combined with virtualization and Viewport loading. They measure mounted content and estimate unknown heights; they do not pre-measure the full dataset. See [Automatic Row Height](24-auto-row-height.md) and [Viewport Datasource](25-viewport-datasource.md).
