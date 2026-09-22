@@ -1,6 +1,6 @@
 # Comins Table Documentation
 
-These guides describe **0.1.11**. See the [migration notes](../README.md#version-0111) for opt-in Row Drag, local versus controlled data ownership, and Clipboard/Fill requirements. The release remains unpublished until the release workflow completes.
+These guides describe **0.1.11**. See the [migration notes](../README.md#version-0111) for opt-in Row Drag, local versus controlled data ownership, and Clipboard/Fill requirements, and the [changelog](../CHANGELOG.md) for publication dates.
 
 [Design contract](../DESIGN.md) · [Componentization guide](design/componentization.md) · [Canonical Feature Manifest](feature-manifest.json)
 
