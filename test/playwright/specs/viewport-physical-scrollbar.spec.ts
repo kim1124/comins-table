@@ -7,6 +7,11 @@ test("viewport reaches the last row using the native scrollbar thumb @perf", asy
   await page.addStyleTag({ content: '[data-testid="viewport-datasource-viewport"] { overflow-y: scroll !important; scrollbar-gutter: stable; scrollbar-color: auto !important; } [data-testid="viewport-datasource-viewport"]::-webkit-scrollbar { width: 24px; } [data-testid="viewport-datasource-viewport"]::-webkit-scrollbar-thumb { min-height: 28px; background: #555; }' });
   await expect(viewport.getByTestId("row-0")).toBeVisible();
   await viewport.scrollIntoViewIfNeeded();
+  // Native scrollbar hit-testing must use the painted position after the outer
+  // page scroll, rather than only the already-updated DOM bounding rectangle.
+  await page.evaluate(() => new Promise<void>(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  }));
   const box = (await viewport.boundingBox())!;
   const metrics = await viewport.evaluate(element => ({ height: element.clientHeight, scrollHeight: element.scrollHeight, gutter: element.offsetWidth - element.clientWidth }));
   expect(metrics.gutter).toBeGreaterThan(0);

@@ -55,10 +55,10 @@ test("pinning allows Row and Group movement and grouping exposes the restriction
   await expect(grid.getByTestId("row-drag-handle-pin-2")).toBeVisible();
   await page.goto("/examples/row-grouping");
   const single = page.getByTestId("row-grouping-single-viewport");
-  await page.getByRole("checkbox", { name: "Row·Group 이동 허용" }).uncheck();
+  await page.getByRole("button", { name: "Row·Group 이동 허용" }).click();
   await expect(single.getByTestId("group-drag-handle-east")).toHaveCount(0);
   await single.getByTestId("group-toggle-east").click();
   await expect(single.getByTestId("row-group-a")).toHaveAttribute("data-row-draggable", "false");
-  await page.getByRole("checkbox", { name: "Row·Group 이동 허용" }).check();
+  await page.getByRole("button", { name: "Row·Group 이동 허용" }).click();
   await expect(single.getByTestId("row-drag-handle-group-a")).toBeVisible();
 });

@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { CominsTable, useCominsViewport, type CominsTableColumn, type CominsViewportRequest } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
+import { Button } from "../components/ui/button";
 import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
 type Row = { id: number; text: string };
 const columns: CominsTableColumn<Row>[] = [
-  { field: "id", label: "id", width: 100, pinned: "left" },
+  { field: "id", label: "id", width: 100, pinned: "left", cell: { props: { style: { textAlign: "right" } } } },
   { field: "text", label: "text", width: 450, cell: { renderer: ({ value }) => <div style={{ whiteSpace: "normal", lineHeight: "20px" }}>{String(value)}</div> } },
 ];
 const id = (row: Row) => row.id;
@@ -34,11 +35,11 @@ export function ViewportFeature() {
   };
   const viewport = useCominsViewport({ rowCount: 1_000_000, queryKey: query, getRows });
   return <section className="feature-panel">
-    <FeatureSampleSection id="viewport-datasource" title={text(defineLocalizedText("Viewport 데이터 조회", "Viewport loading"))} description={text(defineLocalizedText("전체 1,000,000건 중 현재 화면 주변 구간만 조회합니다.", "Load only the current region from a million-row dataset."))}>
+    <FeatureSampleSection id="viewport-datasource" title={text(defineLocalizedText("Viewport 데이터 조회", "Viewport loading"))} description={text(defineLocalizedText("전체 1,000,000건 중 현재 화면 주변 구간만 조회합니다. Viewport는 Row Drag를 지원하지 않습니다. 일부 구간만 로드하므로 전체 순서 변경은 서버의 재정렬 및 재조회 처리가 필요합니다.", "Load only the current region from a million-row dataset. Viewport does not support Row Drag: reordering a partially loaded dataset requires server-side ordering and reloading."))}>
       <div className="table-toolbar">
-        <label><input type="checkbox" checked={automatic} onChange={event => setAutomatic(event.target.checked)} data-testid="viewport-auto-height" />{text(defineLocalizedText("자동 높이", "Auto height"))}</label>
-        <label><input type="checkbox" checked={slow} onChange={event => setSlow(event.target.checked)} />{text(defineLocalizedText("느린 응답", "Slow response"))}</label>
-        <label><input type="checkbox" checked={fail} onChange={event => setFail(event.target.checked)} data-testid="viewport-fail" />{text(defineLocalizedText("오류 응답", "Fail requests"))}</label>
+        <Button aria-pressed={automatic} onClick={() => setAutomatic(value => !value)} data-testid="viewport-auto-height" variant="outline">{text(defineLocalizedText("자동 높이", "Auto height"))}</Button>
+        <Button aria-pressed={slow} onClick={() => setSlow(value => !value)} variant="outline">{text(defineLocalizedText("느린 응답", "Slow response"))}</Button>
+        <Button aria-pressed={fail} onClick={() => setFail(value => !value)} data-testid="viewport-fail" variant="outline">{text(defineLocalizedText("오류 응답", "Fail requests"))}</Button>
         <button type="button" data-testid="viewport-reset" onClick={() => setQuery(value => value + 1)}>{text(defineLocalizedText("검색 결과 변경", "Change query"))}</button>
         <button type="button" data-testid="viewport-content" onClick={() => setExpandedContent(value => !value)}>{text(defineLocalizedText("콘텐츠 길이 변경", "Change content length"))}</button>
         <span data-testid="viewport-cache-state">{text(defineLocalizedText("보관 중", "Cached"))}: {viewport.data.blocks.reduce((count, block) => count + block.rows.length, 0)}{" / 1,000,000"}</span>

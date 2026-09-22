@@ -15,10 +15,10 @@ import { createTenThousandNodeTree, createThirtyNodeTree } from "../fixtures/tre
 import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
 const treeColumns = createBaseColumns();
-const virtualTreeData = createTenThousandNodeTree();
 
 export function TreeGridFeature() {
   const { locale, text } = usePlaygroundLocale();
+  const [virtualTreeData, setVirtualTreeData] = useState(createTenThousandNodeTree);
   const [basicData, setBasicData] = useState(createThirtyNodeTree);
   const [controlData, setControlData] = useState(createThirtyNodeTree);
   const [styleData, setStyleData] = useState(createThirtyNodeTree);
@@ -232,6 +232,7 @@ export function TreeGridFeature() {
           className="example-table tree-virtual-table"
           columns={treeColumns}
           data={virtualTreeData}
+          onChangeData={setVirtualTreeData}
           data-testid="tree-virtual-viewport"
           getRowId={(row) => row.id}
           rowHeight={32}

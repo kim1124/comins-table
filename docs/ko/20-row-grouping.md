@@ -156,7 +156,7 @@ Visible leaf callback은 기존 계약을 유지합니다.
 
 접힌 Group의 selected Row ID와 expanded Detail ID는 dormant 상태로 유지합니다. Cell range, copy, paste는 현재 grouped leaf 순서를 따르며 Group Row를 포함하지 않습니다.
 
-Column Pinning은 일반 leaf Cell과 Header에 계속 적용되며 하나의 spanning Group Cell 자체는 pinning하지 않습니다. Visual Fill Handle UI는 이번 release 범위 밖입니다. 기존 leaf-only selection과 Clipboard 동작은 유지합니다.
+Column Pinning은 일반 leaf Cell과 Header에 계속 적용되며 하나의 spanning Group Cell 자체는 pinning하지 않습니다. Visual Fill Handle UI는 표시된 business leaf Cell에 적용하며 Group 헤딩은 편집 대상에서 제외합니다. 기존 leaf-only selection과 Clipboard 동작은 유지합니다.
 
 Row Grouping은 client-side flat-table 기능이며 pagination, infinite/lazy loading, Viewport Datasource, Tree Grid와 결합할 수 없습니다. 업무 Row는 `getRowHeight`를 통한 고정·자동 높이와 가변 높이 가상화를 지원하며 Group 제목은 fixed `rowHeight`를 유지합니다. 기존 `renderRowDetail`을 통한 grouped leaf Row Detail도 지원합니다. [Row 자동 높이](24-auto-row-height.md)를 참고합니다. 다중 Depth Group tree, Group selection, variable-height Group Row, server grouping, Pivot, custom reducer와 aggregate sorting은 이번 범위가 아닙니다.
 

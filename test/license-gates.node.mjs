@@ -38,6 +38,7 @@ const spoqaFonts = [
 ];
 const spoqaLicense = 'example/public/fonts/spoqa/LICENSE.SpoqaHanSans.txt';
 const readmeGifs = [
+  'docs/assets/comins-table-clipboard-fill.gif',
   'docs/assets/comins-table-column-filtering.gif',
   'docs/assets/comins-table-column-pinning.gif',
   'docs/assets/comins-table-cross-table-drag.gif',

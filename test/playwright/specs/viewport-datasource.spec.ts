@@ -57,13 +57,13 @@ test("viewport resets the dataset and offers an explicit retry after errors", as
   await page.goto("/performance/viewport-datasource");
   const viewport = page.getByTestId("viewport-datasource-viewport");
   await expect(viewport.getByTestId("row-0")).toBeVisible();
-  await page.getByTestId("viewport-fail").check();
+  await page.getByTestId("viewport-fail").click();
   await page.getByTestId("viewport-reset").click();
   await expect(viewport.getByTestId("viewport-retry").first()).toBeVisible();
-  await page.getByTestId("viewport-fail").uncheck();
+  await page.getByTestId("viewport-fail").click();
   await viewport.getByTestId("viewport-retry").first().click();
   await expect(viewport.getByTestId("row-0")).toContainText("Result 1");
-  await page.getByTestId("viewport-auto-height").uncheck();
+  await page.getByTestId("viewport-auto-height").click();
   await viewport.evaluate(element => { element.scrollTop = element.scrollHeight; });
   await expect(viewport.getByTestId("row-999999")).toBeVisible();
   await page.getByTestId("viewport-reset").click();
@@ -128,7 +128,7 @@ test("automatic business height combines with Detail and column width changes", 
   const viewport = page.getByTestId("auto-height-viewport");
   const row = viewport.getByTestId("row-0");
   await expect(row).toBeVisible();
-  await page.getByTestId("auto-height-detail").check();
+  await page.getByTestId("auto-height-detail").click();
   await expect(viewport.getByTestId("row-detail-content-0")).toBeVisible();
   await page.getByTestId("auto-height-content").click();
   const wideHeight = await row.evaluate(element => element.getBoundingClientRect().height);

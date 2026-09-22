@@ -6,9 +6,9 @@ import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { createExampleRows } from "../fixtures/people";
 import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
-type CrudRow = { column1: string; column2: number; column3: string; column4: string; column5?: boolean; column6?: string };
+type CrudRow = { id: string; column1: string; column2: number; column3: string; column4: string; column5?: boolean; column6?: string };
 function createCrudRows(count: number): CrudRow[] {
-  return createExampleRows(count).map(row => ({ column1: row.name, column2: row.age, column3: row.role, column4: row.id, column5: row.active, column6: row.locked }));
+  return createExampleRows(count).map(row => ({ id: row.id, column1: row.name, column2: row.age, column3: row.role, column4: row.id, column5: row.active, column6: row.locked }));
 }
 
 export function BasicCrudFeature() {
@@ -33,6 +33,7 @@ export function BasicCrudFeature() {
   const addRow = () => {
     setRows((current) => [
       {
+        id: `new-${nextRowIndex}`,
         column5: true,
         column2: 30 + nextRowIndex,
         column4: `new-${nextRowIndex}`,
@@ -52,10 +53,10 @@ export function BasicCrudFeature() {
     }
 
     try {
-      const parsed = JSON.parse(selectedRowJson) as Partial<CrudRow>;
+      const parsed = JSON.parse(selectedRowJson) as Partial<Omit<CrudRow, "id">>;
 
       setRows((current) =>
-        current.map((row) => (row.column4 === activeRowId ? { ...row, ...parsed, column4: activeRowId } : row)),
+        current.map((row) => (row.id === activeRowId ? { ...row, ...parsed, id: activeRowId } : row)),
       );
       setError("");
     } catch {
@@ -69,15 +70,16 @@ export function BasicCrudFeature() {
     }
 
     const deleteIds = new Set(selectedRowIds);
-    setRows((current) => current.filter((row) => !deleteIds.has(row.column4)));
+    setRows((current) => current.filter((row) => !deleteIds.has(row.id)));
     setActiveRowId((current) => (current && deleteIds.has(current) ? null : current));
     setSelectedRowIds([]);
     setSelectedRowJson("");
     setError("");
   };
   const selectActiveRow = (row: CrudRow, rowId: string) => {
+    const { id: _id, ...values } = row;
     setActiveRowId(rowId);
-    setSelectedRowJson(JSON.stringify(row, null, 2));
+    setSelectedRowJson(JSON.stringify(values, null, 2));
     setError("");
   };
 
@@ -136,11 +138,13 @@ export function BasicCrudFeature() {
           </div>
           <div className="crud-table-pane">
             <CominsTable
+              rowProps={{ draggable: true }}
               className="example-table"
               columns={columns}
               data={rows}
               data-testid="data-table-viewport"
-              getRowId={(row) => row.column4}
+              getRowId={(row) => row.id}
+              onChangeData={setRows}
               onChangeSelection={syncSelection}
               onClickCell={({ row }) => selectActiveRow(row.data, String(row.id))}
               onClickRow={({ row }) => {

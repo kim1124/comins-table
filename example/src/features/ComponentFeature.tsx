@@ -255,7 +255,7 @@ export function ComponentFeature() {
         components: [
           {
             onClick: ({ row }) => reportComponentEvent("Cell Button", String(row.id)),
-            props: ({ row }) => ({ children: `Data ${row.index + 1} Button` }),
+            props: ({ row }) => ({ children: `${row.data.name} Button` }),
             type: "button",
           },
         ],
@@ -470,7 +470,7 @@ export function ComponentFeature() {
         ],
       };
       componentColumn.cell = {
-        format: ({ row }) => `Data ${row.index + 1}`,
+        format: ({ value }) => String(value),
       };
     }
 
@@ -522,9 +522,6 @@ export function ComponentFeature() {
 
     return [
       {
-        cell: {
-          format: ({ row }) => `Data ${row.index + 1}`,
-        },
         field: "id",
         label: "id",
         minWidth: 100,
@@ -532,9 +529,6 @@ export function ComponentFeature() {
       },
       componentColumn,
       {
-        cell: {
-          format: ({ row }) => `Data ${row.index + 1}`,
-        },
         field: "role",
         id: `${componentId}-state`,
         label: "role",
@@ -577,6 +571,7 @@ export function ComponentFeature() {
             >
               <div className="component-example-table-wrap" data-testid={`component-example-${example.id}`}>
                 <CominsTable
+                  rowProps={{ draggable: true }}
                   className="example-table component-example-table"
                   columns={columnsByExample[example.id]}
                   data={rowsByExample[example.id]}

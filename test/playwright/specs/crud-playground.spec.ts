@@ -45,6 +45,23 @@ test("CRUD example adds every click, updates active row JSON, and deletes select
   await expect(page.getByTestId("row-b")).toBeVisible();
   await expect(page.getByTestId("cell-b-column1")).toHaveText("Data Changed");
   await expect(page.getByTestId("cell-b-column2")).toHaveText("44");
+  await expect(page.getByTestId("cell-b-column3")).toHaveText("검토자");
+  await expect(page.getByTestId("cell-b-column4")).toHaveText("changed-column4");
+  await expect(page.getByTestId("cell-b-column5")).toHaveText("true");
+  await expect(page.getByTestId("cell-b-column6")).toHaveText("Data Changed");
+
+  // Business values may repeat; the internal Row identity must remain stable.
+  await page.getByTestId("cell-b-column4").click();
+  await expect(page.getByLabel("선택 행 JSON")).toHaveValue(JSON.stringify({
+    column1: "Data Changed", column2: 44, column3: "검토자",
+    column4: "changed-column4", column5: true, column6: "Data Changed",
+  }, null, 2));
+  await page.getByLabel("선택 행 JSON").fill('{"column4":"a","id":"changed-id"}');
+  await page.getByRole("button", { exact: true, name: "수정" }).click();
+  await expect(page.getByTestId("cell-b-column4")).toHaveText("a");
+  await expect(page.getByTestId("cell-b-column1")).toHaveText("Data Changed");
+  await expect(page.getByTestId("cell-a-column1")).toHaveText("Data 1");
+  await expect(page.getByTestId("row-b")).toHaveAttribute("data-selected-row", "true");
 
   await page.getByLabel("선택 행 JSON").fill("{잘못된 JSON");
   await page.getByRole("button", { exact: true, name: "수정" }).click();

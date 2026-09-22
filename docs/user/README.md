@@ -1,6 +1,10 @@
 # English Feature Guides
 
+These guides target 0.1.11, including opt-in TSV paste and Fill Handle. [Clipboard and Fill](09-clipboard.md) · [Row Drag migration](07-row.md).
+
 [Documentation home](../README.md) · [한글 가이드](../ko/README.md) · [Playground](http://127.0.0.1:4002/docs/getting-started)
+
+Row Drag is disabled by default in 0.1.11. Set `rowProps={{ draggable: true }}` to enable it. `onChangeData` is optional for local Row reordering; connect it to synchronize application state. A new `data` array replaces internal Rows. See the [Row guide](07-row.md).
 
 ## Getting Started
 
@@ -37,7 +41,7 @@
 | --- | --- | --- |
 | Row callbacks, drag, and Context Menu | [Row](07-row.md) | [`/examples/row`](http://127.0.0.1:4002/examples/row), [`/examples/context-menu`](http://127.0.0.1:4002/examples/context-menu) |
 | Formatting, renderers, and components | [Cell](08-cell.md) | [`/examples/cell`](http://127.0.0.1:4002/examples/cell), [`/examples/component`](http://127.0.0.1:4002/examples/component) |
-| OS copy and internal paste | [Clipboard](09-clipboard.md) | [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard) |
+| OS copy, TSV paste and Fill Handle | [Clipboard](09-clipboard.md) | [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard), [`/examples/fill-handle`](http://127.0.0.1:4002/examples/fill-handle) |
 | Independent Row/Cell selection and getters | [Selection](10-selection.md) | [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard) |
 | Controlled Detail Rows | [Row Expand](19-row-expand.md) | [`/examples/row-expand`](http://127.0.0.1:4002/examples/row-expand) |
 

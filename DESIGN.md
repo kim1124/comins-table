@@ -22,7 +22,7 @@ Motion is limited to short color, opacity, position, and resize feedback. Motion
 
 | Surface | Contract |
 | --- | --- |
-| Frame | Owns the outer border, radius, background, and the final horizontal scrollbar. |
+| Frame | Owns a single 1px outer border, radius, background, and the final horizontal scrollbar. Header and final Cells must not duplicate the perimeter border; pinned-zone separators remain distinct. |
 | Header | Uses an accent surface by default and retains visible focus, resize, sort, move, and pinned boundaries. |
 | Body Cell | Keeps grid borders and application Row backgrounds visible beneath selection indicators. |
 | Group Row | Uses one semantic full-width Cell. Its content remains visible at the Body viewport start during horizontal scrolling. |
@@ -37,6 +37,20 @@ Rest, hover, active, `focus-visible`, selected, disabled, loading, invalid, drag
 `theme.density` selects the built-in Row and Header measurements. Applications may override the documented height and padding tokens, but fixed-height virtualization still requires the resolved `rowHeight` contract to match the logical Row height. Pinned zones preserve a center-content budget and may demote inner pinned blocks when the container becomes too narrow; this is a rendering decision and does not change persisted pin intent.
 
 For variable business Row heights, `getRowHeight` owns the layout policy. Returning `"auto"` measures normal-flow Cell content; `estimatedRowHeight` supplies the initial estimate without imposing a limit on the Renderer. Group headings retain their fixed `rowHeight`, and Row Details keep their independent height policy. CSS height overrides alone do not update virtual geometry. Viewport loading estimates unloaded heights and may adjust the scrollbar as content is measured.
+
+## Icons, sorting, and drag feedback
+
+Built-in icons use the existing Radix 15px SVG primitives and inherit their foreground. Icon buttons have a 24px square interaction area. Disclosure uses right/down Chevrons; ascending/descending sorting uses up/down Chevrons from the same family. Sorting remains a Header action, with `aria-sort` on the owning Header, an accessible button label, decorative SVGs, and native Enter/Space activation. Sort direction must not be confused with Group expansion state.
+
+| Interaction state | Treatment |
+| --- | --- |
+| Source placeholder | Neutral `surface-muted` / `muted` pair and a one-pixel inset dashed `drop-marker` outline. Preserve original geometry. |
+| Valid target | `drop-valid-background` with readable `foreground`; 2px solid `drop-valid` outline or insertion line for Row, Tree, Group and Header targets. |
+| Invalid target | `drop-invalid-background` with readable foreground and 2px solid `drop-invalid` outline; retain rejected-drop semantics. |
+| Floating drag preview | `surface` / `foreground`, `drop-marker` border, 2px radius, compact spacing, subdued shadow; never intercept pointer events. |
+| Fill Handle | 24px hit area, 8px accent marker, visible keyboard focus, preview without data mutation. Click actions provide a non-drag alternative. |
+
+Header and Row Group targets share these states while retaining their own insertion geometry. Never substitute a hard-coded light foreground on a dark-theme accent marker. Component disabled text uses `component-muted`; menu and virtual-list items distinguish keyboard focus from hover. Reduced-motion mode disables Sort and Group disclosure transitions as well as movement animation.
 
 ## CSS token stability
 

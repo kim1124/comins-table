@@ -55,3 +55,7 @@ Use external query controls for server sorting/filtering. Built-in Header sortin
 ## Advanced controlled integration
 
 Advanced controlled integrations can use `CominsViewportTableProps<TData>`, `CominsViewportData<TData>`, `createCominsViewportData` and `reduceCominsViewportData` directly. The snapshot contains revision, count, blocks and bounded request state. A block carries an absolute start index and its Rows. Reducer events are `request`, `success`, `error`, `cancel`, `retain`, `patch` and `reset`. Acknowledge data and request completion together; Promise completion alone does not replace a controlled success/error update. Apply events with functional state updates to preserve independently arriving blocks. `CominsViewportOptions`, `CominsViewportDatasource`, `CominsViewportRequest` and `CominsViewportPatch` describe the hook and callback contracts.
+
+## Playground verification
+
+Toggle automatic height, slow responses, or failed requests. After enabling failed requests, change the query to show retry controls; disable failures and retry to resume loading. Row Drag is unavailable and its handles remain hidden, even if ordinary Row dragging is enabled elsewhere. Server-side reorder results require a new `queryKey`.

@@ -30,7 +30,7 @@ export function BodyFeature() {
     ],
     [text],
   );
-  const [rows] = useState<PersonRow[]>(() => createVirtualRows(100_000));
+  const [rows, setRows] = useState<PersonRow[]>(() => createVirtualRows(100_000));
   const [componentOverrides, setComponentOverrides] = useState<Record<number, ComponentLargeOverride>>({});
   const [componentEvent, setComponentEvent] = useState<string | null>(null);
   const fixture = useMemo(
@@ -54,13 +54,13 @@ export function BodyFeature() {
           ? {
               renderer: ({ row }) => (
                 <span className="body-virtualization-table__heavy-cell" data-testid="virtual-heavy-cell">
-                  <strong>{`Data ${row.index + 1}`}</strong>
+                  <strong>{`Data ${Number(row.id) + 1}`}</strong>
                   <span>{`Column ${columnNumber}`}</span>
                 </span>
               ),
             }
           : {
-              format: ({ row }) => `Data ${row.index + 1}`,
+              format: ({ row }) => [2, 8].includes(columnNumber) ? String(row.id) : [5, 9].includes(columnNumber) ? String(Number(row.id) % 2 === 0) : `Data ${Number(row.id) + 1}`,
             };
 
       return [
@@ -149,7 +149,7 @@ export function BodyFeature() {
     () => [
       {
         cell: {
-          format: ({ row }) => `Data ${row.index + 1}`,
+          format: ({ row }) => `Data ${Number(row.id) + 1}`,
         },
         field: "name",
         label: "name",
@@ -163,12 +163,12 @@ export function BodyFeature() {
               onCheckedChange: ({ checked, row }) => {
                 setComponentOverrides((current) => ({
                   ...current,
-                  [row.index]: { ...current[row.index], active: checked },
+                  [Number(row.id)]: { ...current[Number(row.id)], active: checked },
                 }));
               },
               props: ({ row }) => ({
-                "aria-label": `Data ${row.index + 1} checkbox`,
-                checked: componentOverrides[row.index]?.active ?? row.index % 2 === 0,
+                "aria-label": `Data ${Number(row.id) + 1} checkbox`,
+                checked: componentOverrides[Number(row.id)]?.active ?? Number(row.id) % 2 === 0,
                 "data-testid": "component-large-checkbox",
               }),
               type: "checkbox",
@@ -184,9 +184,9 @@ export function BodyFeature() {
         cell: {
           components: [
             {
-              onClick: ({ row }) => setComponentEvent(`Button: Data ${row.index + 1}`),
+              onClick: ({ row }) => setComponentEvent(`Button: Data ${Number(row.id) + 1}`),
               props: ({ row }) => ({
-                children: `Data ${row.index + 1}`,
+                children: `Data ${Number(row.id) + 1}`,
                 "data-testid": "component-large-button",
               }),
               type: "button",
@@ -202,18 +202,18 @@ export function BodyFeature() {
       {
         cell: {
           renderer: ({ row }) => {
-            const value = componentOverrides[row.index]?.role ?? (row.index % 2 === 0 ? "Owner" : "Viewer");
+            const value = componentOverrides[Number(row.id)]?.role ?? (Number(row.id) % 2 === 0 ? "Owner" : "Viewer");
 
             return (
               <select
-                aria-label={`Data ${row.index + 1} select`}
+                aria-label={`Data ${Number(row.id) + 1} select`}
                 className="comins-table__component comins-table__component-select"
                 data-testid="component-large-select"
                 onChange={(event) => {
                   const nextValue = event.currentTarget.value;
                   setComponentOverrides((current) => ({
                     ...current,
-                    [row.index]: { ...current[row.index], role: nextValue },
+                    [Number(row.id)]: { ...current[Number(row.id)], role: nextValue },
                   }));
                 }}
                 onClick={(event) => event.stopPropagation()}
@@ -242,10 +242,10 @@ export function BodyFeature() {
           components: [
             {
               props: ({ row }) => ({
-                "aria-label": `Data ${row.index + 1} progress`,
+                "aria-label": `Data ${Number(row.id) + 1} progress`,
                 "data-testid": "component-large-progress",
                 max: 100,
-                value: row.index % 100,
+                value: Number(row.id) % 100,
               }),
               type: "progress",
             },
@@ -285,14 +285,14 @@ export function BodyFeature() {
               onValueChange: ({ row, value }) => {
                 setComponentOverrides((current) => ({
                   ...current,
-                  [row.index]: { ...current[row.index], role: value },
+                  [Number(row.id)]: { ...current[Number(row.id)], role: value },
                 }));
               },
               options: roleOptions,
               props: ({ row }) => ({
-                "aria-label": `Data ${row.index + 1} radio`,
+                "aria-label": `Data ${Number(row.id) + 1} radio`,
                 "data-testid": "component-large-radio",
-                value: componentOverrides[row.index]?.role ?? (row.index % 2 === 0 ? "Owner" : "Viewer"),
+                value: componentOverrides[Number(row.id)]?.role ?? (Number(row.id) % 2 === 0 ? "Owner" : "Viewer"),
               }),
               type: "radio",
             },
@@ -319,14 +319,16 @@ export function BodyFeature() {
         title={text(defineLocalizedText("대용량 데이터 표시", "Large dataset rendering"))}
       >
         <CominsTable
+          rowProps={{ draggable: true }}
           className="example-table body-virtualization-table"
           columns={columns}
           data={rows}
+          onChangeData={setRows}
           data-testid="data-table-viewport"
           estimatedRowDetailHeight={detailEnabled ? 180 : undefined}
           expandedRowIds={detailEnabled ? expandedRowIds : undefined}
           getRowDetailHeight={detailEnabled ? () => (automaticDetail ? "auto" : 360) : undefined}
-          getRowId={(_row, index) => index}
+          getRowId={(row) => Number(row.id)}
           multiSort
           onChangeExpandedRowIds={detailEnabled ? setExpandedRowIds : undefined}
           pagination={{ pageIndex: 0, pageSize: rows.length }}
@@ -392,11 +394,13 @@ export function BodyFeature() {
           {componentEvent ?? text(defineLocalizedText("컴포넌트 대용량 이벤트 대기", "Waiting for a large Component event"))}
         </p>
         <CominsTable
+          rowProps={{ draggable: true }}
           className="example-table body-virtualization-table component-large-virtualization-table"
           columns={componentColumns}
           data={rows}
+          onChangeData={setRows}
           data-testid="data-table-viewport-component-large"
-          getRowId={(_row, index) => index}
+          getRowId={(row) => Number(row.id)}
           pagination={{ pageIndex: 0, pageSize: rows.length }}
           rowHeight={112}
           theme={{ density: "compact" }}

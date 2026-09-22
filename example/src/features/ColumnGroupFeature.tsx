@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import { CominsTable, type CominsColumnLayout, type CominsTableRef } from "../../../src";
 import { ActionButton, FeatureControls } from "../components/FeatureControls";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
+import { Button } from "../components/ui/button";
 import { MultiSelect } from "../components/ui/multi-select";
 import {
   cloneGroupLayout,
@@ -148,22 +149,12 @@ export function ColumnGroupFeature() {
             <FeatureControls
               options={
                 <>
-                  <label className="feature-checkbox-control">
-                    <input
-                      checked={profileGroupVisible}
-                      onChange={(event) => setGroupVisible("profile", event.target.checked)}
-                      type="checkbox"
-                    />
-                    <span>{text(defineLocalizedText("Header 그룹 1 표시", "Show Header group 1"))}</span>
-                  </label>
-                  <label className="feature-checkbox-control">
-                    <input
-                      checked={statusGroupVisible}
-                      onChange={(event) => setGroupVisible("status", event.target.checked)}
-                      type="checkbox"
-                    />
-                    <span>{text(defineLocalizedText("Header 그룹 2 표시", "Show Header group 2"))}</span>
-                  </label>
+                  <Button aria-pressed={profileGroupVisible} onClick={() => setGroupVisible("profile", !profileGroupVisible)} variant="outline">
+                    {text(defineLocalizedText("Header 그룹 1 표시", "Show Header group 1"))}
+                  </Button>
+                  <Button aria-pressed={statusGroupVisible} onClick={() => setGroupVisible("status", !statusGroupVisible)} variant="outline">
+                    {text(defineLocalizedText("Header 그룹 2 표시", "Show Header group 2"))}
+                  </Button>
                 </>
               }
               actions={
@@ -219,14 +210,14 @@ export function ColumnGroupFeature() {
                     values={dynamicColumnIds}
                   />
                   {localizedHeaderColumnGroups.map((group) => (
-                    <label className="feature-checkbox-control" key={group.id}>
-                      <input
-                        checked={dynamicVisibleGroupIds.includes(group.id)}
-                        onChange={(event) => setDynamicGroupVisible(group.id, event.target.checked)}
-                        type="checkbox"
-                      />
-                      <span>{locale === "ko" ? `${group.label} 표시` : `Show ${group.label}`}</span>
-                    </label>
+                    <Button
+                      aria-pressed={dynamicVisibleGroupIds.includes(group.id)}
+                      key={group.id}
+                      onClick={() => setDynamicGroupVisible(group.id, !dynamicVisibleGroupIds.includes(group.id))}
+                      variant="outline"
+                    >
+                      {locale === "ko" ? `${group.label} 표시` : `Show ${group.label}`}
+                    </Button>
                   ))}
                 </>
               }

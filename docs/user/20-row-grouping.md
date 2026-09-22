@@ -156,7 +156,7 @@ Visible leaf callbacks preserve the existing contract:
 
 Collapsed Groups keep selected Row IDs and expanded Detail IDs dormant. Cell ranges, copy, and paste follow the current grouped leaf order and never include Group Rows.
 
-Column Pinning continues to apply to ordinary leaf Cells and Headers; the single spanning Group Cell itself is not pinned. Visual Fill Handle UI remains outside this release. Existing leaf-only selection and Clipboard behavior is unchanged.
+Column Pinning continues to apply to ordinary leaf Cells and Headers; the single spanning Group Cell itself is not pinned. Visual Fill Handle UI applies only to visible business leaf Cells; Group headings remain outside editing. Existing leaf-only selection and Clipboard behavior is unchanged.
 
 Row Grouping remains a client-side flat-table feature and cannot be combined with pagination, infinite/lazy loading, Viewport Datasource, or Tree Grid. Business Rows support fixed or automatic heights through `getRowHeight` and variable-height virtualization; Group headings keep the fixed `rowHeight`. Grouped leaf Row Detail remains supported through `renderRowDetail`. See [Automatic Row Height](24-auto-row-height.md). Multi-depth Group trees, Group selection, variable-height Group Rows, server grouping, Pivot, custom reducers, and aggregate sorting are outside this release.
 

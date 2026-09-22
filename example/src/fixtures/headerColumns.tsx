@@ -35,9 +35,6 @@ export function createHeaderGroupColumns(): Array<CominsTableColumn<PersonRow>> 
   return [
     { field: "name", label: "name", minWidth: 100, sort: true, width: 160 },
     {
-      cell: {
-        format: ({ row }) => `Data ${row.index + 1}`,
-      },
       field: "age",
       label: "age",
       minWidth: 100,
@@ -45,9 +42,6 @@ export function createHeaderGroupColumns(): Array<CominsTableColumn<PersonRow>> 
       width: 160,
     },
     {
-      cell: {
-        format: ({ row }) => `Data ${row.index + 1}`,
-      },
       field: "active",
       label: "active",
       minWidth: 100,
@@ -55,9 +49,6 @@ export function createHeaderGroupColumns(): Array<CominsTableColumn<PersonRow>> 
     },
     { field: "locked", label: "locked", minWidth: 100, width: 140 },
     {
-      cell: {
-        format: ({ row }) => `Data ${row.index + 1}`,
-      },
       field: "role",
       label: "role",
       minWidth: 100,

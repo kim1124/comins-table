@@ -18,7 +18,7 @@ Rows support click, double click, keyboard payloads, context menus, selection, a
 />
 ```
 
-`rowProps.draggable` controls whether row drag movement is enabled for a row. Selection state is emitted through `onChangeSelection`.
+`rowProps.draggable` defaults to `false` as of 0.1.11. Set it to `true` (or return `true` per Row) to show a drag handle and enable movement. Disabled or unsupported Rows have no drag handle. Selection state is emitted through `onChangeSelection`.
 
 ## Row Drag lifecycle
 
@@ -42,7 +42,7 @@ The Playground context menu enables View and Create with zero selected Rows, ena
 | 1 | Enabled | Enabled | Enabled | Enabled |
 | N | Enabled | Enabled | Disabled | Enabled |
 
-Selecting a menu item shows its action name in the Playground Alert; the example does not mutate application data.
+Selecting a menu item shows its action in the Playground Alert. Create inserts a new Row; Delete removes selected Rows from the example data. View and Update report the selected action.
 
 For ordinary array-backed Tables, `setSelectedRow`, `setSelectedRows`, and `setMoveTargetRow` use the visible row index after sorting and pagination. Viewport selection setters use absolute indexes and skip unloaded Rows; Row movement is unavailable. Set `rowSelectionOnClick={false}` to preserve Row selection during Cell interaction. Read Row data, Cell values, or the ID snapshot with `getSelectedRows`, `getSelectedCells`, or `getSelection`; see [Selection](10-selection.md).
 
@@ -51,3 +51,5 @@ The live [`/api/ref`](http://127.0.0.1:4002/api/ref) example shows `setMoveTarge
 When `columnFiltering` is configured, Row Drag and `setMoveTargetRow` are disabled because movement through a potentially partial projection is ambiguous. Group Drag remains a separate Group-model operation in the supported Row Grouping combination.
 
 Tree Row movement uses the separate `treeRowDrag` configuration and Tree lifecycle payload types; see [Tree Grid](17-tree-grid.md).
+
+Dragging a Row or Group near the visible top or bottom edge automatically scrolls the local Table. The drop target is recalculated as Rows enter the viewport, including virtualized Rows. Releasing or cancelling the drag stops scrolling. Use stable data-derived Row IDs. `onChangeData` is optional for local reordering: option-only rerenders preserve the internal order. Connect it when application state must follow the new order; a new `data` array replaces the internal Rows. Viewport Datasource does not support Row Drag.

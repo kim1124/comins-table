@@ -1,5 +1,42 @@
 # Comins Table
 
+## 0.1.11 - Unreleased
+
+### Added
+
+- Opt-in external plain-text TSV paste through `clipboardPaste`, typed `cell.parseClipboard`, `onClipboardError`, and `parseCominsClipboardText` / `pasteCominsText` Core helpers. Parsing is bounded and batch errors are atomic; native editors keep their clipboard behavior.
+- Opt-in `fillHandle` with typed value/pattern repetition, preview, edge scrolling, cancellation, and click/Ref `fillSelection` alternatives. Both editing options require Cell selection and a controlled data callback.
+- Optional `cell.validateFill` validates typed destination values before a Fill commits. Returning `false` or throwing rejects the entire operation without changing data; React reports the error through `onClipboardError`.
+- A 1,000-Row Playground editing example with automatic height, pinned Columns, numeric conversion and protected Rows/Cells, plus matching English/Korean guides.
+- A Clipboard/Fill README animation and refreshed 0.1.11 overview and feature GIFs captured from live demos.
+
+### Changed
+
+- **Migration:** Row Drag is now disabled by default. Set `rowProps={{ draggable: true }}` to retain handle-based movement. `onChangeData` remains optional for local Row reordering; a new `data` array replaces internal Rows, while option-only rerenders preserve local order. Tree and cross-Group/transfer ownership contracts remain unchanged.
+- Header Sort uses the same Chevron family and 24px icon-button primitive as Row Group disclosure, retaining sorting, keyboard activation, multi-sort and resize/drag isolation.
+- Header and Row Group drag feedback uses accent/danger tokens, neutral source placeholders and a readable light/dark drag preview. Filled ranges, focus, disabled controls and reduced motion follow `DESIGN.md`.
+
+### Fixed
+
+- Completed Playground option toggle styling, including automatic-height content length, width, renderer expansion, Tree policies, Group visibility, and Viewport request options. Pressed states are visible and support native Enter/Space activation.
+- Excluded ignored local diagnostic files from Vitest discovery so the normal verification command does not execute Playwright-only diagnostics.
+- Removed duplicated perimeter borders at the final Body/Header/Summary Cell and unified Row, Tree and Group drop feedback with the Header target tokens.
+- Enabled local Row/Group edge auto-scroll with refreshed virtual drop targets and viewport-clipped bounds. Tree pointer drops preserve the scrolled viewport instead of following a moved anchor Row.
+- Connected CRUD reordering to controlled data and replaced position-based IDs and labels in both Virtualization examples with stable Row identities. Clarified the Viewport Datasource Row Drag exclusion.
+- Kept the top border stationary when Headers are hidden, and removed Row drag placeholder layout shifts. Local virtual Row drops preserve the viewport position; fixed-height virtual rendering uses the same logical/physical offset convention as variable-height rendering.
+- Made Component example labels follow stable Row data, aligned example text/numeric/control values, clarified empty filtered Groups and disabled Rows, and connected Context Create/Delete to actual example data changes.
+- Added a two-value TSV sample and explained trailing empty fields without changing intentional empty-cell paste behavior.
+- Separated the CRUD Playground's internal Row identity from editable `column4`, so all six displayed fields can be updated while selection and deletion keep targeting the same Row.
+- Clamped logical scroll anchors to the final viewport after sorting variable-height Rows, preventing blank space below the last Row.
+- Preserved keyboard focus when clearing Header sort and opening the first or closing the last virtual Row Detail.
+- Kept incomplete filter drafts independent from applied conditions and repositioned filter popovers after layout changes, above sibling Headers while inheriting Table theme tokens.
+- Connected controlled expansion in the 10,000-node Tree Playground and rejected non-numeric Fill values in its numeric editing example.
+
+### Compatibility notes
+
+- `clipboard`, `clipboardPaste` and `fillHandle` remain independent opt-in features. Existing internal paste remains the default. OS paste imports strings unless a Column parser converts them, and intentional empty TSV Cells overwrite editable destinations.
+- Fill repeats existing values; automatic series and source clearing on shrink are not included. Viewport edits require contiguous loaded data and do not fetch or persist it.
+
 ## 0.1.10 - 2026-09-11
 
 ### Added

@@ -22,8 +22,6 @@ distribution.
 - `DoubleArrowRightIcon`
 - `DragHandleDots2Icon`
 - `MagnifyingGlassIcon`
-- `ThickArrowDownIcon`
-- `ThickArrowUpIcon`
 <!-- radix-icons-used-exports:end -->
 
 MIT License

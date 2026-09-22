@@ -18,6 +18,7 @@ const codeSampleTitles = {
   "Cross-Table Coordinator": defineLocalizedText("Cross-Table Coordinator", "Cross-Table Coordinator"),
   "Controlled Tree Grid": defineLocalizedText("Controlled Tree Grid", "Controlled Tree Grid"),
   "Controlled remote infinite scroll": defineLocalizedText("Controlled 원격 Infinite Scroll", "Controlled remote infinite scroll"),
+  "External paste and pattern fill": defineLocalizedText("외부 붙여넣기와 패턴 채우기", "External paste and pattern fill"),
   "Controlled selection and clipboard": defineLocalizedText("Controlled 선택과 Clipboard", "Controlled selection and clipboard"),
   "Core props": defineLocalizedText("Core props", "Core props"),
   "CSS override": defineLocalizedText("CSS 재정의", "CSS override"),
@@ -79,7 +80,7 @@ export function Example() {
 export const crudSamples: DocsCodeSample[] = [
   {
     code: `const [rows, setRows] = useState([
-  { column1: "Data 1", column2: 31, column3: "Owner", column4: "a", column5: true, column6: "Data 1" },
+  { id: "a", column1: "Data 1", column2: 31, column3: "Owner", column4: "a", column5: true, column6: "Data 1" },
 ]);
 const columns = ["column1", "column2", "column3", "column4", "column5", "column6"]
   .map((field) => ({ field, label: field }));
@@ -87,10 +88,13 @@ const columns = ["column1", "column2", "column3", "column4", "column5", "column6
 <CominsTable
   columns={columns}
   data={rows}
-  getRowId={(row) => row.column4}
+  getRowId={(row) => row.id}
   onChangeData={setRows}
   onChangeSelection={(selection) => setSelectedRowIds(selection.rowIds)}
-  onClickRow={({ row }) => setSelectedRowJson(JSON.stringify(row.data, null, 2))}
+  onClickRow={({ row }) => {
+    const { id: _id, ...values } = row.data;
+    setSelectedRowJson(JSON.stringify(values, null, 2));
+  }}
 />;`,
     language: "tsx",
     title: "Controlled CRUD state",
@@ -240,11 +244,13 @@ const columnGroups = [
 
 export const bodySamples: DocsCodeSample[] = [
   {
-    code: `const rows = createVirtualRows(100000);
+    code: `const [rows, setRows] = useState(() => createVirtualRows(100000));
 
 <CominsTable
   columns={columns}
   data={rows}
+  onChangeData={setRows}
+  rowProps={{ draggable: true }}
   getRowId={(row) => row.id}
   buffer-size={10}
   pagination={{ pageIndex: 0, pageSize: rows.length }}
@@ -255,7 +261,7 @@ export const bodySamples: DocsCodeSample[] = [
     title: "100000-row virtualization",
   },
   {
-    code: `const rows = createVirtualRows(100000);
+    code: `const [rows, setRows] = useState(() => createVirtualRows(100000));
 const overrides = useState({});
 
 <CominsTable
@@ -269,7 +275,9 @@ const overrides = useState({});
     { field: "role", label: "role", cell: { components: [{ type: "radio", options }] } },
   ]}
   data={rows}
-  getRowId={(_row, index) => index}
+  onChangeData={setRows}
+  rowProps={{ draggable: true }}
+  getRowId={(row) => Number(row.id)}
   pagination={{ pageIndex: 0, pageSize: rows.length }}
   rowHeight={112}
   virtualized
@@ -471,6 +479,7 @@ const columns = [
     label: "Protected",
     cell: { props: { copyable: false, pasteable: false } },
   },
+
 ];
 
 <CominsTable
@@ -495,6 +504,27 @@ const copy = () => tableRef.current?.copySelection("auto").catch(showClipboardEr
 <pre>{JSON.stringify(selection, null, 2)}</pre>;`,
     language: "tsx",
     title: "Controlled selection and clipboard",
+  },
+  {
+    title: "External paste and pattern fill",
+    language: "tsx",
+    code: `const columns: CominsTableColumn<Row>[] = [
+  { field: "id", label: "id", cell: { props: { pasteable: false } } },
+  { field: "amount", label: "amount", cell: {
+    parseClipboard: ({ text }) => {
+      if (!text.trim() || !Number.isFinite(Number(text))) throw new Error("Invalid amount");
+      return Number(text);
+    },
+    validateFill: ({ value }) => {
+      if (typeof value !== "number" || !Number.isFinite(value)) throw new Error("Invalid amount");
+    },
+  } },
+];
+<CominsTable ref={tableRef} columns={columns} data={rows}
+  getRowId={row => row.id} onChangeData={setRows}
+  clipboard clipboardPaste fillHandle cellSelection
+  onClipboardError={error => setError(error.message)} />;
+<button onClick={() => tableRef.current?.fillSelection("down")}>Fill down</button>;`,
   },
 ];
 

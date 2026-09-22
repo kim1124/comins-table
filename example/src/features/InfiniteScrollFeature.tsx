@@ -32,7 +32,6 @@ export function InfiniteScrollFeature() {
         width: 180,
       },
       {
-        cell: { format: ({ value }) => `Data ${value}` },
         field: "age",
         label: "age",
         minWidth: 100,

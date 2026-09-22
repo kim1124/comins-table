@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { Button } from "../components/ui/button";
 import { CominsTable, useCominsViewport, type CominsTableColumn, type CominsTableRef, type CominsViewportRequest } from "../../../src";
 
 type ScaleRow = { id: number; text: string };
@@ -8,9 +9,9 @@ const automaticHeight = () => "auto" as const;
 function ExpandablePreview({ value }: { value: unknown }) {
   const [expanded, setExpanded] = useState(false);
   return <div>
-    <button className="readme-demo__content-button" data-testid="readme-content-toggle" onClick={() => setExpanded(!expanded)} type="button">
-      {expanded ? "Collapse content" : "Expand content"}
-    </button>
+    <Button aria-pressed={expanded} data-testid="readme-content-toggle" onClick={() => setExpanded(!expanded)} variant="outline">
+      Expanded content
+    </Button>
     <div>{String(value)}{expanded && " Extra renderer content grows this row without a manual height.".repeat(4)}</div>
   </div>;
 }
@@ -40,7 +41,7 @@ export function AutoHeightDemo() {
   })), []);
   return <div className="readme-demo__scale-grid">
     <div className="readme-demo__tree-controls">
-      <button data-testid="readme-width-toggle" onClick={toggleWidth} type="button">{narrow ? "Widen table" : "Narrow table"}</button>
+      <Button aria-pressed={narrow} data-testid="readme-width-toggle" onClick={toggleWidth} variant="outline">Narrow width</Button>
       <span>100,000 rows · automatic heights</span>
     </div>
     <div className="readme-demo__scale-table" style={{ width: narrow ? 570 : "100%" }}>

@@ -4,7 +4,9 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 
 import {
   getCominsColumnFilterOperators,
@@ -80,6 +82,7 @@ export function CominsColumnFilterControl<TData>({
   columnId,
   columnLabel,
   kind,
+  getPortalContainer,
   onChangeRule,
   onOpenChange,
   open,
@@ -88,6 +91,7 @@ export function CominsColumnFilterControl<TData>({
   columnId: string;
   columnLabel: string;
   kind: CominsColumnFilterKind;
+  getPortalContainer?: () => HTMLElement | null;
   onChangeRule?: (rule: CominsColumnFilterRule | null) => void;
   onOpenChange?: (columnId: string | null) => void;
   open: boolean;
@@ -103,6 +107,13 @@ export function CominsColumnFilterControl<TData>({
   const [value, setValue] = useState(() => getRuleInputValue(rule, kind));
   const [valueTo, setValueTo] = useState(() => getRuleInputValueTo(rule, kind));
   const [position, setPosition] = useState({ left: 0, top: 0 });
+  const pendingRuleKeyRef = useRef<string | null>(null);
+  const ruleKey = (next: CominsColumnFilterRule | CominsNormalizedColumnFilterRule<TData> | null | undefined) => {
+    const inputValue = (value: unknown) => value === undefined ? "" : kind === "date" && typeof value === "number"
+      ? new Date(value).toISOString().slice(0, 10) : String(value);
+    return JSON.stringify([next?.operator, inputValue(next?.value), inputValue(next?.valueTo)]);
+  };
+  const appliedRuleKey = ruleKey(rule);
   const active = rule !== undefined;
   const readOnly = typeof onChangeRule !== "function";
   const requiresValue = operator !== "isEmpty" && operator !== "isNotEmpty";
@@ -113,13 +124,20 @@ export function CominsColumnFilterControl<TData>({
 
   useEffect(() => {
     if (!open) {
+      pendingRuleKeyRef.current = null;
       return;
     }
 
+    // Acknowledging our incomplete draft must not reset the chosen operator.
+    if (pendingRuleKeyRef.current === appliedRuleKey) {
+      pendingRuleKeyRef.current = null;
+      return;
+    }
+    pendingRuleKeyRef.current = null;
     setOperator(rule?.operator ?? getDefaultOperator(kind));
     setValue(getRuleInputValue(rule, kind));
     setValueTo(getRuleInputValueTo(rule, kind));
-  }, [kind, open, rule?.operator, rule?.value, rule?.valueTo]);
+  }, [kind, open, appliedRuleKey]);
 
   useLayoutEffect(() => {
     if (!open) {
@@ -146,7 +164,7 @@ export function CominsColumnFilterControl<TData>({
         ? below
         : Math.max(8, bounds.top - height - 6);
 
-      setPosition({ left, top });
+      setPosition(current => current.left === left && current.top === top ? current : { left, top });
     };
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target;
@@ -170,13 +188,20 @@ export function CominsColumnFilterControl<TData>({
       buttonRef.current?.focus();
     };
 
-    updatePosition();
+    // Layout shifts can move the anchor without a scroll or resize event.
+    let positionFrame: number;
+    const trackPosition = () => {
+      updatePosition();
+      positionFrame = window.requestAnimationFrame(trackPosition);
+    };
+    trackPosition();
     window.addEventListener("resize", updatePosition);
     window.addEventListener("scroll", updatePosition, true);
     window.addEventListener("pointerdown", handlePointerDown, true);
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
+      window.cancelAnimationFrame(positionFrame);
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
       window.removeEventListener("pointerdown", handlePointerDown, true);
@@ -184,6 +209,15 @@ export function CominsColumnFilterControl<TData>({
     };
   }, [open]);
 
+  const emitRule = (nextRule: CominsColumnFilterRule | null) => {
+    const nextKey = ruleKey(nextRule);
+    pendingRuleKeyRef.current = nextKey === appliedRuleKey ? null : nextKey;
+    onChangeRule?.(nextRule);
+  };
+  const renderPopover = (content: ReactNode) => {
+    const container = getPortalContainer?.();
+    return container ? createPortal(content, container) : content;
+  };
   const commitRule = (
     nextOperator: CominsColumnFilterOperator,
     nextValue: string,
@@ -194,19 +228,19 @@ export function CominsColumnFilterControl<TData>({
     }
 
     if (nextOperator === "isEmpty" || nextOperator === "isNotEmpty") {
-      onChangeRule({ columnId, operator: nextOperator });
+      emitRule({ columnId, operator: nextOperator });
       return;
     }
 
     if (kind === "text") {
-      onChangeRule(nextValue.length > 0
+      emitRule(nextValue.length > 0
         ? { columnId, operator: nextOperator, value: nextValue }
         : null);
       return;
     }
 
     if (kind === "boolean") {
-      onChangeRule(nextValue === "true" || nextValue === "false"
+      emitRule(nextValue === "true" || nextValue === "false"
         ? { columnId, operator: nextOperator, value: nextValue === "true" }
         : null);
       return;
@@ -221,7 +255,7 @@ export function CominsColumnFilterControl<TData>({
         return;
       }
 
-      onChangeRule(null);
+      emitRule(null);
       return;
     }
 
@@ -234,11 +268,11 @@ export function CominsColumnFilterControl<TData>({
         return;
       }
 
-      onChangeRule({ columnId, operator: nextOperator, value: firstValue, valueTo: secondValue });
+      emitRule({ columnId, operator: nextOperator, value: firstValue, valueTo: secondValue });
       return;
     }
 
-    onChangeRule({ columnId, operator: nextOperator, value: firstValue });
+    emitRule({ columnId, operator: nextOperator, value: firstValue });
   };
 
   return (
@@ -270,7 +304,7 @@ export function CominsColumnFilterControl<TData>({
         onClick={() => onOpenChange?.(open ? null : columnId)}
         ref={buttonRef}
       />
-      {open ? (
+      {open ? renderPopover(
         <span
           aria-label={`Filter ${columnLabel}`}
           className="comins-column-filter__popover"
@@ -356,7 +390,7 @@ export function CominsColumnFilterControl<TData>({
               setOperator(getDefaultOperator(kind));
               setValue(kind === "boolean" ? "true" : "");
               setValueTo("");
-              onChangeRule?.(null);
+              emitRule(null);
             }}
             type="button"
           >

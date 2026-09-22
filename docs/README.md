@@ -1,15 +1,19 @@
 # Comins Table Documentation
 
+These guides describe **0.1.11**. See the [migration notes](../README.md#version-0111) for opt-in Row Drag, local versus controlled data ownership, and Clipboard/Fill requirements. The release remains unpublished until the release workflow completes.
+
 [Design contract](../DESIGN.md) · [Componentization guide](design/componentization.md) · [Canonical Feature Manifest](feature-manifest.json)
 
 Comins Table documentation is organized by feature and language. Every guide links a runnable local Playground route and the matching guide in the other language.
 
-## Version 0.1.10
+## Version 0.1.11
 
-The 0.1.10 guides cover Tree Row drag, automatic business Row heights, and Viewport Datasource loading, together with independent Row/Cell selection and OS copy APIs.
+The 0.1.11 guides add typed external TSV paste, atomic Fill Handle editing, opt-in local Row movement, and consistent drag feedback. Tree Row drag, automatic heights, bounded Viewport loading, and separate Row/Cell selection remain supported.
 
 | Topic | English | 한국어 |
 | --- | --- | --- |
+| External paste and Fill Handle | [Clipboard](user/09-clipboard.md) | [Clipboard](ko/09-clipboard.md) |
+| Row Drag defaults and data ownership | [Row](user/07-row.md) | [Row](ko/07-row.md) |
 | Tree Row drag and parent changes | [Tree Grid](user/17-tree-grid.md) | [Tree Grid](ko/17-tree-grid.md) |
 | Automatic height and variable virtualization | [Automatic Row Height](user/24-auto-row-height.md) | [Row 자동 높이](ko/24-auto-row-height.md) |
 | Bounded range loading | [Viewport Datasource](user/25-viewport-datasource.md) | [Viewport Datasource](ko/25-viewport-datasource.md) |

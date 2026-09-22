@@ -105,7 +105,7 @@ export function RowGroupingFeature() {
     ],
     [text],
   );
-  const virtualRows = useMemo(() => createVirtualGroupingRows(100_000), []);
+  const [virtualRows, setVirtualRows] = useState(() => createVirtualGroupingRows(100_000));
   const virtualColumns = useMemo<Array<CominsTableColumn<VirtualGroupingRow>>>(
     () => [
       { field: "name", label: "name", minWidth: 260, sort: true },
@@ -158,10 +158,9 @@ export function RowGroupingFeature() {
             </>
           )}
         />
-        <label className="feature-checkbox-control">
-          <input type="checkbox" checked={movementAllowed} onChange={event => setMovementAllowed(event.target.checked)} />
+        <Button aria-pressed={movementAllowed} onClick={() => setMovementAllowed(value => !value)} variant="outline">
           {text(defineLocalizedText("Row·Group 이동 허용", "Allow Row and Group movement"))}
-        </label>
+        </Button>
         <pre className="state-output" data-testid="row-grouping-single-state">
           {JSON.stringify(singleExpandedGroupIds, null, 2)}
         </pre>
@@ -279,6 +278,8 @@ export function RowGroupingFeature() {
           className="example-table row-grouping-virtual-table"
           columns={virtualColumns}
           data={virtualRows}
+          rowProps={{ draggable: true }}
+          onChangeData={setVirtualRows}
           data-testid="row-grouping-virtual-viewport"
           getRowId={getVirtualGroupingRowId}
           rowGrouping={{

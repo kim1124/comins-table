@@ -70,6 +70,7 @@ const SPOQA_FONTS = [
 const SPOQA_LICENSE = 'example/public/fonts/spoqa/LICENSE.SpoqaHanSans.txt';
 const SPOQA_LICENSE_SHA256 = 'd9574d06965f8a559e73540ac5d8e99f22bcf69a0440e916ec9b9e48464b5093';
 const README_GIFS = [
+  'docs/assets/comins-table-clipboard-fill.gif',
   'docs/assets/comins-table-column-filtering.gif',
   'docs/assets/comins-table-column-pinning.gif',
   'docs/assets/comins-table-cross-table-drag.gif',

@@ -41,7 +41,7 @@ Row 위치 이동은 cell range drag와 충돌하지 않도록 첫 번째 cell �
 
 ## rowProps.draggable
 
-`rowProps.draggable`은 row 클릭, 선택, context menu를 유지하면서 drag reorder만 끄는 옵션이다.
+`rowProps.draggable`은 0.1.11부터 기본값이 `false`입니다. `true` 또는 Row별로 `true`를 반환하는 함수를 지정하면 핸들을 표시하고 이동을 활성화합니다. 비활성·잠금·미지원 Row에는 핸들을 표시하지 않습니다.
 `rowProps.disabled`는 row와 cell interaction 전체를 차단하고, `rowProps.draggable`은 row 이동 gesture만 차단한다.
 비활성 row의 기본 배경과 글자색은 theme CSS 변수 `--comins-table-row-disabled-background`, `--comins-table-row-disabled-color`로 조정한다.
 
@@ -96,7 +96,7 @@ tableRef.current?.setMoveTargetRow(2, 0);
 | 1 | 활성 | 활성 | 활성 | 활성 |
 | N | 활성 | 활성 | 비활성 | 활성 |
 
-메뉴 항목을 선택하면 Playground Alert에 기능 이름을 표시하며 실제 application data는 변경하지 않는다.
+메뉴 실행 결과는 Playground Alert에 표시됩니다. Create는 새 Row를 추가하고 Delete는 선택한 Row를 예제 데이터에서 삭제합니다. View와 Update는 선택한 동작을 안내합니다.
 
 Playground 검증 기준:
 
@@ -110,3 +110,5 @@ Playground 검증 기준:
 `columnFiltering`을 설정하면 일부만 보일 수 있는 projection에서 이동 의미가 모호하므로 Row Drag와 `setMoveTargetRow`를 비활성화한다. 지원되는 Row Grouping 결합의 Group Drag는 별도 Group-model operation으로 유지한다.
 
 `rowSelectionOnClick={false}`이면 Cell 조작 중에도 Row 선택을 유지합니다. `getSelectedRows`, `getSelectedCells`, `getSelection`으로 Row 데이터·Cell 값·선택 ID를 각각 조회합니다. Viewport 선택 setter는 절대 인덱스를 받고 미로딩 Row를 건너뛰며 Row 이동은 지원하지 않습니다. [Selection](10-selection.md)을 참고합니다. Tree 이동은 별도 `treeRowDrag` 설정과 Tree lifecycle payload 타입을 사용하며 [Tree Grid](17-tree-grid.md)에 설명합니다.
+
+Row 또는 Group을 현재 보이는 Table의 위·아래 가장자리로 드래그하면 해당 Table이 자동 스크롤됩니다. 가상화된 Row가 새로 표시될 때도 드롭 대상을 다시 계산하며, 드롭 또는 취소하면 스크롤을 중단합니다. 데이터 기반의 고정 Row ID를 사용합니다. 일반 Row의 내부 이동에는 `onChangeData`가 필수가 아니며, 옵션만 바뀌는 렌더링에서는 이동 순서를 유지합니다. 외부 상태 동기화가 필요할 때 콜백을 연결하며, 새로운 `data` 배열을 전달하면 내부 데이터를 교체합니다. Viewport Datasource는 Row Drag를 지원하지 않습니다.

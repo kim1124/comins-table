@@ -115,6 +115,7 @@ export function RefApiFeature() {
             : text(defineLocalizedText("저장된 레이아웃 없음", "No saved layout"))}
         </pre>
         <CominsTable
+          rowProps={{ draggable: true }}
           ref={tableRef}
           className="example-table"
           columns={columns}

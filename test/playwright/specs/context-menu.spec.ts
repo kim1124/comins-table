@@ -55,8 +55,8 @@ test("playground context menu follows the zero, single, and multiple selection m
   await expect(page.getByTestId("context-menu-alert")).toContainText("삭제 기능을 선택했습니다");
 
   await page.getByTestId("cell-c-name").click({ button: "right" });
-  await expect(page.getByTestId("row-a")).not.toHaveAttribute("data-selected-row", "true");
-  await expect(page.getByTestId("row-b")).not.toHaveAttribute("data-selected-row", "true");
+  await expect(page.getByTestId("row-a")).toHaveCount(0);
+  await expect(page.getByTestId("row-b")).toHaveCount(0);
   await expect(page.getByTestId("row-c")).toHaveAttribute("data-selected-row", "true");
   await expect(getMenuItem("수정")).toBeEnabled();
   await expect(getMenuItem("삭제")).toBeEnabled();

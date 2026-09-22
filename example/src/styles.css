@@ -1147,6 +1147,41 @@ body {
   width: 100%;
 }
 
+/* Example schemas: align displayed values without changing library defaults. */
+.example-table :is(.comins-table__td, .comins-table__summary-cell) {
+  text-align: left;
+}
+
+.example-table :is(
+  [data-comins-cell-column-id="age"],
+  [data-comins-cell-column-id="amount"],
+  [data-comins-cell-column-id="quantity"],
+  [data-comins-cell-column-id="unitPrice"],
+  [data-comins-cell-column-id="score"],
+  [data-comins-cell-column-id="progress"],
+  [data-comins-cell-column-id="column2"],
+  [data-comins-summary-column-id="age"],
+  [data-comins-summary-column-id="amount"],
+  [data-comins-summary-column-id="quantity"],
+  [data-comins-summary-column-id="unitPrice"],
+  [data-comins-summary-column-id="score"]
+) {
+  text-align: right;
+}
+
+.example-table :is(
+  [data-comins-cell-column-id="active"],
+  [data-comins-cell-column-id="event"],
+  [data-comins-cell-column-id="column5"],
+  [data-comins-cell-column-id="joinedAt"],
+  [data-comins-cell-column-id="createdAt"],
+  [data-comins-cell-column-id="updatedAt"],
+  [data-comins-cell-column-id="renderer"],
+  [data-comins-component-cell="true"]
+) {
+  text-align: center;
+}
+
 .comins-table {
   --comins-table-cell-height: 36px;
   --comins-table-header-height: 36px;
@@ -2802,6 +2837,10 @@ body {
 .readme-demo__scale-table {
   min-height: 0;
   max-width: 100%;
+}
+
+.readme-demo__tree-grid--caption {
+  gap: 4px;
 }
 
 .readme-demo__scale-table .comins-table__body-viewport {

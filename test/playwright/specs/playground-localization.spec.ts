@@ -57,6 +57,7 @@ test("keeps every Sidebar group and route name in English for both locales", asy
     "Cells",
     "Components",
     "Selection & Clipboard",
+    "Paste & Fill Handle",
     "Rows",
     "Row Expand",
     "Row Grouping",

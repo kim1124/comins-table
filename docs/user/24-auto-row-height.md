@@ -36,3 +36,7 @@ Automatic and numeric heights work with or without virtualization. CSR Flat, Gro
 Only mounted automatic Rows and Details are observed. Fixed-height Rows keep the arithmetic virtual path when all effective heights use the common `rowHeight`. Variable heights use a height index and preserve the visible Row and its internal offset when measurements change. Deleted or shrinking anchors are clamped; exact unknown heights and an unchanging scrollbar thumb are not guaranteed.
 
 [Viewport loading](25-viewport-datasource.md) also supports automatic heights. Its unloaded rows use the estimate, and both data and height history have bounded caches.
+
+## Playground controls
+
+Use **Long content** to change the Row data, **Narrow width** to change the available wrapping width, and **Row Detail** to show the independently measured Detail. The first Row also contains **Expanded content**, which changes only that renderer's content. Each is a toggle with a visible pressed state and Enter/Space support; turn it off to restore the corresponding setting. None requires manually setting a renderer height.

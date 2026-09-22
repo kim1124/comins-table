@@ -13,7 +13,7 @@ test("cell page demonstrates formatting styling and events", async ({ page }) =>
   await expect(page.locator(".comins-table__component")).toHaveCount(0);
   await expect(page.locator(".comins-table__header-table th")).toHaveCount(6);
   await expect(page.getByTestId("header-locked")).toContainText("locked");
-  await expect(page.getByTestId("cell-b-age")).toHaveText("Data 2");
+  await expect(page.getByTestId("cell-b-age")).toHaveText("42");
   await expect(page.getByTestId("cell-b-age")).not.toHaveCSS("background-color", "rgb(17, 24, 39)");
   await expect(page.getByTestId("cell-b-age")).not.toHaveCSS("color", "rgb(248, 250, 252)");
   await expect(page.getByTestId("cell-a-style")).toHaveClass(/cell-role-owner/u);
@@ -142,7 +142,7 @@ test("row page demonstrates styling and events", async ({ page }) => {
   await page.goto("/examples/row");
 
   await expect(page.getByTestId("feature-option-description").first()).toContainText("드래그 이동");
-  await expect(page.getByTestId("feature-option-description").first()).toContainText("rowProps");
+  await expect(page.getByTestId("feature-option-description").first()).toContainText("draggable:false");
   await expect(page.getByTestId("feature-controls")).toHaveCount(0);
 
   await expect(page.getByTestId("feature-option-heading").filter({ hasText: "기본" })).toBeVisible();

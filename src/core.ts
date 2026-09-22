@@ -1,4 +1,6 @@
 import type React from "react";
+import { parseCominsClipboardText, MAX_CLIPBOARD_CELLS } from "./clipboard-text";
+export { parseCominsClipboardText } from "./clipboard-text";
 
 import type { CominsColumnFilterConfig } from "./filtering";
 import { normalizeCominsColumnPinned, type CominsColumnPinned } from "./column-pinning";
@@ -280,6 +282,9 @@ export type CominsCellComponent<TData, TValue = unknown> = CominsComponentPlacem
   CominsCellComponentConfig<TData, TValue>;
 
 export type CominsTableCellConfig<TData, TValue = unknown> = {
+  parseClipboard?: (params: CominsCellComponentPayload<TData, TValue> & { text: string }) => TValue;
+  /** Validate a typed Fill candidate; false or a thrown error cancels the whole Fill. */
+  validateFill?: (params: Omit<CominsCellComponentPayload<TData, TValue>, "value"> & { value: unknown }) => boolean | void;
   components?: Array<CominsCellComponent<TData, TValue>>;
   format?: (params: CominsCellComponentPayload<TData, TValue>) => React.ReactNode;
   props?:
@@ -517,7 +522,7 @@ export type CominsCellSelectionOptions = {
 };
 
 export type CominsFillCellRangeOptions = {
-  source: CominsCellAddress;
+  source: CominsCellAddress | CominsCellRange;
   target: CominsCellRange;
 };
 
@@ -939,8 +944,8 @@ function createCellComponentParams<TData>(
   row: TData,
   rowId: CominsRowId,
   column: CominsTableRuntimeColumn<TData>,
+  rowIndex = state.rowIds.indexOf(rowId),
 ): CominsCellComponentPayload<TData> {
-  const rowIndex = state.rowIds.indexOf(rowId);
 
   return {
     column: {
@@ -1040,13 +1045,15 @@ function canUseCellClipboard<TData>(
   rowId: CominsRowId,
   column: CominsTableRuntimeColumn<TData>,
   kind: "copy" | "paste",
+  rowIndex = state.rowIds.indexOf(rowId),
 ) {
   if (row === undefined) {
     return false;
   }
 
-  const params = createCellComponentParams(state, row, rowId, column);
-  const props = resolveCellProps(state, row, rowId, column);
+  const params = createCellComponentParams(state, row, rowId, column, rowIndex);
+  const definition = column.cell?.props;
+  const props = typeof definition === "function" ? definition(params) : definition;
 
   if (props?.disabled !== undefined && resolveGuard(props.disabled, params) === true) {
     return false;
@@ -2274,20 +2281,85 @@ export function pasteCominsCellRange<TData>(
   return changed ? withRows(state, rows) : state;
 }
 
+/** Apply external text in the supplied visible Row order, preserving matrix positions at guarded Cells. */
+export function pasteCominsText<TData>(
+  state: CominsTableState<TData>,
+  target: CominsCellAddress,
+  text: string,
+  rowIds: readonly CominsRowId[] = state.rowIds,
+) {
+  const matrix = parseCominsClipboardText(text);
+  const columns = getCominsVisibleColumns(state);
+  const firstRow = rowIds.indexOf(target.rowId), firstColumn = columns.findIndex(column => column.id === target.columnId);
+  if (firstRow < 0 || firstColumn < 0) return state;
+  return applyClipboardMatrix(state, rowIds, firstRow, firstColumn, matrix.length,
+    matrix.reduce((max, row) => Math.max(max, row.length), 0), (rowOffset, columnOffset, column, row, rowId, rowIndex) => {
+      const value = matrix[rowOffset]?.[columnOffset];
+      if (value === undefined) return null;
+      const params = createCellComponentParams(state, row, rowId, column, rowIndex);
+      return { value: column.cell?.parseClipboard ? column.cell.parseClipboard({ ...params, text: value }) : value };
+    });
+}
+
+function applyClipboardMatrix<TData>(
+  state: CominsTableState<TData>, rowIds: readonly CominsRowId[], rowStart: number, columnStart: number,
+  height: number, width: number,
+  read: (rowOffset: number, columnOffset: number, column: CominsTableRuntimeColumn<TData>, row: TData, rowId: CominsRowId, rowIndex: number) => { value: unknown } | null,
+) {
+  if (height * width > MAX_CLIPBOARD_CELLS) throw new Error("Clipboard exceeds 100000 cells.");
+  const columns = getCominsVisibleColumns(state);
+  const indexes = new Map(state.rowIds.map((id, index) => [id, index]));
+  const rows = [...state.rows];
+  let changed = false;
+  for (let y = 0; y < height && rowStart + y < rowIds.length; y++) {
+    const rowId = rowIds[rowStart + y]!;
+    const index = indexes.get(rowId), row = index === undefined ? undefined : state.rows[index];
+    if (index === undefined || row === undefined) continue;
+    for (let x = 0; x < width && columnStart + x < columns.length; x++) {
+      const column = columns[columnStart + x]!;
+      if (!canUseCellClipboard(state, row, rowId, column, "paste", index)) continue;
+      const cell = read(y, x, column, row, rowId, index);
+      if (!cell || Object.is(getNestedFieldValue(rows[index], column.field), cell.value)) continue;
+      rows[index] = setNestedFieldValue(rows[index]!, column.field, cell.value);
+      changed = true;
+    }
+  }
+  // Parsing and guards finish before publishing any changes; a thrown parser is atomic.
+  return changed ? withRows(state, rows) : state;
+}
+
 export function fillCominsCellRange<TData>(
   state: CominsTableState<TData>,
   { source, target }: CominsFillCellRangeOptions,
+  rowIds: readonly CominsRowId[] = state.rowIds,
 ) {
-  const copied = copyCominsCell(state, source);
-
-  if (!copied) {
-    return state;
-  }
-
-  return getCominsSelectedCellRange(state, target).reduce(
-    (currentState, cell) => pasteCominsCell(currentState, cell, copied),
-    state,
-  );
+  const sourceRange = "anchor" in source ? source : { anchor: source, focus: source };
+  const from = getCellRangeBounds(state, sourceRange, rowIds), to = getCellRangeBounds(state, target, rowIds);
+  if (!from || !to) return state;
+  const height = from.rowEnd - from.rowStart + 1, width = from.columnEnd - from.columnStart + 1;
+  if (height * width > MAX_CLIPBOARD_CELLS) throw new Error("Clipboard exceeds 100000 cells.");
+  const indexes = new Map(state.rowIds.map((id, index) => [id, index]));
+  const pattern = Array.from({ length: height }, (_, y) => {
+    const id = rowIds[from.rowStart + y]!, index = indexes.get(id), row = index === undefined ? undefined : state.rows[index];
+    return Array.from({ length: width }, (_, x) => {
+      const column = from.visibleColumns[from.columnStart + x]!;
+      return row === undefined || !canUseCellClipboard(state, row, id, column, "copy", index)
+        ? null : { value: getNestedFieldValue(row, column.field) };
+    });
+  });
+  const mod = (value: number, size: number) => ((value % size) + size) % size;
+  return applyClipboardMatrix(state, rowIds, to.rowStart, to.columnStart,
+    to.rowEnd - to.rowStart + 1, to.columnEnd - to.columnStart + 1,
+    (y, x, column, row, rowId, rowIndex) => {
+      const cell = pattern[mod(to.rowStart + y - from.rowStart, height)]![mod(to.columnStart + x - from.columnStart, width)]!;
+      if (cell && !Object.is(getNestedFieldValue(row, column.field), cell.value) && column.cell?.validateFill) {
+        const params = createCellComponentParams(state, row, rowId, column, rowIndex);
+        if (column.cell.validateFill({ ...params, value: cell.value }) === false) {
+          throw new Error(`Fill rejected for column "${column.id}".`);
+        }
+      }
+      return cell;
+    });
 }
 
 function normalizeCominsExportColumns<TData>({

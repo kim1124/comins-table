@@ -116,3 +116,5 @@ Table 전체 스타일은 `className`, `style`, `theme`로 제어한다. Row 스
 동일한 고정 높이로 가상화할 때는 CSS의 `--comins-table-row-height`, `--comins-table-cell-height`와 `rowHeight` prop을 맞춘다. Row별 숫자 높이나 자동 높이는 `getRowHeight`로 지정하며 CSS 높이만으로 가상 배치를 변경하지 않는다. [Row 자동 높이](24-auto-row-height.md)를 참고한다.
 
 `rowProps.disabled`가 `true`인 row는 `--comins-table-row-disabled-background`, `--comins-table-row-disabled-color`로 기본 비활성 스타일을 받는다. Row/cell별 커스텀 class나 style을 추가할 수 있지만, 비활성 row가 조작 불가 상태임을 시각적으로 구분할 수 있어야 한다.
+
+Header Sort는 펼침/접힘과 같은 계열의 15px Chevron을 24px 아이콘 버튼에 사용합니다. Header/Row Group 원본은 중립색 점선 Placeholder, 유효 대상은 accent, 무효 대상은 danger 토큰을 사용합니다. 이동 미리보기는 두 테마 모두 surface와 foreground를 조합합니다. 모션 감소 설정에서는 Sort와 Group 펼침 전환을 끕니다. 상태와 토큰 기준은 패키지의 `DESIGN.md`를 참고합니다.

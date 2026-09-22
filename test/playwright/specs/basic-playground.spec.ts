@@ -134,9 +134,9 @@ test("playground verifies range drag and multi-cell Ctrl+C Ctrl+V interactions i
   await page.keyboard.press(process.platform === "darwin" ? "Meta+V" : "Control+V");
 
   await expect(page.getByTestId("cell-b-name")).toHaveText("Data 1");
-  await expect(page.getByTestId("cell-b-age")).toHaveText("Data 2");
+  await expect(page.getByTestId("cell-b-age")).toHaveText("31");
   await expect(page.getByTestId("cell-c-name")).toHaveText("Data 2");
-  await expect(page.getByTestId("cell-c-age")).toHaveText("Data 3");
+  await expect(page.getByTestId("cell-c-age")).toHaveText("42");
   expect(diagnostics).toEqual([]);
 });
 
