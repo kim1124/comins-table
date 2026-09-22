@@ -34,4 +34,4 @@ Use `onClickRow` and `onClickCell` when the UI needs to open an editor, context 
 
 ## Playground data
 
-The CRUD example uses `column1` through `column6` for both data keys and Column labels, with `column4` as its stable Row ID. Editing preserves that ID. These are example field names; the library accepts application-defined fields and labels. For range-loaded data and loaded Cell edits, use [Viewport Datasource](25-viewport-datasource.md) instead of the array CRUD helpers.
+The CRUD example uses `column1` through `column6` for both editable data keys and Column labels. A separate internal `id` remains stable for selection and deletion and is omitted from the JSON editor. All six displayed fields, including `column4`, can be updated without changing the Row identity. These are example field names; the library accepts application-defined fields and labels. For range-loaded data and loaded Cell edits, use [Viewport Datasource](25-viewport-datasource.md) instead of the array CRUD helpers.

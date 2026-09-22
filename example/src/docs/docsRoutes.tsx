@@ -219,12 +219,20 @@ const englishDocsPages: DocsPage[] = [
       "Keep application Rows in React state and pass onChangeData so keyboard paste results remain controlled.",
       "Use onChangeSelection to observe Row, Cell, and Range selection. Hold Ctrl/Cmd to toggle Rows, Shift to select a Row range, or drag between Cells to select a Cell range.",
       "Set cell.props.copyable or cell.props.pasteable to false when a Column must not participate in clipboard operations.",
+      "Enable clipboardPaste for external TSV and fillHandle for pattern repetition. Both need Cell selection and onChangeData; cell.parseClipboard converts external strings and onClipboardError reports rejected batches.",
     ]),
     category: "Examples",
     codeSamples: selectionClipboardSamples,
     featureId: "selection-clipboard",
     label: "Selection & Clipboard",
     path: "/examples/selection-clipboard",
+  }),
+  featurePage({
+    body: paragraphs(["Paste plain-text TSV into editable Cells, or repeat a selected pattern using the Fill Handle. Protected Cells retain their values; failed parsing cancels the entire edit."]),
+    category: "Examples",
+    codeSamples: selectionClipboardSamples.slice(1),
+    featureId: "visual-fill-handle",
+    path: "/examples/fill-handle",
   }),
   featurePage({
     body: paragraphs(["Review built-in controls and custom renderers for headers and cells."]),
@@ -234,7 +242,7 @@ const englishDocsPages: DocsPage[] = [
     path: "/examples/component",
   }),
   featurePage({
-    body: paragraphs(["Review row styling, events, drag movement, disabled state, and customization."]),
+    body: paragraphs(["Row Drag is disabled by default. Enable it with rowProps.draggable: true; disabled or unsupported Rows have no handle. Local reordering works without onChangeData. Connect that callback to synchronize application state; a new data array replaces the internal Rows."]),
     category: "Row / Context",
     codeSamples: rowSamples,
     featureId: "row",
@@ -531,7 +539,7 @@ const koreanDocsCopy: Record<string, KoreanDocsCopy> = {
     title: "Loading / Empty 상태",
   },
   "/examples/row": {
-    body: ["Row styling, event, drag 이동, disabled 상태와 customization을 확인합니다."],
+    body: ["Row Drag는 기본 비활성화입니다. rowProps.draggable: true로 활성화하며 비활성·미지원 Row에는 핸들이 없습니다. 일반 Row의 내부 이동은 onChangeData 없이도 동작합니다. 외부 상태 동기화가 필요할 때 콜백을 연결하며 새 data 배열을 전달하면 내부 데이터를 교체합니다."],
     category: "Row / Context",
     label: "행",
     summary: "Row style, drag, disabled와 custom behavior 예제입니다.",
@@ -585,11 +593,19 @@ const koreanDocsCopy: Record<string, KoreanDocsCopy> = {
     summary: "Text, number, UTC 날짜, boolean Filter와 Grouping 결합을 확인합니다.",
     title: "Column Filtering",
   },
+  "/examples/fill-handle": {
+    body: ["외부 TSV를 Cell에 붙여넣거나 Fill Handle로 선택 패턴을 반복합니다. 보호 Cell은 값을 유지하며 변환 실패 시 전체 편집을 취소합니다."],
+    category: "예제",
+    label: "붙여넣기와 채우기",
+    title: "붙여넣기와 채우기",
+    summary: "보호 Cell, 타입 변환, 자동 높이와 가상화를 포함한 편집 예제입니다.",
+  },
   "/examples/selection-clipboard": {
     body: [
       "Application Row를 React state에 유지하고 `onChangeData`를 연결하여 paste 결과를 controlled 상태로 반영합니다.",
       "`onChangeSelection`으로 Row, Cell, Range 선택을 관찰하며 Ctrl/Cmd, Shift와 Cell drag를 사용할 수 있습니다.",
       "Clipboard에서 제외할 Column은 `cell.props.copyable` 또는 `pasteable`을 false로 설정합니다.",
+      "`clipboardPaste`는 외부 TSV, `fillHandle`은 패턴 반복을 활성화합니다. 두 기능은 Cell 선택과 `onChangeData`가 필요하며 `cell.parseClipboard`와 `onClipboardError`로 변환과 오류를 처리합니다.",
     ],
     category: "예제",
     label: "선택과 Clipboard",

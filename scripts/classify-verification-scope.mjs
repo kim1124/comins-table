@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 
 const outputOrder = ['policy', 'docs', 'fast', 'browser', 'gif'];
 const readmeGifs = new Set([
+  'docs/assets/comins-table-clipboard-fill.gif',
   'docs/assets/comins-table-column-filtering.gif',
   'docs/assets/comins-table-column-pinning.gif',
   'docs/assets/comins-table-cross-table-drag.gif',

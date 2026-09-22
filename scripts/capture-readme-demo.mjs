@@ -326,17 +326,12 @@ async function captureAutoHeight(page, captureFrame) {
 
 async function scrollPreviewViewport(page, captureFrame) {
   const viewport = page.getByTestId("readme-demo-viewport-datasource-table");
-  const box = await viewport.boundingBox();
-  const metrics = await viewport.evaluate(element => ({ height: element.clientHeight, gutter: element.offsetWidth - element.clientWidth }));
-  assert(box && metrics.gutter > 0, "Viewport scrollbar unavailable");
-  const x = box.x + box.width - metrics.gutter / 2;
-  await page.mouse.move(x, box.y + 14);
-  await page.mouse.down();
-  for (let step = 1; step <= 12; step += 1) {
-    await page.mouse.move(x, box.y + 14 + (metrics.height * 0.65 - 14) * step / 12);
+  await viewport.hover();
+  const distance = await viewport.evaluate(element => element.scrollHeight * 0.06);
+  for (let step = 0; step < 10; step += 1) {
+    await page.mouse.wheel(0, distance);
     await captureFrame();
   }
-  await page.mouse.up();
   await waitForReadmeState(async () => Number(await viewport.locator("[data-comins-row-data-index]").first().getAttribute("data-comins-absolute-index")) > 400_000, "Viewport distant rows unavailable");
 }
 
@@ -351,6 +346,40 @@ async function captureViewport(page, captureFrame) {
   await viewport.getByTestId("row-0").waitFor();
   await waitForReadmeState(async () => (await viewport.getByTestId("row-0").textContent()).includes("Query 2"), "Viewport query reset failed");
   await captureFrame(12);
+}
+
+async function captureClipboardFill(page, captureFrame) {
+  const table = page.getByTestId("readme-demo-clipboard-fill-table");
+  const cell = (row, column = "column1") => table.getByTestId(`cell-${row}-${column}`);
+  const modifier = process.platform === "darwin" ? "Meta" : "Control";
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await captureFrame(6);
+  await page.getByRole("textbox", { name: "Copy two TSV fields" }).click();
+  await page.keyboard.press(`${modifier}+A`);
+  await page.keyboard.press(`${modifier}+C`);
+  await cell(0).click();
+  await page.keyboard.press(`${modifier}+V`);
+  await waitForReadmeState(async () => await cell(0).textContent() === "Pasted value", "TSV paste unavailable");
+  assert(await cell(0, "column2").textContent() === "900", "Typed paste unavailable");
+  assert(await cell(0, "column3").textContent() === "Keep 1", "Paste changed the third field");
+  await captureFrame(8);
+  await cell(0).click();
+  const handle = await table.getByTestId("fill-handle").boundingBox();
+  const target = await cell(3).boundingBox();
+  assert(handle && target, "Fill geometry unavailable");
+  const x = handle.x + handle.width - 5, y = handle.y + handle.height - 5;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  for (let step = 1; step <= 12; step += 1) {
+    await page.mouse.move(x + (target.x + target.width / 2 - x) * step / 12,
+      y + (target.y + target.height / 2 - y) * step / 12);
+    await captureFrame();
+  }
+  await page.mouse.up();
+  await waitForReadmeState(async () => await cell(3).textContent() === "Pasted value", "Fill did not commit");
+  assert(await cell(3, "column2").textContent() === "400", "Fill changed an unselected column");
+  assert(await page.getByTestId("readme-clipboard-commits").textContent() === "Data updates: 2", "Clipboard commit count mismatch");
+  await captureFrame(10);
 }
 
 async function switchOverviewFeature(page, feature) {
@@ -439,25 +468,12 @@ async function captureOverview(page, captureFrame) {
   await scrollPreviewViewport(page, captureFrame);
   await captureFrame(6);
 
-  await switchOverviewFeature(page, "cross-table-drag");
-  const left = page.getByTestId("readme-demo-transfer-left");
-  const right = page.getByTestId("readme-demo-transfer-right");
-  await captureFrame(5);
-  await dragWithCapture(
-    page,
-    left.getByTestId("group-drag-handle-platform"),
-    right.getByTestId("group-row-experience"),
-    () => captureFrame(),
-    0.1,
-  );
-  await waitForReadmeState(
-    async () => right.getByTestId("group-row-platform").isVisible(),
-    "Overview Cross-Table Drag unavailable",
-  );
-  await captureFrame(6);
+  await switchOverviewFeature(page, "clipboard-fill");
+  await captureClipboardFill(page, count => captureFrame(Math.min(count ?? 1, 2)));
 }
 
 const featureDefinitions = [
+  { assetName: "comins-table-clipboard-fill.gif", feature: "clipboard-fill", run: captureClipboardFill },
   { assetName: "comins-table-tree-row-drag.gif", feature: "tree-grid", run: captureTreeDrag },
   { assetName: "comins-table-auto-row-height.gif", feature: "auto-row-height", run: captureAutoHeight },
   { assetName: "comins-table-viewport-datasource.gif", feature: "viewport-datasource", run: captureViewport },
@@ -603,7 +619,7 @@ async function generateReadmeGifs() {
     await waitForServer();
 
     browser = await chromium.launch({ headless: false });
-    const page = await browser.newPage({ deviceScaleFactor: 1, viewport: { height: 760, width: 1000 } });
+    const page = await browser.newPage({ deviceScaleFactor: 1, viewport: { height: 760, width: 960 } });
     for (const definition of featureDefinitions) {
       process.stdout.write(`readme-gif: capturing ${definition.feature}\n`);
       await encodeFeatureGif(definition, page);

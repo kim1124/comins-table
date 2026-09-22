@@ -20,6 +20,7 @@ const featureSpecCoverage = {
   "column-pinning": ["column-pinning.spec.ts"],
   cell: ["cell-row-examples.spec.ts", "cell-selection-option.spec.ts"],
   "selection-clipboard": ["selection-clipboard.spec.ts"],
+  "visual-fill-handle": ["clipboard-edit.spec.ts"],
   component: ["component-renderer.spec.ts"],
   row: ["row-basic.spec.ts", "cell-row-examples.spec.ts"],
   "row-expand": ["row-expand.spec.ts"],

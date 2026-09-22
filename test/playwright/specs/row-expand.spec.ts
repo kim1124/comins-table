@@ -375,19 +375,24 @@ test("keeps automatic Row Detail growth anchored and repeated toggles bounded @p
   const viewport = page.getByTestId("data-table-viewport");
   await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(100_000);
   await viewport.scrollIntoViewIfNeeded();
-  const scrollToFixtureRow = () =>
-    viewport.evaluate(async (element) => {
-      element.scrollTop = Math.floor(element.scrollHeight / 2);
+  const scrollToFixtureRow = (expanded: boolean) =>
+    viewport.evaluate(async (element, detailExpanded) => {
+      // Position the owner inside the viewport using the fixture's logical heights.
+      // Half of the compressed scrollbar can leave it in overscan, outside the viewport.
+      const logicalHeight = 100_000 * 36 + (detailExpanded ? 180 : 0);
+      const scale = (logicalHeight - element.clientHeight) / (element.scrollHeight - element.clientHeight);
+      element.scrollTop = (50_000 * 36 - 120) / scale;
       element.dispatchEvent(new Event("scroll", { bubbles: true }));
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
       });
-    });
-  await scrollToFixtureRow();
+    }, expanded);
+  await scrollToFixtureRow(true);
 
   const owner = page.getByTestId("row-50000");
   const detail = page.getByTestId("row-detail-content-50000");
   const toggle = page.getByTestId("row-detail-toggle-50000");
+  await expect(toggle).toBeInViewport();
   await expect(detail).toBeVisible();
 
   await viewport.evaluate(
@@ -407,7 +412,7 @@ test("keeps automatic Row Detail growth anchored and repeated toggles bounded @p
     transform: getComputedStyle(element.querySelector(".comins-table__body-table")!).transform,
   }));
   const detailHeightBefore = (await detail.boundingBox())!.height;
-  await growButton.evaluate((element) => (element as HTMLButtonElement).click());
+  await growButton.click();
   await expect(page.getByTestId("row-detail-perf-grown-block")).toHaveCount(1);
   await expect.poll(async () => (await detail.boundingBox())?.height ?? 0).toBeGreaterThan(detailHeightBefore + 40);
   await viewport.evaluate(
@@ -430,8 +435,8 @@ test("keeps automatic Row Detail growth anchored and repeated toggles bounded @p
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
     await expect(viewport.locator("[data-detail-for]")).toHaveCount(0);
-    await scrollToFixtureRow();
-    await expect(toggle).toBeVisible();
+    await scrollToFixtureRow(false);
+    await expect(toggle).toBeInViewport();
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-expanded", "true");

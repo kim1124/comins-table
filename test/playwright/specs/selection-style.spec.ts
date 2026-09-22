@@ -50,7 +50,8 @@ test("row selection is mint styled, multi-selectable, sort-stable, and grid bord
   await expect(cell).toHaveCSS("border-top-width", "0px");
 
   const header = page.getByTestId("header-name");
-  await expect(header).toHaveCSS("border-top-width", "1px");
+  await expect(header).toHaveCSS("border-top-width", "0px");
+  await expect(page.getByTestId("data-table-viewport").locator("..")).toHaveCSS("border-top-width", "1px");
   await expect(header).toHaveCSS("border-right-width", "1px");
   await expect(header).toHaveCSS("border-left-width", "0px");
   await expect(header).toHaveCSS("background-color", "rgb(16, 185, 129)");

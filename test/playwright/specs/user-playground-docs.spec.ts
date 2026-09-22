@@ -120,7 +120,7 @@ test("option guide documents core helpers and ref methods", async ({ page }) => 
   await expect(page.locator(".docs-reference-list")).toContainText("data + onChangeData");
   await expect(page.locator(".docs-reference-list")).toContainText("CSR");
   await expect(page.locator(".docs-reference-list")).not.toContainText("Advanced Feature Roadmap");
-  await expect(page.locator(".docs-reference-list")).not.toContainText("Visual Fill Handle UI");
+  await expect(page.locator(".docs-reference-list")).toContainText("fillHandle");
 
   expect(diagnostics).toEqual([]);
 });

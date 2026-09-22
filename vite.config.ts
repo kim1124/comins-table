@@ -21,6 +21,6 @@ export default defineConfig({
     sourcemap: true,
   },
   test: {
-    exclude: [...configDefaults.exclude, ".worktrees/**", "test/playwright/**"],
+    exclude: [...configDefaults.exclude, ".local/**", ".worktrees/**", "test/playwright/**"],
   },
 });

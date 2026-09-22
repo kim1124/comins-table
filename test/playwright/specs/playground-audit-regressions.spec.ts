@@ -61,10 +61,17 @@ test("Viewport fixed mode keeps renderer growth within its numeric row height", 
   await page.goto("/performance/viewport-datasource");
   const viewport = page.getByTestId("viewport-datasource-viewport");
   await expect(viewport.getByTestId("row-0")).toBeVisible();
-  await page.getByTestId("viewport-auto-height").uncheck();
+  await page.getByTestId("viewport-auto-height").click();
   await page.getByTestId("viewport-content").click();
   await expect.poll(() => viewport.getByTestId("row-1").evaluate(row => row.getBoundingClientRect().height)).toBe(36);
   await viewport.evaluate(element => { element.scrollTop = element.scrollHeight * .5; });
+  await expect.poll(() => viewport.evaluate(element => {
+    const box = element.getBoundingClientRect();
+    return [...element.querySelectorAll("[data-comins-row-data-index]")].some(row => {
+      const rect = row.getBoundingClientRect();
+      return rect.bottom > box.top && rect.top < box.bottom;
+    });
+  })).toBe(true);
   await expect(viewport.getByTestId("viewport-placeholder")).toHaveCount(0);
   const anchor = await viewport.evaluate(element => {
     const top = element.getBoundingClientRect().top;
@@ -73,7 +80,7 @@ test("Viewport fixed mode keeps renderer growth within its numeric row height", 
   });
   await page.getByTestId("viewport-content").click();
   await expect.poll(() => viewport.getByTestId(anchor.id).evaluate((row, offset) => Math.abs(row.getBoundingClientRect().top - row.closest(".comins-table__body-viewport")!.getBoundingClientRect().top - offset), anchor.offset)).toBeLessThanOrEqual(1);
-  await page.getByTestId("viewport-auto-height").check();
+  await page.getByTestId("viewport-auto-height").click();
   await page.getByTestId("viewport-content").click();
   await expect.poll(() => viewport.locator("[data-comins-row-data-index]").evaluateAll(rows => Math.max(...rows.map(row => row.getBoundingClientRect().height)))).toBeGreaterThan(60);
 });

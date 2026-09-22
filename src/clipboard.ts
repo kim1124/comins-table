@@ -6,6 +6,8 @@ export {
   pasteCominsCell,
   pasteCominsCellRange,
   pasteCominsRow,
+  pasteCominsText,
+  parseCominsClipboardText,
 } from "./core";
 export type {
   CominsClipboardGuard,

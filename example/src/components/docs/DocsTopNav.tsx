@@ -32,8 +32,11 @@ export function DocsTopNav({ pages }: DocsTopNavProps) {
   return (
     <header className="docs-top-nav">
       <div className="docs-top-nav__brand">
-        <strong>{"comins-table"}</strong>
-        <span>{text(defineLocalizedText("문서 Playground", "Docs Playground"))}</span>
+        <img src="/comins-symbol.svg" width="32" height="32" alt="" style={{ flexShrink: 0, alignSelf: "center" }} />
+        <div style={{ display: "grid", gap: 2 }}>
+          <strong>{"comins-table"}</strong>
+          <span>{text(defineLocalizedText("문서 Playground", "Docs Playground"))}</span>
+        </div>
       </div>
       <div className="docs-top-nav__tools">
         <div

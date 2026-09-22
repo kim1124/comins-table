@@ -8,6 +8,7 @@ import { classifyVerificationScope } from "../scripts/classify-verification-scop
 import { waitForReadmeState } from "../scripts/wait-for-readme-state.mjs";
 
 const gifPaths = [
+  "docs/assets/comins-table-clipboard-fill.gif",
   "docs/assets/comins-table-column-filtering.gif",
   "docs/assets/comins-table-column-pinning.gif",
   "docs/assets/comins-table-cross-table-drag.gif",

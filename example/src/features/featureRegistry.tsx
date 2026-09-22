@@ -20,6 +20,7 @@ import { RefApiFeature } from "./RefApiFeature";
 import { RowFeature } from "./RowFeature";
 import { RowExpandFeature } from "./RowExpandFeature";
 import { RowGroupingFeature } from "./RowGroupingFeature";
+import { ClipboardEditFeature } from "./ClipboardEditSample";
 import { SelectionClipboardFeature } from "./SelectionClipboardFeature";
 import { SizeFeature } from "./SizeFeature";
 import { SummaryRowFeature } from "./SummaryRowFeature";
@@ -125,7 +126,7 @@ export const featureRegistry: FeatureDefinitionSource[] = [
       { description: defineLocalizedText("Parent Header를 resize할 때 child 너비 비율을 유지합니다.", "Keeps child width ratios when resizing the parent header."), example: "resize group header", name: "group resize" },
       { description: defineLocalizedText("Parent Header를 drag할 때 child Column을 함께 이동합니다.", "Moves child columns together when dragging the parent header."), example: "drag group header", name: "group reorder" },
       { description: defineLocalizedText("Columns prop에서 child Column을 제거합니다.", "Removes child columns from the columns prop."), example: "columns.filter(...)", name: "child visibility" },
-      { description: defineLocalizedText("선택한 child Column은 유지하면서 parent Group만 별도로 숨깁니다.", "Hides parent groups independently while preserving the selected child columns."), example: "group visibility checkbox", name: "parent visibility" },
+      { description: defineLocalizedText("선택한 child Column은 유지하면서 parent Group만 별도로 숨깁니다.", "Hides parent groups independently while preserving the selected child columns."), example: "group visibility toggle button", name: "parent visibility" },
       { apiKind: "event", description: defineLocalizedText("Header Group의 Column 순서와 너비 변경을 application state에 전달합니다.", "Reports Header Group column order and width changes to application state."), example: "onChangeColumnLayout={setGroupLayout}", name: "onChangeColumnLayout" },
       { apiKind: "event", description: defineLocalizedText("Row Drag 결과를 controlled data에 반영합니다.", "Commits Row Drag results to controlled data."), example: "onChangeData={setGroupRows}", name: "onChangeData" },
       { apiKind: "method", description: defineLocalizedText("Header Group visibility와 Column layout을 명령형으로 적용합니다.", "Applies Header Group visibility and column layout imperatively."), example: "tableRef.current?.setColumnLayout(layout)", name: "setColumnLayout" },
@@ -249,6 +250,20 @@ export const featureRegistry: FeatureDefinitionSource[] = [
     summary: defineLocalizedText("Consumer-owned selection state와 controlled Clipboard data 변경 예제입니다.", "Consumer-owned selection state and controlled clipboard data updates."),
   },
   {
+    Component: ClipboardEditFeature,
+    id: "visual-fill-handle",
+    label: defineLocalizedText("붙여넣기와 채우기", "Paste & Fill Handle"),
+    description: defineLocalizedText("외부 TSV 붙여넣기와 선택 패턴 반복을 확인합니다.", "External TSV paste and selected-pattern repetition."),
+    options: [
+      { description: defineLocalizedText("외부 TSV를 현재 표시 순서대로 붙여넣습니다. 기본 false.", "Pastes external TSV in displayed order. Defaults to false."), example: "clipboardPaste", name: "clipboardPaste" },
+      { description: defineLocalizedText("선택 모서리 드래그로 값 또는 패턴을 반복합니다. 기본 false.", "Repeats selected values or patterns using the corner handle. Defaults to false."), example: "fillHandle", name: "fillHandle" },
+      { description: defineLocalizedText("OS 문자열을 대상 Column 값으로 변환합니다.", "Converts OS strings to destination Column values."), example: "cell: { parseClipboard: ({ text }) => Number(text) }", name: "cell.parseClipboard" },
+      { apiKind: "event", description: defineLocalizedText("전체 편집이 취소된 오류를 전달합니다.", "Reports an error that cancelled the edit batch."), example: "onClipboardError={error => setError(error.message)}", name: "onClipboardError" },
+      { apiKind: "method", description: defineLocalizedText("선택의 첫 Row 또는 Column을 반복합니다.", "Repeats the first selected Row or Column."), example: 'tableRef.current?.fillSelection("down")', name: "fillSelection" },
+    ],
+    summary: defineLocalizedText("보호 Cell, 타입 변환, 자동 높이와 가상화를 포함한 편집 예제입니다.", "Editing with protected Cells, typed parsing, automatic heights and virtualization."),
+  },
+  {
     Component: ComponentFeature,
     description: defineLocalizedText("Header와 Cell의 내장 Component 및 custom renderer를 확인하는 예제입니다.", "Example page for built-in components and custom renderers in headers and cells."),
     id: "component",
@@ -284,8 +299,8 @@ export const featureRegistry: FeatureDefinitionSource[] = [
       { apiKind: "event", description: defineLocalizedText("Row Drag listener를 등록하기 전에 호출하며 false로 Drag를 취소합니다.", "Runs before Row Drag listeners are registered and cancels the drag when it returns false."), example: "onBeforeRowDrag={({ row }) => row.id !== 'locked'}", name: "onBeforeRowDrag" },
       { apiKind: "event", description: defineLocalizedText("Row Drag target 또는 유효성이 바뀔 때 source와 target을 전달합니다.", "Reports the source and target when the Row Drag target or validity changes."), example: "onRowDrag={({ row, target }) => ...}", name: "onRowDrag" },
       { apiKind: "event", description: defineLocalizedText("시작된 Row Drag가 끝날 때 result와 reason을 한 번 전달합니다.", "Reports result and reason once when a started Row Drag ends."), example: "onAfterDragRow={({ result, reason }) => ...}", name: "onAfterDragRow" },
-      { apiKind: "event", description: defineLocalizedText("Row Drag 결과인 다음 controlled data를 전달합니다.", "Reports the next controlled data produced by Row Drag."), example: "onChangeData={setRows}", name: "onChangeData" },
-      { description: defineLocalizedText("Row styling, disabled 상태와 drag 가능 여부를 지정합니다.", "Row styling, disabled state, and drag availability."), example: "rowProps={{ className, disabled, draggable }}", name: "rowProps" },
+      { apiKind: "event", description: defineLocalizedText("Row Drag 결과를 전달하는 선택적 콜백입니다. 외부 상태 동기화가 필요할 때 연결합니다.", "Optional callback reporting reordered data for application state synchronization."), example: "onChangeData={setRows}", name: "onChangeData" },
+      { description: defineLocalizedText("Row styling, disabled 상태와 drag 가능 여부를 지정합니다. draggable은 기본 false이며 true일 때 핸들을 표시합니다.", "Row styling, disabled state, and drag availability. draggable defaults to false; true shows the handle."), example: "rowProps={{ className, disabled, draggable }}", name: "rowProps" },
       { apiKind: "method", description: defineLocalizedText("Table 외부에서 visible index 기준으로 Row 위치를 이동합니다.", "Moves a Row from outside the table by visible indexes."), example: "tableRef.current?.setMoveTargetRow(targetIdx, sourceIdx)", name: "setMoveTargetRow" },
     ],
     summary: defineLocalizedText("Row style, drag, disabled와 custom behavior 예제입니다.", "Row style, drag, disabled, and custom behavior example."),
@@ -334,7 +349,7 @@ export const featureRegistry: FeatureDefinitionSource[] = [
       { description: defineLocalizedText("현재 열린 Group ID를 application state로 제어합니다.", "Controls the currently open Group IDs in application state."), example: "expandedGroupIds", name: "rowGrouping.expandedGroupIds" },
       { apiKind: "event", description: defineLocalizedText("다음 controlled Group ID 배열을 전달합니다. 생략하면 disclosure가 read-only입니다.", "Receives the next controlled group ID array. Omit it for read-only disclosure."), example: "onChangeExpandedGroupIds={setExpandedGroupIds}", name: "rowGrouping.onChangeExpandedGroupIds" },
       { apiKind: "event", description: defineLocalizedText("Group Drag 결과인 다음 Group 배열을 application state에 반영합니다.", "Writes the next Group array from Group Drag to application state."), example: "onChangeGroups={setGroups}", name: "rowGrouping.onChangeGroups" },
-      { apiKind: "event", description: defineLocalizedText("Group 내 Row Drag 결과인 다음 controlled data를 전달합니다.", "Reports the next controlled data after dragging a Row within or across Groups."), example: "onChangeData={setRows}", name: "onChangeData" },
+      { apiKind: "event", description: defineLocalizedText("Group 내 Row Drag 결과를 전달하는 선택적 콜백입니다. 외부 상태 동기화가 필요할 때 연결합니다.", "Reports the next controlled data after dragging a Row within or across Groups."), example: "onChangeData={setRows}", name: "onChangeData" },
       { apiKind: "event", description: defineLocalizedText("Group 안에서 변경된 Row Detail ID 배열을 전달합니다.", "Reports the changed Row Detail ID array inside Groups."), example: "onChangeExpandedRowIds={setExpandedRowIds}", name: "onChangeExpandedRowIds" },
       { apiKind: "method", description: defineLocalizedText("지정한 Group 또는 모든 Group을 펼칩니다.", "Expands the specified Groups or every Group."), example: "tableRef.current?.expandGroups(groupIds)", name: "expandGroups" },
       { apiKind: "method", description: defineLocalizedText("지정한 Group 또는 모든 Group을 접습니다.", "Folds the specified Groups or every Group."), example: "tableRef.current?.foldGroups(groupIds)", name: "foldGroups" },

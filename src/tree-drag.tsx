@@ -49,6 +49,7 @@ export function useCominsTreeDrag<T>(options: Options<T>) {
   const gesture = useRef<Gesture<T> | null>(null);
   const navigateRef = useRef<((id: CominsRowId) => void) | null>(null);
   const pendingFocus = useRef<{ root: HTMLElement; id: CominsRowId } | null>(null);
+  const pendingScrollTop = useRef<number | null>(null);
   const [preview, setPreview] = useState<Preview<T> | null>(null);
   const [announcement, setAnnouncement] = useState("");
 
@@ -71,6 +72,9 @@ export function useCominsTreeDrag<T>(options: Options<T>) {
       const next = props.config?.canDrop?.(target) === false ? props.data : moveCominsTreeNode(props.data, current.source.id, target.destination, props.getRowId, props.config);
       if (next !== props.data) {
         result = "moved";
+        if (!current.keyboard) {
+          pendingScrollTop.current = current.root.querySelector<HTMLElement>(".comins-table__body-viewport")?.scrollTop ?? null;
+        }
         props.onChangeData([...next]);
       }
     }
@@ -85,7 +89,7 @@ export function useCominsTreeDrag<T>(options: Options<T>) {
     const focus = pendingFocus.current;
     if (!focus) return;
     const handle = Array.from(focus.root.querySelectorAll<HTMLElement>("[data-comins-tree-drag-handle]")).find(element => element.dataset.testid === `row-drag-handle-${String(focus.id)}`);
-    if (handle) { handle.focus({ preventScroll: true }); pendingFocus.current = null; }
+    if (handle) { handle.focus({ preventScroll: true }); pendingFocus.current = null; pendingScrollTop.current = null; }
     else navigateRef.current?.(focus.id);
   };
 
@@ -159,7 +163,8 @@ export function useCominsTreeDrag<T>(options: Options<T>) {
     const tick = (now: number) => {
       if (viewport) {
         const rect = viewport.getBoundingClientRect();
-        const next = getCominsDragAutoScrollTop({ clientHeight: viewport.clientHeight, scrollHeight: viewport.scrollHeight, scrollTop: viewport.scrollTop, deltaMs: now - lastTime, velocity: getCominsDragAutoScrollVelocity({ clientY: lastEvent.clientY, top: rect.top, bottom: rect.bottom }) });
+        const insideX = lastEvent.clientX >= rect.left && lastEvent.clientX <= rect.right;
+        const next = getCominsDragAutoScrollTop({ clientHeight: viewport.clientHeight, scrollHeight: viewport.scrollHeight, scrollTop: viewport.scrollTop, deltaMs: now - lastTime, velocity: insideX ? getCominsDragAutoScrollVelocity({ clientY: lastEvent.clientY, top: Math.max(0, rect.top), bottom: Math.min(window.innerHeight, rect.bottom) }) : 0 });
         if (next !== viewport.scrollTop) viewport.scrollTop = next;
       }
       update(lastEvent);
@@ -225,5 +230,5 @@ export function useCominsTreeDrag<T>(options: Options<T>) {
     }
   };
 
-  return { announcement, navigateRef, restoreFocus, onPointerDown, onKeyDown, preview };
+  return { announcement, navigateRef, pendingScrollTop, restoreFocus, onPointerDown, onKeyDown, preview };
 }

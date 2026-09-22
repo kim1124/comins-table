@@ -28,17 +28,15 @@ export function createRows(count: number): PersonRow[] {
   }));
 }
 
-const virtualRowTemplate: PersonRow = {
-  active: true,
-  age: 0,
-  id: "virtual-row",
-  locked: "Data 1",
-  name: "Data 1",
-  role: "Owner",
-};
-
 export function createVirtualRows(count: number): PersonRow[] {
-  return Array.from({ length: count }, () => virtualRowTemplate);
+  return Array.from({ length: count }, (_value, index) => ({
+    active: index % 2 === 0,
+    age: index,
+    id: String(index),
+    locked: `Data ${index + 1}`,
+    name: `Data ${index + 1}`,
+    role: index % 2 === 0 ? "Owner" : "Viewer",
+  }));
 }
 
 export function createExampleRows(count = 100): PersonRow[] {

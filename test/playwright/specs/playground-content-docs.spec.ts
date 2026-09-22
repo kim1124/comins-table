@@ -30,7 +30,7 @@ const selectedKoreanContentPages = [
   ["/performance/virtualization", "대용량 데이터"],
   ["/examples/cell", "Td Cell 포맷"],
   ["/examples/selection-clipboard", "Row/Cell/Range selection"],
-  ["/examples/row", "Tr Row 스타일"],
+  ["/examples/row", "Row 선택과 드래그 이동"],
   ["/examples/column-filtering", "각 Header의 Filter 버튼"],
   ["/examples/summary-row", "count, sum, avg, max, min"],
   ["/examples/tree-grid", "모든 깊이의 형제 이동과 선택적인 부모 변경"],

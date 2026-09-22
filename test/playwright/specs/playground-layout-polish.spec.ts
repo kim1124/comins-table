@@ -461,7 +461,7 @@ test("header page keeps only requested actions and state outputs", async ({ page
   await expect(page.getByTestId("header-component-event")).toHaveCount(0);
 
   await page.goto("/examples/column-groups");
-  await expect(page.getByTestId("header-example-groups").getByRole("checkbox", { exact: true, name: "Header 그룹 1 표시" })).toBeChecked();
+  await expect(page.getByTestId("header-example-groups").getByRole("button", { exact: true, name: "Header 그룹 1 표시" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("header-example-groups").getByRole("button", { exact: true, name: "초기화" })).toBeVisible();
   await expect(page.getByTestId("column-group-dynamic-columns")).toBeVisible();
   expect(diagnostics).toEqual([]);

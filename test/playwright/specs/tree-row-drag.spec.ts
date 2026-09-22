@@ -19,8 +19,8 @@ test("tree keyboard reorders actual sibling ids through controlled data", async 
 
 test("tree pointer reparent moves the complete collapsed subtree", async ({ page }) => {
   await page.goto("/examples/tree-grid");
-  await page.getByTestId("tree-auto-height").check();
-  await page.getByTestId("tree-allow-reparent").check();
+  await expect(page.getByTestId("tree-auto-height")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("tree-allow-reparent")).toHaveAttribute("aria-pressed", "true");
   const viewport = page.getByTestId("tree-drag-viewport");
   await viewport.getByTestId("row-root-b").scrollIntoViewIfNeeded();
   const source = await viewport.getByTestId("row-drag-handle-a-2").boundingBox();
@@ -60,7 +60,7 @@ test("tree policy change cancels a gesture without changing data", async ({ page
   const viewport = page.getByTestId("tree-drag-viewport");
   await viewport.getByTestId("row-drag-handle-a-1").press("Space");
   await page.keyboard.press("ArrowDown");
-  await page.getByTestId("tree-allow-reparent").uncheck();
+  await page.getByTestId("tree-allow-reparent").click();
   await expect(page.getByTestId("tree-drag-result")).toContainText('"result":"cancelled"');
   await page.keyboard.press("Enter");
   await expect(viewport.getByTestId("row-a-1")).toHaveAttribute("data-comins-row-data-index", "1");

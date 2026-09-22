@@ -21,7 +21,7 @@ test("cell page keeps Td examples focused on format style renderer and guard col
 
   await expect(page.locator(".comins-table__header-table th")).toHaveCount(6);
   await expect(page.locator(".comins-table__component")).toHaveCount(0);
-  await expect(page.getByTestId("cell-b-age")).toHaveText("Data 2");
+  await expect(page.getByTestId("cell-b-age")).toHaveText("42");
   await expect(page.getByTestId("cell-a-style")).toHaveClass(/cell-role-owner/u);
   await expect(page.getByTestId("cell-renderer-a")).toContainText("renderer:Data 1");
   await page.getByTestId("cell-b-locked").click();

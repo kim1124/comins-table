@@ -158,8 +158,8 @@ export function ColumnFilteringFeature() {
 
       <FeatureSampleSection
         description={text(defineLocalizedText(
-          "Filter는 Group 위치와 빈 Group을 유지하면서 Group별 Row, count와 aggregate만 갱신합니다. Filter 설정 중 Row Drag는 비활성화됩니다.",
-          "Filtering preserves Group positions and empty Groups while updating member Rows, counts, and aggregates. Row Drag is disabled while filtering is configured.",
+          "Empty는 처음부터 Row가 없는 그룹입니다. 필터 결과가 0개여도 그룹 위치와 헤더가 유지되는 동작을 확인합니다. 그룹 헤더는 이동할 수 있지만, 이 필터 예제에서는 Row Drag가 비활성화되어 Empty로 Row를 옮길 수 없습니다. 그룹 간 Row 이동은 Row Grouping 예제에서 확인합니다.",
+          "Empty starts with no Rows and demonstrates that filtering preserves empty Group headers and positions. Group headers can move, but Row Drag is disabled in this filtering example, so Rows cannot be moved into Empty here. Use the Row Grouping example for moving Rows between Groups.",
         ))}
         id="column-filtering-grouping"
         title={text(defineLocalizedText("Row Grouping 결합", "Row Grouping integration"))}

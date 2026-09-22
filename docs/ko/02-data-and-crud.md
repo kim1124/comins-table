@@ -30,4 +30,4 @@ React component에서 발생한 데이터 변경은 `onChangeData(nextData)`로 
 
 ## Playground 데이터
 
-CRUD 예제는 데이터 키와 Column 이름을 `column1`부터 `column6`까지 동일하게 사용하며 `column4`를 안정적인 Row ID로 유지합니다. 수정 시 이 ID를 보존합니다. 예제의 필드 규칙이며 라이브러리는 application이 정의한 필드와 label을 허용합니다. 구간 조회와 로딩된 Cell 편집에는 배열 CRUD helper 대신 [Viewport Datasource](25-viewport-datasource.md)를 사용합니다.
+CRUD 예제는 수정 가능한 데이터 키와 Column 이름을 `column1`부터 `column6`까지 동일하게 사용합니다. 별도의 내부 `id`는 선택·삭제를 위해 유지하며 JSON 편집창에서 제외합니다. `column4`를 포함한 표시 필드 6개를 모두 수정해도 Row 식별자는 바뀌지 않습니다. 예제의 필드 규칙이며 라이브러리는 application이 정의한 필드와 label을 허용합니다. 구간 조회와 로딩된 Cell 편집에는 배열 CRUD helper 대신 [Viewport Datasource](25-viewport-datasource.md)를 사용합니다.

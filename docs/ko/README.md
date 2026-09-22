@@ -1,6 +1,10 @@
 # 한글 기능 가이드
 
+이 가이드는 0.1.11 기준이며, 선택적으로 활성화하는 TSV 붙여넣기와 Fill Handle을 포함합니다. [Clipboard와 Fill](09-clipboard.md) · [Row Drag 마이그레이션](07-row.md).
+
 [문서 홈](../README.md) · [English guides](../user/README.md) · [Playground](http://127.0.0.1:4002/docs/getting-started)
+
+0.1.11부터 Row Drag는 기본 비활성화이며 `rowProps={{ draggable: true }}`로 활성화합니다. 일반 Row의 내부 이동에는 `onChangeData`가 선택 사항입니다. 외부 상태를 동기화할 때 연결하고, 새 `data` 배열을 전달하면 해당 데이터로 교체합니다. [Row 가이드](07-row.md)를 참고합니다.
 
 ## 시작하기
 
@@ -37,7 +41,7 @@
 | --- | --- | --- |
 | Row callback, Drag와 Context Menu | [Row](07-row.md) | [`/examples/row`](http://127.0.0.1:4002/examples/row), [`/examples/context-menu`](http://127.0.0.1:4002/examples/context-menu) |
 | Format, Renderer와 Component | [Cell](08-cell.md) | [`/examples/cell`](http://127.0.0.1:4002/examples/cell), [`/examples/component`](http://127.0.0.1:4002/examples/component) |
-| OS 복사와 내부 붙여넣기 | [Clipboard](09-clipboard.md) | [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard) |
+| OS 복사, TSV 붙여넣기와 Fill Handle | [Clipboard](09-clipboard.md) | [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard), [`/examples/fill-handle`](http://127.0.0.1:4002/examples/fill-handle) |
 | Row·Cell 독립 선택과 조회 | [Selection](10-selection.md) | [`/examples/selection-clipboard`](http://127.0.0.1:4002/examples/selection-clipboard) |
 | Controlled Detail Row | [Row Expand](19-row-expand.md) | [`/examples/row-expand`](http://127.0.0.1:4002/examples/row-expand) |
 

@@ -11,9 +11,11 @@ import {
   type CominsTreeNode,
 } from "../../../src";
 
+import { ReadmeClipboardDemo } from "./ReadmeClipboardDemo";
 import { AutoHeightDemo, ViewportDemo } from "./ReadmeScaleDemos";
 
 type ReadmeFeatureId =
+  | "clipboard-fill"
   | "auto-row-height"
   | "viewport-datasource"
   | "column-filtering"
@@ -45,6 +47,7 @@ type PreviewRow = {
 
 const featureOrder: readonly ReadmeFeatureId[] = [
   "table-overview",
+  "clipboard-fill",
   "column-pinning",
   "row-grouping",
   "column-filtering",
@@ -55,6 +58,10 @@ const featureOrder: readonly ReadmeFeatureId[] = [
 ];
 
 const featureCopy: Record<ReadmeFeatureId, { description: string; label: string; title: string }> = {
+  "clipboard-fill": {
+    description: "Paste two external TSV fields without clearing the next cell. Repeat a value with the visual Fill Handle.",
+    label: "Paste & Fill", title: "TSV Paste and Fill Handle",
+  },
   "auto-row-height": {
     description: "Expand renderer content and resize the table. Visible row heights adjust across 100,000 rows.",
     label: "Auto height", title: "Automatic Row Heights",
@@ -477,6 +484,7 @@ function CrossTableDragDemo() {
 }
 
 const featureDemos: Record<ReadmeFeatureId, () => ReactNode> = {
+  "clipboard-fill": ReadmeClipboardDemo,
   "auto-row-height": AutoHeightDemo,
   "viewport-datasource": ViewportDemo,
   "column-filtering": ColumnFilteringDemo,

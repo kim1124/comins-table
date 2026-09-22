@@ -3980,7 +3980,7 @@ describe("comins-table keyboard interaction", () => {
 
     expect(ageHeader.getAttribute("data-column-placeholder")).toBeNull();
     expect(ageHeader.getAttribute("tabindex")).toBe("0");
-    expect(ageHeader.getAttribute("aria-label")).toBeNull();
+    expect(ageHeader.getAttribute("aria-label")).toBe("Age");
     expect(headerContent.hasAttribute("inert")).toBe(false);
     expect(headerContent.getAttribute("aria-hidden")).toBeNull();
 
@@ -5612,6 +5612,35 @@ describe("comins-table keyboard interaction", () => {
     ]);
   });
 
+  it("preserves internal Row order without onChangeData until a new data array arrives", () => {
+    const element = document.createElement("div");
+    const root = createRoot(element);
+    const ref = createRef<CominsTableRef<PersonRow>>();
+    const render = (data: PersonRow[]) => act(() => root.render(<CominsTable ref={ref} columns={[...columns]} data={data} getRowId={row => row.id} pagination={{ pageSize: 10, pageIndex: 0 }} rowProps={{ draggable: true }} />));
+    const order = () => [...element.querySelectorAll("tr[data-comins-row-data-index]")].map(row => row.getAttribute("data-testid"));
+    render(rows);
+    act(() => ref.current?.setMoveTargetRow(0, 1));
+    expect(order()).toEqual(["row-b", "row-a"]);
+    render(rows);
+    expect(order()).toEqual(["row-b", "row-a"]);
+    render([...rows]);
+    expect(order()).toEqual(["row-a", "row-b"]);
+    act(() => root.unmount());
+  });
+
+  it("hides Row drag handles by default and enables only explicitly draggable unlocked Rows", () => {
+    const element = document.createElement("div");
+    const root = createRoot(element);
+    act(() => root.render(<CominsTable columns={columns} data={rows} getRowId={getPersonRowId} />));
+    expect(element.querySelectorAll(".comins-row-drag-handle")).toHaveLength(0);
+    act(() => root.render(<CominsTable columns={columns} data={rows} getRowId={getPersonRowId} rowProps={{ draggable: true, disabled: row => row.id === "b" }} />));
+    expect(element.querySelector("[data-testid='row-drag-handle-a']")).not.toBeNull();
+    expect(element.querySelector("[data-testid='row-drag-handle-b']")).toBeNull();
+    act(() => root.render(<CominsTable columns={columns} data={rows} getRowId={getPersonRowId} rowProps={{ draggable: () => undefined }} />));
+    expect(element.querySelectorAll(".comins-row-drag-handle")).toHaveLength(0);
+    act(() => root.unmount());
+  });
+
   it("blocks row drag through rowProps.draggable without disabling row click", () => {
     const onClickRow = vi.fn();
     const element = renderTableElement(
@@ -6486,7 +6515,7 @@ describe("comins-table keyboard interaction", () => {
     expect(document.activeElement).toBe(toggle);
   });
 
-  it("restores focus to the remounted disclosure after the last virtual Detail collapses", () => {
+  it("preserves the owner disclosure and restores focus after the last virtual Detail collapses", () => {
     const animationFrames: FrameRequestCallback[] = [];
     const requestAnimationFrame = vi
       .spyOn(window, "requestAnimationFrame")
@@ -6530,13 +6559,13 @@ describe("comins-table keyboard interaction", () => {
         detailButton.click();
       });
 
-      const remountedToggle = element.querySelector<HTMLButtonElement>(
+      const preservedToggle = element.querySelector<HTMLButtonElement>(
         "[data-testid='row-detail-toggle-row-0']",
       )!;
 
-      expect(remountedToggle).not.toBe(originalToggle);
-      expect(remountedToggle.getAttribute("aria-expanded")).toBe("false");
-      expect(remountedToggle.hasAttribute("aria-controls")).toBe(false);
+      expect(preservedToggle).toBe(originalToggle);
+      expect(preservedToggle.getAttribute("aria-expanded")).toBe("false");
+      expect(preservedToggle.hasAttribute("aria-controls")).toBe(false);
       expect(element.querySelector("[data-detail-for='row-0']")).toBeNull();
 
       act(() => {
@@ -6545,7 +6574,7 @@ describe("comins-table keyboard interaction", () => {
         }
       });
 
-      expect(document.activeElement).toBe(remountedToggle);
+      expect(document.activeElement).toBe(preservedToggle);
     } finally {
       requestAnimationFrame.mockRestore();
     }

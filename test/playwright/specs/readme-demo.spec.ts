@@ -51,7 +51,7 @@ test("README overview moves through representative controlled Table scenes", asy
   await page.getByRole("button", { name: "Expand all" }).click();
   await expect(tree.locator("tr[data-comins-row-data-index]")).toHaveCount(8);
 
-  for (const feature of ["column-pinning", "row-grouping", "column-filtering", "cross-table-drag", "auto-row-height", "viewport-datasource"]) {
+  for (const feature of ["clipboard-fill", "column-pinning", "row-grouping", "column-filtering", "cross-table-drag", "auto-row-height", "viewport-datasource"]) {
     await page.getByTestId(`readme-demo-view-${feature}`).click();
     await expect(demo).toHaveAttribute("data-feature", feature);
     await expect(page.getByTestId(`readme-demo-${feature}`)).toBeVisible();

@@ -32,7 +32,7 @@ export function CellFeature() {
     },
     {
       cell: {
-        format: ({ row }) => `Data ${row.index + 1}`,
+        format: ({ value }) => String(value),
       },
       field: "age",
       id: "age",
@@ -42,12 +42,12 @@ export function CellFeature() {
     },
     {
       cell: {
-        format: ({ row }) => <strong>{`Data ${row.index + 1}`}</strong>,
+        format: ({ value }) => <strong>{String(value)}</strong>,
         props: {
           className: ({ value }) => (value === "Owner" ? "cell-role-owner" : "cell-role-muted"),
-          style: ({ value }) => ({
-            textAlign: value === "Owner" ? "center" : "left",
-          }),
+          style: {
+            textAlign: "left",
+          },
         },
       },
       field: "role",
@@ -60,7 +60,7 @@ export function CellFeature() {
       cell: {
         renderer: ({ row }) => (
           <span data-testid={`cell-renderer-${String(row.id)}`}>
-            <Button size="default" variant="secondary">{`renderer:Data ${row.index + 1}`}</Button>
+            <Button size="default" variant="secondary">{`renderer:${row.data.name}`}</Button>
           </span>
         ),
       },
@@ -85,7 +85,7 @@ export function CellFeature() {
     },
     {
       cell: {
-        format: ({ row }) => `Data ${row.index + 1}`,
+        format: ({ value }) => String(value),
       },
       field: "active",
       id: "event",

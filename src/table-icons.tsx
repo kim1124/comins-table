@@ -3,8 +3,6 @@ import {
   ChevronRightIcon,
   DragHandleDots2Icon,
   MagnifyingGlassIcon,
-  ThickArrowDownIcon,
-  ThickArrowUpIcon,
 } from "@radix-ui/react-icons";
 import * as React from "react";
 
@@ -22,8 +20,8 @@ const icons = {
   disclosureCollapsed: ChevronRightIcon,
   disclosureExpanded: ChevronRightIcon,
   filter: MagnifyingGlassIcon,
-  sortAscending: ThickArrowUpIcon,
-  sortDescending: ThickArrowDownIcon,
+  sortAscending: ChevronRightIcon,
+  sortDescending: ChevronRightIcon,
   sortUnsorted: CaretSortIcon,
 } as const;
 

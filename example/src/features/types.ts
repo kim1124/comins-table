@@ -20,6 +20,7 @@ export type FeatureId =
   | "viewport-datasource"
   | "cell"
   | "selection-clipboard"
+  | "visual-fill-handle"
   | "component"
   | "row"
   | "row-expand"

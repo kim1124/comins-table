@@ -29,6 +29,7 @@ Implemented routes include:
 - `/examples/column-pinning`
 - `/examples/cell`
 - `/examples/selection-clipboard`
+- `/examples/fill-handle`
 - `/examples/component`
 - `/examples/row`
 - `/examples/row-expand`
@@ -57,15 +58,25 @@ The `/examples/selection-clipboard` route demonstrates independent Row/Cell/Rang
 
 ## Example data and state policy
 
+- Text values align left, numeric values right, and controls, Boolean values, and fixed-format dates center. Component labels use stable Row data so dragging visibly moves their values.
+- In Column Filtering, Empty demonstrates preservation of an empty Group; Row Drag is disabled there. In Rows, Data 2 in Basics blocks only dragging, while Data 4 in Locked Row blocks selection, dragging, events, and keyboard focus.
+- Context Create inserts a new Row at the top; Delete removes all selected Rows. View and Update report menu events and payloads.
+- Paste & Fill includes a two-value TSV source that preserves the third Column. A trailing tab explicitly includes an empty next Cell and clears that destination; no missing Columns are implicitly cleared.
 - General examples use deterministic 30 Row data: Basic, CRUD, Header, Header Group, Cell, Components, Row, Context Menu, Selection/Clipboard, Export, and Ref API.
 - Purpose-specific fixtures retain their own size, including the six-Row multi-sort sample and pagination, lazy-load, infinite-scroll, Row Expand, and Tree scenarios.
 - Loading maps the same remote users API as Infinite Scroll. Initial loading starts with 0 Rows and skeletons, ready/refetch use 30 mapped Rows, refetch retains them under an overlay, and Empty maps an out-of-range response.
 - CRUD provides add, update, delete, and reset. The ambiguous Owner-only filtering control is not part of the example.
-- Header Group examples combine child Column MultiSelect selection with parent Group visibility Checkboxes. Disabling a parent preserves the selected children for restoration.
+- Header Group examples combine child Column MultiSelect selection with parent Group visibility toggles. Disabling a parent preserves the selected children for restoration.
 - The 960px tall Row Detail stays semantic content inside a 480px Table frame. The Table body owns scrolling so following owner Rows remain reachable.
 - Basic, Style, Component, and Renderer Tree examples start expanded and support fold/re-expand through controlled `onChangeData`; only the ref-control example starts folded.
-- CRUD labels and data keys are `column1`–`column6`, with `column4` kept as the Row ID. Other data Columns display their field names.
+- CRUD labels and editable data keys are `column1`–`column6`. A separate internal `id` preserves Row identity while all six fields can be updated. Other data Columns display their field names.
 - Lazy Load simulates 1,000 Rows in batches of 100 with 250ms delay and cancellation; it is separate from the remote Loading/Infinite Scroll examples.
 - Header Group siblings start with equal widths. Grouped Pinning permits moves; Row Grouping demonstrates movement restrictions with its own controls.
 - Summary examples span labels up to their result Columns while respecting pin boundaries.
 - The Tree drag example enables parent changes and automatic heights initially; library defaults remain opt-in.
+
+## Option controls in 0.1.11
+
+Boolean example options use toggle buttons: the accent state means enabled, and the outlined state means disabled. Click, Enter, or Space changes the option. Row selection, Checkbox component demos, and MultiSelect choices retain selection checkboxes.
+
+The Auto row height example provides Long content, Narrow width, and Row Detail toggles, plus an Expanded content toggle inside the first Row renderer. Tree drag starts with parent changes and automatic height enabled. Viewport offers automatic height, slow response, and failed-request toggles; Change query resets the dataset and Retry reloads a failed range after the failure option is disabled.

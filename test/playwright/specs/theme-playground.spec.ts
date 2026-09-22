@@ -42,8 +42,10 @@ test("theme page switches shipped CSS themes without reloading or changing virtu
       (element) => getComputedStyle(element).borderRightColor,
     );
 
-    expect(await firstHeaderCell.evaluate((element) => getComputedStyle(element).borderTopColor)).toBe(
-      rowBorderColor,
+    await expect(firstHeaderCell).toHaveCSS("border-top-width", "0px");
+    await expect(table).toHaveCSS("border-top-width", "1px");
+    expect(await table.evaluate(element => getComputedStyle(element).borderTopColor)).toBe(
+      await table.evaluate(element => getComputedStyle(element).borderRightColor),
     );
     expect(await firstHeaderCell.evaluate((element) => getComputedStyle(element).borderBottomColor)).toBe(
       rowBorderColor,

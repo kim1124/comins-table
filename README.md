@@ -1,5 +1,7 @@
 # Comins Table
 
+<img src="example/public/comins-symbol.svg" width="64" height="64" alt="Comins" />
+
 Comins Table is a controlled React data table for data-heavy application screens. Applications keep ownership of their data and business models while the Table provides virtualized rendering, structured Rows, configurable Headers, precise selection, and customizable cells.
 
 [![npm version](https://img.shields.io/npm/v/comins-table)](https://www.npmjs.com/package/comins-table)
@@ -7,7 +9,7 @@ Comins Table is a controlled React data table for data-heavy application screens
 [![Verify](https://github.com/kim1124/comins-table/actions/workflows/verify.yml/badge.svg?branch=main)](https://github.com/kim1124/comins-table/actions/workflows/verify.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-![Comins Table 0.1.10: Tree subtree drag, automatic heights, Viewport loading, and controlled table interactions](https://raw.githubusercontent.com/kim1124/comins-table/main/docs/assets/comins-table-overview.gif)
+![Comins Table 0.1.11: TSV paste, Fill Handle, Tree drag, automatic heights, and Viewport loading](https://raw.githubusercontent.com/kim1124/comins-table/main/docs/assets/comins-table-overview.gif)
 
 ## Why Comins Table
 
@@ -21,9 +23,20 @@ Comins Table is a controlled React data table for data-heavy application screens
 
 Comins Table is standalone and does not wrap another table or grid implementation.
 
-### Version 0.1.10
+### Version 0.1.11
 
-This source version adds Tree Row drag, automatic business Row heights with variable-height virtualization, and known-count Viewport Datasource loading. Row and Cell selection can be managed independently, with separate Ref getters and opt-in OS clipboard copying. See the [0.1.10 changelog](https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md) for the complete change list.
+The source and demonstrations below target 0.1.11. Publication is tracked separately in the changelog.
+
+**0.1.11 migration:** Row Drag is opt-in with `rowProps={{ draggable: true }}`. `onChangeData` is optional for local Row movement; connect it to synchronize application state. New `data` arrays remain authoritative.
+
+This source version adds opt-in external TSV paste and a visual Fill Handle, with atomic controlled edits and protected Cell guards. Header sorting uses disclosure-family Chevrons, and drag feedback follows the packaged design contract. Tree Row drag, automatic heights, and Viewport Datasource remain available. See the [0.1.11 changelog](https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md) for the complete change list.
+
+For migration, keep these data-ownership boundaries explicit:
+
+- Local Row reordering needs `rowProps.draggable: true`; connect `onChangeData` when the application must retain the new order. Use stable Row IDs and keep the input array reference stable when relying on internal order.
+- Tree movement still requires `treeRowDrag` and controlled `onChangeData`. Cross-Table transfers use the Coordinator; enabling a local Row handle does not enable transfers.
+- OS paste and Fill require `cellSelection` and `onChangeData`; both remain opt-in. A two-field TSV updates two destination Cells. A trailing tab deliberately supplies an additional empty field.
+- Viewport loading has no Row Drag handles. Reordering a partially loaded dataset belongs to the server, followed by a dataset reset.
 
 ### Feature catalog
 
@@ -301,9 +314,11 @@ Virtual List Item activation follows the normal Row selection modifiers. More se
 
 Set `clipboard` to enable OS keyboard copy. It defaults to `false`, preserving the existing internal copy buffer. With OS copy enabled, the default priority is multiple selected Cells → selected Rows → one selected Cell. Five selected Rows and three selected Cells copy the three Cells while retaining all five selected Rows. Discontiguous Cells produce a TSV rectangle with unselected positions empty; internal paste skips those positions.
 
-Call `copySelection("auto" | "cells" | "rows")` from a button or context menu to choose the target explicitly. This Ref method writes to the OS clipboard regardless of the `clipboard` prop, returns `Promise<string | null>`, and rejects if writing is unavailable or denied. Native text editing keeps its own copy behavior. Ctrl/Cmd+V uses the Table's internal buffer; importing arbitrary OS clipboard content is outside this version. See the [Clipboard guide](https://github.com/kim1124/comins-table/blob/main/docs/user/09-clipboard.md) for guards, TSV escaping, and loaded-data limits.
+Call `copySelection("auto" | "cells" | "rows")` from a button or context menu to choose the target explicitly. This Ref method writes to the OS clipboard regardless of the `clipboard` prop, returns `Promise<string | null>`, and rejects if writing is unavailable or denied. Native text editing keeps its own copy behavior. Ctrl/Cmd+V uses the Table's internal buffer by default; enable `clipboardPaste` to import external TSV instead. See the [Clipboard guide](https://github.com/kim1124/comins-table/blob/main/docs/user/09-clipboard.md) for guards, TSV escaping, and loaded-data limits.
 
-`copyCominsRow`, `copyCominsCell`, and `copyCominsCellRange` read Row or Cell selections. `pasteCominsRow`, `pasteCominsCell`, and `pasteCominsCellRange` apply clipboard data while respecting `props.copyable`, `props.pasteable`, and disabled guards. `fillCominsCellRange` remains a framework-independent core helper; no visual fill handle is presented as shipped UI.
+![Comins Table 0.1.11 pastes two TSV fields and repeats a Cell pattern with the Fill Handle](https://raw.githubusercontent.com/kim1124/comins-table/main/docs/assets/comins-table-clipboard-fill.gif)
+
+`copyCominsRow`, `copyCominsCell`, and `copyCominsCellRange` read Row or Cell selections. `pasteCominsRow`, `pasteCominsCell`, and `pasteCominsCellRange` apply clipboard data while respecting `props.copyable`, `props.pasteable`, and disabled guards. `fillCominsCellRange` accepts a single Cell or rectangular source pattern. Enable `clipboardPaste` for OS TSV paste and `fillHandle` for visual pattern repetition; both default to false and require `cellSelection` and `onChangeData`. Set `cell.parseClipboard` for typed external values, optional `cell.validateFill` for atomic Fill validation, and `onClipboardError` for rejected input. `parseCominsClipboardText` and `pasteCominsText` are available from the root, `/core`, and `/clipboard`. See the [Clipboard guide](https://github.com/kim1124/comins-table/blob/main/docs/user/09-clipboard.md) for limits, guards, native-editor behavior, and `fillSelection("down" | "right")` click alternatives.
 
 Use `exportCominsRowsToCsv` and `exportCominsRowsToJson` with the exact rows and export columns the application wants to serialize. Export remains independent of visible pagination, filtering, and selection unless the application passes those rows.
 
@@ -363,7 +378,7 @@ Use the [source repository](https://github.com/kim1124/comins-table) for develop
 
 Comins Table provides CSR arrays and known-count Viewport range loading. Server-side Row models and built-in server filtering, custom Filter editor renderers, Tree filtering, pivoting, charts, AI assistance, remote Tree loading, hierarchy pagination, Tree Row copy/paste, Tree Grid Row Details, nested managed Details, Firefox, Safari, and SSR are not shipped or supported.
 
-The visual fill handle is not shipped or supported. `fillCominsCellRange` remains available as a core helper without a drag-handle UI.
+The visual fill handle repeats values or selected patterns. Automatic numeric/date series and source clearing on range shrink are not supported. Viewport edits require contiguous loaded Rows and never request missing data.
 
 ## Development
 
@@ -378,7 +393,7 @@ npm run verify
 npm run docs:readme-gif
 ```
 
-`npm run docs:readme-gif` is a maintainer command that captures the real hidden Playground fixtures and regenerates the overview animation plus seven detailed feature animations, including Tree subtree drag, automatic height, and Viewport loading.
+`npm run docs:readme-gif` is a maintainer command that captures the real hidden Playground fixtures and regenerates the overview animation plus eight detailed feature animations, including TSV paste and Fill Handle, Tree subtree drag, automatic height, and Viewport loading.
 
 ## Trusted Publishing
 

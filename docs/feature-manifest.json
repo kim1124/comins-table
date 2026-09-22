@@ -225,7 +225,9 @@
         "copyCominsCellRange",
         "CominsCopyTarget",
         "CominsSelectedCell",
-        "CominsSelectionCopy"
+        "CominsSelectionCopy",
+        "parseCominsClipboardText",
+        "pasteCominsText"
       ],
       "guides": {
         "en": [
@@ -244,7 +246,9 @@
         "test/selection-core.test.ts",
         "test/playwright/specs/selection-clipboard.spec.ts",
         "test/selection-read-copy.test.ts",
-        "test/selection-ref.test.tsx"
+        "test/selection-ref.test.tsx",
+        "test/clipboard-edit-core.test.ts",
+        "test/playwright/specs/clipboard-edit.spec.ts"
       ]
     },
     {
@@ -659,7 +663,7 @@
     },
     {
       "id": "visual-fill-handle",
-      "status": "unsupported",
+      "status": "shipped",
       "category": "row-cell-selection",
       "apiSymbols": [
         "fillCominsCellRange"
@@ -672,9 +676,13 @@
           "docs/ko/09-clipboard.md"
         ]
       },
-      "playgroundRoutes": [],
+      "playgroundRoutes": [
+        "/examples/fill-handle"
+      ],
       "tests": [
-        "test/public-api-boundary.test.ts"
+        "test/clipboard-edit-core.test.ts",
+        "test/clipboard-edit-table.test.tsx",
+        "test/playwright/specs/clipboard-edit.spec.ts"
       ],
       "evidence": [
         "README.md"
@@ -871,7 +879,7 @@
       "docs/user/23-cross-table-drag.md",
       "docs/ko/23-cross-table-drag.md"
     ],
-    "fill-helper-no-visual-handle": [
+    "fill-repeat-no-series": [
       "docs/user/09-clipboard.md",
       "docs/ko/09-clipboard.md"
     ]
@@ -984,7 +992,9 @@
         "transferCominsGroupBetweenTables",
         "transferCominsRowBetweenTables",
         "updateCominsRows",
-        "useCominsViewport"
+        "useCominsViewport",
+        "parseCominsClipboardText",
+        "pasteCominsText"
       ],
       "reference": [
         "CominsButtonComponentConfig",
@@ -1375,7 +1385,9 @@
           "transferCominsRowBetweenTables",
           "updateCominsRows",
           "updateCominsTreeItem",
-          "useCominsViewport"
+          "useCominsViewport",
+          "parseCominsClipboardText",
+          "pasteCominsText"
         ]
       },
       "comins-table/core": {
@@ -1508,7 +1520,9 @@
           "setCominsSortState",
           "setCominsTableTheme",
           "sortCominsRows",
-          "updateCominsRows"
+          "updateCominsRows",
+          "parseCominsClipboardText",
+          "pasteCominsText"
         ]
       },
       "comins-table/clipboard": {
@@ -1527,7 +1541,9 @@
           "fillCominsCellRange",
           "pasteCominsCell",
           "pasteCominsCellRange",
-          "pasteCominsRow"
+          "pasteCominsRow",
+          "parseCominsClipboardText",
+          "pasteCominsText"
         ]
       },
       "comins-table/selection": {

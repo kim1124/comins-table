@@ -31,11 +31,12 @@ Route에는 locale prefix를 추가하지 않는다. API 및 prop 이름, code s
 - `/examples/theme`: CSS custom properties, theme class, rowHeight 동기화 계약
 - `/examples/loading`: Infinite Scroll과 같은 원격 API를 사용한 0 Row 초기 skeleton, 30개 매핑 Row 재조회 overlay, 실제 빈 응답과 ready 상태
 - `/examples/header`: 1Depth Header 이동, resize, 컬럼 설정 저장/불러오기, Header 표시 토글, Header 컬럼별 Checkbox Select Box 숨김/표시, Multi-column Sort. 컬럼 설정 저장/불러오기는 컬럼 표시 상태도 함께 저장한다. 다중 정렬 예제는 일반 클릭 또는 `Enter`/`Space`의 단일 정렬과 `Shift` 조작의 조건 추가를 구분하고 현재 `CominsSortModel`을 함께 출력한다.
-- `/examples/column-groups`: 2Depth Header 이동, resize, child Column MultiSelect와 parent Group Checkbox를 조합한 숨김/표시. `/examples/header-groups`는 legacy URL 호환용 redirect로 유지한다.
+- `/examples/column-groups`: 2Depth Header 이동, resize, child Column MultiSelect와 parent Group 토글을 조합한 숨김/표시. `/examples/header-groups`는 legacy URL 호환용 redirect로 유지한다.
 - `/examples/column-pinning`: 좌우 Column 및 Header Group 고정, 중앙 가로 스크롤, responsive demotion과 Summary 정렬
 - `/examples/body`: legacy URL 호환용 redirect. 실제 화면은 `/performance/virtualization`으로 이동한다.
 - `/examples/cell`: `cell.format`, `cell.props`, `cell.renderer`, cell event Alert, clipboard guard
-- `/examples/selection-clipboard`: `rowSelectionOnClick={false}`로 Row·Cell·Range 독립 선택, 선택 조회 API, 명시적인 Cell/Row 복사와 `onChangeSelection` 표시. `clipboard`로 OS 복사를 활성화하며 Ctrl/Cmd+V는 Column guard를 적용한 내부 버퍼를 사용한다.
+- `/examples/selection-clipboard`
+- `/examples/fill-handle`: `rowSelectionOnClick={false}`로 Row·Cell·Range 독립 선택, 선택 조회 API, 명시적인 Cell/Row 복사와 `onChangeSelection` 표시. `clipboard`로 OS 복사를 활성화하며 Ctrl/Cmd+V는 Column guard를 적용한 내부 버퍼를 사용한다.
 - `/examples/component`: Header와 Cell에 적용되는 built-in component와 custom renderer. Component 예제는 렌더링 결과 중심으로 표시한다.
 - `/examples/row`: drag handle reorder, `rowProps.draggable`, row disabled, row custom formatting, row event Alert, row keyboard copy/paste
 - `/examples/row-expand`: semantic Detail Row, controlled expanded ID, fixed/auto height, 480px Table frame 안의 960px tall Detail scroll
@@ -60,12 +61,16 @@ Route에는 locale prefix를 추가하지 않는다. API 및 prop 이름, code s
 
 ## 예제 데이터와 상태 정책
 
+- 문자열은 왼쪽, 숫자는 오른쪽, 컴포넌트·Boolean·고정 형식 날짜는 가운데로 정렬합니다. 컴포넌트 문구는 행 데이터에 연결되어 드래그한 값의 이동을 확인할 수 있습니다.
+- Column Filtering의 Empty는 빈 그룹 유지 동작을 보여주며 해당 예제에서는 Row Drag가 비활성화됩니다. Row 기본의 Data 2는 드래그만 금지하고, Row 잠금의 Data 4는 선택·드래그·이벤트·키보드 포커스를 제한합니다.
+- Context 추가는 새 Row를 맨 위에 넣고 삭제는 선택된 모든 Row를 제거합니다. 조회·수정은 메뉴 이벤트와 payload를 확인합니다.
+- Paste & Fill의 두 값 TSV 원본은 세 번째 컬럼을 유지합니다. 끝의 탭은 명시적인 빈 다음 Cell이므로 해당 값을 지웁니다. 원본에 없는 컬럼까지 비우지는 않습니다.
 - Basic, CRUD, Header, Header Group, Cell, Components, Row, Context Menu, Selection/Clipboard, Export, Ref API의 일반 예제는 deterministic 30 Row를 사용한다.
 - Multi-column Sort 6 Row와 pagination, lazy load, infinite scroll, Row Expand, Tree의 목적별 fixture는 각 기능 계약에 맞는 크기를 유지한다.
 - Loading은 Infinite Scroll과 같은 원격 사용자 API를 매핑한다. Initial은 0 Row skeleton, ready/refetch는 30개 매핑 Row, refetch는 기존 Row 위 overlay, Empty는 범위를 벗어난 실제 빈 응답을 사용한다.
 - Header Group parent를 끄더라도 child MultiSelect 선택은 유지되며 parent를 다시 켜면 선택된 child가 복원된다.
 - 960px tall Row Detail은 480px Table frame 안에서 semantic Detail Row로 유지된다. Table body가 scroll을 소유하므로 Detail 다음 owner Row까지 접근할 수 있다.
-- CRUD의 Column 이름과 데이터 키는 `column1`–`column6`이며 `column4` Row ID를 보존한다. 다른 데이터 Column도 field 이름을 표시한다.
+- CRUD의 Column 이름과 수정 가능한 데이터 키는 `column1`–`column6`이다. 별도의 내부 `id`로 Row 식별자를 유지하며 6개 필드를 모두 수정할 수 있다. 다른 데이터 Column도 field 이름을 표시한다.
 - Lazy Load는 1,000개 Row를 100개씩 250ms 지연·취소와 함께 시뮬레이션하며, 원격 API를 쓰는 Loading/Infinite Scroll 예제와 구분한다.
 - Header Group의 형제 Column은 같은 너비로 시작한다. Grouped Pinning은 이동을 허용하고 Row Grouping 자체 control에서 이동 제한을 확인한다.
 - Summary 예제는 결과 Column 직전까지 label을 병합하며 pin 경계를 유지한다.
@@ -111,3 +116,9 @@ CRUD, Cell, Row처럼 이벤트 확인이 필요한 예제는 별도 JSON echo �
 
 스크린샷 artifact는 모든 변경에 필수는 아니다.
 사용자가 직접 지적한 visual 문제, layout 겹침, 색상/선/위치 문제처럼 텍스트 assertion만으로 판단이 부족한 경우에 남긴다.
+
+## 0.1.11 옵션 조작
+
+Boolean 예제 옵션은 토글 버튼을 사용합니다. 강조색은 활성, 테두리 상태는 비활성을 뜻하며 클릭·Enter·Space로 전환합니다. Row 선택, Checkbox 컴포넌트 예제, MultiSelect 항목은 선택용 체크박스를 유지합니다.
+
+Auto row height 예제는 긴 콘텐츠·좁은 너비·Row Detail 토글과 첫 번째 Row Renderer 내부의 콘텐츠 펼침 토글을 제공합니다. Tree 이동 예제는 부모 변경과 자동 높이가 활성 상태로 시작합니다. Viewport는 자동 높이·느린 응답·오류 응답 토글을 제공합니다. 검색 결과 변경은 데이터셋을 초기화하며, 오류 응답을 끈 다음 Retry로 실패 구간을 다시 조회할 수 있습니다.

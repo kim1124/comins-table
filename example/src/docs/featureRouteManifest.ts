@@ -16,6 +16,7 @@ export const playgroundFeatureRouteManifest: readonly PlaygroundFeatureRoute[] =
   { featureId: "column-pinning", path: "/examples/column-pinning" },
   { featureId: "cell", path: "/examples/cell" },
   { featureId: "selection-clipboard", path: "/examples/selection-clipboard" },
+  { featureId: "visual-fill-handle", path: "/examples/fill-handle" },
   { featureId: "component", path: "/examples/component" },
   { featureId: "row", path: "/examples/row" },
   { featureId: "row-expand", path: "/examples/row-expand" },

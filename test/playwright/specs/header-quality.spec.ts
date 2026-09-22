@@ -73,6 +73,7 @@ test("header boundary resize is isolated from immediate column move and animated
   await expect(sortIcon).toHaveCSS("height", "15px");
   await expect(sortIcon).toHaveAttribute("aria-hidden", "true");
   await expect(sortIcon).toHaveAttribute("focusable", "false");
+  await expect(sortIcon).toHaveCSS("transform", "matrix(0, -1, 1, 0, 0, 0)");
   await expect(page.getByTestId("header-proof-sort")).toHaveCount(0);
 
   await ageHeader.click();
@@ -82,6 +83,7 @@ test("header boundary resize is isolated from immediate column move and animated
   await expect(descendingSortIcon).toBeVisible();
   await expect(descendingSortIcon).toHaveCSS("width", "15px");
   await expect(descendingSortIcon).toHaveCSS("height", "15px");
+  await expect(descendingSortIcon).toHaveCSS("transform", "matrix(0, 1, -1, 0, 0, 0)");
 
   await ageHeader.click();
   await expect(indicator).toHaveAttribute("data-sort-state", "none");
@@ -116,13 +118,8 @@ test("header boundary resize is isolated from immediate column move and animated
   await expect(basicExample.locator(".comins-table__header-table thead th[data-comins-column-id]").first()).toContainText("age");
   await expect(page.getByTestId("layout-order")).toHaveCount(0);
 
-  const firstBodyCell = basicExample.locator(".comins-table__body-table tbody tr").first().locator("td").first();
-  const firstBodyCellBox = await firstBodyCell.boundingBox();
-  const rowDragHandleBox = await basicExample.locator(".comins-row-drag-handle").first().boundingBox();
-  expect(firstBodyCellBox).not.toBeNull();
-  expect(rowDragHandleBox).not.toBeNull();
-  expect(rowDragHandleBox!.x - firstBodyCellBox!.x).toBeGreaterThanOrEqual(0);
-  expect(rowDragHandleBox!.x - firstBodyCellBox!.x).toBeLessThanOrEqual(24);
+  // Header actions do not opt the Table into Row movement.
+  await expect(basicExample.locator(".comins-row-drag-handle")).toHaveCount(0);
 
   expect(diagnostics).toEqual([]);
 });
@@ -287,9 +284,10 @@ test("source placeholder background stays muted while its drop marker remains vi
     },
     headerBackground,
   );
-  expect(placeholderMetrics.current.reduce((sum, channel) => sum + channel, 0)).toBeLessThan(
-    placeholderMetrics.before.reduce((sum, channel) => sum + channel, 0),
-  );
+  expect(placeholderMetrics.current).not.toEqual(placeholderMetrics.before);
+  const sourceSurface = await ageHeader.evaluate(element => getComputedStyle(element).getPropertyValue("--comins-table-surface-muted").trim());
+  expect(sourceSurface).toBe("#f6fcfa");
+  expect(placeholderMetrics.current).toEqual([246, 252, 250]);
   expect(Math.abs(placeholderMetrics.width - ageBox!.width)).toBeLessThanOrEqual(0.5);
   await page.mouse.up();
 
@@ -601,9 +599,8 @@ test("real rich group labels isolate every child subtree and restore after every
   const expectRestored = async (groupCount: number, columnCount: number) => {
     await expect(source).not.toHaveAttribute("data-column-placeholder", "true");
     await expect(source).not.toHaveAttribute("aria-label");
-    for (const child of children) {
-      await expect(child).not.toHaveAttribute("aria-label");
-    }
+    await expect(children[0]).toHaveAttribute("aria-label", "name action");
+    await expect(children[1]).toHaveAttribute("aria-label", "age");
     for (const content of [sourceContent, ...childContents]) {
       await expect(content).not.toHaveAttribute("inert", "");
       await expect(content).not.toHaveAttribute("aria-hidden", "true");
@@ -693,8 +690,8 @@ test("column move marks same-depth targets valid and cross-depth targets invalid
   await page.mouse.move(statusBox!.x + statusBox!.width / 2, statusBox!.y + statusBox!.height / 2);
   await expect(statusHeader).toHaveAttribute("data-column-drop-target", "true");
   await expect(statusHeader).toHaveAttribute("data-column-drop-valid", "true");
-  await expect(statusHeader).toHaveCSS("outline-color", "rgb(37, 99, 235)");
-  await expect(statusHeader).toHaveCSS("background-color", "rgba(37, 99, 235, 0.22)");
+  await expect(statusHeader).toHaveCSS("outline-color", "rgb(4, 120, 87)");
+  await expect(statusHeader).toHaveCSS("background-color", "rgb(209, 250, 229)");
   await page.keyboard.press("Escape");
   await page.mouse.up();
 

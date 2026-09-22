@@ -51,6 +51,7 @@ export function ContextMenuFeature() {
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
   const [selectedAction, setSelectedAction] = useState<ContextAction | null>(null);
   const [rows, setRows] = useState(() => createExampleRows(30));
+  const nextRowIdRef = useRef(1);
   const selectedRowIdsRef = useRef<CominsSelectionState["rowIds"]>([]);
   const tableRef = useRef<CominsTableRef<PersonRow>>(null);
   const columns = useMemo(() => createGuardedColumns(), []);
@@ -67,7 +68,20 @@ export function ContextMenuFeature() {
             ? contextMenu.selectionCount === 0
             : false,
       label: text(label),
-      onSelect: () => setSelectedAction(action),
+      onSelect: () => {
+        setSelectedAction(action);
+        if (action === "create") {
+          const index = nextRowIdRef.current++;
+          setRows(current => [{
+            id: `context-new-${index}`, name: `New row ${index}`, age: 0,
+            role: "Viewer", active: false, locked: "Protected",
+          }, ...current]);
+        } else if (action === "delete") {
+          const selectedIds = new Set(selectedRowIdsRef.current);
+          setRows(current => current.filter(row => !selectedIds.has(row.id)));
+          tableRef.current?.setSelectedRows([]);
+        }
+      },
     }));
   }, [contextMenu, locale, text]);
   const selectedMenuLabel = selectedAction
@@ -81,8 +95,8 @@ export function ContextMenuFeature() {
     <section className="feature-panel" onClick={() => setContextMenu(null)}>
       <FeatureSampleSection
         description={text(defineLocalizedText(
-          "우클릭한 Row가 기존 선택에 포함되면 selection을 유지하고, 선택 개수에 따른 조회·추가·수정·삭제 활성화와 row/cell payload를 확인합니다.",
-          "Right-click a selected row to preserve selection and inspect action availability and row/cell payloads.",
+          "선택된 Row를 우클릭하면 다중 선택을 유지합니다. 추가는 새 Row를 맨 위에 넣고, 삭제는 선택한 모든 Row를 제거합니다. 조회·수정은 payload와 메뉴 이벤트를 확인하는 예제입니다.",
+          "Right-click a selected Row to preserve multi-selection. Create inserts a Row at the top; Delete removes all selected Rows. View and Update demonstrate payloads and menu events.",
         ))}
         id="context-menu"
         title={text(defineLocalizedText("Context Menu 예제", "Context Menu example"))}
@@ -115,6 +129,7 @@ export function ContextMenuFeature() {
             </>
           }
         />
+        <p data-testid="context-row-count">{rows.length} {text(defineLocalizedText("개 Row", "Rows"))}</p>
         {selectedMenuLabel ? (
           <Alert data-testid="context-menu-alert">
             <AlertTitle>{text(defineLocalizedText("메뉴 선택", "Menu selection"))}</AlertTitle>

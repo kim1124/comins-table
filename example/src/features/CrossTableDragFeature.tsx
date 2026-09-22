@@ -165,12 +165,12 @@ export function CrossTableDragFeature() {
         <div className="cross-table-grid">
           <div>
             <strong>{text(defineLocalizedText("왼쪽 Flat Table", "flat-left"))}</strong>
-            <CominsTable className="example-table" columns={transferColumns} data={flatLeft} data-testid="cross-table-flat-left" getRowId={(row) => row.id} rowProps={{ draggable: true }} tableTransfer={flatTransfer("flat-left")} />
+            <CominsTable className="example-table" columns={transferColumns} data={flatLeft} onChangeData={setFlatLeft} data-testid="cross-table-flat-left" getRowId={(row) => row.id} rowProps={{ draggable: true }} tableTransfer={flatTransfer("flat-left")} />
             <pre className="state-output">{JSON.stringify(flatLeft.map((row) => row.id))}</pre>
           </div>
           <div>
             <strong>{text(defineLocalizedText("오른쪽 Flat Table", "flat-right"))}</strong>
-            <CominsTable className="example-table" columns={transferColumns} data={flatRight} data-testid="cross-table-flat-right" getRowId={(row) => row.id} rowProps={{ draggable: true }} tableTransfer={flatTransfer("flat-right")} />
+            <CominsTable className="example-table" columns={transferColumns} data={flatRight} onChangeData={setFlatRight} data-testid="cross-table-flat-right" getRowId={(row) => row.id} rowProps={{ draggable: true }} tableTransfer={flatTransfer("flat-right")} />
             <pre className="state-output">{JSON.stringify(flatRight.map((row) => row.id))}</pre>
           </div>
         </div>
@@ -187,12 +187,12 @@ export function CrossTableDragFeature() {
         <div className="cross-table-grid">
           <div>
             <strong>{text(defineLocalizedText("왼쪽 Group Table", "group-left"))}</strong>
-            <CominsTable className="example-table" columns={transferColumns} data={groupedLeftRows} data-testid="cross-table-group-left" getRowId={(row) => row.id} rowGrouping={grouping("group-left", groupedLeftGroups)} rowProps={{ draggable: true }} tableTransfer={groupedTransfer("group-left")} />
+            <CominsTable className="example-table" columns={transferColumns} data={groupedLeftRows} onChangeData={setGroupedLeftRows} data-testid="cross-table-group-left" getRowId={(row) => row.id} rowGrouping={grouping("group-left", groupedLeftGroups)} rowProps={{ draggable: true }} tableTransfer={groupedTransfer("group-left")} />
             <pre className="state-output" data-testid="cross-table-group-left-state">{JSON.stringify({ groups: groupedLeftGroups.map((group) => group.id), rows: groupedLeftRows.map((row) => ({ groupId: row.groupId, id: row.id })) })}</pre>
           </div>
           <div>
             <strong>{text(defineLocalizedText("오른쪽 Group Table", "group-right"))}</strong>
-            <CominsTable className="example-table" columns={transferColumns} data={groupedRightRows} data-testid="cross-table-group-right" getRowId={(row) => row.id} rowGrouping={grouping("group-right", groupedRightGroups)} rowProps={{ draggable: true }} tableTransfer={groupedTransfer("group-right")} />
+            <CominsTable className="example-table" columns={transferColumns} data={groupedRightRows} onChangeData={setGroupedRightRows} data-testid="cross-table-group-right" getRowId={(row) => row.id} rowGrouping={grouping("group-right", groupedRightGroups)} rowProps={{ draggable: true }} tableTransfer={groupedTransfer("group-right")} />
             <pre className="state-output" data-testid="cross-table-group-right-state">{JSON.stringify({ groups: groupedRightGroups.map((group) => group.id), rows: groupedRightRows.map((row) => ({ groupId: row.groupId, id: row.id })) })}</pre>
           </div>
         </div>

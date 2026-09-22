@@ -227,6 +227,7 @@ describe("comins-table user documentation contract", () => {
     expect(readme).toContain("docs/ko/README.md");
     expect(readme).toContain("docs/assets/comins-table-overview.gif");
     for (const [guide, asset] of [
+      ["09-clipboard.md", "comins-table-clipboard-fill.gif"],
       ["20-row-grouping.md", "comins-table-row-grouping.gif"],
       ["21-column-filtering.md", "comins-table-column-filtering.gif"],
       ["22-column-pinning.md", "comins-table-column-pinning.gif"],
@@ -286,7 +287,7 @@ describe("comins-table user documentation contract", () => {
 
     expect(readme).toContain("CSR-focused controlled component");
     expect(readme).toContain("CSR");
-    expect(readme).toContain("The visual fill handle is not shipped or supported");
+    expect(readme).toContain("The visual fill handle repeats values or selected patterns");
     expect(readme).not.toContain("first public release");
 
     expect(optionGuide).toContain("data + onChangeData");
@@ -300,7 +301,7 @@ describe("comins-table user documentation contract", () => {
     expect(unavailableList).not.toContain("집계");
     expect(unavailableList).not.toContain("트리 데이터");
     expect(unavailableList).not.toContain("Row Grouping");
-    expect(advancedFeature).toContain("시각적 Fill Handle UI");
+    expect(unavailableList).not.toContain("시각적 Fill Handle UI");
   });
 
   it("documents and demonstrates controlled Row Grouping", () => {

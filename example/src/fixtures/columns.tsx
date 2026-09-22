@@ -10,18 +10,12 @@ export function createBaseColumns(): Array<CominsTableColumn<PersonRow>> {
   return [
     { field: "name", label: "name", minWidth: 100, sort: true },
     {
-      cell: {
-        format: ({ row }) => `Data ${row.index + 1}`,
-      },
       field: "age",
       label: "age",
       minWidth: 100,
       sort: true,
     },
     {
-      cell: {
-        format: ({ row }) => `Data ${row.index + 1}`,
-      },
       field: "role",
       label: "role",
       minWidth: 100,
