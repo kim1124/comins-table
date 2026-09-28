@@ -1,4 +1,4 @@
-import type { CominsRowId } from "./core";
+import type { CominsRowId } from "./model";
 
 export const COMINS_MAX_PHYSICAL_TOTAL_HEIGHT = 1_500_000;
 

@@ -1,3 +1,23 @@
+import {
+  getEffectiveColumnMinWidth,
+  getEffectiveColumnMaxWidth,
+  clampColumnWidth,
+  setColumnWidthInsideParentGroup,
+} from "./column-layout";
+import { setCominsNestedInputValue } from "./row-value";
+import {
+  getNextSortModel,
+  getSortRule,
+  getSortIndicatorState,
+  getAriaSortState,
+  areSortStatesEqual,
+  areSortModelsEqual,
+  insertDeclaredColumnsIntoOrder,
+  reconcileColumnOrderHistory,
+  canPreserveSelection,
+} from "./table-state";
+import type { CominsEventRow } from "./model";
+export type { CominsEventRow } from "./model";
 import type React from "react";
 import {
   Fragment,
@@ -331,7 +351,6 @@ function areCominsRowDragTargetsEqual(
   );
 }
 
-const COMINS_MIN_COLUMN_WIDTH = 88;
 function getCominsColumnDropStatus(
   source: CominsColumnMoveHeader,
   target: CominsColumnMoveHeader,
@@ -358,13 +377,6 @@ export type CominsTableRowProps<TData> = {
   /** Row dragging is opt-in. False or undefined hides the drag handle. */
   draggable?: CominsRowPropValue<TData, boolean | undefined>;
   style?: CominsRowPropValue<TData, React.CSSProperties | undefined>;
-};
-
-export type CominsEventRow<TData> = {
-  data: TData;
-  dataIndex: number;
-  id: CominsRowId;
-  index: number;
 };
 
 export type CominsRowDragTarget = {
@@ -1294,335 +1306,6 @@ function renderCominsContentWithComponents<TData>(
       </span>
     </span>
   );
-}
-
-function getEffectiveColumnMinWidth<TData>(column: CominsTableRuntimeColumn<TData>) {
-  return Math.max(COMINS_MIN_COLUMN_WIDTH, column.minWidth ?? COMINS_MIN_COLUMN_WIDTH);
-}
-
-function getEffectiveColumnMaxWidth<TData>(column: CominsTableRuntimeColumn<TData>) {
-  return column.maxWidth ?? Number.POSITIVE_INFINITY;
-}
-
-function getRuntimeColumnWidth<TData>(
-  state: CominsTableState<TData>,
-  column: CominsTableRuntimeColumn<TData>,
-) {
-  return state.columnState[column.id]?.width ?? column.width ?? 100;
-}
-
-function clampColumnWidth(width: number, minWidth: number, maxWidth: number) {
-  return Math.min(maxWidth, Math.max(minWidth, width));
-}
-
-function distributeRuntimeColumnWidths<TData>(
-  state: CominsTableState<TData>,
-  columns: Array<CominsTableRuntimeColumn<TData>>,
-  targetWidth: number,
-) {
-  const widths = columns.map((column) =>
-    clampColumnWidth(getRuntimeColumnWidth(state, column), getEffectiveColumnMinWidth(column), getEffectiveColumnMaxWidth(column)),
-  );
-  const active = new Set(columns.map((_column, index) => index));
-  const minWidths = columns.map(getEffectiveColumnMinWidth);
-  const maxWidths = columns.map(getEffectiveColumnMaxWidth);
-  const boundedTargetWidth = clampColumnWidth(
-    targetWidth,
-    minWidths.reduce((sum, width) => sum + width, 0),
-    maxWidths.reduce((sum, width) => sum + width, 0),
-  );
-
-  while (active.size > 0) {
-    const currentTotal = widths.reduce((sum, width) => sum + width, 0);
-    const delta = boundedTargetWidth - currentTotal;
-
-    if (Math.abs(delta) < 0.001) {
-      break;
-    }
-
-    const activeIndexes = [...active];
-    const activeWeight = activeIndexes.reduce((sum, index) => sum + Math.max(widths[index] ?? 0, 0), 0);
-    let clamped = false;
-
-    for (const index of activeIndexes) {
-      const width = widths[index] ?? 0;
-      const weight = activeWeight > 0 ? width / activeWeight : 1 / activeIndexes.length;
-      const nextWidth = width + delta * weight;
-      const clampedWidth = clampColumnWidth(nextWidth, minWidths[index] ?? 0, maxWidths[index] ?? Number.POSITIVE_INFINITY);
-
-      widths[index] = clampedWidth;
-
-      if (Math.abs(clampedWidth - nextWidth) > 0.001) {
-        active.delete(index);
-        clamped = true;
-      }
-    }
-
-    if (!clamped) {
-      break;
-    }
-  }
-
-  return widths;
-}
-
-function setColumnWidthInsideParentGroup<TData>(
-  state: CominsTableState<TData>,
-  columnId: string,
-  width: number,
-) {
-  const group = state.columnGroups.find((candidate) => candidate.children.includes(columnId));
-
-  if (!group || state.columnGroupState[group.id]?.hidden === true) {
-    return setCominsColumnWidth(state, columnId, width);
-  }
-
-  const childColumns = group.children
-    .map((childId) => state.columns.find((column) => column.id === childId))
-    .filter((column): column is CominsTableRuntimeColumn<TData> => Boolean(column))
-    .filter((column) => state.columnState[column.id]?.hidden !== true);
-  const targetColumn = childColumns.find((column) => column.id === columnId);
-
-  if (!targetColumn) {
-    return setCominsColumnWidth(state, columnId, width);
-  }
-
-  const siblingColumns = childColumns.filter((column) => column.id !== columnId);
-
-  if (siblingColumns.length === 0) {
-    const currentGroupWidth = getRuntimeColumnWidth(state, targetColumn);
-
-    return setCominsColumnWidth(
-      state,
-      columnId,
-      clampColumnWidth(width, getEffectiveColumnMinWidth(targetColumn), Math.min(getEffectiveColumnMaxWidth(targetColumn), currentGroupWidth)),
-    );
-  }
-
-  const currentGroupWidth = childColumns.reduce((sum, column) => sum + getRuntimeColumnWidth(state, column), 0);
-  const siblingMinWidth = siblingColumns.reduce((sum, column) => sum + getEffectiveColumnMinWidth(column), 0);
-  const siblingMaxWidth = siblingColumns.reduce((sum, column) => sum + getEffectiveColumnMaxWidth(column), 0);
-  const minWidth = Math.max(getEffectiveColumnMinWidth(targetColumn), currentGroupWidth - siblingMaxWidth);
-  const maxWidth = Math.max(minWidth, Math.min(getEffectiveColumnMaxWidth(targetColumn), currentGroupWidth - siblingMinWidth));
-  const nextTargetWidth = clampColumnWidth(width, minWidth, maxWidth);
-  const nextSiblingWidths = distributeRuntimeColumnWidths(state, siblingColumns, currentGroupWidth - nextTargetWidth);
-  let next = setCominsColumnWidth(state, columnId, nextTargetWidth);
-
-  siblingColumns.forEach((column, index) => {
-    next = setCominsColumnWidth(next, column.id, nextSiblingWidths[index] ?? getRuntimeColumnWidth(next, column));
-  });
-
-  return next;
-}
-
-function setCominsNestedInputValue<TData>(row: TData, field: string, value: string): TData {
-  if (!row || typeof row !== "object") {
-    return row;
-  }
-
-  const keys = field.split(".");
-  const [firstKey] = keys;
-
-  if (!firstKey) {
-    return row;
-  }
-
-  if (keys.length === 1) {
-    return { ...row, [firstKey]: value };
-  }
-
-  const root = { ...(row as Record<string, unknown>) };
-  let current: Record<string, unknown> = root;
-
-  keys.slice(0, -1).forEach((key, index) => {
-    const nextKey = keys[index + 1];
-    const existing = current[key];
-    const next =
-      existing && typeof existing === "object" && !Array.isArray(existing)
-        ? { ...(existing as Record<string, unknown>) }
-        : {};
-
-    current[key] = next;
-
-    if (nextKey) {
-      current = next;
-    }
-  });
-
-  current[keys.at(-1)!] = value;
-
-  return root as TData;
-}
-
-function getNextSort(current: CominsSortState | null, columnId: string): CominsSortState | null {
-  if (current?.columnId !== columnId) {
-    return { columnId, direction: "asc" };
-  }
-
-  if (current.direction === "asc") {
-    return { columnId, direction: "desc" };
-  }
-
-  return null;
-}
-
-function getNextSortModel(current: CominsSortModel, columnId: string, additive: boolean): CominsSortState[] {
-  const currentIndex = current.findIndex((rule) => rule.columnId === columnId);
-  const currentRule = currentIndex < 0 ? null : current[currentIndex] ?? null;
-  const nextRule = getNextSort(currentRule, columnId);
-
-  if (!additive) {
-    return nextRule ? [nextRule] : [];
-  }
-
-  if (!nextRule) {
-    return current.filter((rule) => rule.columnId !== columnId);
-  }
-
-  if (currentIndex < 0) {
-    return [...current, nextRule];
-  }
-
-  return current.map((rule, index) => (index === currentIndex ? nextRule : rule));
-}
-
-function getSortRule(current: CominsSortModel, columnId: string) {
-  const index = current.findIndex((rule) => rule.columnId === columnId);
-
-  return index < 0 ? null : { priority: index + 1, rule: current[index]! };
-}
-
-function getSortIndicatorState(current: CominsSortModel, columnId: string) {
-  const currentRule = getSortRule(current, columnId)?.rule;
-
-  if (!currentRule) {
-    return "none";
-  }
-
-  return currentRule.direction;
-}
-
-function getAriaSortState(current: CominsSortModel, columnId: string) {
-  const currentRule = getSortRule(current, columnId);
-
-  if (!currentRule) {
-    return current.length > 1 ? undefined : "none";
-  }
-
-  if (currentRule.priority > 1) {
-    return undefined;
-  }
-
-  return currentRule.rule.direction === "asc" ? "ascending" : "descending";
-}
-
-function areSortStatesEqual(left: CominsSortState | null, right: CominsSortState | null) {
-  if (!left || !right) {
-    return left === right;
-  }
-
-  return left.columnId === right.columnId && left.direction === right.direction;
-}
-
-function areSortModelsEqual(left: CominsSortModel, right: CominsSortModel) {
-  if (left.length !== right.length) {
-    return false;
-  }
-
-  return left.every(
-    (rule, index) => rule.columnId === right[index]?.columnId && rule.direction === right[index]?.direction,
-  );
-}
-
-function areRowIdSequencesEqual(left: readonly CominsRowId[], right: readonly CominsRowId[]) {
-  return left.length === right.length && left.every((id, index) => id === right[index]);
-}
-
-function insertDeclaredColumnsIntoOrder(
-  order: readonly string[],
-  declaredOrder: readonly string[],
-) {
-  const next = [...order];
-
-  for (let declaredIndex = 0; declaredIndex < declaredOrder.length; declaredIndex += 1) {
-    const columnId = declaredOrder[declaredIndex];
-
-    if (columnId === undefined || next.includes(columnId)) {
-      continue;
-    }
-
-    const followingColumnId = declaredOrder
-      .slice(declaredIndex + 1)
-      .find((candidate) => next.includes(candidate));
-
-    if (followingColumnId !== undefined) {
-      next.splice(next.indexOf(followingColumnId), 0, columnId);
-      continue;
-    }
-
-    const precedingColumnId = [...declaredOrder.slice(0, declaredIndex)]
-      .reverse()
-      .find((candidate) => next.includes(candidate));
-
-    if (precedingColumnId === undefined) {
-      next.push(columnId);
-    } else {
-      next.splice(next.lastIndexOf(precedingColumnId) + 1, 0, columnId);
-    }
-  }
-
-  return next;
-}
-
-function reconcileColumnOrderHistory(
-  history: readonly string[],
-  currentOrder: readonly string[],
-  declaredOrder: readonly string[],
-) {
-  const merged = insertDeclaredColumnsIntoOrder(history, declaredOrder);
-  const currentIds = new Set(currentOrder);
-  let currentIndex = 0;
-
-  return merged.map((columnId) => {
-    if (!currentIds.has(columnId)) {
-      return columnId;
-    }
-
-    const currentColumnId = currentOrder[currentIndex];
-    currentIndex += 1;
-    return currentColumnId ?? columnId;
-  });
-}
-
-function canPreserveSelection<TData>(
-  current: CominsTableState<TData>,
-  next: CominsTableState<TData>,
-) {
-  if (!areRowIdSequencesEqual(current.rowIds, next.rowIds)) {
-    return false;
-  }
-
-  const nextColumnIds = new Set(next.columns.map((column) => column.id));
-  const selectedCell = current.selection.cell;
-  const selectedCells = current.selection.cells ?? [];
-  const selectedRange = current.selection.range;
-
-  if (selectedCell && !nextColumnIds.has(selectedCell.columnId)) {
-    return false;
-  }
-
-  if (selectedCells.some((cell) => !nextColumnIds.has(cell.columnId))) {
-    return false;
-  }
-
-  if (
-    selectedRange &&
-    (!nextColumnIds.has(selectedRange.anchor.columnId) || !nextColumnIds.has(selectedRange.focus.columnId))
-  ) {
-    return false;
-  }
-
-  return true;
 }
 
 function getTreeNestedFieldValue(row: unknown, field: string): unknown {

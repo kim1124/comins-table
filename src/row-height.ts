@@ -1,4 +1,4 @@
-import type { CominsEventRow } from "./index";
+import type { CominsEventRow } from "./model";
 
 export type CominsRowHeight = number | "auto";
 export type CominsRowHeightParams<TData> = { row: CominsEventRow<TData> };

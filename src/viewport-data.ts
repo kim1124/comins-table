@@ -1,4 +1,4 @@
-import type { CominsRowId, CominsSelectionState } from "./core";
+import type { CominsRowId, CominsSelectionState } from "./model";
 
 export type CominsViewportRevision = string | number;
 export type CominsViewportRange = { startIndex: number; endIndex: number };
