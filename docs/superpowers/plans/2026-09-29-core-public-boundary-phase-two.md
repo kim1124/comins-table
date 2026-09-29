@@ -10,7 +10,7 @@
 
 **Spec:** [Core 플랫폼 경계 설계](../specs/2026-09-29-core-platform-boundary-design.md)
 
-**Boundary evidence:** [선행 경계 조사](../specs/2026-09-29-core-boundary-research.md). Task 0은 2026-09-29 조사·문서 반영 완료, Task 1~4는 미실행이다.
+**Boundary evidence:** [선행 경계 조사](../specs/2026-09-29-core-boundary-research.md). Task 0 조사와 Task 1 기준선 구축 완료, Task 2~4는 미실행이다. 검증은 `reports/2026-09-29.md`에 기록한다.
 
 ## Global Constraints
 
@@ -88,7 +88,7 @@
 
 조사에서 테스트를 실행한 것은 아니다. Task 0 체크는 문서 산출물 완료만 의미하며 제품 독립성은 Task 2 이후 증거로 판정한다.
 
-### Task 1: 공개 API 기준선과 이동 분류 고정
+### Task 1: 공개 API 기준선과 이동 분류 고정 — 완료
 
 **Files:** 생성 `test/fixtures/core-public-api-baseline.json`, `test/fixtures/core-boundary-map.json`, `test/core-public-api.test.ts`, `docs/superpowers/specs/2026-09-29-core-public-api-migration.md`.
 
@@ -96,10 +96,10 @@
 
 추가 `core-boundary-map.json`은 `{ baselineCommit, areas }`다. `areas`는 B1~B9를 key로, `{ sources: string[], targetLayers: ("core" | "browser" | "react")[], invariants: string[], existingTests: string[], plannedTests: string[], implementationStage: "3" | "4" | "3+4" }`를 값으로 갖는다. 현재 존재하는 경로와 후속 생성할 테스트를 분리한다. 공개 심볼 목록에 없는 기능도 이 목록에는 포함한다.
 
-- [ ] **Step 1: 기준선 검증 테스트 작성.** `preserves every public entrypoint`에서 package exports key가 정확히 `[".", "./clipboard", "./core", "./selection", "./styles.css"]`인지 검사한다. `matches all baseline symbols`에서 네 JS/타입 진입점의 정렬된 목록이 JSON과 일치하는지 검사한다. `classifies every core symbol exactly once`에서 `Object.keys(coreDisposition).sort()`가 Core 목록과 같은지, 빈 reason/알 수 없는 kind가 없는지 검사한다.
-- [ ] **Step 2: RED 확인.** `npm run test:run -- test/core-public-api.test.ts`를 실행한다. 새 기준선 파일 부재로 실패해야 하며, 기존 도구의 import 오류라면 테스트 준비 문제를 먼저 수정한다.
-- [ ] **Step 2a: 내부 경계 coverage 테스트.** `covers all nine boundary areas`는 B1~B9의 정확한 key 집합, 비어 있지 않은 계약/계층, sources/existingTests의 파일 존재를 검사한다. 합성 입력에서 B6을 제거하면 누락으로 실패해야 한다. 모든 `src` 구현 파일이 sources에 포함되거나 공개 facade로 명시되어야 하며, runtime graph 검사 대상과 미래 이전 대상은 혼동하지 않는다.
-- [ ] **Step 3: 기준선과 이동표 작성.** 조사 기준 커밋의 전체 이름 목록을 기존 checker로 수집한다. 모든 심볼을 아래 분류에 따라 한 번씩 배정하고, 문서에 `이전 import → 목표 import → 계약 변경 → 검증 위치`를 심볼별로 기록한다. Task 0 조사에서 B1~B9의 파일·계약·기존/추가 테스트를 `core-boundary-map.json`에 옮기고 전체 src 파일의 소유권을 연결한다. 공개 facade도 대응하는 영역의 sources에 포함한다. 테스트 실행 시 기준선을 자동 갱신하지 않는다.
+- [x] **Step 1: 기준선 검증 테스트 작성.** `preserves every public entrypoint`에서 package exports key가 정확히 `[".", "./clipboard", "./core", "./selection", "./styles.css"]`인지 검사한다. `matches all baseline symbols`에서 네 JS/타입 진입점의 정렬된 목록이 JSON과 일치하는지 검사한다. `classifies every core symbol exactly once`에서 `Object.keys(coreDisposition).sort()`가 Core 목록과 같은지, 빈 reason/알 수 없는 kind가 없는지 검사한다.
+- [x] **Step 2: RED 확인.** `npm run test:run -- test/core-public-api.test.ts`를 실행한다. 새 기준선 파일 부재로 실패해야 하며, 기존 도구의 import 오류라면 테스트 준비 문제를 먼저 수정한다.
+- [x] **Step 2a: 내부 경계 coverage 테스트.** `covers all nine boundary areas`는 B1~B9의 정확한 key 집합, 비어 있지 않은 계약/계층, sources/existingTests의 파일 존재를 검사한다. 합성 입력에서 B6을 제거하면 누락으로 실패해야 한다. 모든 `src` 구현 파일이 sources에 포함되거나 공개 facade로 명시되어야 하며, runtime graph 검사 대상과 미래 이전 대상은 혼동하지 않는다.
+- [x] **Step 3: 기준선과 이동표 작성.** 조사 기준 커밋의 전체 이름 목록을 기존 checker로 수집한다. 모든 심볼을 아래 분류에 따라 한 번씩 배정하고, 문서에 `이전 import → 목표 import → 계약 변경 → 검증 위치`를 심볼별로 기록한다. Task 0 조사에서 B1~B9의 파일·계약·기존/추가 테스트를 `core-boundary-map.json`에 옮기고 전체 src 파일의 소유권을 연결한다. 공개 facade도 대응하는 영역의 sources에 포함한다. 테스트 실행 시 기준선을 자동 갱신하지 않는다.
 
 | 대상 | 분류와 목표 계약 |
 | --- | --- |
@@ -112,8 +112,8 @@
 
 `split-contract`는 타입명을 일괄 삭제하거나 `any`/`unknown`으로 치환한다는 뜻이 아니다. 단계 3에서 사용할 구체 모델 선언은 이 이동표와 기존 필드 사용처를 근거로 설계하며, 루트의 기존 이름과 `/core`의 데이터 이름이 충돌하면 루트의 명시적 export로 해결한다. 이름을 새로 추가할 경우 그 단계의 API inventory와 문서 계약을 함께 갱신한다.
 
-- [ ] **Step 4: GREEN 확인.** Step 2 명령과 `npm run check:docs`를 실행한다. 네 진입점의 모든 이름과 Core 130개 분류에 누락이 없어야 한다. `split-contract` 심볼의 구현이 완료됐다고 표시하지 않는다.
-- [ ] **Step 5: 원자적 로컬 커밋.** 이 작업의 네 파일만 stage하고 `test: pin public core API migration inventory`로 커밋한다.
+- [x] **Step 4: GREEN 확인.** Step 2 명령과 `npm run check:docs`를 실행한다. 네 진입점의 모든 이름과 Core 130개 분류에 누락이 없어야 한다. `split-contract` 심볼의 구현이 완료됐다고 표시하지 않는다.
+- [x] **Step 5: 원자적 로컬 커밋.** 이 작업의 네 파일과 계획 체크리스트·실행 리포트를 stage하고 `test: pin public core API migration inventory`로 커밋한다.
 
 ### Task 2: React 없는 공개 패키지 소비자 검사기
 
@@ -174,7 +174,7 @@ CLI는 tarball의 타입/실행 검사와 runtime graph를 항상 수행하고, 
 
 ## 자체 검토 결과
 
-- 승인된 선행 경계 조사는 Task 0으로 완료 기록했다. 설계의 단계 2 구현은 Task 1~4이며 아직 미실행이다. 단계 3~6의 인계 입력과 완료 조건도 연결했다.
+- 승인된 선행 경계 조사 Task 0과 API·내부 기능 기준선 Task 1을 완료했다. Task 2~4는 미실행이며 단계 3~6의 인계 입력과 완료 조건을 연결했다.
 - 기존 1단계의 내부 격리 검증과 이번 공개 패키지 검증을 구분했다.
 - 타입과 런타임 실패를 구분하고, 기대하는 실패를 릴리스 통과로 오인하지 않도록 독립 명령과 exit code를 정의했다.
 - 신규 제품 API나 Vue/패키지 토폴로지를 이 계획에서 임의 확정하지 않았다. 공개 타입 이동 정책은 승인된 설계에 따른다.
