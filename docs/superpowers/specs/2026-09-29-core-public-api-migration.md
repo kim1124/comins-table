@@ -9,7 +9,7 @@
 - `react-only` 30개: `/core` 공개 경계에서 제외하고 루트 `comins-table`에서 기존 이름과 계약을 유지한다.
 - 루트 233, Core 130, clipboard 16, selection 14개는 현재 값·타입을 합한 이름 기준선이다. 향후 Core 이동 시 승인된 행에 맞춰 기준선을 변경하며 루트·서브패스 누락을 함께 검사한다.
 - 내부 기능 소유권은 [경계 조사](2026-09-29-core-boundary-research.md)와 `test/fixtures/core-boundary-map.json`의 B1~B9로 관리한다. 내부 Core 기능을 모두 공개 API로 승격하지 않는다.
-- `test/core-public-api.test.ts`는 현재 이름·분류·소스 coverage만 증명한다. React 없는 소비자·실제 타입 호환성은 아직 미검증이며 Task 2·3에서 검사한다.
+- `test/core-public-api.test.ts`는 현재 이름·분류·소스 coverage와 React 전용 심볼의 루트 보존을 검사한다. Task 2의 공개 Core 소비자는 타입·source graph RED, runtime·runtime graph GREEN이다. Task 3의 React 타입 호환 검증 범위는 아래 절에 명시한다.
 
 ## 심볼별 이동 계약
 
@@ -156,6 +156,18 @@
 4. `/clipboard`와 `/selection`의 이름은 유지한다. 이들 facade가 Core 타입 변경을 받는 경로는 소비자 검증에 포함한다.
 5. 의미가 같은 이름을 양쪽 계약에 쓰는 경우 루트는 명시적 호환 export로 정리해 `export *` 충돌을 방지한다.
 
+## Task 3 React 호환성 검증 범위
+
+검증 파일은 [core-react-compatibility.tsx](../../../test/typecheck/core-react-compatibility.tsx)이며 `npm run lint`의 타입 검사 대상이다. 루트 `src/index`에서 기존 API를 소비한다. 실제 tarball React 소비자 검증은 상위 설계 단계 5에서 수행한다.
+
+- `CominsTableColumn<Row, number>`의 JSX label, header/cell renderer, formatter, CSSProperties props callback을 보존한다.
+- formatter와 renderer의 value를 number에, row.data를 Row에, row.id를 기존 `CominsRowId`에 대입한다. Row.id가 string이어도 payload ID의 공개 타입은 string만으로 좁히지 않는다.
+- number→string 대입과 Row에 없는 속성 접근을 각각 formatter/renderer에서 음성 assertion으로 검사한다. `@ts-expect-error` 없이 실제 TS2322/TS2339 실패를 확인한 뒤 directive를 추가했다. any로 확장되면 unused directive로 실패한다.
+- `CominsTableState<Row>`를 받는 `formatCominsCellValue`의 반환을 ReactNode에, `getCominsCellStyle`의 반환을 CSSProperties 또는 undefined에 대입한다.
+- 현재 state 컬럼의 TValue 기본값은 unknown이다. 숫자 컬럼을 강제 cast하여 state에 넣거나 기존 signature를 바꾸지 않고 typed column callback과 state 함수 호환성을 나누어 검사한다.
+- React 전용 30개 심볼의 **이름 보존**은 `core-public-api.test.ts`로 검사한다. 위 타입 fixture가 30개 심볼 모두의 상세 signature를 검증한다는 뜻은 아니다. 기존 component-renderer 타입 fixture도 계속 실행한다.
+- `/clipboard` 16개와 `/selection` 14개는 루트와 합치지 않고 각각의 기존 심볼 배열을 독립 비교한다. React export 누락 대조군에서는 루트에서 `getCominsCellStyle`만 제거하여 누락 탐지를 확인한다.
+
 ## 내부 기능 인계
 
 B1~B9는 `test/fixtures/core-boundary-map.json`에 source·목표 계층·불변 조건·기존 테스트·계획 테스트·구현 단계를 기록했다. plannedTests 경로는 이후 생성할 대상으로, 존재하거나 통과한 테스트로 집계하지 않는다.
@@ -165,3 +177,17 @@ B1~B9는 `test/fixtures/core-boundary-map.json`에 source·목표 계층·불변
 - B4/B5: renderer/집계와 데이터 정책 분리, 검증 예외의 원자성.
 - B6/B7: signal 포함 루트 API 보존, 늦은 응답 차단, coordinator 격리와 그룹 이동 원자성.
 - B9: 숫자/문자 ID 구분, 측정 캐시 무효화와 sparse 높이 인덱스 한도.
+
+### 단계 3·4 characterization test 사양
+
+다음은 향후 이전할 기능의 **입력·기대 결과 사양**이다. `core-boundary-map.json`의 `characterizationCases`와 ID로 연결하며 모두 `status: planned`다. 여기서 새 동작 테스트를 구현하거나 해당 plannedTests의 실행 성공을 주장하지 않는다.
+
+| ID | 입력 | 기대 결과 | 예정 검증 파일 |
+| --- | --- | --- | --- |
+| B1-option-only-keeps-edits | 원본 data a.score=1 참조 유지, 내부 편집값=9, 컬럼 label Score→Updated score | 편집 rows 참조와 score=9 유지, 새 label 반영 | `test/core-state-reconciliation.test.ts` |
+| B2-composite-notification-order | rows/selection/sort/sortModel 변경, layout 통지 플래그 true | data→selection→columnLayout→sort→sortModel 각 1회. 동일 state와 layout false는 0회 | `test/core-state-changes.test.ts` |
+| B3-filtered-group-projection | groups=[B,A], rows=[a9(A,9),b4(B,4),a1(A,1),a2(A,2)], score>=2, 오름차순, B 접힘 | header [B,A], 표시 데이터 [a2,a9], 원본 순서 불변 | `test/core-row-projection.test.ts` |
+| B5-fill-validation-atomicity | score=[7,1,2], 첫 행을 나머지에 Fill, 두 번째 대상 검증에서 예외 | 전체 실패, 원본 [7,1,2] 유지, 부분 결과 없음 | `test/core-edit-policy.test.ts` |
+| B6-pending-response-keeps-local-edit | revision=a의 2행 block refresh 중 index 0을 id=999로 patch, 옛 id=0 응답 도착 | 최신 id=999 유지, 완료 요청 정리 | `test/core-request-policy.test.ts` |
+| B7-group-transfer-atomicity | source g=[a,b], target h에 b 중복, b 충돌 정책 reject | 전체 null, 양쪽 rows/groups 불변, a만 이동하지 않음 | `test/core-transfer-policy.test.ts` |
+| B9-typed-slot-identity | 숫자 1과 문자열 "1" 슬롯에 서로 다른 높이 측정 | data:number:1과 data:string:1 구분, 측정값 교차 덮어쓰기 없음 | `test/core-layout-invalidation.test.ts` |

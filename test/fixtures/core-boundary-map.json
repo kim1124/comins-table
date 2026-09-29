@@ -24,6 +24,15 @@
       "plannedTests": [
         "test/core-state-reconciliation.test.ts"
       ],
+      "characterizationCases": [
+        {
+          "id": "B1-option-only-keeps-edits",
+          "status": "planned",
+          "input": "data=[{id:'a',score:1}] 참조 유지, 내부 편집 rows=[{id:'a',score:9}], score 컬럼 label만 Score에서 Updated score로 변경",
+          "expected": "조정 후 score=9와 편집 rows 참조 유지, 새 label 반영; 이전 data의 score=1로 복원하지 않음",
+          "plannedTest": "test/core-state-reconciliation.test.ts"
+        }
+      ],
       "implementationStage": "3+4"
     },
     "B2": {
@@ -44,6 +53,15 @@
       ],
       "plannedTests": [
         "test/core-state-changes.test.ts"
+      ],
+      "characterizationCases": [
+        {
+          "id": "B2-composite-notification-order",
+          "status": "planned",
+          "input": "rows/selection 참조 변경, layout 통지 플래그 true, sort와 sortModel 변경, 모든 callback 등록",
+          "expected": "data → selection → columnLayout → sort → sortModel 순서로 각각 1회 통지; 동일 state와 layout 플래그 false 대조군은 통지 0회",
+          "plannedTest": "test/core-state-changes.test.ts"
+        }
       ],
       "implementationStage": "3+4"
     },
@@ -73,6 +91,15 @@
       ],
       "plannedTests": [
         "test/core-row-projection.test.ts"
+      ],
+      "characterizationCases": [
+        {
+          "id": "B3-filtered-group-projection",
+          "status": "planned",
+          "input": "groups=[B,A], rows=[a9(A,9),b4(B,4),a1(A,1),a2(A,2)], score>=2 필터와 score 오름차순, B 접힘",
+          "expected": "그룹 header 순서 [B,A] 유지, 표시 데이터 행 [a2,a9]; a1은 필터 제외, b4는 접힘으로 제외; 원본 data 순서 불변",
+          "plannedTest": "test/core-row-projection.test.ts"
+        }
       ],
       "implementationStage": "3+4"
     },
@@ -136,6 +163,15 @@
       "plannedTests": [
         "test/core-edit-policy.test.ts"
       ],
+      "characterizationCases": [
+        {
+          "id": "B5-fill-validation-atomicity",
+          "status": "planned",
+          "input": "score=[7,1,2]인 3행, 첫 행을 나머지 두 행에 Fill; 첫 대상 검증 성공 후 두 번째 대상 validateFill에서 예외",
+          "expected": "Fill 전체 실패, 원본 rows/값 [7,1,2] 보존, 첫 대상의 score=7인 부분 결과를 발행하지 않음",
+          "plannedTest": "test/core-edit-policy.test.ts"
+        }
+      ],
       "implementationStage": "3+4"
     },
     "B6": {
@@ -163,6 +199,15 @@
       "plannedTests": [
         "test/core-request-policy.test.ts"
       ],
+      "characterizationCases": [
+        {
+          "id": "B6-pending-response-keeps-local-edit",
+          "status": "planned",
+          "input": "revision=a, blockSize=2, index 0~1의 rows=[{id:0},{id:1}] 로드 후 refresh 요청; index 0을 {id:999}로 patch 후 옛 rows 응답 도착",
+          "expected": "index 0의 id=999 유지, 완료된 refresh 요청 정리; pending 응답의 id=0으로 덮어쓰지 않음",
+          "plannedTest": "test/core-request-policy.test.ts"
+        }
+      ],
       "implementationStage": "3+4"
     },
     "B7": {
@@ -185,6 +230,15 @@
       ],
       "plannedTests": [
         "test/core-transfer-policy.test.ts"
+      ],
+      "characterizationCases": [
+        {
+          "id": "B7-group-transfer-atomicity",
+          "status": "planned",
+          "input": "source의 group g 멤버 [a,b], target에는 다른 group h의 b 존재; g 이동 중 b 충돌 정책이 reject 반환",
+          "expected": "전체 transfer 결과 null, source/target의 rows와 groups 불변; 충돌 없는 a만 옮기는 부분 결과 없음",
+          "plannedTest": "test/core-transfer-policy.test.ts"
+        }
       ],
       "implementationStage": "3+4"
     },
@@ -246,6 +300,15 @@
       ],
       "plannedTests": [
         "test/core-layout-invalidation.test.ts"
+      ],
+      "characterizationCases": [
+        {
+          "id": "B9-typed-slot-identity",
+          "status": "planned",
+          "input": "숫자 rowId=1과 문자열 rowId='1'인 두 데이터 슬롯에 서로 다른 측정 높이 적용",
+          "expected": "slot key는 data:number:1과 data:string:1로 구분, 한 슬롯의 높이 갱신이 다른 슬롯의 측정값을 덮어쓰지 않음",
+          "plannedTest": "test/core-layout-invalidation.test.ts"
+        }
       ],
       "implementationStage": "3+4"
     }

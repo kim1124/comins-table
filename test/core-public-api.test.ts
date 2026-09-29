@@ -40,6 +40,14 @@ function sourceFiles(directory: string): string[] {
   });
 }
 
+function findMissingRootExports(coreDisposition: Record<string, Disposition>, rootExports: string[]): string[] {
+  const names = new Set(rootExports);
+  return Object.entries(coreDisposition)
+    .filter(([name, disposition]) => disposition.kind === "react-only" && !names.has(name))
+    .map(([name]) => name)
+    .sort();
+}
+
 function validateAreas(areas: Record<string, Area>) {
   const errors: string[] = [];
   for (const id of areaIds) if (!Object.hasOwn(areas, id)) errors.push(`missing area: ${id}`);
@@ -88,6 +96,22 @@ describe("public Core migration baseline", () => {
     const baseline = readJson(baselinePath);
     expect(validateDisposition(baseline.coreDisposition, actual["comins-table/core"])).toEqual([]);
     expect(Object.keys(baseline.coreDisposition).sort()).toEqual(actual["comins-table/core"]);
+  });
+
+  it("keeps react-only core exports available at root", () => {
+    const { coreDisposition } = readJson(baselinePath);
+    expect(findMissingRootExports(coreDisposition, actual["comins-table"])).toEqual([]);
+  });
+
+  it("detects a React export missing from root even when Core still exports it", () => {
+    const { coreDisposition } = readJson(baselinePath);
+    const rootWithoutStyle = actual["comins-table"].filter((name: string) => name !== "getCominsCellStyle");
+    expect(findMissingRootExports(coreDisposition, rootWithoutStyle)).toEqual(["getCominsCellStyle"]);
+  });
+
+  it.each(["comins-table/clipboard", "comins-table/selection"])("preserves %s independently of root exports", (specifier) => {
+    const { entrypoints } = readJson(baselinePath);
+    expect(actual[specifier]).toEqual(entrypoints[specifier]);
   });
 
   it("rejects missing, unknown and invalid migration decisions", () => {

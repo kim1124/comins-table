@@ -10,7 +10,7 @@
 
 **Spec:** [Core 플랫폼 경계 설계](../specs/2026-09-29-core-platform-boundary-design.md)
 
-**Boundary evidence:** [선행 경계 조사](../specs/2026-09-29-core-boundary-research.md). Task 0~2 완료, Task 3~4는 미실행이다. 검증은 `reports/2026-09-29.md`에 기록한다.
+**Boundary evidence:** [선행 경계 조사](../specs/2026-09-29-core-boundary-research.md). Task 0~3 완료, Task 4는 미실행이다. 검증은 `reports/2026-09-29.md`에 기록한다.
 
 ## Global Constraints
 
@@ -138,18 +138,18 @@ CLI는 tarball의 타입/실행 검사와 runtime graph를 항상 수행하고, 
 
 Task 2 보강: 실제 Node 조건부 export 해석 결과를 runtime graph 시작점으로 사용한다. 선언 파일의 triple-slash 지시자가 DOM lib를 추가할 수 있으므로 `tsc --listFiles`의 실제 closure도 검사한다. 명시적 `./core.types` 파일이 누락되면 setup exit 2로 판정한다. 현재 패키지의 단일 문자열 types export를 지원하며, 다른 types 조건 구조는 추측하지 않고 setup 오류로 중단한다. 검사기는 신뢰하는 로컬 패키지 전용 진단 도구이며 악성 코드 실행 sandbox가 아니다.
 
-### Task 3: React 호환 타입 및 서브패스 보존 계약
+### Task 3: React 호환 타입 및 서브패스 보존 계약 — 완료
 
 **Files:** 생성 `test/typecheck/core-react-compatibility.tsx`; 수정 `test/core-public-api.test.ts`; Task 1의 이동표에 검증 파일 연결.
 
 **Interfaces:** 루트의 기존 `CominsTableColumn<TData, TValue>`, `CominsTableState<TData>`, `CominsCellComponentPayload<TData, TValue>`, `formatCominsCellValue`, `getCominsCellStyle`를 그대로 소비한다. `/clipboard`와 `/selection`은 Task 1의 진입점별 기준선으로 검사한다. 아직 패키지를 설치하지 않은 repo 타입 fixture에서는 기존 관례대로 `../../src/index`를 사용하며, 실제 배포 타입 검증은 단계 5에서 수행한다.
 
-- [ ] **Step 1: 현재 동작의 양성 타입 fixture 작성.** `CominsTableColumn<Row, number>`에 JSX label, number value를 읽는 formatter, header renderer, CSSProperties style callback을 지정한다. `formatCominsCellValue` 결과가 `React.ReactNode`, `getCominsCellStyle` 결과가 `React.CSSProperties | undefined`에 대입되는지 검사한다. renderer에 전달되는 row ID와 `value`가 올바른 제네릭 타입인지 명시적으로 대입해 확인한다.
-- [ ] **Step 2: 음성 타입 assertion 작성.** number value를 string에 대입하는 라인과 잘못된 Row 접근에 각각 `@ts-expect-error`를 붙인다. 타입이 `any`로 넓어지면 unused directive로 실패해야 한다. fixture 작성 시 일시적으로 directive를 제거해 실제 오류가 나는지 확인한 뒤 복원한다.
-- [ ] **Step 3: 이동 누락 검사 추가.** `keeps react-only core exports available at root`는 Task 1에서 `react-only`로 분류한 모든 심볼이 현재 루트 inventory에도 있는지 검사한다. 테스트 파일 내부의 `findMissingRootExports(coreDisposition, rootExports): string[]`가 누락 이름을 반환하도록 하고, `getCominsCellStyle`을 제거한 합성 루트 목록에서 결과가 `["getCominsCellStyle"]`인지 검사한다. 실제 목록에서는 `[]`여야 한다. `/clipboard`와 `/selection`의 심볼은 독립 배열로 비교하고 루트 목록과 합쳐 누락을 숨기지 않는다.
-- [ ] **Step 4: GREEN 확인.** `npm run lint`와 `npm run test:run -- test/core-public-api.test.ts test/core-isolation.test.ts test/documentation-contract.test.ts`를 실행한다. 기존 내부 모델 격리 테스트와 루트 React 계약이 함께 통과해야 한다.
-- [ ] **Step 4a: 동작 인계 fixture 사양 고정.** migration 문서와 boundary map에 다음 입력/기대 결과를 기록한다: 동일 data의 컬럼 옵션 변경은 편집 rows 유지(B1); 복합 변경 통지는 data→selection→layout→sort→sortModel 순서(B2); 필터+그룹은 그룹 순서 유지/그룹 내부 정렬/접힌 행 제외(B3); 숫자 1과 문자열 "1"의 slot 구분(B9); pending 응답보다 최신 로컬 편집 유지(B6); Fill 검증 예외와 그룹 이동 충돌은 부분 결과 미반영(B5/B7). 이는 단계 3·4의 characterization test 사양이며, 2단계에 존재하지 않는 테스트를 통과로 표시하지 않는다.
-- [ ] **Step 5: 원자적 로컬 커밋.** 이 작업의 fixture·테스트·이동표 변경을 `test: preserve React contracts during core migration`으로 커밋한다.
+- [x] **Step 1: 현재 동작의 양성 타입 fixture 작성.** `CominsTableColumn<Row, number>`에 JSX label, number value를 읽는 formatter, header renderer, CSSProperties style callback을 지정한다. `formatCominsCellValue` 결과가 `React.ReactNode`, `getCominsCellStyle` 결과가 `React.CSSProperties | undefined`에 대입되는지 검사한다. renderer에 전달되는 row ID와 `value`가 올바른 제네릭 타입인지 명시적으로 대입해 확인한다.
+- [x] **Step 2: 음성 타입 assertion 작성.** number value를 string에 대입하는 라인과 잘못된 Row 접근에 각각 `@ts-expect-error`를 붙인다. 타입이 `any`로 넓어지면 unused directive로 실패해야 한다. fixture 작성 시 일시적으로 directive를 제거해 실제 오류가 나는지 확인한 뒤 복원한다.
+- [x] **Step 3: 이동 누락 검사 추가.** `keeps react-only core exports available at root`는 Task 1에서 `react-only`로 분류한 모든 심볼이 현재 루트 inventory에도 있는지 검사한다. 테스트 파일 내부의 `findMissingRootExports(coreDisposition, rootExports): string[]`가 누락 이름을 반환하도록 하고, `getCominsCellStyle`을 제거한 합성 루트 목록에서 결과가 `["getCominsCellStyle"]`인지 검사한다. 실제 목록에서는 `[]`여야 한다. `/clipboard`와 `/selection`의 심볼은 독립 배열로 비교하고 루트 목록과 합쳐 누락을 숨기지 않는다.
+- [x] **Step 4: GREEN 확인.** `npm run lint`와 `npm run test:run -- test/core-public-api.test.ts test/core-isolation.test.ts test/documentation-contract.test.ts`를 실행한다. 기존 내부 모델 격리 테스트와 루트 React 계약이 함께 통과해야 한다.
+- [x] **Step 4a: 동작 인계 fixture 사양 고정.** migration 문서와 boundary map에 다음 입력/기대 결과를 기록한다: 동일 data의 컬럼 옵션 변경은 편집 rows 유지(B1); 복합 변경 통지는 data→selection→layout→sort→sortModel 순서(B2); 필터+그룹은 그룹 순서 유지/그룹 내부 정렬/접힌 행 제외(B3); 숫자 1과 문자열 "1"의 slot 구분(B9); pending 응답보다 최신 로컬 편집 유지(B6); Fill 검증 예외와 그룹 이동 충돌은 부분 결과 미반영(B5/B7). 이는 단계 3·4의 characterization test 사양이며, 2단계에 존재하지 않는 테스트를 통과로 표시하지 않는다.
+- [x] **Step 5: 원자적 로컬 커밋.** 이 작업의 fixture·테스트·이동표 변경을 `test: preserve React contracts during core migration`으로 커밋한다.
 
 ### Task 4: 명령 연결과 단계 3·4 인계
 
@@ -176,7 +176,7 @@ Task 2 보강: 실제 Node 조건부 export 해석 결과를 runtime graph 시�
 
 ## 자체 검토 결과
 
-- 승인된 선행 조사 Task 0, 기준선 Task 1, 격리 검사기 Task 2를 완료했다. Task 3~4는 미실행이며 단계 3~6의 인계 입력과 완료 조건을 연결했다.
+- 승인된 선행 조사 Task 0, 기준선 Task 1, 격리 검사기 Task 2, React 호환 계약 Task 3을 완료했다. Task 4는 미실행이며 단계 3~6의 인계 입력과 완료 조건을 연결했다.
 - 기존 1단계의 내부 격리 검증과 이번 공개 패키지 검증을 구분했다.
 - 타입과 런타임 실패를 구분하고, 기대하는 실패를 릴리스 통과로 오인하지 않도록 독립 명령과 exit code를 정의했다.
 - 신규 제품 API나 Vue/패키지 토폴로지를 이 계획에서 임의 확정하지 않았다. 공개 타입 이동 정책은 승인된 설계에 따른다.
