@@ -10,7 +10,7 @@
 
 **Spec:** [Core 플랫폼 경계 설계](../specs/2026-09-29-core-platform-boundary-design.md)
 
-**Boundary evidence:** [선행 경계 조사](../specs/2026-09-29-core-boundary-research.md). Task 0 조사와 Task 1 기준선 구축 완료, Task 2~4는 미실행이다. 검증은 `reports/2026-09-29.md`에 기록한다.
+**Boundary evidence:** [선행 경계 조사](../specs/2026-09-29-core-boundary-research.md). Task 0~2 완료, Task 3~4는 미실행이다. 검증은 `reports/2026-09-29.md`에 기록한다.
 
 ## Global Constraints
 
@@ -52,7 +52,7 @@
 | `viewport-data.ts`의 `AbortSignal` | React와 무관한 환경 타입도 Core 타입 closure에 유입 | Core descriptor/실행 요청 분리, 루트 signal 계약 보존 |
 | `table-transfer.ts` | HTMLElement 등록과 데이터 이동이 혼재 | 데이터 충돌 처리 / DOM 등록 / feedback renderer 분리 |
 
-위 항목은 소스 및 export 수집 결과다. 공개 Core의 격리 컴파일 실패와 런타임 성공 여부는 이번 계획 작성에서 실행하지 않았으며, Task 2에서 실제 결과를 기록한다. 런타임은 이미 통과할 수 있으므로 억지로 RED를 만들지 않는다.
+위 항목은 소스 및 export 수집 결과다. Task 2의 실제 tarball 검사에서 타입·source graph는 React/DOM 결합으로 실패했고 Node 런타임·runtime graph는 통과했다. unresolved는 없으며, 상세 진단은 실행 리포트에 기록했다.
 
 이 계획은 상위 설계의 **단계 2만 실행 가능한 작업으로 상세화**한다. 단계 3~6의 상태 모델 이전, React 동작 변경, 공개 문서 전환, 전체 릴리스 검증은 아래 인계 조건으로 연결한다.
 
@@ -115,7 +115,7 @@
 - [x] **Step 4: GREEN 확인.** Step 2 명령과 `npm run check:docs`를 실행한다. 네 진입점의 모든 이름과 Core 130개 분류에 누락이 없어야 한다. `split-contract` 심볼의 구현이 완료됐다고 표시하지 않는다.
 - [x] **Step 5: 원자적 로컬 커밋.** 이 작업의 네 파일과 계획 체크리스트·실행 리포트를 stage하고 `test: pin public core API migration inventory`로 커밋한다.
 
-### Task 2: React 없는 공개 패키지 소비자 검사기
+### Task 2: React 없는 공개 패키지 소비자 검사기 — 완료
 
 **Files:** 생성 `scripts/check-core-boundary.mjs`, `test/core-boundary-checker.node.mjs`, `test/fixtures/core-public-consumer/consumer.ts`, `test/fixtures/core-public-consumer/smoke.mjs`.
 
@@ -125,16 +125,18 @@
 
 CLI는 tarball의 타입/실행 검사와 runtime graph를 항상 수행하고, `--source-root <repo>`가 주어지면 `src/core.ts`에서 source graph도 검사한다. graph 위반은 exit 1, unresolved는 exit 2이며, 요청한 검사 모두가 성공해야 exit 0이다. source 검사를 생략한 소비자 실행은 source PASS로 기록하지 않는다.
 
-- [ ] **Step 1: 검사기의 RED 테스트 작성.** Node test fixture로 `accepts an isolated pure package`, `rejects transitive React declarations`, `rejects a React import in a shared runtime chunk`, `reports missing artifact as setup error`, `cleans its own temporary directory`를 작성한다. 순수 fixture는 타입·런타임 모두 `ok: true`; `.d.ts → bridge.d.ts → react` fixture는 types false; `.js → chunk.js → react/jsx-runtime` fixture는 runtime false여야 한다. 오류를 빈 diagnostics 또는 성공으로 바꾸지 않는다.
-- [ ] **Step 2: RED 확인.** `node --test test/core-boundary-checker.node.mjs`를 실행해 새 검사기 부재로 실패하는지 확인한다.
-- [ ] **Step 2a: graph 검사 회귀 fixture.** `rejects React in an uncalled lazy chunk`, `rejects a Core to Browser type-only re-export`, `reports computed imports as unresolved`를 추가한다. 함수 호출 없이 Node import가 성공하는 지연 React fixture도 graph는 violations를 반환해야 한다. 정상 내부 순환 import는 visited set으로 종료하고 금지 의존이 없으면 통과해야 한다.
-- [ ] **Step 3: 격리 검사 구현.** `mkdtemp`로 생성한 OS 임시 디렉터리에 패키지를 복사하고 `node_modules/comins-table` 경로에서 실제 package exports를 해석한다. 소비자 디렉터리에서 `react`, `react-dom`, `@types/react`, `@types/react-dom`을 찾을 수 없음을 먼저 확인한다. repo를 symlink하지 않고 `NODE_PATH`를 제거한다. npm install을 실행하지 않는다. compiler는 repo의 절대 경로를 사용하지만 소비자 tsconfig를 별도로 만든다: `strict: true`, `noUncheckedIndexedAccess: true`, `skipLibCheck: false`, `types: []`, `lib: ["ES2022"]`, `target: "ES2022"`, `module: "ESNext"`, `moduleResolution: "Bundler"`, `noEmit: true`. DOM 없는 최종 Core 계약도 함께 검사한다. 테스트가 생성한 정확한 임시 경로만 finally에서 정리한다.
-- [ ] **Step 4: 양성 소비자 작성.** `consumer.ts`는 `comins-table/core`에서 `createCominsTableState`, `queryCominsRows`, `setCominsSortModel`, `CominsTableState`를 import한다. `Row = { id: string; score: number }`, 문자열 label 컬럼, ID callback으로 state를 만들고 조회 결과를 `Row[]`에 대입한다. renderer/JSX/DOM shim/React ambient module은 사용하지 않는다. `smoke.mjs`는 같은 패키지 경로를 실제 Node 프로세스에서 import하고 rows 두 건의 ID, `setCominsSortModel` 결과의 정렬 규칙, 입력 rows의 불변성을 assert한다.
-- [ ] **Step 4a: 환경 타입 및 호환 취소 조건.** 합성 순수 package의 선언에 `AbortSignal`만 추가한 fixture는 ES2022-only 타입 검사에서 실패해야 한다. 현재 Core에서 아직 노출하지 않는 Viewport 모듈의 독립성은 이 fixture 통과로 주장하지 않는다. 실제 request descriptor/cancel 변환은 단계 3·4에서 구현하고, 루트의 기존 signal 포함 요청과 취소 reducer 경로를 함께 테스트한다.
-- [ ] **Step 5: 검사기 GREEN 및 제품 RED 구분.** Node 검사기 테스트는 모두 통과해야 한다. 새 빌드로 `npm pack --json --pack-destination <이번 실행 임시 디렉터리>`를 수행하고 CLI에 해당 tarball 절대 경로를 전달한다. 타입 검사는 현재 React 선언 결합을 보고할 것으로 예상한다. 실제 진단 파일/심볼과 exit code를 기록하며, 런타임은 실측 결과 그대로 기록한다. 성공 또는 실패를 예상값에 맞추기 위해 assertion을 반전하지 않는다.
+- [x] **Step 1: 검사기의 RED 테스트 작성.** Node test fixture로 `accepts an isolated pure package`, `rejects transitive React declarations`, `rejects a React import in a shared runtime chunk`, `reports missing artifact as setup error`, `cleans its own temporary directory`를 작성한다. 순수 fixture는 타입·런타임 모두 `ok: true`; `.d.ts → bridge.d.ts → react` fixture는 types false; `.js → chunk.js → react/jsx-runtime` fixture는 runtime false여야 한다. 오류를 빈 diagnostics 또는 성공으로 바꾸지 않는다.
+- [x] **Step 2: RED 확인.** `node --test test/core-boundary-checker.node.mjs`를 실행해 새 검사기 부재로 실패하는지 확인한다.
+- [x] **Step 2a: graph 검사 회귀 fixture.** `rejects React in an uncalled lazy chunk`, `rejects a Core to Browser type-only re-export`, `reports computed imports as unresolved`를 추가한다. 함수 호출 없이 Node import가 성공하는 지연 React fixture도 graph는 violations를 반환해야 한다. 정상 내부 순환 import는 visited set으로 종료하고 금지 의존이 없으면 통과해야 한다.
+- [x] **Step 3: 격리 검사 구현.** `mkdtemp`로 생성한 OS 임시 디렉터리에 패키지를 복사하고 `node_modules/comins-table` 경로에서 실제 package exports를 해석한다. 소비자 디렉터리에서 `react`, `react-dom`, `@types/react`, `@types/react-dom`을 찾을 수 없음을 먼저 확인한다. repo를 symlink하지 않고 `NODE_PATH`를 제거한다. npm install을 실행하지 않는다. compiler는 repo의 절대 경로를 사용하지만 소비자 tsconfig를 별도로 만든다: `strict: true`, `noUncheckedIndexedAccess: true`, `skipLibCheck: false`, `types: []`, `lib: ["ES2022"]`, `target: "ES2022"`, `module: "ESNext"`, `moduleResolution: "Bundler"`, `noEmit: true`. DOM 없는 최종 Core 계약도 함께 검사한다. 테스트가 생성한 정확한 임시 경로만 finally에서 정리한다.
+- [x] **Step 4: 양성 소비자 작성.** `consumer.ts`는 `comins-table/core`에서 `createCominsTableState`, `queryCominsRows`, `setCominsSortModel`, `CominsTableState`를 import한다. `Row = { id: string; score: number }`, 문자열 label 컬럼, ID callback으로 state를 만들고 조회 결과를 `Row[]`에 대입한다. renderer/JSX/DOM shim/React ambient module은 사용하지 않는다. `smoke.mjs`는 같은 패키지 경로를 실제 Node 프로세스에서 import하고 rows 두 건의 ID, `setCominsSortModel` 결과의 정렬 규칙, 입력 rows의 불변성을 assert한다.
+- [x] **Step 4a: 환경 타입 및 호환 취소 조건.** 합성 순수 package의 선언에 `AbortSignal`만 추가한 fixture는 ES2022-only 타입 검사에서 실패해야 한다. 현재 Core에서 아직 노출하지 않는 Viewport 모듈의 독립성은 이 fixture 통과로 주장하지 않는다. 실제 request descriptor/cancel 변환은 단계 3·4에서 구현하고, 루트의 기존 signal 포함 요청과 취소 reducer 경로를 함께 테스트한다.
+- [x] **Step 5: 검사기 GREEN 및 제품 RED 구분.** Node 검사기 테스트는 모두 통과해야 한다. 새 빌드로 `npm pack --json --pack-destination <이번 실행 임시 디렉터리>`를 수행하고 CLI에 해당 tarball 절대 경로를 전달한다. 타입 검사는 현재 React 선언 결합을 보고할 것으로 예상한다. 실제 진단 파일/심볼과 exit code를 기록하며, 런타임은 실측 결과 그대로 기록한다. 성공 또는 실패를 예상값에 맞추기 위해 assertion을 반전하지 않는다.
 
 이 실행에는 `--source-root <현재 저장소 절대 경로>`도 전달하고 source graph/type/runtime graph/runtime 결과를 각각 기록한다. 기존 혼합 모듈의 React 결합을 임시 allowlist로 통과시키지 않는다.
-- [ ] **Step 6: 원자적 로컬 커밋.** 검사기와 fixture 네 파일을 `test: add isolated public core consumer diagnostics`로 커밋한다. 제품 경계 RED는 완료 보고에 별도 표시한다.
+- [x] **Step 6: 원자적 로컬 커밋.** 검사기와 fixture 네 파일을 `test: add isolated public core consumer diagnostics`로 커밋한다. 제품 경계 RED는 완료 보고에 별도 표시한다.
+
+Task 2 보강: 실제 Node 조건부 export 해석 결과를 runtime graph 시작점으로 사용한다. 선언 파일의 triple-slash 지시자가 DOM lib를 추가할 수 있으므로 `tsc --listFiles`의 실제 closure도 검사한다. 명시적 `./core.types` 파일이 누락되면 setup exit 2로 판정한다. 현재 패키지의 단일 문자열 types export를 지원하며, 다른 types 조건 구조는 추측하지 않고 setup 오류로 중단한다. 검사기는 신뢰하는 로컬 패키지 전용 진단 도구이며 악성 코드 실행 sandbox가 아니다.
 
 ### Task 3: React 호환 타입 및 서브패스 보존 계약
 
@@ -174,7 +176,7 @@ CLI는 tarball의 타입/실행 검사와 runtime graph를 항상 수행하고, 
 
 ## 자체 검토 결과
 
-- 승인된 선행 경계 조사 Task 0과 API·내부 기능 기준선 Task 1을 완료했다. Task 2~4는 미실행이며 단계 3~6의 인계 입력과 완료 조건을 연결했다.
+- 승인된 선행 조사 Task 0, 기준선 Task 1, 격리 검사기 Task 2를 완료했다. Task 3~4는 미실행이며 단계 3~6의 인계 입력과 완료 조건을 연결했다.
 - 기존 1단계의 내부 격리 검증과 이번 공개 패키지 검증을 구분했다.
 - 타입과 런타임 실패를 구분하고, 기대하는 실패를 릴리스 통과로 오인하지 않도록 독립 명령과 exit code를 정의했다.
 - 신규 제품 API나 Vue/패키지 토폴로지를 이 계획에서 임의 확정하지 않았다. 공개 타입 이동 정책은 승인된 설계에 따른다.
