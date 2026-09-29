@@ -10,7 +10,7 @@
 
 **Spec:** [Core 플랫폼 경계 설계](../specs/2026-09-29-core-platform-boundary-design.md)
 
-**Boundary evidence:** [선행 경계 조사](../specs/2026-09-29-core-boundary-research.md). Task 0~3 완료, Task 4는 미실행이다. 검증은 `reports/2026-09-29.md`에 기록한다.
+**Boundary evidence:** [선행 경계 조사](../specs/2026-09-29-core-boundary-research.md). Task 0~4 완료. 계약·진단 단계의 완료이며 실제 Core 분리 구현은 상위 단계 3·4에 남아 있다. 검증은 `reports/2026-09-29.md`에 기록한다.
 
 ## Global Constraints
 
@@ -151,17 +151,17 @@ Task 2 보강: 실제 Node 조건부 export 해석 결과를 runtime graph 시�
 - [x] **Step 4a: 동작 인계 fixture 사양 고정.** migration 문서와 boundary map에 다음 입력/기대 결과를 기록한다: 동일 data의 컬럼 옵션 변경은 편집 rows 유지(B1); 복합 변경 통지는 data→selection→layout→sort→sortModel 순서(B2); 필터+그룹은 그룹 순서 유지/그룹 내부 정렬/접힌 행 제외(B3); 숫자 1과 문자열 "1"의 slot 구분(B9); pending 응답보다 최신 로컬 편집 유지(B6); Fill 검증 예외와 그룹 이동 충돌은 부분 결과 미반영(B5/B7). 이는 단계 3·4의 characterization test 사양이며, 2단계에 존재하지 않는 테스트를 통과로 표시하지 않는다.
 - [x] **Step 5: 원자적 로컬 커밋.** 이 작업의 fixture·테스트·이동표 변경을 `test: preserve React contracts during core migration`으로 커밋한다.
 
-### Task 4: 명령 연결과 단계 3·4 인계
+### Task 4: 명령 연결과 단계 3·4 인계 — 완료
 
 **Files:** 수정 `package.json`, 실행일의 `reports/YYYY-MM-DD.md`, 이동표 문서.
 
 **Interfaces:** `test:core-boundary-checker = node --test test/core-boundary-checker.node.mjs`; `test:core-consumer = node scripts/check-core-boundary.mjs`. 후자는 이미 빌드한 tarball 경로를 `npm run test:core-consumer -- <tarball.tgz>`로 받는다.
 
-- [ ] **Step 1: 명령 등록.** `verify`의 기존 검사 순서를 보존하고 `test:core-boundary-checker`를 추가한다. 아직 RED인 제품 검사 `test:core-consumer`는 독립 명령으로 등록한다. 기존 테스트를 skip/expected-failure 처리하지 않는다. 기본 verify가 통과해도 `/core`가 독립적이라고 보고하지 않는다.
-- [ ] **Step 2: 검증 실행.** `npm run verify`를 한 번 실행한다. 생성된 최신 dist를 임시 디렉터리에 pack하고 `test:core-consumer`를 실행한다. 일반 게이트와 제품 경계 검사 결과를 별도로 기록한다. 새 변경이 UI/scroll/virtualization 동작에 없으므로 이 단계의 E2E·성능 전체 실행은 필요하지 않다.
-- [ ] **Step 3: 인계 문서 작성.** 실제 React/DOM 의존 경로, 각 경로가 영향을 주는 public symbol, Task 1의 분류, 후속 소유 계층, 해당 실패를 GREEN으로 만들 검증을 연결한다. 예: `core → react-types → ReactNode`는 column/state 모델 분리와 루트 호환 export에서 해결한다. 소스에서 확인한 `core → react-types → filtering → core` 순환 타입 참조도 이전 대상에 포함하되, 실제 소비자 진단과 소스 분석 결과를 구분해 기록한다.
-- [ ] **Step 4: 완료 상태 검토.** 모든 현재 Core 심볼과 B1~B9 내부 영역에 이동 분류가 있고, checker의 정상/오염/지연 import/환경 타입 fixture가 통과하며, 실제 패키지 경계 실패 원인이 기록됐는지 확인한다. unresolved graph와 컴파일러 실행 오류, 누락 artifact는 제품 RED 증거로 인정하지 않는다. Task 3 React 타입 fixture와 기존 검사 통과를 확인한다. 실제 Core 독립성 완료와는 구분한다.
-- [ ] **Step 5: 로컬 커밋과 상태 확인.** 이 작업의 파일만 stage하고 `chore: wire core boundary validation commands`로 커밋한다. `git diff --check`, `git status --short --branch`로 남은 변경을 확인한다. 원격 작업은 포함하지 않는다.
+- [x] **Step 1: 명령 등록.** `verify`의 기존 검사 순서를 보존하고 `test:core-boundary-checker`를 추가한다. 아직 RED인 제품 검사 `test:core-consumer`는 독립 명령으로 등록한다. 기존 테스트를 skip/expected-failure 처리하지 않는다. 기본 verify가 통과해도 `/core`가 독립적이라고 보고하지 않는다.
+- [x] **Step 2: 검증 실행.** `npm run verify`를 한 번 실행한다. 생성된 최신 dist를 임시 디렉터리에 pack하고 `test:core-consumer`를 실행한다. 일반 게이트와 제품 경계 검사 결과를 별도로 기록한다. 새 변경이 UI/scroll/virtualization 동작에 없으므로 이 단계의 E2E·성능 전체 실행은 필요하지 않다.
+- [x] **Step 3: 인계 문서 작성.** 실제 React/DOM 의존 경로, 각 경로가 영향을 주는 public symbol, Task 1의 분류, 후속 소유 계층, 해당 실패를 GREEN으로 만들 검증을 연결한다. 예: `core → react-types → ReactNode`는 column/state 모델 분리와 루트 호환 export에서 해결한다. 소스에서 확인한 `core → react-types → filtering → core` 순환 타입 참조도 이전 대상에 포함하되, 실제 소비자 진단과 소스 분석 결과를 구분해 기록한다.
+- [x] **Step 4: 완료 상태 검토.** 모든 현재 Core 심볼과 B1~B9 내부 영역에 이동 분류가 있고, checker의 정상/오염/지연 import/환경 타입 fixture가 통과하며, 실제 패키지 경계 실패 원인이 기록됐는지 확인한다. unresolved graph와 컴파일러 실행 오류, 누락 artifact는 제품 RED 증거로 인정하지 않는다. Task 3 React 타입 fixture와 기존 검사 통과를 확인한다. 실제 Core 독립성 완료와는 구분한다.
+- [x] **Step 5: 로컬 커밋과 상태 확인.** 이 작업의 파일만 stage하고 `chore: wire core boundary validation commands`로 커밋한다. `git diff --check`, `git status --short --branch`로 남은 변경을 확인한다. 원격 작업은 포함하지 않는다.
 
 ## 후속 단계 연결과 최종 게이트
 
@@ -176,7 +176,7 @@ Task 2 보강: 실제 Node 조건부 export 해석 결과를 runtime graph 시�
 
 ## 자체 검토 결과
 
-- 승인된 선행 조사 Task 0, 기준선 Task 1, 격리 검사기 Task 2, React 호환 계약 Task 3을 완료했다. Task 4는 미실행이며 단계 3~6의 인계 입력과 완료 조건을 연결했다.
+- 승인된 선행 조사 Task 0, 기준선 Task 1, 격리 검사기 Task 2, React 호환 계약 Task 3, 명령 연결·최종 검토 Task 4를 완료했으며 단계 3~6의 인계 입력과 완료 조건을 연결했다.
 - 기존 1단계의 내부 격리 검증과 이번 공개 패키지 검증을 구분했다.
 - 타입과 런타임 실패를 구분하고, 기대하는 실패를 릴리스 통과로 오인하지 않도록 독립 명령과 exit code를 정의했다.
 - 신규 제품 API나 Vue/패키지 토폴로지를 이 계획에서 임의 확정하지 않았다. 공개 타입 이동 정책은 승인된 설계에 따른다.

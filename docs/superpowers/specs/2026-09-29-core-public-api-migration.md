@@ -150,8 +150,8 @@
 
 ## 후속 구현의 완료 조건
 
-1. Task 2에서 패키지의 타입·runtime·source graph 증거를 확보한다.
-2. Task 3에서 기존 JSX label, formatter, style, Row/Value 제네릭과 음성 타입 assertion을 고정한다.
+1. Task 2에서 패키지의 타입·runtime·source graph 증거를 확보했다. Task 4에서 최종 명령으로 재검증한다.
+2. Task 3에서 기존 JSX label, formatter, style, Row/Value 제네릭과 음성 타입 assertion을 고정했다.
 3. 단계 3·4에서 signature와 wrapper를 확정하고 실제 이동을 수행한다. 원래 React 타입을 `any`/`unknown`으로 넓히는 우회는 사용하지 않는다.
 4. `/clipboard`와 `/selection`의 이름은 유지한다. 이들 facade가 Core 타입 변경을 받는 경로는 소비자 검증에 포함한다.
 5. 의미가 같은 이름을 양쪽 계약에 쓰는 경우 루트는 명시적 호환 export로 정리해 `export *` 충돌을 방지한다.
@@ -191,3 +191,41 @@ B1~B9는 `test/fixtures/core-boundary-map.json`에 source·목표 계층·불변
 | B6-pending-response-keeps-local-edit | revision=a의 2행 block refresh 중 index 0을 id=999로 patch, 옛 id=0 응답 도착 | 최신 id=999 유지, 완료 요청 정리 | `test/core-request-policy.test.ts` |
 | B7-group-transfer-atomicity | source g=[a,b], target h에 b 중복, b 충돌 정책 reject | 전체 null, 양쪽 rows/groups 불변, a만 이동하지 않음 | `test/core-transfer-policy.test.ts` |
 | B9-typed-slot-identity | 숫자 1과 문자열 "1" 슬롯에 서로 다른 높이 측정 | data:number:1과 data:string:1 구분, 측정값 교차 덮어쓰기 없음 | `test/core-layout-invalidation.test.ts` |
+
+## Task 4 검증 명령과 단계 3·4 인계
+
+`npm run verify`는 기존 검사 순서를 유지하며, 단위 테스트 이후 `test:core-boundary-checker`를 실행한다. 이 명령은 검사기 자체의 정상/오염 fixture를 검증한다. 제품의 Core 독립성을 뜻하지 않는다.
+
+실제 패키지 검사는 최신 build로 만든 로컬 tarball을 아래 별도 명령에 전달한다. 설치나 publish는 수행하지 않는다.
+
+```sh
+npm run test:core-boundary-checker
+npm run test:core-consumer -- /absolute/path/comins-table-0.1.11.tgz --source-root "$PWD"
+```
+
+- exit 0: 요청한 타입·Node 실행·그래프 검사가 모두 통과했다.
+- exit 1: 실제 타입/실행 실패 또는 금지 의존이 발견됐다. 현재 제품의 React·DOM 결합은 이 상태다.
+- exit 2: 누락 artifact/컴파일러/도구 등 준비 오류 또는 graph unresolved다. 상대 import/re-export나 reference path로 연결된 전이 선언 파일 누락도 포함하며, 외부 React 미설치 실패와 구분한다. 이를 제품 RED 근거로 집계하지 않는다.
+- `--source-root`를 생략하면 sourceGraph는 null이다. 소스 경계 PASS를 뜻하지 않는다.
+- 실제 제품 검사 `test:core-consumer`는 아직 기본 verify에 넣지 않는다. 후속 분리로 GREEN이 되면 최신 build→pack→소비자 검사 전체를 필수 게이트에 편입한다. 실패를 반전하거나 allowlist로 숨기지 않는다.
+
+### 실측 실패에서 다음 구현으로 연결
+
+다음 표의 선언 진단은 실제 tarball 소비자에서 확인된 것이며, source 경로/순환 및 아직 공개 Core에 없는 내부 모듈은 별도 표시한다. 최종 실행 결과와 artifact 식별자는 `reports/2026-09-29.md`의 Task 4 기록을 따른다.
+
+| 증거와 경로 | 영향 심볼·Task 1 분류 | 후속 소유권·구현 | GREEN으로 만들 검증 |
+| --- | --- | --- | --- |
+| source `core.ts → react-types.ts → react`, 선언 `core.d.ts → react-types.d.ts:1` | CominsTableColumn/RuntimeColumn, State/StateInput, HeaderCell 및 payload: split-contract | 단계 3의 Core 데이터 모델과 단계 4의 React 렌더링 확장 분리. 루트는 기존 이름·제네릭 유지 | ES2022-only tarball types와 source graph 통과, React 타입 fixture·inventory 유지 |
+| `core.d.ts:31`의 React.CSSProperties (setCominsTableTheme 추론 반환) | CominsTableTheme, setCominsTableTheme: react-only | theme/style 책임은 React에 둔다. 중립 state에 theme이 역유입되지 않도록 state 경계도 함께 분리 | Core 선언의 React namespace 제거, 루트 theme/API 이름 보존 |
+| `core.d.ts:262`의 import("react").ReactNode, `:265`의 CSSProperties | formatCominsCellValue, getCominsCellStyle: react-only; getCominsCellClassName도 같은 이동 분류 | React formatter/style 해석은 루트 어댑터로 이전. 순수 값 접근과 데이터 guard는 Core에 유지 | Core 소비자 타입 통과, 루트 ReactNode/CSSProperties 반환 호환 검사 |
+| `react-types.d.ts`의 HTMLButtonElement/HTMLInputElement/HTMLDivElement/HTMLSelectElement/HTMLTableCellElement/Event | component/config/props: react-only, CominsCellComponentPayload/CominsClipboardGuard: split-contract | 데이터 callback과 DOM/React 이벤트·렌더러 payload 분리. clipboard/Fill 데이터 규칙은 유지 | Core 타입의 DOM 진단 제거, 루트 JSX/payload 타입 및 clipboard/selection inventory 보존 |
+| source만 확인: `core → react-types → filtering → core` 타입 참조 순환 | CominsCellFormatParams, CominsTableRuntimeColumn: split-contract; 필터 데이터 계약 B3/B4 | filtering이 공개 facade/React 타입 대신 중립 모델을 직접 참조하도록 단계 3에서 정리 | source graph의 금지 역참조 제거, 필터/그룹 회귀 및 루트 제네릭 검사. 순수 내부 순환 자체는 검사기 위반이 아님 |
+| 내부 source만 확인: `viewport-data.ts`의 AbortSignal. 현재 `/core` 소비자가 이 경로의 독립성까지 증명하지 않음 | B6 요청 descriptor·취소 정책, 공개 Core 130개 외 내부 inventory | Core descriptor와 Browser 실행·취소, React lifecycle 분리. 루트의 기존 signal 계약·aborted reducer 동작 보존 | 향후 B6 characterization + DOM 없는 내부 타입 closure와 루트 signal 소비자 검증 |
+
+현재 런타임 `dist/core.js → dist/core-Cgyp6upI.js` 경로는 Node 실행과 runtime graph를 통과했다. 따라서 우선 해결할 실측 실패는 타입·source 경계다. 런타임 검사를 삭제하지 않고 후속 이동의 회귀 게이트로 유지한다.
+
+### 단계 2 완료의 의미와 다음 작업
+
+단계 2는 전체 Core 130개 심볼의 이동 분류, B1~B9 내부 소유권, 격리 검사기, React 호환성 기준선과 실행 명령을 준비하는 단계다. 이는 Core 분리 구현이나 0.2.0 릴리스 완료가 아니다.
+
+다음 작업은 상위 설계 **단계 3·4의 통합 상세 구현 계획**이다. 중립 column/state/payload 모델, 내부 projection·변경 통지·요청·transfer 계약, 루트 호환 export 및 Browser 실행 경계를 함께 설계한다. 이후 작은 이전 커밋마다 해당 characterization을 구현하고 검증한다. 기존 `codex-0.2.0-core-separation` 브랜치를 유지하며 Vue 3, 추가 패키지, 공개 `/browser` 진입점은 포함하지 않는다.

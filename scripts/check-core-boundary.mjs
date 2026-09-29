@@ -91,9 +91,17 @@ export async function checkCoreBoundary({ packageRoot, compilerPath, fixtureRoot
       }
     `], root);
     if (probe.status !== 0) throw new Error(`Isolation setup failed: ${probe.diagnostics}`);
-    const types = run(compilerPath, ["-p", resolve(root, "tsconfig.json"), "--pretty", "false", "--listFiles"], root);
+    const types = run(compilerPath, ["-p", resolve(root, "tsconfig.json"), "--pretty", "false", "--locale", "en", "--listFiles"], root);
     if (types.status !== 0 && !/error TS\d+:/.test(types.diagnostics)) {
       throw new Error(`Compiler setup failed: ${types.diagnostics || types.status}`);
+    }
+    // Local declaration edges missing from the artifact are setup failures, unlike
+    // forbidden external dependencies (e.g. react) absent from the consumer.
+    const missingDeclaration = types.diagnostics.split("\n").filter((line) =>
+      /error TS6053:/.test(line) ||
+      /error TS(?:2307|7016):[^\n]*module ['"]\.{1,2}\//.test(line));
+    if (missingDeclaration.length) {
+      throw new Error(`Missing declaration artifact: ${missingDeclaration.join("\n")}`);
     }
     const loadedFiles = types.diagnostics.split("\n").filter((line) => isAbsolute(line) && existsSync(line));
     if (loadedFiles.length === 0) throw new Error("Compiler did not report its file closure");

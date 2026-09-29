@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readdirSync, chmodSync, symlinkSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, readdirSync, chmodSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { test } from "node:test";
@@ -146,6 +146,21 @@ test("missing declared type artifact is a setup error rather than product RED", 
   assert.equal(result.status, 2, result.stderr || result.stdout);
   assert.match(result.stderr, /SETUP/);
 });
+
+for (const [label, declaration, bridge] of [
+  ["relative re-export", 'export * from "./missing-bridge";', null],
+  ["reference path", '/// <reference path="./missing-bridge.d.ts" />', null],
+  ["JavaScript bridge without declarations", 'export * from "./bridge.js";', "export const bridge = 1;"],
+]) {
+  test(`missing transitive declaration (${label}) is setup exit 2`, (t) => {
+    const input = publicFixture(t);
+    put(input.packageRoot, "core.d.ts", `${declaration}\n${readFileSync(resolve(input.packageRoot, "core.d.ts"), "utf8")}`);
+    if (bridge) put(input.packageRoot, "bridge.js", bridge);
+    const result = packedCLI(input);
+    assert.equal(result.status, 2, result.stderr || result.stdout);
+    assert.match(result.stderr, /SETUP:.*declaration artifact/);
+  });
+}
 
 test("CLI reports a real consumer API failure as exit 1, not a setup error", (t) => {
   const input = fixture(t);
