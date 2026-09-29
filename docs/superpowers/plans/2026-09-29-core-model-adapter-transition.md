@@ -1,6 +1,6 @@
 # Core Model and Adapter Transition Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 기존 세션에서 순차 실행하며 새 브랜치·worktree를 만들지 않는다. 이 문서는 검토용 계획이며 아래 제품 구현은 아직 시작하지 않았다.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 기존 세션에서 순차 실행하며 새 브랜치·worktree를 만들지 않는다. Task 1 완료, Task 2~10 미실행. 실행 증거는 `reports/2026-09-29.md`에 기록한다.
 
 **Goal:** 상위 단계 3·4의 Core 상태·모델 및 Browser·React 어댑터를 함께 전환하여, React 루트 호환성을 유지하면서 공개·내부 Core의 React/DOM 의존을 제거한다.
 
@@ -68,17 +68,19 @@
 - Core 연산에 필요한 guard/parser는 React wrapper가 원본 payload로 변환하여 주입한다. 함수가 React에 정의되어도 Core가 그 함수의 실행 환경을 import하지 않게 한다. 형식화된 값의 CSV/JSON 변환은 기존 순수 export 계약을 그대로 쓰며 React formatter는 어댑터에서 해석한다.
 - 이 bridge는 양쪽 public state를 강제 상속시키는 방법을 피한다. 기존 state.columns의 기본 TValue=unknown과 독립 `CominsTableColumn<Row, number>`의 variance를 캐스트로 우회하지 않는다.
 
-### Task 1: 중립 모델·기본 state 연산과 React bridge
+### Task 1: 중립 모델·기본 state 연산과 React bridge — 완료
 
 **Files:** 위 model/state/table/selection/state/layout/columns와 react/model/core-compat 생성. `src/core.ts`, `src/model.ts`, `src/react-types.ts`, `src/filtering.ts`, `src/selection-data.ts`의 데이터 참조를 분리. 테스트 `test/core-model.test.ts`, `test/react-core-bridge.test.ts`, `test/typecheck/core-neutral-model.ts`, 기존 `test/typecheck/core-react-compatibility.tsx`.
 
 **Interfaces:** 중립 create/rows CRUD/sort/selection/column layout·header/virtual rows 함수는 현재 `src/core.ts`의 해당 공개 signature를 CoreState로 옮긴다. React bridge는 위 두 함수와 `{source, core, ...대응 정보}`를 제공한다. 공개 facade는 아직 기존 계약을 유지한다.
 
-- [ ] **Step 1: 계약 테스트 작성.** 중립 column에 JSX/DOM props를 넣는 음성 타입 assertion, label 문자열 및 Row/Value 양성 검증을 추가한다. bridge roundtrip은 `restore(project(state), bridge.core) === state`, rows/selection 동일 참조, JSX label/theme 복원을 검증한다. CRUD/정렬/선택/컬럼 숨김·순서·핀 및 header/group 결과는 기존 함수와 같은 입력으로 비교한다.
-- [ ] **Step 2: RED 확인.** `npm run test:run -- test/core-model.test.ts test/react-core-bridge.test.ts`와 `npm run lint`. 새 중립 계약/bridge 부재의 실패를 기록하고 기존 React fixture는 통과해야 한다.
-- [ ] **Step 3: 최소 구현.** 모델 및 기본 연산을 옮긴다. 기존 알고리즘을 중복 보관하지 않고 React 호환 함수가 bridge를 통해 같은 계산을 호출하도록 바꾼다. 필요한 데이터 helper만 내부 모델을 참조하게 하며 Core가 facade나 react-types를 역참조하지 않게 한다.
-- [ ] **Step 4: GREEN 확인.** 위 focused tests, `test/basic-core.test.ts test/selection-core.test.ts test/table-calculations.test.ts`, lint 및 verify. 양쪽 선언의 데이터 callback 추론과 root 반환 state를 확인한다. UI가 사용하는 호환 함수가 바뀌므로 `npm run test:e2e -- test/playwright/specs/ref-api.spec.ts test/playwright/specs/header-basic.spec.ts --workers=1`도 실행한다. virtual rows 경로의 bridge 비용은 focused virtualization perf 후 full perf 1회로 확인한다.
-- [ ] **Step 5: 기록·커밋.** `refactor: introduce neutral table models and React state bridge`. 공개 `/core` 전체 독립성은 아직 미완료로 기록한다.
+- [x] **Step 1: 계약 테스트 작성.** 중립 column에 JSX/DOM props를 넣는 음성 타입 assertion, label 문자열 및 Row/Value 양성 검증을 추가한다. bridge roundtrip은 `restore(project(state), bridge.core) === state`, rows/selection 동일 참조, JSX label/theme 복원을 검증한다. CRUD/정렬/선택/컬럼 숨김·순서·핀 및 header/group 결과는 기존 함수와 같은 입력으로 비교한다.
+- [x] **Step 2: RED 확인.** `npm run test:run -- test/core-model.test.ts test/react-core-bridge.test.ts`와 `npm run lint`. 새 중립 계약/bridge 부재의 실패를 기록하고 기존 React fixture는 통과해야 한다.
+- [x] **Step 3: 최소 구현.** 모델 및 기본 연산을 옮긴다. 기존 알고리즘을 중복 보관하지 않고 React 호환 함수가 bridge를 통해 같은 계산을 호출하도록 바꾼다. 필요한 데이터 helper만 내부 모델을 참조하게 하며 Core가 facade나 react-types를 역참조하지 않게 한다.
+- [x] **Step 4: GREEN 확인.** 위 focused tests, `test/basic-core.test.ts test/selection-core.test.ts test/table-calculations.test.ts`, lint 및 verify. 양쪽 선언의 데이터 callback 추론과 root 반환 state를 확인한다. UI가 사용하는 호환 함수가 바뀌므로 `npm run test:e2e -- test/playwright/specs/ref-api.spec.ts test/playwright/specs/header-basic.spec.ts --workers=1`도 실행한다. virtual rows 경로의 bridge 비용은 focused virtualization perf 후 full perf 1회로 확인한다.
+- [x] **Step 5: 기록·커밋.** `refactor: introduce neutral table models and React state bridge`. 공개 `/core` 전체 독립성은 아직 미완료로 기록한다.
+
+Task 1 실행 보강: 내부 `src/core/state/access.ts`에 데이터 접근 helper를 공유했다. hot-path 값/선택 조회는 최소 구조 입력으로 호출하고 전체 상태 변경에만 bridge를 사용한다. 중립 cell 정책 타입은 정의했으나 React guard/parser 투영은 Task 2에 남겨 두었다. 세 선택 함수는 기존의 좁은 반환 타입 추론까지 보존한다. `src/model.ts`·`src/react-types.ts`의 기존 계약은 수정할 필요가 없어 유지했다.
 
 ### Task 2: 편집·clipboard·export 정책 분리
 
@@ -197,7 +199,7 @@ Task 1 → 2 → 3(공개 Core 독립성) → 4 → 5 → 6 → 7 → 8 → 9 �
 - 단계 3 완료: 중립 state/model/편집/projection/viewport/transfer/layout를 React 없이 검사할 수 있고 B1~B9 Core 소유 연산이 실제 어댑터에서 사용된다.
 - 단계 4 완료: 기존 root 타입/행동 및 callback 순서를 유지하고 Browser 자원이 cleanup되며 Core/Browser의 React 역참조가 없다.
 - 단계 5·6 미완료: 이 계획 통과만으로 사용자 문서 전체, React 배포 소비자, 최종 릴리스 준비 또는 배포 완료를 주장하지 않는다.
-- 계획 검토 후 첫 실행 범위는 **Task 1**이다. 기존 브랜치·순차 실행 방법은 유지한다. 상위 설계 변경 없이 해결할 수 없는 호환성 충돌이 입증되면 그 지점에서 대안·영향을 보고하고 범위 확장 전에 결정받는다.
+- Task 1을 완료했으며 다음 실행 범위는 **Task 2**다. 기존 브랜치·순차 실행 방법은 유지한다. 상위 설계 변경 없이 해결할 수 없는 호환성 충돌이 입증되면 그 지점에서 대안·영향을 보고하고 범위 확장 전에 결정받는다.
 
 ## 자체 검토
 
@@ -206,4 +208,4 @@ Task 1 → 2 → 3(공개 Core 독립성) → 4 → 5 → 6 → 7 → 8 → 9 �
 - root state와 Core state 사이의 구조적 호환을 가정하지 않고 bridge identity·metadata·callback payload 복원을 명시했다. props 조정 통지와 사용자 조작 통지를 구분했다.
 - 현재 지원하지 않는 일반 cell Arrow/Home/End 이동은 제외했고, B8은 기존 Fill/선택·clipboard·tree drag 계산 이전으로 한정했다. clipboard 옵션별 좌표 분기를 새 규칙으로 통합하지 않는다.
 - Review Focus 5개에 소유 테스트가 있으며 기능별 focused 검증과 전체 게이트를 구분했다. 문서 작성 자체에는 구현 검증 결과를 붙이지 않는다.
-- Vue·새 패키지·새 브랜치·SSR·신규 모드 지원·release 작업은 추가하지 않았다. 구현 checklist는 모두 미실행이다.
+- Vue·새 패키지·새 브랜치·SSR·신규 모드 지원·release 작업은 추가하지 않았다. 구현 checklist는 Task 1만 완료했으며 후속 작업과 공개 Core 독립성은 남아 있다.

@@ -2,6 +2,9 @@ import type React from "react";
 import {
   formatCominsCellValue,
   getCominsCellStyle,
+  selectCell,
+  selectCellRange,
+  clearCominsCellRange,
   type CominsCellComponentPayload,
   type CominsRowId,
   type CominsTableColumn,
@@ -56,6 +59,14 @@ const scoreColumn: CominsTableColumn<Row, number> = {
 // State columns currently erase TValue to unknown; do not cast the typed numeric
 // column into that collection or silently change the existing state signature.
 function consumeRootState(state: CominsTableState<Row>, column: CominsTableRuntimeColumn<Row>) {
+  const address = { rowId: "a", columnId: "score" };
+  const selected = selectCell(state, address);
+  const cellCount: number = selected.selection.cells.length;
+  const noRange: null = selected.selection.range;
+  const range = selectCellRange(state, { anchor: address, focus: address });
+  const focusId: CominsRowId = range.selection.range.focus.rowId;
+  const cleared: null = clearCominsCellRange(state).selection.range;
+  void [cellCount, noRange, focusId, cleared];
   const row = state.rows[0];
   if (!row) return;
   const rowId: CominsRowId = state.getRowId(row, 0);

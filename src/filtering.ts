@@ -1,10 +1,11 @@
 import type {
   CominsCellFormatParams,
-  CominsRowId,
   CominsTableRuntimeColumn,
-} from "./core";
+} from "./react-types";
+import type { CominsRowId } from "./model";
+import type { CominsColumnFilterConfig as CoreFilterConfig, CominsColumnFilterKind } from "./core/model";
 
-export type CominsColumnFilterKind = "boolean" | "date" | "number" | "text";
+export type { CominsColumnFilterKind } from "./core/model";
 
 export type CominsColumnFilterOperator =
   | "between"
@@ -21,10 +22,8 @@ export type CominsColumnFilterOperator =
   | "notEquals"
   | "startsWith";
 
-export type CominsColumnFilterConfig<TData, TValue = unknown> = {
-  caseSensitive?: boolean;
+export type CominsColumnFilterConfig<TData, TValue = unknown> = Omit<CoreFilterConfig<TData, TValue>, "getValue"> & {
   getValue?: (params: CominsCellFormatParams<TData, TValue>) => unknown;
-  kind: CominsColumnFilterKind;
 };
 
 export type CominsColumnFilterRule = {

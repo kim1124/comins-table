@@ -4,6 +4,11 @@
     "B1": {
       "sources": [
         "src/core.ts",
+        "src/core/model.ts",
+        "src/core/state/table.ts",
+        "src/core/state/access.ts",
+        "src/react/model.ts",
+        "src/react/core-compat.ts",
         "src/model.ts",
         "src/table-state.ts",
         "src/row-value.ts",
@@ -245,6 +250,7 @@
     "B8": {
       "sources": [
         "src/selection.ts",
+        "src/core/selection/state.ts",
         "src/selection-data.ts",
         "src/column-pointer.ts",
         "src/drag-autoscroll.ts",
@@ -276,6 +282,7 @@
     "B9": {
       "sources": [
         "src/column-layout.ts",
+        "src/core/layout/columns.ts",
         "src/column-pinning.ts",
         "src/row-height.ts",
         "src/virtual-layout.ts",

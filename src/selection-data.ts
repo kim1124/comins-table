@@ -1,7 +1,8 @@
 import {
   copyCominsCell, getCominsCellValue, getCominsSelectedCellRange, getCominsVisibleColumns,
-  type CominsCellAddress, type CominsCopiedCellRange, type CominsRowId, type CominsTableState,
 } from "./core";
+import type { CominsCellAddress, CominsCopiedCellRange, CominsRowId } from "./model";
+import type { CominsTableState } from "./react-types";
 
 export type CominsSelectedCell = CominsCellAddress & { value: unknown };
 export type CominsCopyTarget = "auto" | "cells" | "rows";
