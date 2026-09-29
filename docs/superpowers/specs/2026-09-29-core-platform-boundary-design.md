@@ -38,6 +38,8 @@ Vue 3 지원은 0.2.0 범위에서 제외한다. 0.2.0이 `main`에 통합되고
 
 ## 5. 목표 아키텍처
 
+2026-09-29 경계 재검토 승인에 따라 [선행 조사](2026-09-29-core-boundary-research.md)의 B1~B9와 내부 구조를 추가한다. 공개 심볼뿐 아니라 React 내부의 상태 조정, 모드별 표시 행 구성, 요청 및 이동 정책까지 조사·분리 범위에 포함한다. 2단계에서는 경계를 고정하고, 실제 제품 코드 이전은 단계 3·4에서 수행한다.
+
 ### 5.1 Core 계층
 
 Core는 다음 책임만 소유한다.
@@ -48,6 +50,10 @@ Core는 다음 책임만 소유한다.
 - 행 모델 생성과 가상화·스크롤 관련 순수 계산
 - 상태 정규화와 외부 제어 상태 조정
 - DOM, JSX, React 노드 또는 프레임워크 생명주기가 필요 없는 유틸리티
+- 모드별 표시 행 projection과 원본/표시/Viewport 절대 좌표 매핑
+- 변경 항목 판정, 데이터 편집의 원자성, 요청 revision 및 이동 충돌 정책
+
+Core는 다음 상태와 변경 내역을 계산한다. callback 호출과 렌더링은 어댑터가 수행하며 기존 통지 순서를 보존한다. 기존 높이 인덱스 등 자료구조는 인스턴스 단위 갱신·복제·무효화 계약을 유지할 수 있다. 새 전역 store는 도입하지 않는다.
 
 `src/core.ts`에서 공개하는 모든 값과 타입은 다음 조건을 만족해야 한다.
 
@@ -62,14 +68,22 @@ React 어댑터는 다음 책임을 유지한다.
 
 - 컴포넌트 렌더링과 JSX
 - React 훅, 컨텍스트, ref, effect 및 생명주기
-- React 이벤트와 DOM 이벤트 연결
+- React 이벤트와 브라우저 실행 계층 연결
 - 셀·헤더·필터·그룹 렌더러 계약
 - 기존 React 컬럼 정의를 Core 컬럼 모델로 변환하는 어댑터
 - 기존 `comins-table` 루트 API의 동작 호환성
 
 React 전용 공개 타입은 루트 진입점에서 제공한다. Core 타입을 React 타입으로 확장하거나 변환할 수는 있지만, Core가 React 타입을 역으로 참조해서는 안 된다.
 
-### 5.3 패키지 경계
+### 5.3 Browser 내부 계층
+
+프레임워크에 독립적인 DOM 측정, focus/scroll 적용, clipboard I/O, timer/frame/observer, 요청 실행·취소, 테이블 DOM 등록과 해제를 담당한다. Browser는 Core를 사용하지만 React를 참조하지 않는다. React는 Browser/Core를 사용할 수 있고, Core는 둘을 역참조하지 않는다.
+
+Viewport의 Core 요청 descriptor는 range/revision/requestId 등 데이터만 보유한다. AbortSignal은 실행 요청과 루트 호환 타입에서 유지한다. 현재 signal.aborted를 읽는 reducer의 동작은 cancel 상태 전이와 호환 wrapper로 보존해야 한다. Core의 DOM 없는 타입 검증은 SSR 지원 선언이 아니다.
+
+목표 내부 폴더는 `src/core/`, `src/browser/`, `src/react/`다. 기존 공개 facade 파일과 npm exports는 유지하고, 기능 이전 커밋에서 필요한 파일만 이동한다. `/browser` 공개 진입점, Vue 빈 폴더, 별도 패키지는 생성하지 않는다.
+
+### 5.4 패키지 경계
 
 0.2.0은 다음 공개 진입점을 유지한다.
 
@@ -120,10 +134,13 @@ Vue 브랜치는 0.2.0이 검증·통합·배포된 뒤의 `main`에서 생성�
 
 ### 단계 2. 공개 Core 경계 고정
 
+- Task 0 선행 조사: B1~B9 기능 경계, 상태 소유권, 모드/좌표 계약, Browser 분리 및 source/runtime graph 검증 기준 고정
 - 현재 `/core` 공개 값·타입과 React 결합 지점 목록화
 - React 미설치 타입 소비자와 런타임 import에 대한 실패 테스트 작성
 - Core 공개 계약과 React 전용 계약의 이동·호환성 표 확정
 - 공개 진입점 inventory 테스트 보강
+
+선행 조사는 [경계 조사 문서](2026-09-29-core-boundary-research.md)에 기록했다. API inventory·검사기 구현 완료와 구분한다. 내부 기능의 소유권 목록은 공개 export 목록과 별도로 관리한다.
 
 완료 기준은 실패 테스트가 현재 결합을 재현하고, 목표 계약과 마이그레이션 범위가 코드 변경 전에 고정되는 것이다.
 
@@ -168,6 +185,7 @@ Vue 브랜치는 0.2.0이 검증·통합·배포된 뒤의 `main`에서 생성�
 
 - React 패키지와 React 타입을 사용할 수 없는 소비자 fixture에서 `/core` 타입 검사
 - `/core` 런타임 import graph에 `react`, `react-dom`, JSX 런타임이 없는지 검사
+- Core source의 type/value import와 재수출, 번들의 공유 chunk·literal dynamic import까지 전이적으로 검사하며 미해석 경로는 성공 처리하지 않는다.
 - 생성된 `/core` 선언 파일에 React 타입 참조가 없는지 검사
 - 공개 export inventory 스냅샷 또는 계약 테스트
 
