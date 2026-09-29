@@ -174,6 +174,8 @@ Task 2 보강: 실제 Node 조건부 export 해석 결과를 runtime graph 시�
 
 단계 3·4는 연결된 계약을 바꾸므로 상세 구현 계획을 함께 작성한다. 이 단계에서 JSX label을 단순 문자열로 바꾸거나 guard callback을 삭제하는 우회는 허용하지 않는다. 제품 격리 검사가 GREEN이 된 후에는 해당 검사 명령을 필수 검증 흐름에 연결해 다시 React 결합이 생기는 것을 차단한다.
 
+후속 [Core 모델·어댑터 통합 구현 계획](2026-09-29-core-model-adapter-transition.md)을 작성했다. 현재 검토용이며 제품 구현 checklist는 미실행이다. 기존 브랜치에서 Task 1부터 순차 실행하고, React의 JSX label과 callback은 호환 bridge에서 보존한다.
+
 ## 자체 검토 결과
 
 - 승인된 선행 조사 Task 0, 기준선 Task 1, 격리 검사기 Task 2, React 호환 계약 Task 3, 명령 연결·최종 검토 Task 4를 완료했으며 단계 3~6의 인계 입력과 완료 조건을 연결했다.
