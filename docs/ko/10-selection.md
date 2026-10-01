@@ -4,6 +4,8 @@
 
 Selection은 Row, 단일/비연속 Cell, 직사각형 Cell range를 지원한다. React ref method는 화면에 보이는 visible Row index 기준으로 Row selection을 설정한다.
 
+[0.2.0 개발 브랜치](26-migration-0.2.0.md)에서 루트와 `/selection`은 React state 계약을 사용합니다. 중립 state에는 `/core`의 선택 helper를 사용하며 state 생성과 선택 연산의 계약을 일치시킵니다.
+
 <!-- comins-doc-example: fragment -->
 ```tsx
 const tableRef = useRef<CominsTableRef<Row>>(null);

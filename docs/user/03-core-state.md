@@ -33,6 +33,8 @@ Core helpers do not own React state. They return the next state, and the applica
 
 ## 0.2.0 migration (unreleased)
 
+See the [complete migration guide](26-migration-0.2.0.md) for entry-point selection, React and neutral examples, installation boundaries, and the consumer verification checklist.
+
 `comins-table/core` now exposes framework-neutral runtime and types. Column and Group labels are strings; Core state has no theme or renderer metadata. Core cell policies use `cell.disabled`, `cell.copyable`, and `cell.pasteable` directly, alongside `cell.parseClipboard` and `cell.validateFill`.
 
 <!-- comins-doc-example: fragment -->

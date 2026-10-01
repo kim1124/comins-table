@@ -12,10 +12,10 @@
 - `npm run verify`는 최신 build→로컬 pack→공개 타입/runtime/runtimeGraph/sourceGraph 및 internalTypes/browserGraph 검사까지 포함한다. `--source-root`를 생략한 artifact 단독 검사에서 sourceGraph/internalTypes/browserGraph의 `null`은 미실행이지 통과가 아니다.
 - B1~B9 characterization은 실제 구현·실행된 테스트만 `verified`로 기록한다. B4 renderer payload 참조와 B8 typed ID·표시 순서 사례도 경계 맵에 연결했다. `a2f4e4d..9ef6685` 독립 최종 검토에서 종료 차단 결함을 발견하지 않아 단계 3·4를 종료했다. 이는 아래 단계 5·6이나 전체 보안 인증의 완료가 아니다.
 
-### 단계 5·6에 남기는 범위
+### 단계 5 완료 및 단계 6 잔여
 
-1. 단계 5: EN/KO 전체 migration 문서·가이드·실행 예제 정리. Core 중립 state와 루트 React state 사용법, peer dependency 및 client-only 경계를 일관되게 설명한다.
-2. 단계 5: **동일한 최신 tarball**로 root React 소비자와 `/core`, `/clipboard`, `/selection`, `/styles.css`를 검증한다. 현재 Core artifact 검증을 React 소비자 검증으로 대체하지 않는다.
+1. 단계 5 문서 완료(2026-10-01): [EN migration](../../user/26-migration-0.2.0.md)·[KO migration](../../ko/26-migration-0.2.0.md), README/언어별 인덱스와 Core/Clipboard/Selection 안내를 연결했다. Core 중립 state와 루트 React state 사용법, peer dependency 및 client-only 경계를 구분한다.
+2. 단계 5 소비자 완료(2026-10-01): SHA-256 `187a12decc7134a47b84490dc4842fd969007e60bccdf4223c8f7397c61bf25e`의 **동일한 최신 tarball**로 React 없는 Core 검사와 React 18.3.1/19.3.0 소비자를 검증했다. 루트 233·Core 100·clipboard 16·selection 14의 packed 타입 import, EN/KO 실제 예제 4개, root/subpath helper 실행, jsdom client mount, CSS 포함 브라우저 빌드와 누락 대조군이 통과했다. jsdom과 번들 빌드는 실제 브라우저 UI 회귀·전체 peer patch 범위 인증이 아니다.
 3. 단계 6: 최종 `verify:full`, 릴리스 준비와 별도 승인된 원격·배포 절차. Task 3 보안 스캔의 공식 coverage partial도 별도 잔여이며 검사기·security gate 단위 테스트 통과를 전체 보안 인증으로 표시하지 않는다.
 4. Vue 3 구현, 새 패키지, 새 공개 `/browser`, SSR 지원 및 0.2.0 배포는 이번 통합 계획 완료와 별개다.
 

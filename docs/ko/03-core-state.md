@@ -14,7 +14,7 @@ import {
   setCominsPagination,
   setCominsSortModel,
   setCominsSortState,
-} from "comins-table";
+} from "comins-table/core";
 
 const state = createCominsTableState({
   columns: [
@@ -40,6 +40,8 @@ Column layout persistence는 Column 순서와 지원되는 Column/Group runtime 
 `setCominsSortState`는 전체 정렬 모델을 단일 조건으로 교체한다. `setCominsSortModel`은 우선순위가 있는 `CominsSortModel`을 적용하여 다중 컬럼 정렬을 수행한다. 중복 조건과 존재하지 않거나 정렬할 수 없는 Column 조건은 정규화 과정에서 제거한다.
 
 ## 0.2.0 마이그레이션 (미배포)
+
+진입점 선택, React·중립 예제, 설치 경계와 소비자 검증 체크리스트는 [전체 마이그레이션 가이드](26-migration-0.2.0.md)를 참고합니다.
 
 `comins-table/core`는 프레임워크 중립 런타임과 타입을 제공합니다. Column·Group label은 문자열이며 Core state에는 theme이나 renderer 메타데이터가 없습니다. Core 셀 정책은 `cell.disabled`, `cell.copyable`, `cell.pasteable`에 직접 지정하며, `cell.parseClipboard`와 `cell.validateFill`도 함께 사용할 수 있습니다.
 
