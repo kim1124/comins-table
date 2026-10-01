@@ -10,7 +10,7 @@
 - 내부 state/editing/rows/selection/viewport/transfer/layout 계산과 Browser·React 어댑터 연결은 Task 1~9에서 이전했다. 기존 facade는 아직 사용되므로 무리하게 삭제하지 않는다.
 - Task 10 검사기는 `/core`뿐 아니라 `src/core/` 전체 source/type closure를 확인한다. Core는 ES2022·`types: []`·`skipLibCheck: false`로 격리 컴파일하며 실제 읽은 환경 선언도 제한한다. `src/browser/` 전체는 DOM을 허용하되 직접·간접 React/JSX/React 어댑터 의존과 미해석 import를 거부한다.
 - `npm run verify`는 최신 build→로컬 pack→공개 타입/runtime/runtimeGraph/sourceGraph 및 internalTypes/browserGraph 검사까지 포함한다. `--source-root`를 생략한 artifact 단독 검사에서 sourceGraph/internalTypes/browserGraph의 `null`은 미실행이지 통과가 아니다.
-- B1~B9 characterization은 실제 구현·실행된 테스트만 `verified`로 기록한다. B4 renderer payload 참조와 B8 typed ID·표시 순서 사례도 경계 맵에 연결했다. 전체 브랜치 최종 검토 결과는 계획과 리포트에서 별도로 판정한다.
+- B1~B9 characterization은 실제 구현·실행된 테스트만 `verified`로 기록한다. B4 renderer payload 참조와 B8 typed ID·표시 순서 사례도 경계 맵에 연결했다. `a2f4e4d..9ef6685` 독립 최종 검토에서 종료 차단 결함을 발견하지 않아 단계 3·4를 종료했다. 이는 아래 단계 5·6이나 전체 보안 인증의 완료가 아니다.
 
 ### 단계 5·6에 남기는 범위
 
