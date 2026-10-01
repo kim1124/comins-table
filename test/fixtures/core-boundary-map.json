@@ -152,6 +152,15 @@
       "plannedTests": [
         "test/core-render-contract.test.ts"
       ],
+      "characterizationCases": [
+        {
+          "id": "B4-react-render-payload-identity",
+          "status": "verified",
+          "input": "JSX label과 custom aggregate ReactElement, score>3 필터 및 원본 column callback",
+          "expected": "필터 index=[1], 원본 column/filtered rows 참조 및 custom aggregate ReactElement 반환 보존; Core의 숫자 집계는 유한 값만 계산",
+          "plannedTest": "test/core-render-contract.test.ts"
+        }
+      ],
       "implementationStage": "3+4"
     },
     "B5": {
@@ -311,6 +320,15 @@
       ],
       "plannedTests": [
         "test/core-navigation.test.ts"
+      ],
+      "characterizationCases": [
+        {
+          "id": "B8-typed-displayed-copy-navigation",
+          "status": "verified",
+          "input": "표시 rows=['last','1',1], columns=['a','b']; 복사 cells=[last/a,1/b] 및 숨긴 b 컬럼을 제외한 React 소비자",
+          "expected": "typed ID와 표시 순서, 가운데 빈 행과 선택 hole 유지; 숨긴 컬럼 제외; Tree 목적지는 parent/sibling 좌표로 계산",
+          "plannedTest": "test/core-navigation.test.ts"
+        }
       ],
       "implementationStage": "3+4"
     },

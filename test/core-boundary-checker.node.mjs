@@ -307,3 +307,71 @@ test("CLI rejects archives outside the package prefix without extracting them", 
   assert.equal(result.status, 2, result.stderr);
   assert.match(result.stderr, /Unsafe/);
 });
+
+for (const [name, source, expected, area] of [
+  ["internal React type", 'import type {ReactNode} from "react"; export type Value = ReactNode;', 1, "sourceGraph"],
+  ["internal AbortSignal", 'export type Cancellation = AbortSignal;', 1, "internalTypes"],
+  ["missing internal import", 'export {missing} from "./missing";', 2, "sourceGraph"],
+]) {
+  test(`CLI checks an unreachable ${name} instead of only the public facade`, t => {
+    const input = publicFixture(t);
+    put(input.packageRoot, "src/core/viewport/orphan.ts", source);
+    const result = packedCLI(input, ["--source-root", input.packageRoot]);
+    assert.equal(result.status, expected, result.stderr || result.stdout);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.types.ok, true);
+    assert.equal(report.runtime.ok, true);
+    assert.equal(report[area].ok, false);
+    if (name === "internal AbortSignal") assert.match(report.internalTypes.diagnostics, /AbortSignal/);
+  });
+}
+
+for (const [name, source, additional] of [
+  ["React import", 'import type {ReactNode} from "react"; export type View = ReactNode;', {}],
+  ["React adapter", 'export {view} from "../react/adapter";', { "src/react/adapter.ts": 'export const view = 1;' }],
+  ["indirect React adapter", 'export {view} from "../shared";', { "src/shared.ts": 'export {view} from "./react/adapter";', "src/react/adapter.ts": 'export const view = 1;' }],
+  ["JSX file", 'export {view} from "../view";', { "src/view.tsx": 'export const view = 1;' }],
+]) {
+  test(`CLI rejects Browser to ${name} without compiling Browser against DOM-free libs`, t => {
+    const input = publicFixture(t);
+    put(input.packageRoot, "src/browser/host.ts", source);
+    for (const [path, text] of Object.entries(additional)) put(input.packageRoot, path, text);
+    const result = packedCLI(input, ["--source-root", input.packageRoot]);
+    assert.equal(result.status, 1, result.stderr || result.stdout);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.sourceGraph.ok, true);
+    assert.equal(report.internalTypes.ok, true);
+    assert.equal(report.browserGraph.ok, false);
+    assert.equal(report.browserGraph.unresolved.length, 0);
+  });
+}
+
+test("CLI accepts DOM-owning Browser to Browser/Core edges and neutral internal names", t => {
+  const input = publicFixture(t);
+  put(input.packageRoot, "src/core/internal.ts", 'export type Node = {value: number}; export const document = 1;');
+  put(input.packageRoot, "src/browser/host.ts", 'export {measure} from "./measure";');
+  put(input.packageRoot, "src/browser/measure.ts", 'import {document as value} from "../core/internal"; export const measure = (el: HTMLElement) => el.getBoundingClientRect().height + value;');
+  const result = packedCLI(input, ["--source-root", input.packageRoot]);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.browserGraph?.ok, true);
+  assert.equal(report.internalTypes?.ok, true);
+});
+
+test("CLI fails closed on an unresolved Browser import", t => {
+  const input = publicFixture(t);
+  put(input.packageRoot, "src/browser/host.ts", 'export const load = () => import("./missing");');
+  const result = packedCLI(input, ["--source-root", input.packageRoot]);
+  assert.equal(result.status, 2, result.stderr || result.stdout);
+  assert.equal(JSON.parse(result.stdout).browserGraph.unresolved.length, 1);
+});
+
+test("CLI detects a DOM library injected into an otherwise unreachable Core file", t => {
+  const input = publicFixture(t);
+  put(input.packageRoot, "src/core/orphan.ts", '/// <reference lib="dom" />\nexport type Cancel = AbortSignal;');
+  const result = packedCLI(input, ["--source-root", input.packageRoot]);
+  assert.equal(result.status, 2, result.stderr || result.stdout);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.internalTypes.ok, false);
+  assert.match(report.internalTypes.diagnostics, /lib\.dom/);
+});

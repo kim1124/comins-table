@@ -3,6 +3,13 @@ import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:f
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { expect, it } from "vitest";
+import * as checker from "../scripts/check-core-boundary.mjs";
+
+it("compiles every internal Core root and its transitive closure without React or DOM", () => {
+  expect(checker).toHaveProperty("checkInternalCoreTypes");
+  const result = checker.checkInternalCoreTypes({ root: process.cwd(), compilerPath: resolve("node_modules/.bin/tsc"), consumerPath: resolve("test/fixtures/core-internal-consumer/consumer.ts") });
+  expect(result).toEqual({ ok: true, diagnostics: "" });
+});
 
 it("typechecks the public Core facade with ES2022 only and no React", () => {
   const root = mkdtempSync(resolve(tmpdir(), "comins-public-core-"));

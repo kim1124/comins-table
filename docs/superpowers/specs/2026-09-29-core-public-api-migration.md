@@ -2,6 +2,23 @@
 
 기준 커밋: `34b7727`. 2026-09-29 Task 1 산출물. 현재 API를 변경한 문서가 아니라 단계 3·4의 목표 이동 계약이다.
 
+## 2026-10-01 구현·검증 현황
+
+아래 Task 1~4의 RED, planned 및 후속 구현 표현은 **단계 2 당시의 역사적 기준선**이다. 현재 실행 증거는 [통합 구현 계획](../plans/2026-09-29-core-model-adapter-transition.md)과 [작업 리포트](../../../reports/2026-10-01.md)를 따른다.
+
+- 공개 Core는 retain-core 75 + split-contract 25 = 100개이며 React-only 30개는 루트에 유지한다. 원래 Core 130개 기준선은 회귀 대조군으로 보존한다. 루트 233, `/clipboard` 16, `/selection` 14와 CSS 경로는 유지한다.
+- 내부 state/editing/rows/selection/viewport/transfer/layout 계산과 Browser·React 어댑터 연결은 Task 1~9에서 이전했다. 기존 facade는 아직 사용되므로 무리하게 삭제하지 않는다.
+- Task 10 검사기는 `/core`뿐 아니라 `src/core/` 전체 source/type closure를 확인한다. Core는 ES2022·`types: []`·`skipLibCheck: false`로 격리 컴파일하며 실제 읽은 환경 선언도 제한한다. `src/browser/` 전체는 DOM을 허용하되 직접·간접 React/JSX/React 어댑터 의존과 미해석 import를 거부한다.
+- `npm run verify`는 최신 build→로컬 pack→공개 타입/runtime/runtimeGraph/sourceGraph 및 internalTypes/browserGraph 검사까지 포함한다. `--source-root`를 생략한 artifact 단독 검사에서 sourceGraph/internalTypes/browserGraph의 `null`은 미실행이지 통과가 아니다.
+- B1~B9 characterization은 실제 구현·실행된 테스트만 `verified`로 기록한다. B4 renderer payload 참조와 B8 typed ID·표시 순서 사례도 경계 맵에 연결했다. 전체 브랜치 최종 검토 결과는 계획과 리포트에서 별도로 판정한다.
+
+### 단계 5·6에 남기는 범위
+
+1. 단계 5: EN/KO 전체 migration 문서·가이드·실행 예제 정리. Core 중립 state와 루트 React state 사용법, peer dependency 및 client-only 경계를 일관되게 설명한다.
+2. 단계 5: **동일한 최신 tarball**로 root React 소비자와 `/core`, `/clipboard`, `/selection`, `/styles.css`를 검증한다. 현재 Core artifact 검증을 React 소비자 검증으로 대체하지 않는다.
+3. 단계 6: 최종 `verify:full`, 릴리스 준비와 별도 승인된 원격·배포 절차. Task 3 보안 스캔의 공식 coverage partial도 별도 잔여이며 검사기·security gate 단위 테스트 통과를 전체 보안 인증으로 표시하지 않는다.
+4. Vue 3 구현, 새 패키지, 새 공개 `/browser`, SSR 지원 및 0.2.0 배포는 이번 통합 계획 완료와 별개다.
+
 ## 적용 원칙
 
 - `retain-core` 75개: 이름과 데이터/계산 의미 유지. state를 받는 함수는 향후 중립 state 모델에 연결한다.

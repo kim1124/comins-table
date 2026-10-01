@@ -1,6 +1,6 @@
 # Core Model and Adapter Transition Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 기존 세션에서 순차 실행하며 새 브랜치·worktree를 만들지 않는다. Task 1~9 구현·제품 검증 완료, Task 10 미실행. Task 3 보안 스캔의 공식 coverage는 이전 보류 기록이 남은 partial이며 전체 보안 인증을 의미하지 않는다. 실행 증거는 `reports/2026-09-29.md`, `reports/2026-10-01.md`에 기록한다.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 기존 세션에서 순차 실행하며 새 브랜치·worktree를 만들지 않는다. Task 1~10 구현·제품 검증 완료, 전체 브랜치 최종 검토 대기. Task 3 보안 스캔의 공식 coverage는 이전 보류 기록이 남은 partial이며 전체 보안 인증을 의미하지 않는다. 실행 증거는 `reports/2026-09-29.md`, `reports/2026-10-01.md`에 기록한다.
 
 **Goal:** 상위 단계 3·4의 Core 상태·모델 및 Browser·React 어댑터를 함께 전환하여, React 루트 호환성을 유지하면서 공개·내부 Core의 React/DOM 의존을 제거한다.
 
@@ -200,11 +200,11 @@ Task 8 실행 보강: Fill bounds/확장·copy rectangle·Tree 목적지를 중�
 
 **Interfaces:** 기존 `inspectCoreGraph({root, entries, mode})`와 checker exit 0/1/2 계약을 유지한다. `/core` 외에 `src/core/` 전체 .ts 파일의 source/type closure를 검사한다. Browser는 DOM을 허용하지만 react/react-dom/JSX import 및 src/react 역참조를 금지한다. Node/React 타입이 없는 ES2022 compile 대상은 Core만이다.
 
-- [ ] **Step 1: 누락 대조군 작성.** 공개 facade에서 도달하지 않는 내부 viewport 파일에 React type/AbortSignal이 들어간 fixture, Browser→React 역참조 fixture, 미해석 import fixture가 반드시 실패하게 한다. Core의 DOM 오염은 전역 이름 문자열 검색만으로 판정하지 않고 실제 ES2022 compiler closure로 검증한다.
-- [ ] **Step 2: RED 실행.** `npm run test:core-boundary-checker`와 `npm run test:run -- test/core-isolation.test.ts test/core-public-api.test.ts`. Core 전체 검사 없이 공개 entry만 검사하는 구현이 내부 오염 대조군을 놓치는 것을 확인한다.
-- [ ] **Step 3: 검사 보강·증거 연결.** source/type 검사의 roots를 내부 Core까지 확장하고 Browser 의존 방향 검증을 추가한다. B1~B9 characterization 상태는 실제 테스트와 실행 증거가 있는 것만 완료로 바꾼다. 새 public export는 추가하지 않고 불필요해진 migration shim은 소비자가 없는 것만 제거한다.
-- [ ] **Step 4: 최종 GREEN 확인.** `npm run verify`로 실제 최신 tarball과 전체 내부 경계를 검증하고 `npm run test:e2e -- --workers=1`, `npm run test:perf -- --workers=1`을 실행한다. 실패·미실행 항목이 있으면 단계 3·4 완료로 표시하지 않는다. `git diff --check`와 로컬 branch/worktree 상태도 기록한다.
-- [ ] **Step 5: 인계·커밋.** `test: enforce core and adapter boundaries across internal modules`. 단계 5에는 EN/KO 전체 migration 문서, root React tarball consumer 및 모든 subpath artifact 검증을 남긴다. 단계 6의 릴리스 준비 `verify:full`과 원격·배포 승인 경계도 별도로 남긴다.
+- [x] **Step 1: 누락 대조군 작성.** 공개 facade에서 도달하지 않는 내부 viewport 파일에 React type/AbortSignal이 들어간 fixture, Browser→React 역참조 fixture, 미해석 import fixture가 반드시 실패하게 한다. Core의 DOM 오염은 전역 이름 문자열 검색만으로 판정하지 않고 실제 ES2022 compiler closure로 검증한다.
+- [x] **Step 2: RED 실행.** `npm run test:core-boundary-checker`와 `npm run test:run -- test/core-isolation.test.ts test/core-public-api.test.ts`. Core 전체 검사 없이 공개 entry만 검사하는 구현이 내부 오염 대조군을 놓치는 것을 확인한다.
+- [x] **Step 3: 검사 보강·증거 연결.** source/type 검사의 roots를 내부 Core까지 확장하고 Browser 의존 방향 검증을 추가한다. B1~B9 characterization 상태는 실제 테스트와 실행 증거가 있는 것만 완료로 바꾼다. 새 public export는 추가하지 않고 불필요해진 migration shim은 소비자가 없는 것만 제거한다.
+- [x] **Step 4: 최종 GREEN 확인.** `npm run verify`로 실제 최신 tarball과 전체 내부 경계를 검증하고 `npm run test:e2e -- --workers=1`, `npm run test:perf -- --workers=1`을 실행한다. 실패·미실행 항목이 있으면 단계 3·4 완료로 표시하지 않는다. `git diff --check`와 로컬 branch/worktree 상태도 기록한다.
+- [x] **Step 5: 인계·커밋.** `test: enforce core and adapter boundaries across internal modules`. 단계 5에는 EN/KO 전체 migration 문서, root React tarball consumer 및 모든 subpath artifact 검증을 남긴다. 단계 6의 릴리스 준비 `verify:full`과 원격·배포 승인 경계도 별도로 남긴다.
 
 ## 실행 순서·완료 판정
 
@@ -213,7 +213,7 @@ Task 1 → 2 → 3(공개 Core 독립성) → 4 → 5 → 6 → 7 → 8 → 9 �
 - 단계 3 완료: 중립 state/model/편집/projection/viewport/transfer/layout를 React 없이 검사할 수 있고 B1~B9 Core 소유 연산이 실제 어댑터에서 사용된다.
 - 단계 4 완료: 기존 root 타입/행동 및 callback 순서를 유지하고 Browser 자원이 cleanup되며 Core/Browser의 React 역참조가 없다.
 - 단계 5·6 미완료: 이 계획 통과만으로 사용자 문서 전체, React 배포 소비자, 최종 릴리스 준비 또는 배포 완료를 주장하지 않는다.
-- Task 1~9를 완료했으며 다음 실행 범위는 **Task 10**다. 기존 브랜치·순차 실행 방법은 유지한다. 상위 설계 변경 없이 해결할 수 없는 호환성 충돌이 입증되면 그 지점에서 대안·영향을 보고하고 범위 확장 전에 결정받는다.
+- Task 1~10의 구현·제품 검증을 완료했으며 **전체 브랜치 최종 검토**를 진행한다. 기존 브랜치·순차 실행 방법은 유지한다. 상위 설계 변경 없이 해결할 수 없는 호환성 충돌이 입증되면 그 지점에서 대안·영향을 보고하고 범위 확장 전에 결정받는다.
 
 ## 자체 검토
 
@@ -222,4 +222,4 @@ Task 1 → 2 → 3(공개 Core 독립성) → 4 → 5 → 6 → 7 → 8 → 9 �
 - root state와 Core state 사이의 구조적 호환을 가정하지 않고 bridge identity·metadata·callback payload 복원을 명시했다. props 조정 통지와 사용자 조작 통지를 구분했다.
 - 현재 지원하지 않는 일반 cell Arrow/Home/End 이동은 제외했고, B8은 기존 Fill/선택·clipboard·tree drag 계산 이전으로 한정했다. clipboard 옵션별 좌표 분기를 새 규칙으로 통합하지 않는다.
 - Review Focus 5개에 소유 테스트가 있으며 기능별 focused 검증과 전체 게이트를 구분했다. 문서 작성 자체에는 구현 검증 결과를 붙이지 않는다.
-- Vue·새 패키지·새 브랜치·SSR·신규 모드 지원·release 작업은 추가하지 않았다. 구현 checklist는 Task 1~9를 완료했다. 공개 Core 독립성 검증과 별도로 Task 10 내부 전체 경계 및 최종 검증은 남아 있다.
+- Vue·새 패키지·새 브랜치·SSR·신규 모드 지원·release 작업은 추가하지 않았다. 구현 checklist는 Task 1~10을 완료했다. 공개 Core 및 내부 전체 경계 검증과 별도로 전체 브랜치 최종 검토 결과를 확인한 뒤 단계 3·4 완료를 판정한다.

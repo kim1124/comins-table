@@ -59,6 +59,23 @@ function run(command, args, cwd) {
   return { status: result.status, diagnostics: `${result.stdout ?? ""}${result.stderr ?? ""}`.trim() };
 }
 
+function describeTypes(types, root) {
+  const loadedFiles = types.diagnostics.split("\n").filter((line) => isAbsolute(line) && existsSync(line));
+  if (loadedFiles.length === 0) throw new Error("Compiler did not report its file closure");
+  const isolatedRoot = realpathSync(root);
+  const libraryRoot = realpathSync(resolve(repository, "node_modules"));
+  const forbiddenFiles = loadedFiles.filter((file) => {
+    const actual = realpathSync(file);
+    if (inside(isolatedRoot, actual)) return false;
+    const compilerLibrary = /^(?:@typescript\/typescript-[^/]+|typescript)\/lib\//.test(relative(libraryRoot, actual).replaceAll(sep, "/"));
+    return !compilerLibrary || !/^lib\.(?:es[\w.]*|decorators(?:\.legacy)?)\.d\.ts$/.test(basename(actual));
+  });
+  // A .d.ts can inject DOM via triple-slash lib directives despite compilerOptions.lib.
+  const typeDiagnostics = types.diagnostics.split("\n").filter((line) => !loadedFiles.includes(line));
+  typeDiagnostics.push(...forbiddenFiles.map((file) => `Forbidden environment declaration: ${file}`));
+  return { ok: types.status === 0 && forbiddenFiles.length === 0, diagnostics: typeDiagnostics.join("\n").trim() };
+}
+
 export async function checkCoreBoundary({ packageRoot, compilerPath, fixtureRoot }) {
   packageRoot = realpathSync(packageRoot);
   compilerPath = resolve(compilerPath);
@@ -103,22 +120,10 @@ export async function checkCoreBoundary({ packageRoot, compilerPath, fixtureRoot
     if (missingDeclaration.length) {
       throw new Error(`Missing declaration artifact: ${missingDeclaration.join("\n")}`);
     }
-    const loadedFiles = types.diagnostics.split("\n").filter((line) => isAbsolute(line) && existsSync(line));
-    if (loadedFiles.length === 0) throw new Error("Compiler did not report its file closure");
-    const isolatedRoot = realpathSync(root);
-    const libraryRoot = realpathSync(resolve(repository, "node_modules"));
-    const forbiddenFiles = loadedFiles.filter((file) => {
-      const actual = realpathSync(file);
-      if (inside(isolatedRoot, actual)) return false;
-      const compilerLibrary = /^(?:@typescript\/typescript-[^/]+|typescript)\/lib\//.test(relative(libraryRoot, actual).replaceAll(sep, "/"));
-      return !compilerLibrary || !/^lib\.(?:es[\w.]*|decorators(?:\.legacy)?)\.d\.ts$/.test(basename(actual));
-    });
-    // A .d.ts can inject DOM via triple-slash lib directives despite compilerOptions.lib.
-    const typeDiagnostics = types.diagnostics.split("\n").filter((line) => !loadedFiles.includes(line));
-    typeDiagnostics.push(...forbiddenFiles.map((file) => `Forbidden environment declaration: ${file}`));
+    const typeResult = describeTypes(types, root);
     const runtime = run(process.execPath, [resolve(root, "smoke.mjs")], root);
     return {
-      types: { ok: types.status === 0 && forbiddenFiles.length === 0, diagnostics: typeDiagnostics.join("\n").trim() },
+      types: typeResult,
       runtime: { ok: runtime.status === 0, diagnostics: runtime.diagnostics },
     };
   } finally {
@@ -126,7 +131,47 @@ export async function checkCoreBoundary({ packageRoot, compilerPath, fixtureRoot
   }
 }
 
-export function inspectCoreGraph({ root, entries, mode }) {
+function layerEntries(root, layer) {
+  const directory = resolve(root, "src", layer);
+  return existsSync(directory) ? filesUnder(directory).filter(file => /\.tsx?$/.test(file)).map(file => relative(root, file)) : [];
+}
+
+export function checkInternalCoreTypes({ root, compilerPath, consumerPath }) {
+  root = realpathSync(root);
+  compilerPath = resolve(compilerPath);
+  accessSync(compilerPath, constants.X_OK);
+  const entries = ["src/core.ts", ...layerEntries(root, "core")];
+  for (const entry of entries) regularFile(resolve(root, entry));
+  const temporary = mkdtempSync(resolve(tmpdir(), "comins-internal-core-"));
+  try {
+    // Copy source, not node_modules or the repository's ambient TS configuration.
+    for (const file of filesUnder(resolve(root, "src"))) {
+      const target = resolve(temporary, relative(root, file));
+      mkdirSync(dirname(target), { recursive: true });
+      cpSync(file, target);
+    }
+    if (consumerPath) {
+      cpSync(consumerPath, resolve(temporary, "consumer.ts"));
+      entries.push("consumer.ts");
+    }
+    writeFileSync(resolve(temporary, "tsconfig.json"), JSON.stringify({ compilerOptions, files: entries }));
+    const types = run(compilerPath, ["-p", resolve(temporary, "tsconfig.json"), "--pretty", "false", "--locale", "en", "--listFiles"], temporary);
+    if (types.status !== 0 && !/error TS\d+:/.test(types.diagnostics)) throw new Error(`Compiler setup failed: ${types.diagnostics || types.status}`);
+    return describeTypes(types, temporary);
+  } finally {
+    rmSync(temporary, { recursive: true, force: true });
+  }
+}
+
+export function inspectCoreGraph(options) {
+  return inspectGraph({ ...options, layer: "Core" });
+}
+
+export function inspectBrowserGraph({ root, entries }) {
+  return inspectGraph({ root, entries, mode: "source", layer: "Browser" });
+}
+
+function inspectGraph({ root, entries, mode, layer }) {
   if (!["source", "runtime"].includes(mode)) throw new Error(`Unknown graph mode: ${mode}`);
   root = realpathSync(root);
   if (!Array.isArray(entries) || entries.length === 0) throw new Error("Graph entries are required");
@@ -159,6 +204,8 @@ export function inspectCoreGraph({ root, entries, mode }) {
       if (visited.has(file)) return;
       visited.add(file);
       const label = relative(root, file);
+      const layerPattern = layer === "Core" ? /(?:^|\/)(?:browser|react)(?:[./-]|$)/ : /(?:^|\/)react(?:[./-]|$)/;
+      if (layerPattern.test(label.replaceAll(sep, "/")) || /\.tsx$/.test(label)) violations.add(`${label}: ${layer} -> ${layer === "Core" ? "Browser/React" : "React"}`);
       if (!inside(root, realpathSync(file))) { unresolved.add(`${label}: outside graph root`); return; }
       const source = project.program.getSourceFile(file);
       if (!source) { unresolved.add(`${label}: unavailable syntax tree`); return; }
@@ -188,8 +235,8 @@ export function inspectCoreGraph({ root, entries, mode }) {
           return;
         }
         const targetLabel = relative(root, target).replaceAll(sep, "/");
-        if (/(?:^|\/)(?:browser|react)(?:[./-]|$)/.test(targetLabel) || /\.tsx$/.test(targetLabel)) {
-          violations.add(`${edge} (${targetLabel}): Core -> Browser/React`);
+        if (layerPattern.test(targetLabel) || /\.tsx$/.test(targetLabel)) {
+          violations.add(`${edge} (${targetLabel}): ${layer} -> ${layer === "Core" ? "Browser/React" : "React"}`);
         }
         visit(target);
       }
@@ -267,11 +314,15 @@ async function main(args) {
       fixtureRoot: resolve(repository, "test/fixtures/core-public-consumer"),
     });
     const runtimeGraph = inspectCoreGraph({ root: packageRoot, entries: [relative(packageRoot, entry)], mode: "runtime" });
-    const sourceGraph = args[1] ? inspectCoreGraph({ root: resolve(args[2]), entries: ["src/core.ts"], mode: "source" }) : null;
-    const graphs = [runtimeGraph, sourceGraph].filter(Boolean);
-    process.stdout.write(`${JSON.stringify({ ...results, runtimeGraph, sourceGraph }, null, 2)}\n`);
+    const sourceRoot = args[1] ? realpathSync(resolve(args[2])) : null;
+    const sourceGraph = sourceRoot ? inspectCoreGraph({ root: sourceRoot, entries: ["src/core.ts", ...layerEntries(sourceRoot, "core")], mode: "source" }) : null;
+    const browserEntries = sourceRoot ? layerEntries(sourceRoot, "browser") : [];
+    const browserGraph = sourceRoot ? browserEntries.length ? inspectBrowserGraph({ root: sourceRoot, entries: browserEntries }) : { ok: true, violations: [], unresolved: [] } : null;
+    const internalTypes = sourceRoot ? checkInternalCoreTypes({ root: sourceRoot, compilerPath: resolve(repository, "node_modules/.bin/tsc") }) : null;
+    const graphs = [runtimeGraph, sourceGraph, browserGraph].filter(Boolean);
+    process.stdout.write(`${JSON.stringify({ ...results, runtimeGraph, sourceGraph, internalTypes, browserGraph }, null, 2)}\n`);
     process.exitCode = graphs.some((graph) => graph.unresolved.length) ? 2 :
-      results.types.ok && results.runtime.ok && graphs.every((graph) => graph.ok) ? 0 : 1;
+      results.types.ok && results.runtime.ok && (!internalTypes || internalTypes.ok) && graphs.every((graph) => graph.ok) ? 0 : 1;
   } catch (error) {
     process.stderr.write(`SETUP: ${error.message}\n`);
     process.exitCode = 2;
