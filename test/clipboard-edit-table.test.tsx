@@ -5,7 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { CominsTable, createCominsViewportData, reduceCominsViewportData, type CominsTableRef } from "../src";
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 let node: HTMLDivElement, root: ReturnType<typeof createRoot>;
-afterEach(() => { act(() => root?.unmount()); node?.remove(); });
+afterEach(() => { act(() => root?.unmount()); node?.remove(); vi.restoreAllMocks(); });
 function mount(content: React.ReactNode) { node = document.createElement("div"); document.body.append(node); root = createRoot(node); act(() => root.render(content)); }
 function paste(selector: string, text: string) {
   const event = new Event("paste", { bubbles: true, cancelable: true });
@@ -16,6 +16,30 @@ const rows = [{ id: 0, value: "c" }, { id: 1, value: "a" }, { id: 2, value: "b" 
 const columns = [{ field: "value", label: "value", sort: true }];
 const id = (row: { id: number }) => row.id;
 const cell = (id: number) => `[data-testid='cell-${id}-value']`;
+
+it.each(["cancel", "unmount"])("releases Fill capture and animation frames after %s", (reason) => {
+  const changed = vi.fn();
+  mount(<CominsTable fillHandle data={rows} columns={columns} getRowId={id} onChangeData={changed} />);
+  act(() => node.querySelector(cell(0))!.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+  const button = node.querySelector<HTMLButtonElement>("[data-testid='fill-handle']")!;
+  const held = new Set<number>(), frames = new Map<number, FrameRequestCallback>(); let next = 0;
+  Object.assign(button, { setPointerCapture: (id: number) => held.add(id), releasePointerCapture: (id: number) => held.delete(id) });
+  vi.spyOn(window, "requestAnimationFrame").mockImplementation(callback => { frames.set(++next, callback); return next; });
+  vi.spyOn(window, "cancelAnimationFrame").mockImplementation(id => { frames.delete(id); });
+  const down = new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 0 });
+  Object.defineProperty(down, "pointerId", { value: 7 });
+  act(() => button.dispatchEvent(down));
+  expect([...held]).toEqual([7]); expect(frames.size).toBeGreaterThan(0);
+  act(() => { if (reason === "cancel") window.dispatchEvent(new Event("pointercancel")); else root.render(null); });
+  expect([...held]).toEqual([]); expect(frames.size).toBe(0); expect(changed).not.toHaveBeenCalled();
+});
+
+it("honors application preventDefault before built-in cell copy", () => {
+  const changed = vi.fn();
+  mount(<CominsTable data={rows} columns={columns} getRowId={id} onChangeData={changed} onKeyDownCell={({ event }) => { if (event.key === "c") event.preventDefault(); }} />);
+  for (const [row, key] of [[0, "c"], [1, "v"]] as const) act(() => node.querySelector(cell(row))!.dispatchEvent(new KeyboardEvent("keydown", { key, ctrlKey: true, bubbles: true, cancelable: true })));
+  expect(changed).not.toHaveBeenCalled(); expect(node.querySelector(cell(1))!.textContent).toBe("a");
+});
 
 it("rejects Ref fill before internal state changes or application notification", () => {
   const changed = vi.fn(), error = vi.fn(), ref = createRef<CominsTableRef<typeof rows[number]>>();

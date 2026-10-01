@@ -279,6 +279,8 @@
     },
     "B8": {
       "sources": [
+        "src/core/selection/navigation.ts",
+        "src/browser/pointer.ts",
         "src/selection.ts",
         "src/core/selection/state.ts",
         "src/selection-data.ts",
@@ -302,7 +304,10 @@
       "existingTests": [
         "test/selection-core.test.ts",
         "test/tree-row-drag-core.test.ts",
-        "test/table-interaction.test.tsx"
+        "test/table-interaction.test.tsx",
+        "test/core-navigation.test.ts",
+        "test/browser-pointer.test.ts",
+        "test/clipboard-edit-table.test.tsx"
       ],
       "plannedTests": [
         "test/core-navigation.test.ts"

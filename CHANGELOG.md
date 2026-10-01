@@ -10,6 +10,7 @@
 
 ### Fixed
 
+- Fill gestures explicitly release pointer capture on cancellation and cleanup, and stopped pointer animation loops cannot schedule another frame during cleanup.
 - Repeated cleanup of an old cross-table transfer registration no longer removes a replacement registered under the same scope and Table ID.
 
 ## 0.1.11 - 2026-09-22

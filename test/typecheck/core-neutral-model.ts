@@ -1,4 +1,6 @@
 import type { CominsTableColumn, CominsTableState } from "../../src/core/model";
+import { resolveCoreFillTarget, resolveCoreTreeDropContext, planCoreSelectionCopy } from "../../src/core/selection/navigation";
+void [resolveCoreFillTarget, resolveCoreTreeDropContext, planCoreSelectionCopy];
 import { transferCominsRowBetweenTables } from "../../src/core/transfer/policy";
 void transferCominsRowBetweenTables({ source: { tableId: "a", data: [{ id: 1 }], getRowId: row => row.id }, target: { tableId: "b", data: [], getRowId: row => row.id }, sourceRowId: 1 });
 import type { CoreViewportRequest } from "../../src/core/viewport/data";

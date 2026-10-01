@@ -1,6 +1,6 @@
 # Core Model and Adapter Transition Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 기존 세션에서 순차 실행하며 새 브랜치·worktree를 만들지 않는다. Task 1~7 구현·제품 검증 완료, Task 8~10 미실행. Task 3 보안 스캔의 공식 coverage는 이전 보류 기록이 남은 partial이며 전체 보안 인증을 의미하지 않는다. 실행 증거는 `reports/2026-09-29.md`, `reports/2026-10-01.md`에 기록한다.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 기존 세션에서 순차 실행하며 새 브랜치·worktree를 만들지 않는다. Task 1~8 구현·제품 검증 완료, Task 9~10 미실행. Task 3 보안 스캔의 공식 coverage는 이전 보류 기록이 남은 partial이며 전체 보안 인증을 의미하지 않는다. 실행 증거는 `reports/2026-09-29.md`, `reports/2026-10-01.md`에 기록한다.
 
 **Goal:** 상위 단계 3·4의 Core 상태·모델 및 Browser·React 어댑터를 함께 전환하여, React 루트 호환성을 유지하면서 공개·내부 Core의 React/DOM 의존을 제거한다.
 
@@ -174,11 +174,13 @@ Task 7 실행 보강: 기존 branded coordinator와 callback options는 React에
 
 **Interfaces:** `resolveCoreFillTarget({source, address, rowIds, columnIds}): CominsCellRange | null`은 source range와 현재 pointer의 cell address로 기존 Fill 확장 범위를 계산한다. 두 축 거리 동률은 현재처럼 세로 우선, 원본 범위 안이면 null, 100000 cells 초과면 null이다. tree drag 목적지·autoscroll 함수는 기존 수치 입력/결과를 유지한다. React가 이벤트 우선권을 확인한 뒤 의도로 변환하고 Browser가 pointer capture/focus/scroll을 적용한다. 일반 cell Arrow/Home/End 이동은 현재 구현에 없으므로 새로 추가하지 않는다.
 
-- [ ] **Step 1: 계약 테스트 작성.** 정렬·필터 뒤 표시 rowIds와 숨김 제외 columnIds로 선택/Fill/copy 대상이 기존 계약과 일치하는지 검증한다. 기존 clipboard 옵션에 따른 rowIds 분기는 통합하지 않는다. 범위 경계·빈 표·숫자/문자열 ID, nested input 및 사용자 preventDefault에서 내장 동작 미실행, drag cancel/unmount에서 capture·frame 해제를 고정한다.
-- [ ] **Step 2: RED 실행.** `npm run test:run -- test/core-navigation.test.ts test/selection-core.test.ts test/tree-row-drag-core.test.ts test/table-interaction.test.tsx`.
-- [ ] **Step 3: 최소 구현.** React SyntheticEvent와 DOM target 확인을 Core에 넘기지 않는다. 이미 순수한 column-pointer/drag-autoscroll 수치 계산은 재사용하고 이벤트 시스템을 새로 만들지 않는다. Task 5의 표시 순서와 원본 순서를 명시적으로 전달하고 기존 기능/옵션별 선택을 보존한다. 분기 간 동작 차이를 발견하면 리팩터링에서 임의 수정하지 않는다.
-- [ ] **Step 4: GREEN 확인.** focused tests와 verify. shared interaction 변경이므로 `npm run test:e2e -- --workers=1`. scroll 실행 경로가 바뀌면 focused virtualization perf 후 full perf 1회도 실행한다.
-- [ ] **Step 5: 기록·커밋.** `refactor: separate navigation intent from pointer execution`.
+- [x] **Step 1: 계약 테스트 작성.** 정렬·필터 뒤 표시 rowIds와 숨김 제외 columnIds로 선택/Fill/copy 대상이 기존 계약과 일치하는지 검증한다. 기존 clipboard 옵션에 따른 rowIds 분기는 통합하지 않는다. 범위 경계·빈 표·숫자/문자열 ID, nested input 및 사용자 preventDefault에서 내장 동작 미실행, drag cancel/unmount에서 capture·frame 해제를 고정한다.
+- [x] **Step 2: RED 실행.** `npm run test:run -- test/core-navigation.test.ts test/selection-core.test.ts test/tree-row-drag-core.test.ts test/table-interaction.test.tsx`.
+- [x] **Step 3: 최소 구현.** React SyntheticEvent와 DOM target 확인을 Core에 넘기지 않는다. 이미 순수한 column-pointer/drag-autoscroll 수치 계산은 재사용하고 이벤트 시스템을 새로 만들지 않는다. Task 5의 표시 순서와 원본 순서를 명시적으로 전달하고 기존 기능/옵션별 선택을 보존한다. 분기 간 동작 차이를 발견하면 리팩터링에서 임의 수정하지 않는다.
+- [x] **Step 4: GREEN 확인.** focused tests와 verify. shared interaction 변경이므로 `npm run test:e2e -- --workers=1`. scroll 실행 경로가 바뀌면 focused virtualization perf 후 full perf 1회도 실행한다.
+- [x] **Step 5: 기록·커밋.** `refactor: separate navigation intent from pointer execution`.
+
+Task 8 실행 보강: Fill bounds/확장·copy rectangle·Tree 목적지를 중립 navigation으로 이전하고 기존 순수 column-pointer/drag-autoscroll을 재사용했다. Browser는 capture/listener/frame/focus/scroll과 cross-table autoscroll을 소유한다. React의 사용자 이벤트 우선권·clipboard 옵션별 row order·guard 및 callback은 유지했다. 선행 실패한 실제 Fill 취소/unmount의 capture 해제를 멱등 cleanup으로 보강했고 frame 내부 stop 후 재예약을 막았다. focused 175 tests, verify(568 tests 및 checker 33), focused virtualization(9), full perf(38), 일반 E2E(231)가 통과했다. 공개 API·지원 모드는 변경하지 않았다.
 
 ### Task 9: layout 무효화와 Browser 측정·I/O 경계 — B4/B9
 
@@ -211,7 +213,7 @@ Task 1 → 2 → 3(공개 Core 독립성) → 4 → 5 → 6 → 7 → 8 → 9 �
 - 단계 3 완료: 중립 state/model/편집/projection/viewport/transfer/layout를 React 없이 검사할 수 있고 B1~B9 Core 소유 연산이 실제 어댑터에서 사용된다.
 - 단계 4 완료: 기존 root 타입/행동 및 callback 순서를 유지하고 Browser 자원이 cleanup되며 Core/Browser의 React 역참조가 없다.
 - 단계 5·6 미완료: 이 계획 통과만으로 사용자 문서 전체, React 배포 소비자, 최종 릴리스 준비 또는 배포 완료를 주장하지 않는다.
-- Task 1~7를 완료했으며 다음 실행 범위는 **Task 8**다. 기존 브랜치·순차 실행 방법은 유지한다. 상위 설계 변경 없이 해결할 수 없는 호환성 충돌이 입증되면 그 지점에서 대안·영향을 보고하고 범위 확장 전에 결정받는다.
+- Task 1~8를 완료했으며 다음 실행 범위는 **Task 9**다. 기존 브랜치·순차 실행 방법은 유지한다. 상위 설계 변경 없이 해결할 수 없는 호환성 충돌이 입증되면 그 지점에서 대안·영향을 보고하고 범위 확장 전에 결정받는다.
 
 ## 자체 검토
 
@@ -220,4 +222,4 @@ Task 1 → 2 → 3(공개 Core 독립성) → 4 → 5 → 6 → 7 → 8 → 9 �
 - root state와 Core state 사이의 구조적 호환을 가정하지 않고 bridge identity·metadata·callback payload 복원을 명시했다. props 조정 통지와 사용자 조작 통지를 구분했다.
 - 현재 지원하지 않는 일반 cell Arrow/Home/End 이동은 제외했고, B8은 기존 Fill/선택·clipboard·tree drag 계산 이전으로 한정했다. clipboard 옵션별 좌표 분기를 새 규칙으로 통합하지 않는다.
 - Review Focus 5개에 소유 테스트가 있으며 기능별 focused 검증과 전체 게이트를 구분했다. 문서 작성 자체에는 구현 검증 결과를 붙이지 않는다.
-- Vue·새 패키지·새 브랜치·SSR·신규 모드 지원·release 작업은 추가하지 않았다. 구현 checklist는 Task 1~7를 완료했다. 공개 Core 독립성 검증과 별도로 Task 8~10 내부 분리 및 최종 검증은 남아 있다.
+- Vue·새 패키지·새 브랜치·SSR·신규 모드 지원·release 작업은 추가하지 않았다. 구현 checklist는 Task 1~8를 완료했다. 공개 Core 독립성 검증과 별도로 Task 9~10 내부 분리 및 최종 검증은 남아 있다.
