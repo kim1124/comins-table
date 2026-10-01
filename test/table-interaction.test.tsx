@@ -2064,6 +2064,24 @@ describe("comins-table keyboard interaction", () => {
     }
   });
 
+  it("reclaims pending Detail focus retries across repeated table unmounts", () => {
+    const pending = new Map<number, FrameRequestCallback>();
+    let frameId = 0;
+    const requestFrame = vi.spyOn(window, "requestAnimationFrame").mockImplementation(callback => { pending.set(++frameId, callback); return frameId; });
+    const cancelFrame = vi.spyOn(window, "cancelAnimationFrame").mockImplementation(id => { pending.delete(id); });
+    try {
+      for (let iteration = 0; iteration < 3; iteration++) {
+        const element = renderTableElement(<CominsTable columns={columns} data={rows} getRowId={getPersonRowId} expandedRowIds={["a"]} onChangeExpandedRowIds={() => {}} renderRowDetail={() => <input data-testid="detail-input" />} />);
+        act(() => element.querySelector<HTMLInputElement>("[data-testid='detail-input']")!.focus());
+        act(() => root?.unmount()); root = undefined;
+        element.remove();
+        expect(pending.size).toBe(0);
+      }
+    } finally {
+      requestFrame.mockRestore(); cancelFrame.mockRestore();
+    }
+  });
+
   it("creates no Detail measurement observer when Row Detail is disabled", () => {
     const resize = installControllableResizeObserver();
 

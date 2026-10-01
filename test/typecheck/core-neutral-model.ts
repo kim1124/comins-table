@@ -1,4 +1,8 @@
 import type { CominsTableColumn, CominsTableState } from "../../src/core/model";
+import { CominsHeightIndex, getCominsScrollScale } from "../../src/core/layout/virtual";
+import { CominsViewportHeightIndex } from "../../src/core/layout/viewport";
+import { resolveCominsRowHeight } from "../../src/core/layout/row-height";
+void [CominsHeightIndex, CominsViewportHeightIndex, getCominsScrollScale, resolveCominsRowHeight];
 import { resolveCoreFillTarget, resolveCoreTreeDropContext, planCoreSelectionCopy } from "../../src/core/selection/navigation";
 void [resolveCoreFillTarget, resolveCoreTreeDropContext, planCoreSelectionCopy];
 import { transferCominsRowBetweenTables } from "../../src/core/transfer/policy";

@@ -10,6 +10,7 @@
 
 ### Fixed
 
+- Pending Row Detail focus retries are cancelled when their owning Table unmounts, while disclosure-collapse focus restoration is preserved.
 - Fill gestures explicitly release pointer capture on cancellation and cleanup, and stopped pointer animation loops cannot schedule another frame during cleanup.
 - Repeated cleanup of an old cross-table transfer registration no longer removes a replacement registered under the same scope and Table ID.
 

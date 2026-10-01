@@ -1,6 +1,6 @@
 # Core Model and Adapter Transition Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 기존 세션에서 순차 실행하며 새 브랜치·worktree를 만들지 않는다. Task 1~8 구현·제품 검증 완료, Task 9~10 미실행. Task 3 보안 스캔의 공식 coverage는 이전 보류 기록이 남은 partial이며 전체 보안 인증을 의미하지 않는다. 실행 증거는 `reports/2026-09-29.md`, `reports/2026-10-01.md`에 기록한다.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 기존 세션에서 순차 실행하며 새 브랜치·worktree를 만들지 않는다. Task 1~9 구현·제품 검증 완료, Task 10 미실행. Task 3 보안 스캔의 공식 coverage는 이전 보류 기록이 남은 partial이며 전체 보안 인증을 의미하지 않는다. 실행 증거는 `reports/2026-09-29.md`, `reports/2026-10-01.md`에 기록한다.
 
 **Goal:** 상위 단계 3·4의 Core 상태·모델 및 Browser·React 어댑터를 함께 전환하여, React 루트 호환성을 유지하면서 공개·내부 Core의 React/DOM 의존을 제거한다.
 
@@ -188,11 +188,11 @@ Task 8 실행 보강: Fill bounds/확장·copy rectangle·Tree 목적지를 중�
 
 **Interfaces:** 기존 height index·slot·anchor 수치 함수 signature를 유지한다. `createMeasurementObserver({onMeasure}): {observe(element): void, unobserve(element): void, dispose(): void}`는 실제 DOM 측정 수명만 담당하며 onMeasure로 `{element,height}`를 반환한다. React가 element→row/slot 대응을 관리하고 Core에 row/layoutKey/contentRevision/height를 전달한다. Browser scroll/clipboard 함수는 기존 동기·Promise 반환과 fallback을 유지한다.
 
-- [ ] **Step 1: 계약 테스트 작성.** B9 `data:number:1`/`data:string:1` 측정 분리, row/layoutKey/contentRevision 각각 변경 시 무효화, 동일 입력 캐시 재사용, 제거된 anchor fallback, sparse index clone/retain/한도/물리 높이 상한을 고정한다. 관측 마지막 요소 제거 및 반복 mount/unmount에서 observer/frame/listener 회수를 검증한다.
-- [ ] **Step 2: RED 실행.** `npm run test:run -- test/core-layout-invalidation.test.ts test/browser-measurements.test.ts test/virtual-layout.test.ts test/table-calculations.test.ts`. 기존 수치 결과와 신규 경계 실패를 분리한다.
-- [ ] **Step 3: 최소 구현.** DOM geometry·ResizeObserver·focus/scroll·clipboard I/O를 Browser로 옮긴다. React effect/ref는 그대로 생명주기를 연결한다. Core는 실제 숫자/식별자만 받고 높이 index 갱신·clone 계약을 유지한다. clipboard fallback/권한 오류 동작을 새 기능으로 확장하지 않는다.
-- [ ] **Step 4: GREEN 확인.** focused tests와 verify. `npm run test:e2e -- test/playwright/specs/row-expand.spec.ts test/playwright/specs/selection-clipboard.spec.ts test/playwright/specs/physical-scrollbar.spec.ts --workers=1`. 먼저 `npm run test:perf -- test/playwright/specs/virtualization.spec.ts test/playwright/specs/viewport-physical-scrollbar.spec.ts --workers=1`, 이후 `npm run test:perf -- --workers=1` 1회 실행한다. 성능 기준·memory counter를 통과 목적으로 완화하지 않는다.
-- [ ] **Step 5: 기록·커밋.** `refactor: isolate layout models and browser measurement lifecycle`.
+- [x] **Step 1: 계약 테스트 작성.** B9 `data:number:1`/`data:string:1` 측정 분리, row/layoutKey/contentRevision 각각 변경 시 무효화, 동일 입력 캐시 재사용, 제거된 anchor fallback, sparse index clone/retain/한도/물리 높이 상한을 고정한다. 관측 마지막 요소 제거 및 반복 mount/unmount에서 observer/frame/listener 회수를 검증한다.
+- [x] **Step 2: RED 실행.** `npm run test:run -- test/core-layout-invalidation.test.ts test/browser-measurements.test.ts test/virtual-layout.test.ts test/table-calculations.test.ts`. 기존 수치 결과와 신규 경계 실패를 분리한다.
+- [x] **Step 3: 최소 구현.** DOM geometry·ResizeObserver·focus/scroll·clipboard I/O를 Browser로 옮긴다. React effect/ref는 그대로 생명주기를 연결한다. Core는 실제 숫자/식별자만 받고 높이 index 갱신·clone 계약을 유지한다. clipboard fallback/권한 오류 동작을 새 기능으로 확장하지 않는다.
+- [x] **Step 4: GREEN 확인.** focused tests와 verify. `npm run test:e2e -- test/playwright/specs/row-expand.spec.ts test/playwright/specs/selection-clipboard.spec.ts test/playwright/specs/physical-scrollbar.spec.ts --workers=1`. 먼저 `npm run test:perf -- test/playwright/specs/virtualization.spec.ts test/playwright/specs/viewport-physical-scrollbar.spec.ts --workers=1`, 이후 `npm run test:perf -- --workers=1` 1회 실행한다. 성능 기준·memory counter를 통과 목적으로 완화하지 않는다.
+- [x] **Step 5: 기록·커밋.** `refactor: isolate layout models and browser measurement lifecycle`.
 
 ### Task 10: 전체 내부 경계 검증과 단계 5 인계
 
@@ -213,7 +213,7 @@ Task 1 → 2 → 3(공개 Core 독립성) → 4 → 5 → 6 → 7 → 8 → 9 �
 - 단계 3 완료: 중립 state/model/편집/projection/viewport/transfer/layout를 React 없이 검사할 수 있고 B1~B9 Core 소유 연산이 실제 어댑터에서 사용된다.
 - 단계 4 완료: 기존 root 타입/행동 및 callback 순서를 유지하고 Browser 자원이 cleanup되며 Core/Browser의 React 역참조가 없다.
 - 단계 5·6 미완료: 이 계획 통과만으로 사용자 문서 전체, React 배포 소비자, 최종 릴리스 준비 또는 배포 완료를 주장하지 않는다.
-- Task 1~8를 완료했으며 다음 실행 범위는 **Task 9**다. 기존 브랜치·순차 실행 방법은 유지한다. 상위 설계 변경 없이 해결할 수 없는 호환성 충돌이 입증되면 그 지점에서 대안·영향을 보고하고 범위 확장 전에 결정받는다.
+- Task 1~9를 완료했으며 다음 실행 범위는 **Task 10**다. 기존 브랜치·순차 실행 방법은 유지한다. 상위 설계 변경 없이 해결할 수 없는 호환성 충돌이 입증되면 그 지점에서 대안·영향을 보고하고 범위 확장 전에 결정받는다.
 
 ## 자체 검토
 
@@ -222,4 +222,4 @@ Task 1 → 2 → 3(공개 Core 독립성) → 4 → 5 → 6 → 7 → 8 → 9 �
 - root state와 Core state 사이의 구조적 호환을 가정하지 않고 bridge identity·metadata·callback payload 복원을 명시했다. props 조정 통지와 사용자 조작 통지를 구분했다.
 - 현재 지원하지 않는 일반 cell Arrow/Home/End 이동은 제외했고, B8은 기존 Fill/선택·clipboard·tree drag 계산 이전으로 한정했다. clipboard 옵션별 좌표 분기를 새 규칙으로 통합하지 않는다.
 - Review Focus 5개에 소유 테스트가 있으며 기능별 focused 검증과 전체 게이트를 구분했다. 문서 작성 자체에는 구현 검증 결과를 붙이지 않는다.
-- Vue·새 패키지·새 브랜치·SSR·신규 모드 지원·release 작업은 추가하지 않았다. 구현 checklist는 Task 1~8를 완료했다. 공개 Core 독립성 검증과 별도로 Task 9~10 내부 분리 및 최종 검증은 남아 있다.
+- Vue·새 패키지·새 브랜치·SSR·신규 모드 지원·release 작업은 추가하지 않았다. 구현 checklist는 Task 1~9를 완료했다. 공개 Core 독립성 검증과 별도로 Task 10 내부 전체 경계 및 최종 검증은 남아 있다.

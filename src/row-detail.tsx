@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from "react";
 import type * as React from "react";
+import type { createCominsDetailFocusRestorer } from "./browser/scroll";
 
 import { CominsTableIconButton } from "./table-icons";
 
@@ -47,13 +48,16 @@ export function CominsRowDetailRow(props: {
   ownerId: string;
   testId: string;
   getToggleElement: () => HTMLButtonElement | null;
+  restoreFocus: ReturnType<typeof createCominsDetailFocusRestorer>["restore"];
 }) {
   const contentRef = useRef<HTMLDivElement | null>(null);
   const getToggleElementRef = useRef(props.getToggleElement);
+  const restoreFocusRef = useRef(props.restoreFocus);
   const onContentElementRef = useRef(props.onContentElement);
   const automatic = props.fixedHeight === undefined;
 
   getToggleElementRef.current = props.getToggleElement;
+  restoreFocusRef.current = props.restoreFocus;
   onContentElementRef.current = props.onContentElement;
 
   useLayoutEffect(() => {
@@ -68,18 +72,7 @@ export function CominsRowDetailRow(props: {
     const element = contentRef.current;
 
     return () => {
-      if (element?.contains(document.activeElement)) {
-        const restoreFocus = () => {
-          const toggle = getToggleElementRef.current();
-
-          if (toggle?.isConnected) {
-            toggle.focus();
-          }
-        };
-
-        restoreFocus();
-        window.requestAnimationFrame(restoreFocus);
-      }
+      restoreFocusRef.current(element, () => getToggleElementRef.current());
     };
   }, []);
 

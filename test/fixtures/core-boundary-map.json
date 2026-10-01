@@ -316,6 +316,12 @@
     },
     "B9": {
       "sources": [
+        "src/core/layout/virtual.ts",
+        "src/core/layout/viewport.ts",
+        "src/core/layout/row-height.ts",
+        "src/browser/measurements.ts",
+        "src/browser/scroll.ts",
+        "src/browser/clipboard.ts",
         "src/column-layout.ts",
         "src/core/layout/columns.ts",
         "src/column-pinning.ts",
@@ -337,6 +343,8 @@
       ],
       "existingTests": [
         "test/virtual-layout.test.ts",
+        "test/core-layout-invalidation.test.ts",
+        "test/browser-measurements.test.ts",
         "test/viewport-data.test.ts",
         "test/table-calculations.test.ts"
       ],
@@ -346,7 +354,7 @@
       "characterizationCases": [
         {
           "id": "B9-typed-slot-identity",
-          "status": "planned",
+          "status": "verified",
           "input": "숫자 rowId=1과 문자열 rowId='1'인 두 데이터 슬롯에 서로 다른 측정 높이 적용",
           "expected": "slot key는 data:number:1과 data:string:1로 구분, 한 슬롯의 높이 갱신이 다른 슬롯의 측정값을 덮어쓰지 않음",
           "plannedTest": "test/core-layout-invalidation.test.ts"
