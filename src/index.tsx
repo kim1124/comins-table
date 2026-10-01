@@ -105,7 +105,7 @@ import {
 import { CominsPointerTooltip } from "./tooltip";
 import { createCominsViewportData, reduceCominsViewportData, normalizeCominsViewportInteger, type CominsViewportData, type CominsViewportRequest } from "./viewport-data";
 import { CominsViewportHeightIndex } from "./viewport-layout";
-import { useCominsViewportRequests } from "./viewport-requests";
+import { useCominsViewportRequests } from "./react/viewport";
 import type { CominsViewportDatasource } from "./use-viewport";
 import { normalizeCominsRowHeight, resolveCominsRowHeight, type CominsRowHeight, type CominsRowHeightParams, type CominsRowMeasurement } from "./row-height";
 import { useCominsTreeDrag, type CominsBeforeTreeRowDragPayload, type CominsTreeRowDragPayload, type CominsAfterTreeRowDragPayload } from "./tree-drag";

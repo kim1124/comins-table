@@ -1,4 +1,11 @@
 import type { CominsTableColumn, CominsTableState } from "../../src/core/model";
+import type { CoreViewportRequest } from "../../src/core/viewport/data";
+import { createCominsViewportData, reduceCominsViewportData } from "../../src/core/viewport/data";
+import { planViewportRequests } from "../../src/core/viewport/requests";
+const verifyViewportRequest = (request: CoreViewportRequest) => request.requestId;
+void verifyViewportRequest;
+const viewportData = createCominsViewportData({ revision: 1, rowCount: 100 });
+void [reduceCominsViewportData(viewportData, { type: "retain", range: { startIndex: 0, endIndex: 20 } }), planViewportRequests({ data: viewportData, range: { startIndex: 0, endIndex: 20 }, active: [], retryStarts: [] })];
 import { createCominsTableState, setCominsSortModel } from "../../src/core/state/table";
 import { copyCominsCell, pasteCominsCell, isCominsCellDisabled } from "../../src/core/editing/cells";
 import { copyCominsRow, pasteCominsRow, copyCominsCellRange, pasteCominsCellRange, pasteCominsText, fillCominsCellRange } from "../../src/core/editing/clipboard";

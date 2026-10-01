@@ -200,6 +200,10 @@
     },
     "B6": {
       "sources": [
+        "src/core/viewport/data.ts",
+        "src/core/viewport/requests.ts",
+        "src/browser/viewport-requests.ts",
+        "src/react/viewport.ts",
         "src/viewport-data.ts",
         "src/viewport-requests.ts",
         "src/use-viewport.ts",
@@ -218,6 +222,8 @@
       "existingTests": [
         "test/viewport-data.test.ts",
         "test/viewport-table.test.tsx",
+        "test/core-request-policy.test.ts",
+        "test/browser-viewport-requests.test.ts",
         "test/table-interaction.test.tsx"
       ],
       "plannedTests": [
@@ -226,7 +232,7 @@
       "characterizationCases": [
         {
           "id": "B6-pending-response-keeps-local-edit",
-          "status": "planned",
+          "status": "verified",
           "input": "revision=a, blockSize=2, index 0~1의 rows=[{id:0},{id:1}] 로드 후 refresh 요청; index 0을 {id:999}로 patch 후 옛 rows 응답 도착",
           "expected": "index 0의 id=999 유지, 완료된 refresh 요청 정리; pending 응답의 id=0으로 덮어쓰지 않음",
           "plannedTest": "test/core-request-policy.test.ts"

@@ -1,6 +1,6 @@
 # Core Model and Adapter Transition Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 기존 세션에서 순차 실행하며 새 브랜치·worktree를 만들지 않는다. Task 1~5 구현·제품 검증 완료, Task 6~10 미실행. Task 3 보안 스캔의 공식 coverage는 이전 보류 기록이 남은 partial이며 전체 보안 인증을 의미하지 않는다. 실행 증거는 `reports/2026-09-29.md`, `reports/2026-10-01.md`에 기록한다.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 기존 세션에서 순차 실행하며 새 브랜치·worktree를 만들지 않는다. Task 1~6 구현·제품 검증 완료, Task 7~10 미실행. Task 3 보안 스캔의 공식 coverage는 이전 보류 기록이 남은 partial이며 전체 보안 인증을 의미하지 않는다. 실행 증거는 `reports/2026-09-29.md`, `reports/2026-10-01.md`에 기록한다.
 
 **Goal:** 상위 단계 3·4의 Core 상태·모델 및 Browser·React 어댑터를 함께 전환하여, React 루트 호환성을 유지하면서 공개·내부 Core의 React/DOM 의존을 제거한다.
 
@@ -142,15 +142,17 @@ Task 5 실행 보강: 준비된 필터/정렬/그룹 인덱스를 받는 project
 
 **Files:** core/viewport/data/requests, browser/viewport-requests, react/viewport 생성. `src/viewport-data.ts`, `src/viewport-requests.ts`, `src/use-viewport.ts`, `src/index.tsx` 연결. `test/core-request-policy.test.ts`, `test/browser-viewport-requests.test.ts`, 기존 viewport-data/viewport-table tests.
 
-**Interfaces:** `CoreViewportRequest = {startIndex,endIndex,revision,requestId,retainRange}`는 signal을 갖지 않는다. `planViewportRequests({data, range, active, retryStarts, maxConcurrent}): {startRanges: CominsViewportRange[], cancelRequestIds: string[], consumedRetryStarts: number[]}`; active는 descriptor와 done boolean의 readonly 목록이다. `createViewportRequestExecutor<TData>({onRequest, onSettled}): {start(descriptor): void, cancel(requestId): void, dispose(): void}`는 Browser 내부에서 AbortController/Promise를 소유한다. `onRequest`에는 descriptor + signal의 기존 루트 실행 요청을 전달하고 `onSettled`에는 requestId만 전달한다. 응답 data는 기존 애플리케이션 callback/reducer 흐름으로 들어온다.
+**Interfaces:** `CoreViewportRequest = {startIndex,endIndex,revision,requestId,retainRange}`는 signal을 갖지 않는다. `planViewportRequests({data, range, active, retryStarts, maxConcurrent}): {startRanges: CominsViewportRange[], cancelRequestIds: string[], releaseRequestIds: string[], consumedRetryStarts: number[]}`; active는 descriptor와 done boolean의 readonly 목록이다. `createViewportRequestExecutor({onRequest, onSettled}): {start(descriptor): void, cancel(requestId): void, release(requestId): void, dispose(): void}`는 Browser 내부에서 AbortController/Promise를 소유한다. `onRequest`에는 descriptor + signal의 기존 루트 실행 요청을 전달하고 `onSettled`에는 requestId만 전달한다. 응답 data는 기존 애플리케이션 callback/reducer 흐름으로 들어온다.
 
 Browser의 실행 요청 타입은 `CoreViewportRequest & {signal: AbortSignal}`로 정의하고 루트 타입이 이를 재수출한다. 소비자 훅의 별도 실행 경계 `runViewportRequest<TData>({request, getRows, dispatch}): Promise<void>`도 같은 Browser 파일에 둔다. getRows는 현재 동기 배열/Promise 계약, dispatch는 request/cancel/success/error 데이터 event를 받는다. 이 helper는 abort listener 등록·finally 해제를 소유하고 React hook의 dispatch closure가 mounted/initial snapshot 유효성을 검사한다. Table의 스케줄링 executor와 소비자 getRows 실행을 합쳐 이중 요청하지 않는다.
 
-- [ ] **Step 1: 계약 테스트 작성.** B6 refresh→local patch id=999→옛 응답에서 최신 값과 pending 정리, revision 불일치/중복 ID/불완전·sparse 응답, cache retain을 고정한다. 시작 전에 aborted면 request no-op, pending 이후 aborted response면 cancel과 같은 정리, 기본 동시 실행 2·retry·범위 이탈·unmount cleanup을 각각 검증한다.
-- [ ] **Step 2: RED 실행.** `npm run test:run -- test/core-request-policy.test.ts test/browser-viewport-requests.test.ts test/viewport-data.test.ts test/viewport-table.test.tsx`. ES2022/types=[]의 내부 Core 타입 검사에도 viewport entry를 포함하여 AbortSignal 유입 RED를 확인한다.
-- [ ] **Step 3: 최소 구현.** Core reducer는 signal 없이 기존 event/data 계약을 처리한다. 기존 루트 `CominsViewportRequest`와 reducer wrapper는 signal을 유지하며 request/response 양쪽 aborted 분기를 기존 순서대로 변환한다. Promise reject가 새 공용 오류 callback을 만들지 않게 한다. executor는 취소 후 settled 통지를 억제하고 dispose를 멱등으로 구현한다. React는 ref/effect 및 제어 snapshot 갱신을 담당하고 소비자 훅의 abort listener도 Browser helper로 위임한다. lazy/infinite 요청은 viewport 정책에 합치거나 동작을 바꾸지 않는다.
-- [ ] **Step 4: GREEN 확인.** 위 tests와 verify. `npm run test:e2e -- test/playwright/specs/viewport-datasource.spec.ts --workers=1`; focused `npm run test:perf -- test/playwright/specs/viewport-physical-scrollbar.spec.ts --workers=1` 후 full perf 1회. 요청 계획이 cache/scroll 자원 사용을 바꾸는 회귀를 확인한다.
-- [ ] **Step 5: 기록·커밋.** `refactor: split viewport request policy and browser execution`.
+- [x] **Step 1: 계약 테스트 작성.** B6 refresh→local patch id=999→옛 응답에서 최신 값과 pending 정리, revision 불일치/중복 ID/불완전·sparse 응답, cache retain을 고정한다. 시작 전에 aborted면 request no-op, pending 이후 aborted response면 cancel과 같은 정리, 기본 동시 실행 2·retry·범위 이탈·unmount cleanup을 각각 검증한다.
+- [x] **Step 2: RED 실행.** `npm run test:run -- test/core-request-policy.test.ts test/browser-viewport-requests.test.ts test/viewport-data.test.ts test/viewport-table.test.tsx`. ES2022/types=[]의 내부 Core 타입 검사에도 viewport entry를 포함하여 AbortSignal 유입 RED를 확인한다.
+- [x] **Step 3: 최소 구현.** Core reducer는 signal 없이 기존 event/data 계약을 처리한다. 기존 루트 `CominsViewportRequest`와 reducer wrapper는 signal을 유지하며 request/response 양쪽 aborted 분기를 기존 순서대로 변환한다. Promise reject가 새 공용 오류 callback을 만들지 않게 한다. executor는 취소 후 settled 통지를 억제하고 dispose를 멱등으로 구현한다. React는 ref/effect 및 제어 snapshot 갱신을 담당하고 소비자 훅의 abort listener도 Browser helper로 위임한다. lazy/infinite 요청은 viewport 정책에 합치거나 동작을 바꾸지 않는다.
+- [x] **Step 4: GREEN 확인.** 위 tests와 verify. `npm run test:e2e -- test/playwright/specs/viewport-datasource.spec.ts --workers=1`; focused `npm run test:perf -- test/playwright/specs/viewport-physical-scrollbar.spec.ts --workers=1` 후 full perf 1회. 요청 계획이 cache/scroll 자원 사용을 바꾸는 회귀를 확인한다.
+- [x] **Step 5: 기록·커밋.** `refactor: split viewport request policy and browser execution`.
+
+Task 6 실행 보강: 완료된 요청의 abort 없는 참조 해제를 보존하도록 planner의 releaseRequestIds 및 executor.release를 추가했다. 행 데이터를 받지 않는 executor의 불필요한 generic은 생략했다. Core는 signal 없는 reducer/정책을 소유하고 Browser는 controller/Promise/listener를, React는 controlled snapshot/ref/effect를 소유한다. focused 31 tests, verify(547 tests 및 checker 33), Viewport E2E(5), 일반 E2E(231), focused physical scrollbar(1), 전체 perf(38)가 통과했다. B6 characterization과 ES2022 격리 컴파일을 실행 증거로 연결했다.
 
 ### Task 7: transfer 계산과 DOM 등록 분리 — B7
 
@@ -207,7 +209,7 @@ Task 1 → 2 → 3(공개 Core 독립성) → 4 → 5 → 6 → 7 → 8 → 9 �
 - 단계 3 완료: 중립 state/model/편집/projection/viewport/transfer/layout를 React 없이 검사할 수 있고 B1~B9 Core 소유 연산이 실제 어댑터에서 사용된다.
 - 단계 4 완료: 기존 root 타입/행동 및 callback 순서를 유지하고 Browser 자원이 cleanup되며 Core/Browser의 React 역참조가 없다.
 - 단계 5·6 미완료: 이 계획 통과만으로 사용자 문서 전체, React 배포 소비자, 최종 릴리스 준비 또는 배포 완료를 주장하지 않는다.
-- Task 1~5를 완료했으며 다음 실행 범위는 **Task 6**다. 기존 브랜치·순차 실행 방법은 유지한다. 상위 설계 변경 없이 해결할 수 없는 호환성 충돌이 입증되면 그 지점에서 대안·영향을 보고하고 범위 확장 전에 결정받는다.
+- Task 1~6를 완료했으며 다음 실행 범위는 **Task 7**다. 기존 브랜치·순차 실행 방법은 유지한다. 상위 설계 변경 없이 해결할 수 없는 호환성 충돌이 입증되면 그 지점에서 대안·영향을 보고하고 범위 확장 전에 결정받는다.
 
 ## 자체 검토
 
@@ -216,4 +218,4 @@ Task 1 → 2 → 3(공개 Core 독립성) → 4 → 5 → 6 → 7 → 8 → 9 �
 - root state와 Core state 사이의 구조적 호환을 가정하지 않고 bridge identity·metadata·callback payload 복원을 명시했다. props 조정 통지와 사용자 조작 통지를 구분했다.
 - 현재 지원하지 않는 일반 cell Arrow/Home/End 이동은 제외했고, B8은 기존 Fill/선택·clipboard·tree drag 계산 이전으로 한정했다. clipboard 옵션별 좌표 분기를 새 규칙으로 통합하지 않는다.
 - Review Focus 5개에 소유 테스트가 있으며 기능별 focused 검증과 전체 게이트를 구분했다. 문서 작성 자체에는 구현 검증 결과를 붙이지 않는다.
-- Vue·새 패키지·새 브랜치·SSR·신규 모드 지원·release 작업은 추가하지 않았다. 구현 checklist는 Task 1~5를 완료했다. 공개 Core 독립성 검증과 별도로 Task 6~10 내부 분리 및 최종 검증은 남아 있다.
+- Vue·새 패키지·새 브랜치·SSR·신규 모드 지원·release 작업은 추가하지 않았다. 구현 checklist는 Task 1~6를 완료했다. 공개 Core 독립성 검증과 별도로 Task 7~10 내부 분리 및 최종 검증은 남아 있다.
