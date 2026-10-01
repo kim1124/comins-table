@@ -1,4 +1,6 @@
 import type React from "react";
+import { pasteCominsText } from "../../src/clipboard";
+import { selectCell as selectClipboardCell } from "../../src/selection";
 import {
   formatCominsCellValue,
   getCominsCellStyle,
@@ -61,6 +63,10 @@ const scoreColumn: CominsTableColumn<Row, number> = {
 function consumeRootState(state: CominsTableState<Row>, column: CominsTableRuntimeColumn<Row>) {
   const address = { rowId: "a", columnId: "score" };
   const selected = selectCell(state, address);
+  const edited: CominsTableState<Row> = pasteCominsText(selectClipboardCell(state, address), address, "10");
+  const editedLabel: React.ReactNode = edited.columns[0]?.label;
+  const editedTheme: React.CSSProperties | undefined = edited.theme.style;
+  void [editedLabel, editedTheme];
   const cellCount: number = selected.selection.cells.length;
   const noRange: null = selected.selection.range;
   const range = selectCellRange(state, { anchor: address, focus: address });

@@ -1,6 +1,6 @@
 import {
   copyCominsCell, getCominsCellValue, getCominsSelectedCellRange, getCominsVisibleColumns,
-} from "./core";
+} from "./react/core-compat";
 import type { CominsCellAddress, CominsCopiedCellRange, CominsRowId } from "./model";
 import type { CominsTableState } from "./react-types";
 

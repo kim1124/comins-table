@@ -176,23 +176,59 @@ test("CLI reports a real consumer API failure as exit 1, not a setup error", (t)
 });
 
 function publicFixture(t, suffix = "") {
+  // Minimal stand-in for the production consumer contract; not an implementation oracle.
   return fixture(t, {
     "package/core.js": `
-      export function createCominsTableState({rows, getRowId}) {
-        return {rows, rowIds: rows.map(getRowId), sortModel: []};
+      export function createCominsTableState({rows, columns, getRowId}) {
+        return {rows, columns, rowIds: rows.map(getRowId), sortModel: []};
       }
       export function queryCominsRows(state) { return [...state.rows]; }
       export function setCominsSortModel(state, sortModel) { return {...state, sortModel, sort: sortModel[0]}; }
+      export function isCominsCellDisabled(state, data, rowId, column) {
+        return column.cell.disabled({row: {data}, value: data[column.field]});
+      }
+      export function pasteCominsText(state, address, text) {
+        const column = state.columns.find(column => column.field === address.columnId);
+        const start = state.rowIds.indexOf(address.rowId);
+        const values = text.split('\\n').map(text => column.cell.parseClipboard({text}));
+        let changed = false;
+        const rows = state.rows.map((row, index) => {
+          const offset = index - start;
+          if (offset < 0 || offset >= values.length || row[column.field] === values[offset]) return row;
+          changed = true;
+          return {...row, [column.field]: values[offset]};
+        });
+        return changed ? {...state, rows} : state;
+      }
+      export function fillCominsCellRange(state, {source, target}) {
+        const value = state.rows[state.rowIds.indexOf(source.rowId)][source.columnId];
+        return pasteCominsText(state, target.focus, String(value));
+      }
       ${suffix}
     `,
     "package/core.d.ts": `
       type Sort = { columnId: string; direction: "asc" | "desc" };
-      export type CominsTableState<T> = { rows: T[]; rowIds: string[]; sortModel: Sort[] };
+      type Address = { rowId: string; columnId: string };
+      type Payload<T> = { row: {data: T}; value: unknown };
+      type Column<T> = { field: string; label: string; sort: boolean; cell: {
+        disabled: (payload: Payload<T>) => boolean;
+        copyable: boolean; pasteable: (payload: Payload<T>) => boolean;
+        parseClipboard: (payload: Payload<T> & {text: string}) => unknown;
+        validateFill: (payload: Payload<T>) => boolean;
+      } };
+      export type CominsTableState<T> = { rows: T[]; columns: Column<T>[]; rowIds: string[]; sortModel: Sort[] };
+      export type CominsHeaderComponentPayload<T> = {
+        column: {definition: Column<T>; field: string; id: string; index: number; label: string};
+        layout: {hidden: boolean}; sort: {count: number; direction: null; enabled: boolean; priority: null};
+      };
       export declare function createCominsTableState<T>(input: {
-        rows: T[]; columns: { field: string; label: string; sort: boolean }[]; getRowId: (row: T) => string;
+        rows: T[]; columns: Column<T>[]; getRowId: (row: T) => string;
       }): CominsTableState<T>;
       export declare function queryCominsRows<T>(state: CominsTableState<T>): T[];
       export declare function setCominsSortModel<T>(state: CominsTableState<T>, sort: Sort[]): CominsTableState<T>;
+      export declare function isCominsCellDisabled<T>(state: CominsTableState<T>, row: T, rowId: string, column: Column<T>): boolean;
+      export declare function pasteCominsText<T>(state: CominsTableState<T>, address: Address, text: string): CominsTableState<T>;
+      export declare function fillCominsCellRange<T>(state: CominsTableState<T>, range: {source: Address; target: {anchor: Address; focus: Address}}): CominsTableState<T>;
     `,
     "package/src/core.ts": "export const pure = 1;",
   });

@@ -1,6 +1,8 @@
 import { createElement } from "react";
 import { describe, expect, it } from "vitest";
-import * as legacy from "../src/core";
+import * as legacy from "../src";
+import * as clipboard from "../src/clipboard";
+import * as selection from "../src/selection";
 
 const modules = import.meta.glob("../src/react/model.ts", { eager: true });
 function bridgeApi() {
@@ -16,6 +18,23 @@ const create = () => legacy.createCominsTableState({ rows, getRowId: row => row.
 });
 
 describe("React state bridge", () => {
+  it("preserves React metadata and guard payloads through the public subpaths", () => {
+    const state = create();
+    let seenLabel: unknown;
+    state.columns[0]!.cell = { ...state.columns[0]!.cell, props: { pasteable: params => {
+      seenLabel = params.column.label;
+      expect(params.column.definition).toBe(state.columns[0]);
+      return true;
+    } }, parseClipboard: ({ text }) => Number(text) };
+    const selected = selection.selectCell(state, { rowId: "a", columnId: "score" });
+    const next = clipboard.pasteCominsText(selected, { rowId: "a", columnId: "score" }, "12");
+    expect(next.rows[0]?.score).toBe(12);
+    expect(next.columns).toBe(state.columns);
+    expect(next.columns[0]?.cell?.renderer).toBe(state.columns[0]?.cell?.renderer);
+    expect(next.theme).toBe(theme);
+    expect(seenLabel).toBe(label);
+    expect(clipboard.pasteCominsText(next, { rowId: "a", columnId: "score" }, "12")).toBe(next);
+  });
   it("projects data without rendering metadata and restores the exact no-op state", () => {
     const { projectReactState, restoreReactState } = bridgeApi();
     const source = create(), bridge = projectReactState(source);

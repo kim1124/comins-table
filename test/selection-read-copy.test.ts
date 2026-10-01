@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createCominsTableState, selectCell, selectCellRange, selectRows } from "../src/core";
+import { createCominsTableState, selectCell, selectCellRange, selectRows } from "../src";
 import { copySelectionData, selectedCellValues, selectedRowData } from "../src/selection-data";
 
 const rows = Array.from({ length: 5 }, (_, i) => ({ id: String(i), name: `row ${i}`, value: i, secret: "private" }));

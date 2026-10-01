@@ -1,6 +1,6 @@
 import type React from "react";
 
-import type { CominsTableRuntimeColumn } from "./core";
+import type { CominsTableRuntimeColumn } from "./react/core-compat";
 
 export type CominsSummaryBuiltin = "avg" | "count" | "max" | "min" | "sum";
 

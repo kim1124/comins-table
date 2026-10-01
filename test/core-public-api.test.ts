@@ -9,6 +9,12 @@ const baselinePath = "test/fixtures/core-public-api-baseline.json";
 const boundaryPath = "test/fixtures/core-boundary-map.json";
 const actual = collectDocumentationContractEvidence(root, loadDocumentationManifest(root)).entrypointExports;
 const areaIds = ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9"];
+const baseline = readJson(baselinePath);
+const coreTarget = baseline.entrypoints["comins-table/core"].filter((name: string) => baseline.coreDisposition[name].kind !== "react-only");
+const target = { ...baseline.entrypoints, "comins-table/core": coreTarget };
+function compareCore(names: string[]) {
+  return { missing: coreTarget.filter((name: string) => !names.includes(name)), extra: names.filter(name => !coreTarget.includes(name)) };
+}
 
 type Disposition = { kind: string; target: string; reason: string };
 type Area = {
@@ -86,7 +92,9 @@ describe("public Core migration baseline", () => {
     expect(Object.keys(baseline.entrypoints).sort()).toEqual([
       "comins-table", "comins-table/clipboard", "comins-table/core", "comins-table/selection",
     ]);
-    expect(actual).toEqual(baseline.entrypoints);
+    expect(baseline.entrypoints["comins-table/core"]).toHaveLength(130);
+    expect(coreTarget).toHaveLength(100);
+    expect(actual).toEqual(target);
     for (const names of Object.values(baseline.entrypoints) as string[][]) {
       expect(names).toEqual([...new Set(names)].sort());
     }
@@ -94,8 +102,14 @@ describe("public Core migration baseline", () => {
 
   it("classifies every core symbol exactly once", () => {
     const baseline = readJson(baselinePath);
-    expect(validateDisposition(baseline.coreDisposition, actual["comins-table/core"])).toEqual([]);
-    expect(Object.keys(baseline.coreDisposition).sort()).toEqual(actual["comins-table/core"]);
+    expect(validateDisposition(baseline.coreDisposition, baseline.entrypoints["comins-table/core"])).toEqual([]);
+    expect(Object.keys(baseline.coreDisposition).sort()).toEqual(baseline.entrypoints["comins-table/core"]);
+  });
+
+  it("detects missing neutral exports and accidental React additions against the approved target", () => {
+    expect(compareCore(actual["comins-table/core"])).toEqual({ missing: [], extra: [] });
+    expect(compareCore(coreTarget.filter((name: string) => name !== "pasteCominsText"))).toEqual({ missing: ["pasteCominsText"], extra: [] });
+    expect(compareCore([...coreTarget, "CominsTableTheme"])).toEqual({ missing: [], extra: ["CominsTableTheme"] });
   });
 
   it("keeps react-only core exports available at root", () => {

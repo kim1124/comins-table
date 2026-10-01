@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createCominsTableState } from "../src/core";
+import { createCominsTableState } from "../src";
 import {
   createCominsGroupModel,
   getCominsAggregateValue,

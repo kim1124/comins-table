@@ -1,6 +1,6 @@
 # Core Model and Adapter Transition Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 기존 세션에서 순차 실행하며 새 브랜치·worktree를 만들지 않는다. Task 1·2 완료, Task 3~10 미실행. 실행 증거는 `reports/2026-09-29.md`, `reports/2026-10-01.md`에 기록한다.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 기존 세션에서 순차 실행하며 새 브랜치·worktree를 만들지 않는다. Task 1~3 구현·제품 검증 완료, Task 4~10 미실행. Task 3 보안 스캔의 공식 coverage는 이전 보류 기록이 남은 partial이며 전체 보안 인증을 의미하지 않는다. 실행 증거는 `reports/2026-09-29.md`, `reports/2026-10-01.md`에 기록한다.
 
 **Goal:** 상위 단계 3·4의 Core 상태·모델 및 Browser·React 어댑터를 함께 전환하여, React 루트 호환성을 유지하면서 공개·내부 Core의 React/DOM 의존을 제거한다.
 
@@ -96,17 +96,19 @@ Task 1 실행 보강: 내부 `src/core/state/access.ts`에 데이터 접근 help
 
 Task 2 실행 보강: 원본 React props의 1회 해석과 동일 payload guard 호출을 호출 범위 WeakMap으로 보존했다. 렌더용 disabled/format/style/theme는 React 호환 계층에 유지하고 Core disabled는 중립 정책을 사용한다. 이미 중립인 clipboard-text와 React 계약 재수출인 clipboard facade는 그대로 두고, row-value setter를 공유했다. 기존 임시 React withRows/getCellRangeBounds wrapper는 소비자 이전 후 제거했다. 실제 소스 ES2022-only 편집 타입 검사와 전이 source graph, verify(507 tests), 편집/export E2E(5), focused virtualization perf(9), full perf(38)가 통과했다. 실행 기록은 `reports/2026-10-01.md`에 있다. 공개 `/core` 중립 전환과 실제 tarball 소비자 검증은 Task 3에 남는다.
 
-### Task 3: 공개 Core/React facade 원자적 전환 및 제품 게이트 연결
+### Task 3: 공개 Core/React facade 원자적 전환 및 제품 게이트 연결 — 구현·제품 검증 완료
 
 **Files:** `src/core.ts`, `src/index.tsx`, `src/react/core-compat.ts`, `src/clipboard.ts`, `src/selection.ts`, `test/core-public-api.test.ts`, `test/core-isolation.test.ts`, `test/fixtures/core-public-consumer/consumer.ts`, `scripts/verify-core-package.mjs`, `test/core-package-gate.node.mjs`, `package.json`, `test/typecheck/docs/core-state.ts`, `docs/user/03-core-state.md`, `docs/ko/03-core-state.md`, `CHANGELOG.md`.
 
 **Interfaces:** `/core` 목표 심볼 = 역사적 Core baseline에서 `react-only` 30개만 제외한 100개. root/clipboard/selection inventory는 기존 이름을 유지한다. 루트는 state를 받거나 반환하는 함수 및 split-contract 타입을 **React 호환 export로 명시**하고 동일 이름을 중립 star export로 덮지 않는다. `/clipboard`·`/selection`도 기존 React state 입출력·guard 타입을 호환 함수로 보존한다. 중립 state 소비자는 `/core`의 대응 함수를 사용하며 이 두 서브패스까지 React 독립성을 새로 약속하지 않는다. `verify:core-package = node scripts/verify-core-package.mjs`는 최신 build 이후 임시 tarball을 pack하고 기존 checker를 source-root와 함께 실행한다.
 
-- [ ] **Step 1: RED 계약 추가.** 기존 baseline은 보존하고 목표 집합 산출/누락/추가 대조군을 검사한다. Core consumer에 문자열 label·데이터 guard·state 편집을 추가하고 root fixture에는 state 변경 후 JSX/theme/renderer 복원을 검증한다. `/clipboard`·`/selection` 함수에도 root state를 전달하고 반환 state의 JSX/theme을 확인하는 타입·runtime 검증을 추가한다. package gate에는 checker exit 1/2 전파와 pack 실패·cleanup 테스트를 추가한다.
-- [ ] **Step 2: RED 실행.** `npm run test:run -- test/core-public-api.test.ts test/core-isolation.test.ts`; 현재 build/pack의 `test:core-consumer`가 기존 제품 경계 이유로 exit 1인지 확인한다. 미해석 graph 또는 준비 오류를 RED 달성으로 인정하지 않는다.
-- [ ] **Step 3: facade 전환.** Core는 Task 1·2 중립 구현만 재수출하고 root의 React API를 명시적으로 보존한다. 내부 React 소비자는 필요한 호환 import로 바꾼다. 공개 가이드/타입 예제에 중립 Core와 React root의 import·label·셀 정책 차이를 EN/KO로 최소 반영하고 CHANGELOG의 미배포 항목에 기록한다. blanket snapshot 재생성이나 테스트 skip은 금지한다.
-- [ ] **Step 4: GREEN 및 필수 게이트.** build → 임시 pack → `npm run test:core-consumer -- <tarball> --source-root <repo>`가 네 영역 모두 PASS/exit 0, unresolved=[]인지 확인한다. gate runner는 설치/네트워크 조회 없이 로컬 artifact를 사용하고 자신이 만든 임시 경로만 finally 정리한다. `verify`의 build 뒤 `verify:core-package`, 기존 checker 명령에 새 gate Node tests를 연결하고 `npm run verify`와 `npm run test:run -- test/user-docs.test.ts`를 실행한다. shared root import가 바뀌므로 `npm run test:e2e -- --workers=1` 실행.
-- [ ] **Step 5: 기록·커밋.** `refactor: switch public core to framework-neutral contracts`. tarball SHA-256·명령·root/Core 타입 결과를 기록한다. B1~B9 내부 분리 및 상위 단계 5·6 완료로 확대 해석하지 않는다.
+- [x] **Step 1: RED 계약 추가.** 기존 baseline은 보존하고 목표 집합 산출/누락/추가 대조군을 검사한다. Core consumer에 문자열 label·데이터 guard·state 편집을 추가하고 root fixture에는 state 변경 후 JSX/theme/renderer 복원을 검증한다. `/clipboard`·`/selection` 함수에도 root state를 전달하고 반환 state의 JSX/theme을 확인하는 타입·runtime 검증을 추가한다. package gate에는 checker exit 1/2 전파와 pack 실패·cleanup 테스트를 추가한다.
+- [x] **Step 2: RED 실행.** `npm run test:run -- test/core-public-api.test.ts test/core-isolation.test.ts`; 현재 build/pack의 `test:core-consumer`가 기존 제품 경계 이유로 exit 1인지 확인한다. 미해석 graph 또는 준비 오류를 RED 달성으로 인정하지 않는다.
+- [x] **Step 3: facade 전환.** Core는 Task 1·2 중립 구현만 재수출하고 root의 React API를 명시적으로 보존한다. 내부 React 소비자는 필요한 호환 import로 바꾼다. 공개 가이드/타입 예제에 중립 Core와 React root의 import·label·셀 정책 차이를 EN/KO로 최소 반영하고 CHANGELOG의 미배포 항목에 기록한다. blanket snapshot 재생성이나 테스트 skip은 금지한다.
+- [x] **Step 4: GREEN 및 필수 게이트.** build → 임시 pack → `npm run test:core-consumer -- <tarball> --source-root <repo>`가 네 영역 모두 PASS/exit 0, unresolved=[]인지 확인한다. gate runner는 설치/네트워크 조회 없이 로컬 artifact를 사용하고 자신이 만든 임시 경로만 finally 정리한다. `verify`의 build 뒤 `verify:core-package`, 기존 checker 명령에 새 gate Node tests를 연결하고 `npm run verify`와 `npm run test:run -- test/user-docs.test.ts`를 실행한다. shared root import가 바뀌므로 `npm run test:e2e -- --workers=1` 실행.
+- [x] **Step 5: 기록·커밋.** `refactor: switch public core to framework-neutral contracts`. tarball SHA-256·명령·root/Core 타입 결과를 기록한다. B1~B9 내부 분리 및 상위 단계 5·6 완료로 확대 해석하지 않는다.
+
+Task 3 실행 보강: 역사적 Core 130개 baseline은 보존하고 목표 100개를 이동표에서 산출했다. root 233 / clipboard 16 / selection 14 계약은 유지한다. 실제 tarball Core 네 영역과 React 19.2.7 root/subpath 타입·runtime, verify(510 tests 및 checker 33), 일반 E2E(231)가 통과했다. docs manifest는 현재 Core 목록에서 승인된 react-only 30개만 제거했고, 검사기의 가상 패키지 fixture도 확장된 소비 계약에 맞췄다. 보안 스캔 종료 복구 후 공식 결과의 과거 deferred 항목 잔존을 확인했으므로 coverage partial을 잔여로 기록했다. Task 4 시작 시 이 기록을 보안 완료로 확대 해석하지 않는다.
 
 ### Task 4: 상태 조정과 변경 내역 계산 — B1/B2
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
-import type { CominsCellAddress, CominsCellRange, CominsRowId, CominsTableState } from "./core";
+import type { CominsCellAddress, CominsCellRange, CominsRowId, CominsTableState } from "./react/core-compat";
 import { getCominsDragAutoScrollTop, getCominsDragAutoScrollVelocity } from "./drag-autoscroll";
 
 type Bounds = { top: number; bottom: number; left: number; right: number };

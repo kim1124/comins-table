@@ -29,6 +29,11 @@ export type CominsCellComponentPayload<TData, TValue = unknown> = {
   value: TValue;
 };
 export type CominsClipboardGuard<TData, TValue = unknown> = boolean | ((params: CominsCellComponentPayload<TData, TValue>) => boolean);
+export type CominsHeaderComponentPayload<TData, TValue = unknown> = {
+  column: CominsComponentColumnPayload<TData, TValue>;
+  layout: { hidden: boolean; width?: number };
+  sort: { count: number; direction: CominsSortState["direction"] | null; enabled: boolean; priority: number | null };
+};
 export type CoreCellDataConfig<TData, TValue = unknown> = {
   disabled?: CominsClipboardGuard<TData, TValue>;
   copyable?: CominsClipboardGuard<TData, TValue>;

@@ -8,7 +8,7 @@ export {
   pasteCominsRow,
   pasteCominsText,
   parseCominsClipboardText,
-} from "./core";
+} from "./react/core-compat";
 export type {
   CominsClipboardGuard,
   CominsCopiedCell,
@@ -17,4 +17,4 @@ export type {
   CominsCopiedRow,
   CominsFillCellRangeOptions,
   CominsPasteRowOptions,
-} from "./core";
+} from "./react/core-compat";

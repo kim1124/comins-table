@@ -1,5 +1,13 @@
 # Comins Table
 
+## Unreleased — 0.2.0 Core separation
+
+### Changed
+
+- **Migration:** `comins-table/core` now exports neutral state, Column/Group and payload contracts. Labels are strings, cell data guards live directly on `cell`, and React renderer/theme/DOM contracts are excluded. Move React state helpers and React-only types previously imported from `/core` to `comins-table`.
+- The root, `/clipboard`, and `/selection` preserve their existing React-state APIs, JSX labels, props guards, callbacks and theme behavior. Use `/core` helpers with neutral state. Package exports and React peer dependencies are unchanged; this is not an SSR or Vue support declaration.
+- Local verification now checks a freshly built and packed Core artifact with no React installation and ES2022-only declarations, plus source and runtime dependency graphs.
+
 ## 0.1.11 - 2026-09-22
 
 ### Added

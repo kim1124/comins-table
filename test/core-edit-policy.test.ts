@@ -1,6 +1,6 @@
 import { createElement } from "react";
 import { describe, expect, it } from "vitest";
-import * as react from "../src/core";
+import * as react from "../src";
 import { createCominsTableState } from "../src/core/state/table";
 import { projectReactState } from "../src/react/model";
 

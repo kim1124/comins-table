@@ -1,8 +1,24 @@
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { expect, it } from "vitest";
+
+it("typechecks the public Core facade with ES2022 only and no React", () => {
+  const root = mkdtempSync(resolve(tmpdir(), "comins-public-core-"));
+  try {
+    cpSync(resolve("src"), resolve(root, "src"), { recursive: true });
+    writeFileSync(resolve(root, "consumer.ts"), readFileSync("test/fixtures/core-public-consumer/consumer.ts", "utf8").replaceAll("comins-table/core", "./src/core"));
+    writeFileSync(resolve(root, "tsconfig.json"), JSON.stringify({ compilerOptions: {
+      strict: true, noUncheckedIndexedAccess: true, noEmit: true, skipLibCheck: false,
+      types: [], lib: ["ES2022"], module: "ESNext", moduleResolution: "Bundler", target: "ES2022",
+    }, files: ["consumer.ts"] }));
+    let diagnostics = "";
+    try { execFileSync(resolve("node_modules/.bin/tsc"), ["-p", resolve(root, "tsconfig.json")], { encoding: "utf8", stdio: "pipe" }); }
+    catch (error) { const failure = error as { stdout?: string; stderr?: string }; diagnostics = `${failure.stdout ?? ""}${failure.stderr ?? ""}` || String(error); }
+    expect(diagnostics).toBe("");
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
 
 it("typechecks shared height, tree and viewport models without React installed", () => {
   const root = mkdtempSync(resolve(tmpdir(), "comins-core-isolation-"));

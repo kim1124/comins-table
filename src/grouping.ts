@@ -4,7 +4,7 @@ import type {
   CominsRowId,
   CominsSortModel,
   CominsTableRuntimeColumn,
-} from "./core";
+} from "./react/core-compat";
 
 export type CominsRowGroupAggregation = "avg" | "count" | "max" | "min" | "sum";
 

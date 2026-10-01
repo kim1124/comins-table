@@ -65,7 +65,7 @@ import {
   setCominsSortModel,
   setCominsSortState,
   updateCominsRows,
-} from "./core";
+} from "./react/core-compat";
 import { copySelectionData, selectedCellValues, selectedRowData, type CominsCopyTarget, type CominsSelectedCell } from "./selection-data";
 export type { CominsCopyTarget, CominsSelectedCell, CominsSelectionCopy } from "./selection-data";
 import { getCominsColumnMouseIntent } from "./column-pointer";
@@ -139,7 +139,151 @@ import {
   type CominsVirtualSlot,
 } from "./virtual-layout";
 
-export * from "./core";
+export {
+  setCominsColumnWidth,
+  setCominsColumnHidden,
+  setCominsColumnGroupHidden,
+  setCominsColumnGroupWidth,
+  moveCominsColumn,
+  moveCominsColumnGroup,
+  serializeCominsColumnLayout,
+  applyCominsColumnLayout,
+  getCominsVisibleColumns,
+  getCominsHeaderRows,
+  selectRow,
+  selectRows,
+  selectCell,
+  selectCellRange,
+  clearCominsCellRange,
+  clearCominsSelection,
+  isCominsRowSelected,
+  isCominsCellSelected,
+  getCominsSelectedCellRange,
+  isCominsCellInSelectedRange,
+  createCominsTableState,
+  queryCominsRows,
+  replaceCominsRows,
+  addCominsRows,
+  updateCominsRows,
+  deleteCominsRows,
+  setCominsHeaderVisible,
+  setCominsPagination,
+  setCominsSortState,
+  setCominsSortModel,
+  clearCominsSortState,
+  getCominsSortedRowIndexes,
+  sortCominsRows,
+  getCominsPageRows,
+  getCominsVirtualRows,
+  moveCominsRow,
+  moveCominsRowToGroup,
+  getCominsCellValue,
+} from "./react/core-compat";
+
+export {
+  parseCominsClipboardText,
+} from "./clipboard-text";
+
+export type { CominsColumnPinned } from "./column-pinning";
+
+export type {
+  CominsRowId,
+  CominsTableDensity,
+  CominsSortDirection,
+  CominsSortState,
+  CominsSortModel,
+  CominsComponentPrimitiveValue,
+  CominsComponentAlign,
+  CominsComponentDirection,
+  CominsComponentPlacement,
+  CominsComponentRowPayload,
+  CominsColumnRuntimeState,
+  CominsColumnGroupRuntimeState,
+  CominsColumnLayout,
+  CominsPaginationState,
+  CominsSelectionState,
+  CominsRowUpdate,
+  CominsVirtualRowsOptions,
+  CominsVirtualRows,
+  CominsCopiedRow,
+  CominsCopiedCell,
+  CominsCopiedCellRangeCell,
+  CominsCopiedCellRange,
+  CominsExportFormat,
+  CominsExportValueSource,
+  CominsExportColumn,
+  CominsExportRowsOptions,
+  CominsCellAddress,
+  CominsCellRange,
+  CominsPasteRowOptions,
+  CominsRowSelectionOptions,
+  CominsCellSelectionOptions,
+  CominsFillCellRangeOptions,
+} from "./model";
+
+export type {
+  CominsTableTheme,
+  CominsCellFormatParams,
+  CominsColumnValueResolver,
+  CominsTableComponentOption,
+  CominsVirtualListItem,
+  CominsTableMenuItem,
+  CominsComponentColumnPayload,
+  CominsCellComponentPayload,
+  CominsHeaderComponentPayload,
+  CominsClipboardGuard,
+  CominsColumnProps,
+  CominsTableComponentProps,
+  CominsTableOptions,
+  CominsTableMenuItems,
+  CominsVirtualListItems,
+  CominsButtonComponentConfig,
+  CominsInputCommitEvent,
+  CominsInputComponentConfig,
+  CominsCheckboxComponentConfig,
+  CominsRadioComponentConfig,
+  CominsSelectComponentConfig,
+  CominsToggleComponentConfig,
+  CominsProgressComponentConfig,
+  CominsMenuComponentConfig,
+  CominsVirtualListSearchFilterPayload,
+  CominsVirtualListComponentConfig,
+  CominsHeaderComponentConfig,
+  CominsCellComponentConfig,
+  CominsHeaderComponent,
+  CominsCellComponent,
+  CominsTableCellConfig,
+  CominsTableHeaderConfig,
+  CominsTableColumn,
+  CominsTableColumnGroup,
+  CominsTableRuntimeColumn,
+  CominsTableRuntimeColumnGroup,
+  CominsEventColumn,
+  CominsTableState,
+  CominsTableStateInput,
+  CominsHeaderColumnCell,
+  CominsHeaderGroupCell,
+  CominsHeaderCell,
+} from "./react-types";
+
+export type { CominsRowGroupMoveOptions } from "./core/state/table";
+
+export {
+  setCominsTableTheme,
+  formatCominsCellValue,
+  isCominsCellDisabled,
+  getCominsCellClassName,
+  getCominsCellStyle,
+  copyCominsRow,
+  pasteCominsRow,
+  copyCominsCell,
+  pasteCominsCell,
+  copyCominsCellRange,
+  pasteCominsCellRange,
+  pasteCominsText,
+  fillCominsCellRange,
+} from "./react/core-compat";
+export { exportCominsRowsToCsv, exportCominsRowsToJson } from "./core/editing/export";
 export * from "./summary";
 export * from "./tree";
 export { createCominsViewportData, reduceCominsViewportData } from "./viewport-data";
@@ -241,7 +385,7 @@ import type {
   CominsSelectionState,
   CominsSortModel,
   CominsSortState,
-} from "./core";
+} from "./react/core-compat";
 
 type CominsClassValue = string | Record<string, boolean> | undefined;
 type CominsRowPropValue<TData, TValue> = TValue | ((row: TData, index: number) => TValue);
