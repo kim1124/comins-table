@@ -3,6 +3,8 @@ import { createCominsTableState, setCominsSortModel } from "../../src/core/state
 import { copyCominsCell, pasteCominsCell, isCominsCellDisabled } from "../../src/core/editing/cells";
 import { copyCominsRow, pasteCominsRow, copyCominsCellRange, pasteCominsCellRange, pasteCominsText, fillCominsCellRange } from "../../src/core/editing/clipboard";
 import { exportCominsRowsToCsv, exportCominsRowsToJson } from "../../src/core/editing/export";
+import { reconcileCoreState } from "../../src/core/state/reconcile";
+import { getCoreStateChanges } from "../../src/core/state/changes";
 type Row = { id: string; score: number };
 const numeric: CominsTableColumn<Row, number> = { field: "score", label: "Score", cell: {
   parseClipboard: payload => Number(payload.text) + payload.value,
@@ -10,6 +12,9 @@ const numeric: CominsTableColumn<Row, number> = { field: "score", label: "Score"
 } };
 const state: CominsTableState<Row> = createCominsTableState({ rows: [{ id: "a", score: 2 }], columns: [{ field: "score", label: "Score", sort: true }] });
 const next: CominsTableState<Row> = setCominsSortModel(state, [{ columnId: "score", direction: "asc" }]);
+const reconciled = reconcileCoreState({ current: next, nextInput: { columns: next.columns, rows: next.rows }, columnOrderHistory: next.columnOrder, dataChanged: false, getRowIdChanged: false, viewportIndices: [0] });
+const changed: boolean = getCoreStateChanges(next, reconciled.state).selection;
+void [reconciled.invalidatedDetailRowIds, changed];
 // @ts-expect-error Core labels are text, not renderer objects.
 const badLabel: CominsTableColumn<Row> = { field: "score", label: { type: "span" } };
 // @ts-expect-error DOM event props belong to the React cell contract.

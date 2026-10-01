@@ -10,12 +10,9 @@ import {
   getSortRule,
   getSortIndicatorState,
   getAriaSortState,
-  areSortStatesEqual,
-  areSortModelsEqual,
-  insertDeclaredColumnsIntoOrder,
   reconcileColumnOrderHistory,
-  canPreserveSelection,
 } from "./table-state";
+import { reconcileReactState, notifyReactInputChanges, notifyReactStateChanges } from "./react/state";
 import type { CominsEventRow } from "./model";
 export type { CominsEventRow } from "./model";
 import type React from "react";
@@ -105,7 +102,7 @@ import {
   transferCominsRowBetweenTables,
 } from "./table-transfer";
 import { CominsPointerTooltip } from "./tooltip";
-import { createCominsViewportData, reduceCominsViewportData, reconcileCominsViewportSelection, normalizeCominsViewportInteger, type CominsViewportData, type CominsViewportRequest } from "./viewport-data";
+import { createCominsViewportData, reduceCominsViewportData, normalizeCominsViewportInteger, type CominsViewportData, type CominsViewportRequest } from "./viewport-data";
 import { CominsViewportHeightIndex } from "./viewport-layout";
 import { useCominsViewportRequests } from "./viewport-requests";
 import type { CominsViewportDatasource } from "./use-viewport";
@@ -2229,64 +2226,20 @@ function CominsTableInner<TData, TGroup>(
 
     stateInputRef.current = { columnGroups, columns, data: effectiveData, getRowId, pagination: effectivePagination, showHeader };
     const current = stateRef.current;
-    const declaredColumnOrder = columns.map((column) => String(column.id ?? column.field));
-    const currentLayout = serializeCominsColumnLayout(current);
-    const historicalOrder = reconcileColumnOrderHistory(
-      columnOrderHistoryRef.current,
-      current.columnOrder,
-      current.columns.map((column) => column.id),
-    );
-    const nextState = createCominsTableState({
-      columnLayout: {
-        ...currentLayout,
-        order: insertDeclaredColumnsIntoOrder(historicalOrder, declaredColumnOrder),
-      },
-      columnGroups,
-      columns,
-      getRowId,
-      pagination: effectivePagination,
-      // New data is authoritative; option-only renders keep local edits/reordering.
-      rows: previousInput.data === effectiveData ? current.rows : effectiveData,
-      showHeader,
-      sortModel: current.sortModel,
-      theme: current.theme,
+    const result = reconcileReactState({
+      current,
+      nextInput: { columnGroups, columns, getRowId, pagination: effectivePagination, rows: effectiveData, showHeader },
+      columnOrderHistory: columnOrderHistoryRef.current,
+      dataChanged: previousInput.data !== effectiveData,
+      getRowIdChanged: previousInput.getRowId !== getRowId,
+      viewportIndices: viewportContext?.indices,
     });
-    const next = viewportContext
-      ? { ...nextState, selection: reconcileCominsViewportSelection(current.selection, nextState.rowIds, viewportContext.indices, nextState.columns.map(column => column.id)) }
-      : canPreserveSelection(current, nextState)
-      ? { ...nextState, selection: current.selection }
-      : nextState;
-
-    columnOrderHistoryRef.current = reconcileColumnOrderHistory(
-      historicalOrder,
-      next.columnOrder,
-      declaredColumnOrder,
-    );
-
-    if (previousInput.getRowId !== getRowId) {
-      const previousRowById = new Map(
-        current.rowIds.map((rowId, index) => [rowId, current.rows[index]]),
-      );
-
-      next.rowIds.forEach((rowId, index) => {
-        if (previousRowById.has(rowId) && previousRowById.get(rowId) !== next.rows[index]) {
-          detailMeasurementsRef.current.delete(rowId);
-        }
-      });
-    }
-
+    const next = result.state;
+    columnOrderHistoryRef.current = result.columnOrderHistory;
+    result.invalidatedDetailRowIds.forEach(rowId => detailMeasurementsRef.current.delete(rowId));
     stateRef.current = next;
     setState(next);
-
-    if (viewportContext && next.selection !== current.selection) onChangeSelection?.(next.selection);
-
-    if (!areSortStatesEqual(next.sort, current.sort)) {
-      onChangeSort?.(next.sort);
-    }
-
-    if (!areSortModelsEqual(next.sortModel, current.sortModel)) {
-      onChangeSortModel?.(next.sortModel);
-    }
+    notifyReactInputChanges(current, next, { onChangeSelection, onChangeSort, onChangeSortModel }, Boolean(viewportContext));
   }, [columnGroups, columns, effectiveData, effectivePagination, getRowId, showHeader]);
 
   useEffect(() => {
@@ -2593,25 +2546,7 @@ function CominsTableInner<TData, TGroup>(
     next: CominsTableState<TData>,
     options: { columnLayoutChanged?: boolean } = {},
   ) => {
-    if (next.rows !== current.rows) {
-      onChangeData?.(next.rows);
-    }
-
-    if (next.selection !== current.selection) {
-      onChangeSelection?.(next.selection);
-    }
-
-    if (options.columnLayoutChanged) {
-      onChangeColumnLayout?.(serializeCominsColumnLayout(next));
-    }
-
-    if (!areSortStatesEqual(next.sort, current.sort)) {
-      onChangeSort?.(next.sort);
-    }
-
-    if (!areSortModelsEqual(next.sortModel, current.sortModel)) {
-      onChangeSortModel?.(next.sortModel);
-    }
+    notifyReactStateChanges(current, next, { onChangeData, onChangeSelection, onChangeColumnLayout, onChangeSort, onChangeSortModel }, options);
   };
 
   const commitState = (

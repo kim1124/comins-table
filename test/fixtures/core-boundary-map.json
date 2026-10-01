@@ -6,9 +6,11 @@
         "src/core.ts",
         "src/core/model.ts",
         "src/core/state/table.ts",
+        "src/core/state/reconcile.ts",
         "src/core/state/access.ts",
         "src/react/model.ts",
         "src/react/core-compat.ts",
+        "src/react/state.ts",
         "src/model.ts",
         "src/table-state.ts",
         "src/row-value.ts",
@@ -23,6 +25,7 @@
         "새 data는 authoritative이며 컬럼 순서 이력·선택을 기존 기준으로 조정한다."
       ],
       "existingTests": [
+        "test/core-state-reconciliation.test.ts",
         "test/table-interaction.test.tsx",
         "test/table-calculations.test.ts"
       ],
@@ -32,7 +35,7 @@
       "characterizationCases": [
         {
           "id": "B1-option-only-keeps-edits",
-          "status": "planned",
+          "status": "verified",
           "input": "data=[{id:'a',score:1}] 참조 유지, 내부 편집 rows=[{id:'a',score:9}], score 컬럼 label만 Score에서 Updated score로 변경",
           "expected": "조정 후 score=9와 편집 rows 참조 유지, 새 label 반영; 이전 data의 score=1로 복원하지 않음",
           "plannedTest": "test/core-state-reconciliation.test.ts"
@@ -43,6 +46,9 @@
     "B2": {
       "sources": [
         "src/index.tsx",
+        "src/core/state/changes.ts",
+        "src/react/state.ts",
+        "src/table-state.ts",
         "src/core.ts"
       ],
       "targetLayers": [
@@ -54,6 +60,7 @@
         "변경 감지의 참조 비교·정렬 비교·layout 플래그를 보존한다. 변경 없는 동일 state와 layout 플래그 부재 시 통지하지 않는다."
       ],
       "existingTests": [
+        "test/core-state-changes.test.ts",
         "test/table-interaction.test.tsx"
       ],
       "plannedTests": [
@@ -62,7 +69,7 @@
       "characterizationCases": [
         {
           "id": "B2-composite-notification-order",
-          "status": "planned",
+          "status": "verified",
           "input": "rows/selection 참조 변경, layout 통지 플래그 true, sort와 sortModel 변경, 모든 callback 등록",
           "expected": "data → selection → columnLayout → sort → sortModel 순서로 각각 1회 통지; 동일 state와 layout 플래그 false 대조군은 통지 0회",
           "plannedTest": "test/core-state-changes.test.ts"

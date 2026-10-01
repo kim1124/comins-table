@@ -1,4 +1,4 @@
-import type { CominsRowId, CominsSelectionState } from "./model";
+export { reconcileCoreViewportSelection as reconcileCominsViewportSelection } from "./core/state/reconcile";
 
 export type CominsViewportRevision = string | number;
 export type CominsViewportRange = { startIndex: number; endIndex: number };
@@ -112,22 +112,4 @@ export function reduceCominsViewportData<T>(data: CominsViewportData<T>, event: 
   if (currentBlock && currentBlock.version > previous.version) return { ...data, changes: [], requests };
   const clock = data.clock + 1;
   return trim({ ...data, changes: [], clock, requests, blocks: [...data.blocks.filter(block => block.startIndex !== request.startIndex), { startIndex: request.startIndex, rows: [...event.rows], touched: clock, version: data.version }] });
-}
-
-export function reconcileCominsViewportSelection(selection: CominsSelectionState, rowIds: readonly CominsRowId[], indices: readonly number[], columnIds: readonly string[]): CominsSelectionState {
-  const positions = new Map(rowIds.map((id, index) => [id, index]));
-  const columns = new Set(columnIds);
-  const valid = (address: { rowId: CominsRowId; columnId: string }) => positions.has(address.rowId) && columns.has(address.columnId);
-  const cell = selection.cell && valid(selection.cell) ? selection.cell : null;
-  let range = selection.range;
-  if (range) {
-    if (!valid(range.anchor) || !valid(range.focus)) range = null;
-    else {
-      const a = positions.get(range.anchor.rowId)!, b = positions.get(range.focus.rowId)!;
-      for (let index = Math.min(a, b); index < Math.max(a, b); index++) if (indices[index + 1] !== indices[index]! + 1) { range = null; break; }
-    }
-  }
-  const cells = selection.cells?.filter(valid);
-  if (cell === selection.cell && range === selection.range && cells?.length === selection.cells?.length) return selection;
-  return { ...selection, cell, range, ...(cells ? { cells } : {}) };
 }
