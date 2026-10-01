@@ -8,6 +8,10 @@
 - The root, `/clipboard`, and `/selection` preserve their existing React-state APIs, JSX labels, props guards, callbacks and theme behavior. Use `/core` helpers with neutral state. Package exports and React peer dependencies are unchanged; this is not an SSR or Vue support declaration.
 - Local verification now checks a freshly built and packed Core artifact with no React installation and ES2022-only declarations, plus source and runtime dependency graphs.
 
+### Fixed
+
+- Repeated cleanup of an old cross-table transfer registration no longer removes a replacement registered under the same scope and Table ID.
+
 ## 0.1.11 - 2026-09-22
 
 ### Added

@@ -1,3 +1,4 @@
+import { getCrossTableTransferHit as getBrowserTransferHit } from "./browser/table-transfer";
 import {
   getEffectiveColumnMinWidth,
   getEffectiveColumnMaxWidth,
@@ -96,9 +97,9 @@ import {
 import {
   emitCominsTableTransfer,
   emitCominsTableTransferRejected,
-  getCominsTableTransferRegistration,
+  getRegisteredTransferSnapshot as getReactTransferSnapshot,
   isCominsTableTransferCoordinator,
-  registerCominsTableTransfer,
+  useCominsTableTransferRegistration,
   transferCominsGroupBetweenTables,
   transferCominsRowBetweenTables,
 } from "./table-transfer";
@@ -1869,70 +1870,12 @@ function CominsTableInner<TData, TGroup>(
       element.dataset.cominsCrossRowDropPosition = "before";
     }
   };
-  const getRegisteredTransferSnapshot = (tableId: string) => {
-    if (!normalizedTableTransfer) {
-      return null;
-    }
-
-    const registration = getCominsTableTransferRegistration(
-      normalizedTableTransfer.coordinator,
-      normalizedTableTransfer.scope,
-      tableId,
-    );
-    const snapshot = registration?.getSnapshot() ?? null;
-
-    if (
-      !snapshot ||
-      snapshot.config.coordinator !== normalizedTableTransfer.coordinator ||
-      snapshot.config.scope !== normalizedTableTransfer.scope ||
-      snapshot.config.tableId !== tableId ||
-      snapshot.endpoint.tableId !== tableId
-    ) {
-      return null;
-    }
-
-    return snapshot;
-  };
-  const getCrossTableTransferHit = (
-    clientX: number,
-    clientY: number,
-  ): CominsTransferTableHit<TData, TGroup> | null => {
-    if (!normalizedTableTransfer) {
-      return null;
-    }
-
-    const sourceSnapshot = getRegisteredTransferSnapshot(normalizedTableTransfer.tableId);
-    const element = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
-    const root = element?.closest<HTMLElement>("[data-comins-table-instance-id]") ?? null;
-    const tableId = root?.dataset.cominsTransferTableId;
-
-    if (
-      !sourceSnapshot ||
-      sourceSnapshot.instanceId !== tableInstanceId ||
-      sourceSnapshot.root !== tableRootRef.current ||
-      !element ||
-      !root ||
-      !tableId ||
-      tableId === normalizedTableTransfer.tableId ||
-      root.dataset.cominsTransferScope !== normalizedTableTransfer.scope
-    ) {
-      return null;
-    }
-
-    const snapshot = getRegisteredTransferSnapshot(tableId);
-
-    if (
-      !snapshot ||
-      snapshot.root !== root ||
-      snapshot.instanceId !== root.dataset.cominsTableInstanceId ||
-      !snapshot.viewport ||
-      !root.contains(snapshot.viewport)
-    ) {
-      return null;
-    }
-
-    return { element, root, snapshot };
-  };
+  const getRegisteredTransferSnapshot = (tableId: string) => normalizedTableTransfer
+    ? getReactTransferSnapshot(normalizedTableTransfer.coordinator, normalizedTableTransfer.scope, tableId)
+    : null;
+  const getCrossTableTransferHit = (clientX: number, clientY: number): CominsTransferTableHit<TData, TGroup> | null => normalizedTableTransfer
+    ? getBrowserTransferHit({ sourceTableId: normalizedTableTransfer.tableId, scope: normalizedTableTransfer.scope, instanceId: tableInstanceId, root: tableRootRef.current, clientX, clientY, document, getSnapshot: getRegisteredTransferSnapshot })
+    : null;
   const scheduleTransferFocus = (
     targetTableId: string,
     kind: "group" | "row",
@@ -2865,33 +2808,7 @@ function CominsTableInner<TData, TGroup>(
       }
     : null;
 
-  const transferCoordinator = normalizedTableTransfer?.coordinator;
-  const transferScope = normalizedTableTransfer?.scope;
-  const transferTableId = normalizedTableTransfer?.tableId;
-  useEffect(() => {
-    if (!transferCoordinator || !transferScope || !transferTableId) {
-      return undefined;
-    }
-
-    return registerCominsTableTransfer(
-      transferCoordinator,
-      transferScope,
-      transferTableId,
-      {
-        getSnapshot: () => {
-          const snapshot = transferSnapshotRef.current;
-
-          return snapshot
-            ? {
-                ...snapshot,
-                root: tableRootRef.current,
-                viewport: containerRef.current,
-              }
-            : null;
-        },
-      },
-    );
-  }, [transferCoordinator, transferScope, transferTableId]);
+  useCominsTableTransferRegistration({ config: normalizedTableTransfer, snapshot: transferSnapshotRef, root: tableRootRef, viewport: containerRef });
 
   useLayoutEffect(() => {
     if (!groupingProjection || !orderedGroupModel) {

@@ -242,6 +242,9 @@
     },
     "B7": {
       "sources": [
+        "src/core/transfer/policy.ts",
+        "src/browser/table-transfer.ts",
+        "src/react/table-transfer.ts",
         "src/table-transfer.ts",
         "src/index.tsx"
       ],
@@ -256,7 +259,9 @@
         "그룹의 한 멤버라도 충돌 거부이면 전체 transfer를 원자적으로 거부한다."
       ],
       "existingTests": [
-        "test/table-transfer.test.ts"
+        "test/table-transfer.test.ts",
+        "test/core-transfer-policy.test.ts",
+        "test/browser-transfer-registration.test.ts"
       ],
       "plannedTests": [
         "test/core-transfer-policy.test.ts"
@@ -264,7 +269,7 @@
       "characterizationCases": [
         {
           "id": "B7-group-transfer-atomicity",
-          "status": "planned",
+          "status": "verified",
           "input": "source의 group g 멤버 [a,b], target에는 다른 group h의 b 존재; g 이동 중 b 충돌 정책이 reject 반환",
           "expected": "전체 transfer 결과 null, source/target의 rows와 groups 불변; 충돌 없는 a만 옮기는 부분 결과 없음",
           "plannedTest": "test/core-transfer-policy.test.ts"
