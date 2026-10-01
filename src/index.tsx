@@ -13,6 +13,7 @@ import {
   reconcileColumnOrderHistory,
 } from "./table-state";
 import { reconcileReactState, notifyReactInputChanges, notifyReactStateChanges } from "./react/state";
+import { getSortedReactTree, projectReactRows, projectCoreViewportWindow, getCorePageProjection } from "./react/rows";
 import type { CominsEventRow } from "./model";
 export type { CominsEventRow } from "./model";
 import type React from "react";
@@ -112,7 +113,6 @@ import { getCominsSummaryValues } from "./summary";
 import {
   flattenCominsTree,
   getCominsTreeLeafItems,
-  sortCominsTreeSiblings,
   toggleCominsTreeNode,
   updateCominsTreeItem,
 } from "./tree";
@@ -120,7 +120,6 @@ import {
   CominsHeightIndex,
   captureCominsScrollAnchor,
   createCominsDataVirtualSlot,
-  getCominsDataSlotKey,
   getCominsMixedVirtualRange,
   getCominsPhysicalScrollTop,
   getCominsScrollScale,
@@ -339,7 +338,6 @@ export type {
 import type { CominsTableSummaryConfig } from "./summary";
 import type { CominsTreeNode, CominsVisibleTreeRow, CominsTreeRowDragConfig, CominsTreeMoveDestination, CominsTreeDropPosition } from "./tree";
 import type {
-  CominsGroupingProjectionEntry,
   CominsRowGroupingConfig,
 } from "./grouping";
 import type {
@@ -1449,56 +1447,6 @@ function renderCominsContentWithComponents<TData>(
   );
 }
 
-function getTreeNestedFieldValue(row: unknown, field: string): unknown {
-  return field.split(".").reduce<unknown>((value, key) => {
-    if (value == null || typeof value !== "object") {
-      return undefined;
-    }
-
-    return (value as Record<string, unknown>)[key];
-  }, row);
-}
-
-function compareTreeValues(left: unknown, right: unknown) {
-  if (typeof left === "number" && typeof right === "number") {
-    return left - right;
-  }
-
-  return String(left ?? "").localeCompare(String(right ?? ""));
-}
-
-function getSortedCominsTree<TData>(
-  data: readonly CominsTreeNode<TData>[],
-  columns: readonly CominsTableColumn<TData>[],
-  sortModel: CominsSortModel,
-) {
-  if (sortModel.length === 0) {
-    return data;
-  }
-
-  return sortCominsTreeSiblings(data, (leftRow, rightRow) => {
-    for (const rule of sortModel) {
-      const column = columns.find((candidate) => (candidate.id ?? candidate.field) === rule.columnId);
-
-      if (!column?.sort) {
-        continue;
-      }
-
-      const leftValue = getTreeNestedFieldValue(leftRow, column.field);
-      const rightValue = getTreeNestedFieldValue(rightRow, column.field);
-      const result =
-        typeof column.sort === "function"
-          ? column.sort(leftValue, rightValue, leftRow, rightRow)
-          : compareTreeValues(leftValue, rightValue);
-
-      if (result !== 0) {
-        return rule.direction === "desc" ? result * -1 : result;
-      }
-    }
-
-    return 0;
-  });
-}
 
 function setCominsTreeExpansion<TData>(
   data: readonly CominsTreeNode<TData>[],
@@ -3013,10 +2961,7 @@ function CominsTableInner<TData, TGroup>(
   const selectionRowIds = useMemo(() => projectedDataIndexes.map(index => state.rowIds[index]!), [projectedDataIndexes, state.rowIds]);
   const visibleRowCount = projectedDataIndexes.length;
   const visibleSlotCount = viewportContext?.data.rowCount ?? groupingProjection?.entries.length ?? visibleRowCount;
-  const pageSize = Math.max(1, state.pagination.pageSize);
-  const maxPageIndex = Math.max(0, Math.ceil(visibleRowCount / pageSize) - 1);
-  const effectivePageIndex = Math.min(Math.max(0, state.pagination.pageIndex), maxPageIndex);
-  const pageStartIndex = effectivePageIndex * pageSize;
+  const { pageSize, maxPageIndex, effectivePageIndex, pageStartIndex } = getCorePageProjection(visibleRowCount, state.pagination);
   useEffect(() => {
     if (!groupingProjection && !filteringRequested) {
       return;
@@ -3114,25 +3059,16 @@ function CominsTableInner<TData, TGroup>(
   const rowLayoutKey = `${detailContentWidth}:${visibleColumns.map((column, index) => `${column.id}:${columnWidths[index]}`).join("|")}:${JSON.stringify(theme ?? state.theme)}:${rowHeight}`;
   const rowContentRevision = useMemo(() => ({}), [columns, rowProps?.style, className, style, theme, rowFontRevision]);
   const viewportIndexById = useMemo(() => viewportContext ? new Map(effectiveData.map((row, index) => [getRowId!(row, index), viewportContext.indices[index]!] as const)) : null, [effectiveData, getRowId, viewportContext?.indices]);
+  const rowProjection = useMemo(() => {
+    const source = { rows: state.rows, rowIds: state.rowIds, dataIndexes: projectedDataIndexes };
+    if (viewportIndexById) return projectReactRows({ ...source, mode: "viewport", absoluteIndexById: viewportIndexById, rowCount: viewportContext!.data.rowCount });
+    if (groupingProjection) return projectReactRows({ ...source, mode: "grouped", projection: groupingProjection });
+    return treeContext ? projectReactRows({ ...source, mode: "tree" }) : projectReactRows({ ...source, mode: "flat", virtualized: true });
+  }, [state.rows, state.rowIds, projectedDataIndexes, viewportIndexById, groupingProjection, treeContext !== undefined]);
   const fullProjectionSlots = useMemo<Array<CominsVirtualSlot<TData>>>(() => {
     const safeRowHeight = Math.max(1, rowHeight);
-    const entries: readonly CominsGroupingProjectionEntry[] = groupingProjection?.entries ?? projectedDataIndexes.map(
-      (dataIndex, visibleLeafIndex) => {
-        const rowId = state.rowIds[dataIndex];
-
-        return rowId === undefined
-          ? null
-          : {
-              dataIndex,
-              key: getCominsDataSlotKey(rowId),
-              kind: "data" as const,
-              rowId,
-              visibleLeafIndex,
-            };
-      },
-    ).filter((entry): entry is Extract<CominsGroupingProjectionEntry, { kind: "data" }> => entry !== null);
-
-    return entries.flatMap<CominsVirtualSlot<TData>>((projectionEntry) => {
+    return rowProjection.entries.flatMap<CominsVirtualSlot<TData>>((projectionEntry) => {
+      if (projectionEntry.kind === "placeholder") return [];
       if (projectionEntry.kind === "group") {
         return [{
           groupId: projectionEntry.groupId,
@@ -3143,7 +3079,7 @@ function CominsTableInner<TData, TGroup>(
       }
 
       const { dataIndex, rowId } = projectionEntry;
-      const absoluteIndex = viewportIndexById?.get(rowId);
+      const absoluteIndex = projectionEntry.absoluteIndex;
       const visibleIndex = absoluteIndex ?? projectionEntry.visibleLeafIndex;
       if (viewportIndexById && absoluteIndex === undefined) return [];
         const row = state.rows[dataIndex];
@@ -3199,8 +3135,7 @@ function CominsTableInner<TData, TGroup>(
     effectiveExpandedRowIdSet,
     estimatedRowDetailHeight,
     getRowDetailHeight,
-    groupingProjection,
-    projectedDataIndexes,
+    rowProjection,
     rowHeight,
     state.rowIds,
     state.rows,
@@ -3366,9 +3301,8 @@ function CominsTableInner<TData, TGroup>(
       const transaction = logicalAnchorTransaction && Math.abs(scrollTop - logicalAnchorTransaction.actualPhysical) <= .5 ? logicalAnchorTransaction : null;
       const logical = viewportAnchorLogical ?? transaction?.targetLogical;
       const range = getCominsMixedVirtualRange({ heightIndex: viewportHeightIndex, overscan: virtualBufferSize, physicalScrollTop: logical === undefined ? scrollTop : getCominsPhysicalScrollTop(logical, viewportHeightIndex.getTotalHeight(), viewportHeight), viewportHeight });
-      const byIndex = new Map(fullProjectionSlots.flatMap(slot => slot.kind === "data" && slot.absoluteIndex !== undefined ? [[slot.absoluteIndex, slot] as const] : []));
-      const slots: CominsVirtualSlot<TData>[] = [];
-      for (let index = range.startIndex; index < Math.min(viewportHeightIndex.rowCount, range.endIndex); index++) slots.push(byIndex.get(index) ?? { kind: "placeholder", key: `viewport:${index}`, absoluteIndex: index, height: viewportHeightIndex.getHeight(index) });
+      const slots: CominsVirtualSlot<TData>[] = projectCoreViewportWindow(fullProjectionSlots.filter((slot): slot is CominsDataVirtualSlot<TData> => slot.kind === "data"), range, viewportHeightIndex.rowCount)
+        .map(slot => slot.kind === "placeholder" ? { ...slot, height: viewportHeightIndex.getHeight(slot.absoluteIndex) } : slot);
       return { mixed: true, renderOffset: logical === undefined ? range.renderOffset : scrollTop - (logical - range.logicalStartOffset), scrollHeight: range.physicalScrollHeight, slots };
     }
     if (virtualized) {
@@ -7186,7 +7120,7 @@ function CominsTreeTableInner<TData>(
   );
   const treeColumnId = treeColumns[0]?.id ?? treeColumns[0]?.field ?? null;
   const sortedTree = useMemo(
-    () => getSortedCominsTree(data, treeColumns, treeSortModel),
+    () => getSortedReactTree(data, treeColumns, treeSortModel),
     [data, treeColumns, treeSortModel],
   );
   const visibleTreeRows = useMemo(

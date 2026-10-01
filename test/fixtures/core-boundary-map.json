@@ -79,6 +79,10 @@
     },
     "B3": {
       "sources": [
+        "src/core/rows/projection.ts",
+        "src/core/rows/filtering.ts",
+        "src/core/rows/grouping.ts",
+        "src/react/rows.ts",
         "src/index.tsx",
         "src/core.ts",
         "src/filtering.ts",
@@ -96,6 +100,7 @@
         "rowId, 원본 dataIndex, 표시 위치, Viewport 절대 위치와 슬롯을 구분한다."
       ],
       "existingTests": [
+        "test/core-row-projection.test.ts",
         "test/filtering.test.ts",
         "test/grouping.test.ts",
         "test/tree-core.test.ts",
@@ -107,7 +112,7 @@
       "characterizationCases": [
         {
           "id": "B3-filtered-group-projection",
-          "status": "planned",
+          "status": "verified",
           "input": "groups=[B,A], rows=[a9(A,9),b4(B,4),a1(A,1),a2(A,2)], score>=2 필터와 score 오름차순, B 접힘",
           "expected": "그룹 header 순서 [B,A] 유지, 표시 데이터 행 [a2,a9]; a1은 필터 제외, b4는 접힘으로 제외; 원본 data 순서 불변",
           "plannedTest": "test/core-row-projection.test.ts"
@@ -117,6 +122,7 @@
     },
     "B4": {
       "sources": [
+        "src/core/rows/summary.ts",
         "src/react-types.ts",
         "src/component-renderer.tsx",
         "src/column-filter.tsx",
@@ -138,6 +144,7 @@
         "기존 custom aggregate의 ReactNode 반환은 루트에서 보존한다. 컬럼·셀 payload의 Row/Value 제네릭을 넓히지 않는다."
       ],
       "existingTests": [
+        "test/core-render-contract.test.ts",
         "test/summary-core.test.ts",
         "test/grouping.test.ts",
         "test/typecheck/component-renderer-api.tsx"

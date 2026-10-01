@@ -5,6 +5,10 @@ import { copyCominsRow, pasteCominsRow, copyCominsCellRange, pasteCominsCellRang
 import { exportCominsRowsToCsv, exportCominsRowsToJson } from "../../src/core/editing/export";
 import { reconcileCoreState } from "../../src/core/state/reconcile";
 import { getCoreStateChanges } from "../../src/core/state/changes";
+import { projectCoreRows, getSortedCoreTree } from "../../src/core/rows/projection";
+import { getCominsFilteredRowIndexes } from "../../src/core/rows/filtering";
+import { normalizeCominsRowGrouping, createCominsGroupModel, orderCominsGroupModel } from "../../src/core/rows/grouping";
+import { getBuiltinSummaryValue } from "../../src/core/rows/summary";
 type Row = { id: string; score: number };
 const numeric: CominsTableColumn<Row, number> = { field: "score", label: "Score", cell: {
   parseClipboard: payload => Number(payload.text) + payload.value,
@@ -15,6 +19,8 @@ const next: CominsTableState<Row> = setCominsSortModel(state, [{ columnId: "scor
 const reconciled = reconcileCoreState({ current: next, nextInput: { columns: next.columns, rows: next.rows }, columnOrderHistory: next.columnOrder, dataChanged: false, getRowIdChanged: false, viewportIndices: [0] });
 const changed: boolean = getCoreStateChanges(next, reconciled.state).selection;
 void [reconciled.invalidatedDetailRowIds, changed];
+const projected = projectCoreRows({ mode: "flat", rows: next.rows, rowIds: next.rowIds, dataIndexes: [0], virtualized: true });
+void [projected, getSortedCoreTree, getCominsFilteredRowIndexes, normalizeCominsRowGrouping, createCominsGroupModel, orderCominsGroupModel, getBuiltinSummaryValue];
 // @ts-expect-error Core labels are text, not renderer objects.
 const badLabel: CominsTableColumn<Row> = { field: "score", label: { type: "span" } };
 // @ts-expect-error DOM event props belong to the React cell contract.

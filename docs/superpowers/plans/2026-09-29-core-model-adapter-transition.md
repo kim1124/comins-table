@@ -1,6 +1,6 @@
 # Core Model and Adapter Transition Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 기존 세션에서 순차 실행하며 새 브랜치·worktree를 만들지 않는다. Task 1~4 구현·제품 검증 완료, Task 5~10 미실행. Task 3 보안 스캔의 공식 coverage는 이전 보류 기록이 남은 partial이며 전체 보안 인증을 의미하지 않는다. 실행 증거는 `reports/2026-09-29.md`, `reports/2026-10-01.md`에 기록한다.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 기존 세션에서 순차 실행하며 새 브랜치·worktree를 만들지 않는다. Task 1~5 구현·제품 검증 완료, Task 6~10 미실행. Task 3 보안 스캔의 공식 coverage는 이전 보류 기록이 남은 partial이며 전체 보안 인증을 의미하지 않는다. 실행 증거는 `reports/2026-09-29.md`, `reports/2026-10-01.md`에 기록한다.
 
 **Goal:** 상위 단계 3·4의 Core 상태·모델 및 Browser·React 어댑터를 함께 전환하여, React 루트 호환성을 유지하면서 공개·내부 Core의 React/DOM 의존을 제거한다.
 
@@ -130,11 +130,13 @@ Task 4 실행 보강: 변경 감지는 rows/selection/sort/sortModel 최소 snap
 
 **Interfaces:** `projectCoreRows<TData,TGroup>(input: CoreProjectionInput<TData,TGroup>): CoreProjection<TData>`. 입력은 `mode: flat | grouped | tree | viewport` 판별 union이며 기존 허용 옵션만 갖는다. 출력은 data/group/placeholder 판별 entries, `visibleRowIds`, 원본 dataIndex를 포함하고 viewport data에는 별도 absoluteIndex를 둔다. group에는 rowId를 날조하지 않는다. `getBuiltinSummaryValue(kind, values): number | null`; 사용자 aggregate/format의 ReactNode 반환은 React summary wrapper가 처리한다.
 
-- [ ] **Step 1: 계약 테스트 작성.** B3 groups=[B,A], filter score>=2, B 접힘, 오름차순의 표시 행=[a2,a9], 원본 배열 불변을 고정한다. flat pagination/virtual 분기, tree sibling sort/expanded 경로, sparse viewport 절대 좌표·빈 슬롯, 필터 후 요약 대상과 custom aggregate JSX를 추가한다.
-- [ ] **Step 2: RED 실행.** `npm run test:run -- test/core-row-projection.test.ts test/core-render-contract.test.ts test/grouping.test.ts test/summary-core.test.ts test/tree-core.test.ts test/filtering.test.ts`. 기존 모드 거부/비활성 조건의 characterization은 GREEN으로 확보한다.
-- [ ] **Step 3: 최소 구현.** 기존 filter/sort/group/tree 알고리즘과 메모 경계를 재사용한다. Flat/Filtered/Grouped/Tree/Viewport 각각의 지원 조합을 조사 문서 그대로 유지한다. 중립 group model에서 JSX label을 제거하고 React가 groupId/원본 group으로 렌더링한다. built-in 집계와 renderer 호출을 분리하며 새로운 public aggregate API는 만들지 않는다.
-- [ ] **Step 4: GREEN 확인.** focused tests와 verify. `npm run test:e2e -- test/playwright/specs/column-filtering.spec.ts test/playwright/specs/row-grouping.spec.ts test/playwright/specs/tree-grid.spec.ts test/playwright/specs/summary-row.spec.ts --workers=1`. projection이 virtual slots 경로를 바꾸므로 `npm run test:perf -- test/playwright/specs/virtualization.spec.ts --workers=1`을 먼저 실행하고 `npm run test:perf -- --workers=1`을 1회 실행한다.
-- [ ] **Step 5: 기록·커밋.** `refactor: extract mode-specific row projection and aggregation`.
+- [x] **Step 1: 계약 테스트 작성.** B3 groups=[B,A], filter score>=2, B 접힘, 오름차순의 표시 행=[a2,a9], 원본 배열 불변을 고정한다. flat pagination/virtual 분기, tree sibling sort/expanded 경로, sparse viewport 절대 좌표·빈 슬롯, 필터 후 요약 대상과 custom aggregate JSX를 추가한다.
+- [x] **Step 2: RED 실행.** `npm run test:run -- test/core-row-projection.test.ts test/core-render-contract.test.ts test/grouping.test.ts test/summary-core.test.ts test/tree-core.test.ts test/filtering.test.ts`. 기존 모드 거부/비활성 조건의 characterization은 GREEN으로 확보한다.
+- [x] **Step 3: 최소 구현.** 기존 filter/sort/group/tree 알고리즘과 메모 경계를 재사용한다. Flat/Filtered/Grouped/Tree/Viewport 각각의 지원 조합을 조사 문서 그대로 유지한다. 중립 group model에서 JSX label을 제거하고 React가 groupId/원본 group으로 렌더링한다. built-in 집계와 renderer 호출을 분리하며 새로운 public aggregate API는 만들지 않는다.
+- [x] **Step 4: GREEN 확인.** focused tests와 verify. `npm run test:e2e -- test/playwright/specs/column-filtering.spec.ts test/playwright/specs/row-grouping.spec.ts test/playwright/specs/tree-grid.spec.ts test/playwright/specs/summary-row.spec.ts --workers=1`. projection이 virtual slots 경로를 바꾸므로 `npm run test:perf -- test/playwright/specs/virtualization.spec.ts --workers=1`을 먼저 실행하고 `npm run test:perf -- --workers=1`을 1회 실행한다.
+- [x] **Step 5: 기록·커밋.** `refactor: extract mode-specific row projection and aggregation`.
+
+Task 5 실행 보강: 준비된 필터/정렬/그룹 인덱스를 받는 projection과 별도 페이지/Viewport window helper로 기존 memo 경계를 유지했다. React 그룹 label은 groupId로 복원하며 Core 그룹 모델에는 label을 두지 않는다. 필터도 중립 모듈로 이전하고 원래 React payload/receiver는 wrapper가 보존한다. verify(531 tests 및 checker 33), focused E2E(6), 일반 E2E(231), focused virtualization(9) 및 전체 perf(38)가 통과했다. Tree/Viewport 좌표 판단과 실제 tarball hash는 작업 보고서에 기록했다.
 
 ### Task 6: viewport descriptor·요청 정책·실행 생명주기 — B6
 
@@ -205,7 +207,7 @@ Task 1 → 2 → 3(공개 Core 독립성) → 4 → 5 → 6 → 7 → 8 → 9 �
 - 단계 3 완료: 중립 state/model/편집/projection/viewport/transfer/layout를 React 없이 검사할 수 있고 B1~B9 Core 소유 연산이 실제 어댑터에서 사용된다.
 - 단계 4 완료: 기존 root 타입/행동 및 callback 순서를 유지하고 Browser 자원이 cleanup되며 Core/Browser의 React 역참조가 없다.
 - 단계 5·6 미완료: 이 계획 통과만으로 사용자 문서 전체, React 배포 소비자, 최종 릴리스 준비 또는 배포 완료를 주장하지 않는다.
-- Task 1~4를 완료했으며 다음 실행 범위는 **Task 5**다. 기존 브랜치·순차 실행 방법은 유지한다. 상위 설계 변경 없이 해결할 수 없는 호환성 충돌이 입증되면 그 지점에서 대안·영향을 보고하고 범위 확장 전에 결정받는다.
+- Task 1~5를 완료했으며 다음 실행 범위는 **Task 6**다. 기존 브랜치·순차 실행 방법은 유지한다. 상위 설계 변경 없이 해결할 수 없는 호환성 충돌이 입증되면 그 지점에서 대안·영향을 보고하고 범위 확장 전에 결정받는다.
 
 ## 자체 검토
 
@@ -214,4 +216,4 @@ Task 1 → 2 → 3(공개 Core 독립성) → 4 → 5 → 6 → 7 → 8 → 9 �
 - root state와 Core state 사이의 구조적 호환을 가정하지 않고 bridge identity·metadata·callback payload 복원을 명시했다. props 조정 통지와 사용자 조작 통지를 구분했다.
 - 현재 지원하지 않는 일반 cell Arrow/Home/End 이동은 제외했고, B8은 기존 Fill/선택·clipboard·tree drag 계산 이전으로 한정했다. clipboard 옵션별 좌표 분기를 새 규칙으로 통합하지 않는다.
 - Review Focus 5개에 소유 테스트가 있으며 기능별 focused 검증과 전체 게이트를 구분했다. 문서 작성 자체에는 구현 검증 결과를 붙이지 않는다.
-- Vue·새 패키지·새 브랜치·SSR·신규 모드 지원·release 작업은 추가하지 않았다. 구현 checklist는 Task 1~4를 완료했다. 공개 Core 독립성 검증과 별도로 Task 5~10 내부 분리 및 최종 검증은 남아 있다.
+- Vue·새 패키지·새 브랜치·SSR·신규 모드 지원·release 작업은 추가하지 않았다. 구현 checklist는 Task 1~5를 완료했다. 공개 Core 독립성 검증과 별도로 Task 6~10 내부 분리 및 최종 검증은 남아 있다.
