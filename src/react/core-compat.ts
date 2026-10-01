@@ -1,3 +1,10 @@
+import type { CominsTableTheme, CominsTableRuntimeColumn } from "../react-types";
+import type {
+  CominsCopiedRow, CominsCopiedCell, CominsCopiedCellRange, CominsPasteRowOptions, CominsFillCellRangeOptions,
+} from "../model";
+import * as cells from "../core/editing/cells";
+import * as clipboard from "../core/editing/clipboard";
+import { createCellComponentParams, resolveCellProps, resolveGuard } from "./edit-policy";
 import type {
   CominsTableState,
   CominsTableStateInput,
@@ -311,26 +318,6 @@ export function getCominsCellValue<TData>(
   return table.getCominsCellValue(state, row, columnId);
 }
 
-export function withRows<TData>(
-  state: CominsTableState<TData>,
-  rows: TData[],
-  options: { resetSelection?: boolean } = {},
-): CominsTableState<TData> {
-  const bridge = projectReactState(state);
-  const next = table.withRows(bridge.core, rows, options);
-  return restoreReactState(bridge, next);
-}
-
-export function getCellRangeBounds<TData>(
-  state: CominsTableState<TData>,
-  range: CominsCellRange,
-  rowIds: readonly CominsRowId[] = state.rowIds,
-) {
-  const bridge = projectReactState(state);
-  const bounds = selection.getCellRangeBounds(bridge.core, range, rowIds);
-  return bounds && { ...bounds, visibleColumns: bounds.visibleColumns.map(bridge.restoreColumn) };
-}
-
 export function createCominsTableState<TData>(input: CominsTableStateInput<TData>): CominsTableState<TData> {
   const runtimeColumns = columns.normalizeColumns(input.columns);
   const runtimeGroups = columns.normalizeColumnGroups(runtimeColumns, input.columnGroups);
@@ -348,4 +335,135 @@ export function getCominsHeaderRows<TData>(state: CominsTableState<TData>): Arra
   return columns.getCominsHeaderRows(bridge.core).map(row => row.map(cell => cell.kind === "column"
     ? { ...cell, column: bridge.restoreColumn(cell.column) }
     : { ...cell, group: bridge.restoreGroup(cell.group) }));
+}
+
+export function setCominsTableTheme<TData>(state: CominsTableState<TData>, theme: CominsTableTheme) {
+  return {
+    ...state,
+    theme: { ...state.theme, ...theme },
+  };
+}
+
+export function formatCominsCellValue<TData>(
+  state: CominsTableState<TData>,
+  row: TData,
+  rowId: CominsRowId,
+  column: CominsTableRuntimeColumn<TData>,
+) {
+  const value = getCominsCellValue(state, row, column.id);
+
+  if (column.cell?.format) {
+    return column.cell.format(createCellComponentParams(state, row, rowId, column));
+  }
+
+  return value == null ? "" : String(value);
+}
+
+export function isCominsCellDisabled<TData>(
+  state: CominsTableState<TData>,
+  row: TData,
+  rowId: CominsRowId,
+  column: CominsTableRuntimeColumn<TData>,
+) {
+  const props = resolveCellProps(state, row, rowId, column);
+
+  return props?.disabled !== undefined && resolveGuard(props.disabled, createCellComponentParams(state, row, rowId, column)) === true;
+}
+
+export function getCominsCellClassName<TData>(
+  state: CominsTableState<TData>,
+  row: TData,
+  rowId: CominsRowId,
+  column: CominsTableRuntimeColumn<TData>,
+) {
+  const params = createCellComponentParams(state, row, rowId, column);
+  const className = resolveCellProps(state, row, rowId, column)?.className;
+
+  return typeof className === "function" ? className(params) : className;
+}
+
+export function getCominsCellStyle<TData>(
+  state: CominsTableState<TData>,
+  row: TData,
+  rowId: CominsRowId,
+  column: CominsTableRuntimeColumn<TData>,
+) {
+  const params = createCellComponentParams(state, row, rowId, column);
+  const style = resolveCellProps(state, row, rowId, column)?.style;
+
+  return typeof style === "function" ? style(params) : style;
+}
+
+export function copyCominsRow<TData>(state: CominsTableState<TData>, rowId: CominsRowId): CominsCopiedRow<TData> {
+  const bridge = projectReactState(state);
+  return clipboard.copyCominsRow(bridge.core, rowId);
+}
+
+export function pasteCominsRow<TData>(
+  state: CominsTableState<TData>,
+  copied: CominsCopiedRow<TData>,
+  options: CominsPasteRowOptions<TData>,
+) {
+  const bridge = projectReactState(state);
+  const next = clipboard.pasteCominsRow(bridge.core, copied, options);
+  return restoreReactState(bridge, next);
+}
+
+export function copyCominsCell<TData>(
+  state: CominsTableState<TData>,
+  { columnId, rowId }: CominsCellAddress,
+): CominsCopiedCell | null {
+  const bridge = projectReactState(state);
+  return cells.copyCominsCell(bridge.core, { columnId, rowId });
+}
+
+export function pasteCominsCell<TData>(
+  state: CominsTableState<TData>,
+  { columnId, rowId }: CominsCellAddress,
+  copied: CominsCopiedCell | null,
+) {
+  const bridge = projectReactState(state);
+  const next = cells.pasteCominsCell(bridge.core, { columnId, rowId }, copied);
+  return restoreReactState(bridge, next);
+}
+
+export function copyCominsCellRange<TData>(
+  state: CominsTableState<TData>,
+  range: CominsCellRange | null = state.selection.range,
+  rowIds: readonly CominsRowId[] = state.rowIds,
+): CominsCopiedCellRange | null {
+  const bridge = projectReactState(state);
+  return clipboard.copyCominsCellRange(bridge.core, range, rowIds);
+}
+
+export function pasteCominsCellRange<TData>(
+  state: CominsTableState<TData>,
+  target: CominsCellAddress,
+  copied: CominsCopiedCellRange | null,
+  rowIds: readonly CominsRowId[] = state.rowIds,
+) {
+  const bridge = projectReactState(state);
+  const next = clipboard.pasteCominsCellRange(bridge.core, target, copied, rowIds);
+  return restoreReactState(bridge, next);
+}
+
+export function pasteCominsText<TData>(
+  state: CominsTableState<TData>,
+  target: CominsCellAddress,
+  text: string,
+  rowIds: readonly CominsRowId[] = state.rowIds,
+) {
+  const bridge = projectReactState(state);
+  const next = clipboard.pasteCominsText(bridge.core, target, text, rowIds);
+  return restoreReactState(bridge, next);
+}
+
+export function fillCominsCellRange<TData>(
+  state: CominsTableState<TData>,
+  { source, target }: CominsFillCellRangeOptions,
+  rowIds: readonly CominsRowId[] = state.rowIds,
+) {
+  const bridge = projectReactState(state);
+  const next = clipboard.fillCominsCellRange(bridge.core, { source, target }, rowIds);
+  return restoreReactState(bridge, next);
 }

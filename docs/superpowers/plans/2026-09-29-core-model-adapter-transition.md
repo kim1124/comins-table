@@ -1,6 +1,6 @@
 # Core Model and Adapter Transition Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 기존 세션에서 순차 실행하며 새 브랜치·worktree를 만들지 않는다. Task 1 완료, Task 2~10 미실행. 실행 증거는 `reports/2026-09-29.md`에 기록한다.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. 기존 세션에서 순차 실행하며 새 브랜치·worktree를 만들지 않는다. Task 1·2 완료, Task 3~10 미실행. 실행 증거는 `reports/2026-09-29.md`, `reports/2026-10-01.md`에 기록한다.
 
 **Goal:** 상위 단계 3·4의 Core 상태·모델 및 Browser·React 어댑터를 함께 전환하여, React 루트 호환성을 유지하면서 공개·내부 Core의 React/DOM 의존을 제거한다.
 
@@ -82,17 +82,19 @@
 
 Task 1 실행 보강: 내부 `src/core/state/access.ts`에 데이터 접근 helper를 공유했다. hot-path 값/선택 조회는 최소 구조 입력으로 호출하고 전체 상태 변경에만 bridge를 사용한다. 중립 cell 정책 타입은 정의했으나 React guard/parser 투영은 Task 2에 남겨 두었다. 세 선택 함수는 기존의 좁은 반환 타입 추론까지 보존한다. `src/model.ts`·`src/react-types.ts`의 기존 계약은 수정할 필요가 없어 유지했다.
 
-### Task 2: 편집·clipboard·export 정책 분리
+### Task 2: 편집·clipboard·export 정책 분리 — 완료
 
 **Files:** 위 core/editing 3개와 react/edit-policy 생성. `src/core.ts`, `src/react/core-compat.ts`, `src/clipboard.ts`, `src/clipboard-text.ts`, `src/row-value.ts` 연결. 테스트 `test/core-edit-policy.test.ts`, 기존 clipboard/edit/export tests 및 React bridge tests.
 
 **Interfaces:** Core `isCominsCellDisabled`, copy/paste row/cell/range, `pasteCominsText`, `fillCominsCellRange`는 기존 인수/default rowIds와 반환 규칙을 유지한다. `createReactEditPolicy<TData>(state: ReactState<TData>, column: ReactRuntimeColumn<TData>): CoreCellDataConfig<TData>`는 기존 props/guard/parser를 원본 React payload로 호출하는 투영 정책을 제공한다. `CoreCellDataConfig`는 Task 1 model의 데이터 셀 설정을 가리키는 내부 alias다.
 
-- [ ] **Step 1: 계약 테스트 작성.** B5의 `[7,1,2]` Fill 중 두 번째 대상 검증 예외에서 원본 배열·값 유지, parser throw 원자성, 보호 셀의 행렬 위치 유지, 기존 no-op identity를 고정한다. props 함수/guard에 전달되는 원본 column·JSX label·row dataIndex·selectedRowCount를 검증한다. raw clipboard와 formatted export를 혼동하지 않는다.
-- [ ] **Step 2: RED 확인.** `npm run test:run -- test/core-edit-policy.test.ts test/react-core-bridge.test.ts`; 기존 구현 characterization GREEN과 새 중립 편집 entry RED를 별도로 기록한다.
-- [ ] **Step 3: 최소 구현.** 데이터 편집 함수와 export serializer를 Core로 이전한다. React format/class/style/theme 함수는 React 호환 모듈에 남긴다. guard 호출 순서·원래 row 기준 payload·100000 cells 한도·throw 전에 부분 결과를 내보내지 않는 동작을 유지한다.
-- [ ] **Step 4: GREEN 확인.** focused tests에 `test/clipboard-edit-core.test.ts test/clipboard-edit-table.test.tsx test/clipboard-core.test.ts test/export-core.test.ts`를 추가하고 verify. `npm run test:e2e -- test/playwright/specs/clipboard-edit.spec.ts test/playwright/specs/export-helper.spec.ts --workers=1` 실행.
-- [ ] **Step 5: 기록·커밋.** `refactor: separate core editing policies from React cell props`.
+- [x] **Step 1: 계약 테스트 작성.** B5의 `[7,1,2]` Fill 중 두 번째 대상 검증 예외에서 원본 배열·값 유지, parser throw 원자성, 보호 셀의 행렬 위치 유지, 기존 no-op identity를 고정한다. props 함수/guard에 전달되는 원본 column·JSX label·row dataIndex·selectedRowCount를 검증한다. raw clipboard와 formatted export를 혼동하지 않는다.
+- [x] **Step 2: RED 확인.** `npm run test:run -- test/core-edit-policy.test.ts test/react-core-bridge.test.ts`; 기존 구현 characterization GREEN과 새 중립 편집 entry RED를 별도로 기록한다.
+- [x] **Step 3: 최소 구현.** 데이터 편집 함수와 export serializer를 Core로 이전한다. React format/class/style/theme 함수는 React 호환 모듈에 남긴다. guard 호출 순서·원래 row 기준 payload·100000 cells 한도·throw 전에 부분 결과를 내보내지 않는 동작을 유지한다.
+- [x] **Step 4: GREEN 확인.** focused tests에 `test/clipboard-edit-core.test.ts test/clipboard-edit-table.test.tsx test/clipboard-core.test.ts test/export-core.test.ts`를 추가하고 verify. `npm run test:e2e -- test/playwright/specs/clipboard-edit.spec.ts test/playwright/specs/export-helper.spec.ts --workers=1` 실행.
+- [x] **Step 5: 기록·커밋.** `refactor: separate core editing policies from React cell props`.
+
+Task 2 실행 보강: 원본 React props의 1회 해석과 동일 payload guard 호출을 호출 범위 WeakMap으로 보존했다. 렌더용 disabled/format/style/theme는 React 호환 계층에 유지하고 Core disabled는 중립 정책을 사용한다. 이미 중립인 clipboard-text와 React 계약 재수출인 clipboard facade는 그대로 두고, row-value setter를 공유했다. 기존 임시 React withRows/getCellRangeBounds wrapper는 소비자 이전 후 제거했다. 실제 소스 ES2022-only 편집 타입 검사와 전이 source graph, verify(507 tests), 편집/export E2E(5), focused virtualization perf(9), full perf(38)가 통과했다. 실행 기록은 `reports/2026-10-01.md`에 있다. 공개 `/core` 중립 전환과 실제 tarball 소비자 검증은 Task 3에 남는다.
 
 ### Task 3: 공개 Core/React facade 원자적 전환 및 제품 게이트 연결
 

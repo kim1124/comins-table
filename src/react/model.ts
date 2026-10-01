@@ -1,7 +1,8 @@
 import type * as Core from "../core/model";
 import type * as React from "../react-types";
+import { createReactEditPolicy } from "./edit-policy";
 
-/** Only data options cross the boundary; cell policies are connected in Task 2. */
+/** Only data options cross the boundary; state-dependent cell policies are attached by the bridge. */
 export function projectReactColumn<TData>(column: React.CominsTableRuntimeColumn<TData>): Core.CominsTableRuntimeColumn<TData> {
   const sort = column.sort;
   const filter = column.filter;
@@ -33,6 +34,7 @@ export function projectReactState<TData>(source: React.CominsTableState<TData>):
   const groupSources = new Map<Core.CominsTableRuntimeColumnGroup, React.CominsTableRuntimeColumnGroup>();
   const columns = source.columns.map(column => {
     const projected = projectReactColumn(column);
+    if (column.cell) projected.cell = createReactEditPolicy(source, column);
     columnSources.set(projected, column);
     return projected;
   });

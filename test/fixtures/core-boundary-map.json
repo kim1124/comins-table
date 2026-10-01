@@ -143,6 +143,10 @@
     "B5": {
       "sources": [
         "src/core.ts",
+        "src/core/editing/cells.ts",
+        "src/core/editing/clipboard.ts",
+        "src/core/editing/export.ts",
+        "src/react/edit-policy.ts",
         "src/clipboard.ts",
         "src/clipboard-text.ts",
         "src/row-value.ts",
@@ -163,7 +167,8 @@
       "existingTests": [
         "test/clipboard-edit-core.test.ts",
         "test/clipboard-edit-table.test.tsx",
-        "test/clipboard-core.test.ts"
+        "test/clipboard-core.test.ts",
+        "test/core-edit-policy.test.ts"
       ],
       "plannedTests": [
         "test/core-edit-policy.test.ts"
@@ -171,7 +176,7 @@
       "characterizationCases": [
         {
           "id": "B5-fill-validation-atomicity",
-          "status": "planned",
+          "status": "verified",
           "input": "score=[7,1,2]인 3행, 첫 행을 나머지 두 행에 Fill; 첫 대상 검증 성공 후 두 번째 대상 validateFill에서 예외",
           "expected": "Fill 전체 실패, 원본 rows/값 [7,1,2] 보존, 첫 대상의 score=7인 부분 결과를 발행하지 않음",
           "plannedTest": "test/core-edit-policy.test.ts"
