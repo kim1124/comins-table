@@ -2,7 +2,7 @@
 
 [English guides](README.md) · [한국어](../ko/26-migration-0.2.0.md) · [Core State](03-core-state.md)
 
-This guide describes the 0.2.0 development branch, not a published release. The package version remains 0.1.11 until a separately approved release. Do not assume installing the published 0.1.x package provides the neutral Core contract below.
+This guide describes the source prepared for 0.2.0. The package version is 0.2.0, but publication is pending separate approval. Do not assume installing the published 0.1.x package provides the neutral Core contract below.
 
 ## Choose the contract owning your state
 
@@ -74,12 +74,12 @@ The application decides where to store the result. Clipboard helpers calculate d
 2. Keep root `/clipboard` and `/selection` operations on React state; keep neutral operations entirely on `/core`.
 3. For a deliberate neutral consumer, use string labels and direct cell data policies; remove React rendering metadata from that model.
 4. Run strict type checking and your editing, selection, sorting/filtering/grouping, and callback regressions. Use browser tests for your actual UI integration.
-5. Verify a local tarball before a release; source tests alone do not prove published declarations or CSS resolution.
+5. Verify the exact release tarball; source tests alone do not prove packaged declarations or CSS resolution.
 
-The repository's package fixtures compile strict packed types, execute root/subpath helpers, mount the packed Table in jsdom, and build a browser JS/CSS consumer for React 18 and 19. The same artifact is also checked by the React-free Core consumer. Run after `npm run build` and local `npm pack`:
+The repository's package fixtures compile strict packed types, execute root/subpath helpers, mount the packed Table in jsdom, and build a browser JS/CSS consumer for React 18 and 19. The same artifact is also checked by the React-free Core consumer. The release workflow runs this check against its canonical artifact before staging. For local diagnostics, pass an existing trusted tarball:
 
 ```bash
-node test/public-package-consumer.mjs /absolute/path/to/comins-table-0.1.11.tgz
+node test/public-package-consumer.mjs /absolute/path/to/comins-table-0.2.0.tgz
 ```
 
 This trusted-local-artifact test installs peers only in temporary directories and requires registry access. It is not a sandbox for untrusted packages. jsdom mount and a browser bundle are not cross-browser, layout, SSR, or release certification. See [the React consumer fixture](../../test/fixtures/react-public-consumer/consumer.tsx) and [Core consumer fixture](../../test/fixtures/core-public-consumer/consumer.ts) for executable type coverage.

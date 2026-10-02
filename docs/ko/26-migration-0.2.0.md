@@ -2,7 +2,7 @@
 
 [한글 가이드](README.md) · [English](../user/26-migration-0.2.0.md) · [Core State](03-core-state.md)
 
-이 문서는 배포된 버전이 아닌 0.2.0 개발 브랜치를 설명합니다. 별도 승인된 릴리스 전까지 패키지 버전은 0.1.11을 유지합니다. 배포된 0.1.x 패키지를 설치하면 아래 중립 Core 계약이 제공된다고 가정하지 않습니다.
+이 문서는 0.2.0 배포를 준비한 소스를 설명합니다. 패키지 버전은 0.2.0이며 실제 배포는 별도 승인 전까지 대기합니다. 배포된 0.1.x 패키지를 설치하면 아래 중립 Core 계약이 제공된다고 가정하지 않습니다.
 
 ## state를 소유하는 계약 선택
 
@@ -74,12 +74,12 @@ const rows = queryCominsRows(edited); // [{ id: "a", score: 42 }]
 2. 루트 `/clipboard`·`/selection`에는 React state를 사용하고 중립 연산은 `/core` 안에서 수행합니다.
 3. 중립 소비자로 전환할 때 문자열 label과 직접 셀 데이터 정책을 사용하고 React 렌더링 메타데이터를 모델에서 제외합니다.
 4. strict 타입 검사와 편집·선택·정렬/필터/그룹·callback 회귀 검사를 실행합니다. 실제 UI 연결에는 브라우저 검증을 적용합니다.
-5. 릴리스 전 로컬 tarball을 검증합니다. 소스 테스트만으로 배포 선언이나 CSS 해석을 증명하지 않습니다.
+5. 실제 배포 대상 tarball을 검증합니다. 소스 테스트만으로 패키지 선언이나 CSS 해석을 증명하지 않습니다.
 
-저장소의 패키지 fixture는 React 18·19에서 배포 타입을 strict 검사하고 루트·서브패스 helper 실행, jsdom의 패키지 Table mount, 브라우저 JS/CSS 빌드를 검증합니다. 같은 산출물을 React 없는 Core 소비자로도 검사합니다. `npm run build`와 로컬 `npm pack` 후 실행합니다.
+저장소의 패키지 fixture는 React 18·19에서 배포 타입을 strict 검사하고 루트·서브패스 helper 실행, jsdom의 패키지 Table mount, 브라우저 JS/CSS 빌드를 검증합니다. 같은 산출물을 React 없는 Core 소비자로도 검사합니다. 릴리스 워크플로는 staging 전에 정식 배포 산출물로 이 검사를 실행합니다. 로컬 진단에서는 이미 생성한 신뢰된 tarball을 전달합니다.
 
 ```bash
-node test/public-package-consumer.mjs /absolute/path/to/comins-table-0.1.11.tgz
+node test/public-package-consumer.mjs /absolute/path/to/comins-table-0.2.0.tgz
 ```
 
 이 검사는 신뢰된 로컬 산출물 전용이며 peer 설치는 임시 디렉터리에만 수행하고 registry 접근이 필요합니다. 신뢰할 수 없는 패키지 실행용 sandbox가 아닙니다. jsdom mount와 브라우저 번들은 브라우저별 동작·layout·SSR·릴리스 인증이 아닙니다. 실행 가능한 타입 검증은 [React 소비자 fixture](../../test/fixtures/react-public-consumer/consumer.tsx)와 [Core 소비자 fixture](../../test/fixtures/core-public-consumer/consumer.ts)를 참고합니다.

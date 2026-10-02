@@ -23,13 +23,13 @@ Comins Table is a controlled React data table for data-heavy application screens
 
 Comins Table is standalone and does not wrap another table or grid implementation.
 
-### Version 0.1.11
+### Version 0.2.0 (unreleased)
 
-The source and demonstrations below target 0.1.11. Publication is tracked separately in the changelog.
+The source targets 0.2.0; publication is pending. The animations were recorded with 0.1.11. See the [changelog](https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md) for release status.
 
 **0.1.11 migration:** Row Drag is opt-in with `rowProps={{ draggable: true }}`. `onChangeData` is optional for local Row movement; connect it to synchronize application state. New `data` arrays remain authoritative.
 
-This source version adds opt-in external TSV paste and a visual Fill Handle, with atomic controlled edits and protected Cell guards. Header sorting uses disclosure-family Chevrons, and drag feedback follows the packaged design contract. Tree Row drag, automatic heights, and Viewport Datasource remain available. See the [0.1.11 changelog](https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md) for the complete change list.
+**0.2.0 migration:** `/core` now exposes framework-neutral contracts. Move React state helpers and React-only types from `/core` to `comins-table`; see the [migration guide](https://github.com/kim1124/comins-table/blob/main/docs/user/26-migration-0.2.0.md). Existing opt-in TSV paste, Fill Handle, Tree Row drag, automatic heights, and Viewport Datasource remain available.
 
 For migration, keep these data-ownership boundaries explicit:
 
@@ -169,7 +169,7 @@ Set `multiSort` to opt into ordered multi-column sorting. Normal Header click or
 
 ## Package Entry Points
 
-**0.2.0 development branch (unreleased):** `/core` uses neutral state and string labels. Existing React state helpers and JSX/renderer/theme types belong to the root; `/clipboard` and `/selection` retain React-state contracts. Published 0.1.x behavior is not changed by this guide. See the [English migration guide](https://github.com/kim1124/comins-table/blob/main/docs/user/26-migration-0.2.0.md) or [한국어 마이그레이션](https://github.com/kim1124/comins-table/blob/main/docs/ko/26-migration-0.2.0.md). React peers and the client-only Table boundary remain unchanged; Vue support is not included.
+**0.2.0 (unreleased):** `/core` uses neutral state and string labels. Existing React state helpers and JSX/renderer/theme types belong to the root; `/clipboard` and `/selection` retain React-state contracts. Published 0.1.x behavior is not changed by this guide. See the [English migration guide](https://github.com/kim1124/comins-table/blob/main/docs/user/26-migration-0.2.0.md) or [한국어 마이그레이션](https://github.com/kim1124/comins-table/blob/main/docs/ko/26-migration-0.2.0.md). React peers and the client-only Table boundary remain unchanged; Vue support is not included.
 
 | Import | Purpose |
 | --- | --- |
