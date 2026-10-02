@@ -30,3 +30,28 @@ const sorted = setCominsSortModel(state, [
 ```
 
 Core helpers do not own React state. They return the next state, and the application decides where to store it.
+
+## 0.2.0 migration (unreleased)
+
+See the [complete migration guide](26-migration-0.2.0.md) for entry-point selection, React and neutral examples, installation boundaries, and the consumer verification checklist.
+
+`comins-table/core` now exposes framework-neutral runtime and types. Column and Group labels are strings; Core state has no theme or renderer metadata. Core cell policies use `cell.disabled`, `cell.copyable`, and `cell.pasteable` directly, alongside `cell.parseClipboard` and `cell.validateFill`.
+
+<!-- comins-doc-example: fragment -->
+```ts
+import { createCominsTableState, pasteCominsText } from "comins-table/core";
+
+const state = createCominsTableState({
+  rows: [{ id: "a", age: 31 }],
+  getRowId: row => row.id,
+  columns: [{ field: "age", label: "Age", cell: {
+    pasteable: ({ row }) => row.data.age >= 0,
+    parseClipboard: ({ text }) => Number(text),
+  } }],
+});
+const edited = pasteCominsText(state, { rowId: "a", columnId: "age" }, "42");
+```
+
+For existing React state, import helpers and types from `comins-table` instead of `/core`. This retains JSX labels, `cell.props` guards, renderer callbacks, and themes. React-only exports such as `CominsTableCellConfig`, `CominsTableTheme`, `formatCominsCellValue`, `getCominsCellClassName`, `getCominsCellStyle`, and `setCominsTableTheme` are available only from the root.
+
+`comins-table/clipboard` and `comins-table/selection` retain their React-state contracts. Use the corresponding `/core` helpers with neutral state; do not mix the two state contracts. The package still declares React peer dependencies, the React table remains client-only, and this separation does not declare SSR or Vue support.

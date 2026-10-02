@@ -3,6 +3,7 @@ import { act, createRef, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CominsTable, createCominsViewportData, reduceCominsViewportData, useCominsViewport, type CominsViewportData, type CominsViewportRequest, type CominsTableRef } from "../src";
+import { useCominsViewportRequests } from "../src/viewport-requests";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 type Row = { id: number; name: string };
@@ -29,6 +30,77 @@ function press(element: Element, key: string) {
 }
 
 describe("viewport Table integration", () => {
+  it("cancels scheduled requests on range exit, revision reset and unmount without restarting late completions", async () => {
+    const requests: CominsViewportRequest[] = [];
+    const finish: Array<() => void> = [];
+    const onRequest = (request: CominsViewportRequest) => {
+      requests.push(request);
+      return new Promise<void>(resolve => { finish.push(resolve); });
+    };
+    const initial = createCominsViewportData<Row>({ revision: "a", rowCount: 100, blockSize: 2 });
+    function Harness({ data, start = 0 }: { data: CominsViewportData<Row>; start?: number }) {
+      useCominsViewportRequests({ data, range: { startIndex: start, endIndex: start + 8 }, onRequest });
+      return null;
+    }
+    await act(async () => { mount(<Harness data={initial} />); });
+    expect(requests.map(request => request.startIndex)).toEqual([0, 2]);
+    await act(async () => { root!.render(<Harness data={initial} start={8} />); });
+    expect(requests.slice(0, 2).every(request => request.signal.aborted)).toBe(true);
+    expect(requests.slice(2).map(request => request.startIndex)).toEqual([8, 10]);
+    const next = createCominsViewportData<Row>({ revision: "b", rowCount: 100, blockSize: 2 });
+    await act(async () => { root!.render(<Harness data={next} start={8} />); });
+    expect(requests.slice(2, 4).every(request => request.signal.aborted)).toBe(true);
+    expect(requests.slice(4).map(request => request.revision)).toEqual(["b", "b"]);
+    act(() => { root!.unmount(); root = undefined; });
+    expect(requests.every(request => request.signal.aborted)).toBe(true);
+    await act(async () => { finish.forEach(resolve => resolve()); });
+    expect(requests).toHaveLength(6);
+  });
+  it("waits for explicit retry after an acknowledged error", async () => {
+    const initial = createCominsViewportData<Row>({ revision: "a", rowCount: 2, blockSize: 2 });
+    const requests: CominsViewportRequest[] = [];
+    let retry!: (index: number) => void;
+    let finishRetry!: () => void;
+    const onRequest = (request: CominsViewportRequest) => {
+      requests.push(request);
+      if (requests.length > 1) return new Promise<void>(resolve => { finishRetry = resolve; });
+    };
+    function Harness({ data }: { data: CominsViewportData<Row> }) {
+      retry = useCominsViewportRequests({ data, range: { startIndex: 0, endIndex: 2 }, onRequest });
+      return null;
+    }
+    await act(async () => { mount(<Harness data={initial} />); });
+    const request = requests[0]!;
+    const failed = reduceCominsViewportData(reduceCominsViewportData(initial, { type: "request", request }), { type: "error", request });
+    await act(async () => { root!.render(<Harness data={failed} />); });
+    expect(requests).toHaveLength(1);
+    await act(async () => { retry(1); });
+    expect(requests).toHaveLength(2);
+    expect(requests[1]?.requestId).not.toBe(request.requestId);
+    expect(requests[1]?.startIndex).toBe(0);
+    act(() => { root!.unmount(); root = undefined; });
+    expect(request.signal.aborted).toBe(false);
+    expect(requests[1]?.signal.aborted).toBe(true);
+    await act(async () => { finishRetry(); });
+  });
+  it("does not apply a consumer response from the previous query snapshot", async () => {
+    let current!: ReturnType<typeof useCominsViewport<Row>>;
+    let finish!: (rows: readonly Row[]) => void;
+    const getRows = () => new Promise<readonly Row[]>(resolve => { finish = resolve; });
+    function Harness({ queryKey }: { queryKey: string }) {
+      current = useCominsViewport<Row>({ rowCount: 2, blockSize: 2, queryKey, getRows });
+      return null;
+    }
+    await act(async () => { mount(<Harness queryKey="a" />); });
+    const request: CominsViewportRequest = { revision: "a", requestId: "old", startIndex: 0, endIndex: 2, retainRange: { startIndex: 0, endIndex: 2 }, signal: new AbortController().signal };
+    let pending!: Promise<void>;
+    act(() => { pending = current.tableProps.onViewportRequest(request); });
+    await act(async () => { root!.render(<Harness queryKey="b" />); });
+    await act(async () => { finish([{ id: 0, name: "Stale" }, { id: 1, name: "Stale" }]); await pending; });
+    expect(current.data.revision).toBe("b");
+    expect(current.data.blocks).toEqual([]);
+    expect(current.data.requests).toEqual([]);
+  });
   it("renders skeletons without business callbacks and selects loaded absolute indexes", () => {
     const renderer = vi.fn(({ row }: { row: { id: string | number; dataIndex: number } }) => `${row.id}:${row.dataIndex}`);
     const getRowHeight = vi.fn(() => 36);

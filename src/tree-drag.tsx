@@ -2,7 +2,8 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type React from "react";
 import type { CominsRowId } from "./core";
 import type { CominsEventRow, CominsRowDragReason, CominsRowDragResult, CominsRowDragTarget, CominsTableRowProps } from "./index";
-import { getCominsDragAutoScrollTop, getCominsDragAutoScrollVelocity } from "./drag-autoscroll";
+import { resolveCoreTreeDropContext, resolveCoreTreePointerPosition } from "./core/selection/navigation";
+import { applyCominsDragScroll, focusCominsPointerTarget, registerCominsPointerListeners, startCominsPointerFrames } from "./browser/pointer";
 import { moveCominsTreeNode, type CominsTreeDropContext, type CominsTreeDropPosition, type CominsTreeNode, type CominsTreeRowDragConfig, type CominsVisibleTreeRow } from "./tree";
 
 export type CominsBeforeTreeRowDragPayload<T> = {
@@ -89,7 +90,7 @@ export function useCominsTreeDrag<T>(options: Options<T>) {
     const focus = pendingFocus.current;
     if (!focus) return;
     const handle = Array.from(focus.root.querySelectorAll<HTMLElement>("[data-comins-tree-drag-handle]")).find(element => element.dataset.testid === `row-drag-handle-${String(focus.id)}`);
-    if (handle) { handle.focus({ preventScroll: true }); pendingFocus.current = null; pendingScrollTop.current = null; }
+    if (handle) { focusCominsPointerTarget(handle); pendingFocus.current = null; pendingScrollTop.current = null; }
     else navigateRef.current?.(focus.id);
   };
 
@@ -104,18 +105,10 @@ export function useCominsTreeDrag<T>(options: Options<T>) {
   const choose = (targetId: CominsRowId, position: CominsTreeDropPosition, event: PointerEvent | KeyboardEvent) => {
     const current = gesture.current;
     const props = committed.current;
-    const source = props.entries.find(entry => entry.rowId === current?.source.id);
-    const target = props.entries.find(entry => entry.rowId === targetId);
-    if (!current || !source || !target) return;
-    const parentPath = target.path.slice(0, -1);
-    const parent = props.entries.find(entry => pathKey(entry.path) === pathKey(parentPath));
-    const nextSibling = props.entries.find(entry => pathKey(entry.path.slice(0, -1)) === pathKey(parentPath) && entry.path[entry.path.length - 1] === target.path[target.path.length - 1]! + 1);
-    const context: CominsTreeDropContext<T> = {
-      source, target, position,
-      destination: position === "inside"
-        ? { parentId: target.rowId, beforeRowId: null }
-        : { parentId: parent?.rowId ?? null, beforeRowId: position === "before" ? target.rowId : nextSibling?.rowId ?? null },
-    };
+    if (!current) return;
+    const context = resolveCoreTreeDropContext({ entries: props.entries, sourceId: current.source.id, targetId, position });
+    if (!context) return;
+    const { source } = context;
     const valid = !props.sorted && Boolean(props.config && props.onChangeData) && props.config?.canDrop?.(context) !== false && moveCominsTreeNode(props.data, source.rowId, context.destination, props.getRowId, props.config) !== props.data;
     if (current.target?.context.target.rowId === targetId && current.target.context.position === position && current.target.valid === valid) return;
     current.target = { context, valid };
@@ -145,7 +138,6 @@ export function useCominsTreeDrag<T>(options: Options<T>) {
     const current = gesture.current!;
     const viewport = current.root.querySelector<HTMLElement>(".comins-table__body-viewport");
     let lastEvent = event.nativeEvent;
-    let frame = 0;
     let lastTime = performance.now();
     const update = (pointer: PointerEvent) => {
       const element = document.elementFromPoint(pointer.clientX, pointer.clientY)?.closest<HTMLElement>("[data-comins-row-data-index]");
@@ -158,38 +150,25 @@ export function useCominsTreeDrag<T>(options: Options<T>) {
       if (!entry || element.dataset.testid !== `row-${String(entry.rowId)}`) return;
       const rect = element.getBoundingClientRect();
       const fraction = (pointer.clientY - rect.top) / Math.max(1, rect.height);
-      choose(entry.rowId, fraction < .25 ? "before" : fraction > .75 ? "after" : committed.current.config?.allowReparent ? "inside" : fraction < .5 ? "before" : "after", pointer);
+      choose(entry.rowId, resolveCoreTreePointerPosition(fraction, committed.current.config?.allowReparent), pointer);
     };
     const tick = (now: number) => {
       if (viewport) {
         const rect = viewport.getBoundingClientRect();
         const insideX = lastEvent.clientX >= rect.left && lastEvent.clientX <= rect.right;
-        const next = getCominsDragAutoScrollTop({ clientHeight: viewport.clientHeight, scrollHeight: viewport.scrollHeight, scrollTop: viewport.scrollTop, deltaMs: now - lastTime, velocity: insideX ? getCominsDragAutoScrollVelocity({ clientY: lastEvent.clientY, top: Math.max(0, rect.top), bottom: Math.min(window.innerHeight, rect.bottom) }) : 0 });
-        if (next !== viewport.scrollTop) viewport.scrollTop = next;
+        applyCominsDragScroll(viewport, { clientY: lastEvent.clientY, top: Math.max(0, rect.top), bottom: Math.min(window.innerHeight, rect.bottom), deltaMs: now - lastTime, enabled: insideX, onlyIfChanged: true });
       }
       update(lastEvent);
       lastTime = now;
-      frame = requestAnimationFrame(tick);
     };
     const move = (pointer: PointerEvent) => { lastEvent = pointer; update(pointer); };
     const up = (pointer: PointerEvent) => { update(pointer); finish(true, pointer, "drop"); };
     const cancel = (pointer: PointerEvent) => finish(false, pointer, "pointer-cancel");
     const blur = () => finish(false, null, "blur");
     const key = (keyboard: KeyboardEvent) => { if (keyboard.key === "Escape") { keyboard.preventDefault(); finish(false, keyboard, "escape"); } };
-    current.cleanup = () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", cancel);
-      window.removeEventListener("blur", blur);
-      window.removeEventListener("keydown", key);
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", cancel);
-    window.addEventListener("blur", blur);
-    window.addEventListener("keydown", key);
-    frame = requestAnimationFrame(tick);
+    const removeListeners = registerCominsPointerListeners({ move, up, cancel, blur, key });
+    const stopFrames = startCominsPointerFrames(tick);
+    current.cleanup = () => { stopFrames(); removeListeners(); };
   };
 
   const moveByKeyboard = (event: KeyboardEvent) => {

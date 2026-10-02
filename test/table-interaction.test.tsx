@@ -109,6 +109,49 @@ afterEach(() => {
   container = undefined;
 });
 
+describe("state reconciliation notification contract", () => {
+  it("keeps local edits across option-only renders until authoritative data arrives", () => {
+    const ref = createRef<CominsTableRef<PersonRow>>();
+    const onChangeData = vi.fn();
+    const editableColumns = [{ field: "age", label: "Age", cell: { components: [{ type: "input" as const, props: ({ value }: { value: unknown }) => ({ value: String(value) }) }] } }];
+    const render = (data: PersonRow[], nextColumns = editableColumns) => <CominsTable columns={nextColumns} data={data} getRowId={getPersonRowId} onChangeData={onChangeData} ref={ref} />;
+    const element = renderTableElement(render(rows));
+    act(() => { ref.current?.setSelectedRow(0); });
+    const input = element.querySelector<HTMLInputElement>("[data-testid='cell-a-age'] input")!;
+    expect(input).not.toBeNull();
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "9");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    act(() => {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    expect(onChangeData.mock.calls.at(-1)?.[0][0].age).toBe("9");
+    onChangeData.mockClear();
+    act(() => root?.render(render(rows, [{ ...editableColumns[0]!, label: "Updated age" }])));
+    expect(element.querySelector<HTMLInputElement>("[data-testid='cell-a-age'] input")?.value).toBe("9");
+    expect(onChangeData).not.toHaveBeenCalled();
+    act(() => root?.render(render([...rows])));
+    expect(element.querySelector<HTMLInputElement>("[data-testid='cell-a-age'] input")?.value).toBe("31");
+    expect(onChangeData).not.toHaveBeenCalled();
+  });
+
+  it("does not notify data, layout or ordinary selection when props remove selected sorted columns", () => {
+    const events: string[] = [];
+    const ref = createRef<CominsTableRef<PersonRow>>();
+    const callbacks = { onChangeData: () => { events.push("data"); }, onChangeSelection: () => { events.push("selection"); }, onChangeColumnLayout: () => { events.push("layout"); }, onChangeSort: () => { events.push("sort"); }, onChangeSortModel: () => { events.push("sortModel"); } };
+    const render = (nextColumns: typeof columns | { field: string; label: string }[], data = rows) => <CominsTable columns={nextColumns} data={data} getRowId={getPersonRowId} ref={ref} {...callbacks} />;
+    renderTableElement(render(columns));
+    act(() => { ref.current?.setSelectedRow(0); ref.current?.setSortModel([{ columnId: "age", direction: "asc" }]); });
+    events.length = 0;
+    act(() => root?.render(render(columns)));
+    expect(events).toEqual([]);
+    act(() => root?.render(render([{ field: "name", label: "Name" }], [{ id: "c", name: "C", age: 7 }])));
+    expect(events).toEqual(["sort", "sortModel"]);
+    expect(ref.current?.getSelection().rowIds).toEqual([]);
+  });
+});
+
 describe("column pinning interaction contract", () => {
   it("renders responsive sticky Header, Body, and split Summary surfaces", () => {
     const restoreResizeObserver = installTestResizeObserver(240, 400);
@@ -2018,6 +2061,24 @@ describe("comins-table keyboard interaction", () => {
     } finally {
       requestAnimationFrame.mockRestore();
       restoreResizeObserver();
+    }
+  });
+
+  it("reclaims pending Detail focus retries across repeated table unmounts", () => {
+    const pending = new Map<number, FrameRequestCallback>();
+    let frameId = 0;
+    const requestFrame = vi.spyOn(window, "requestAnimationFrame").mockImplementation(callback => { pending.set(++frameId, callback); return frameId; });
+    const cancelFrame = vi.spyOn(window, "cancelAnimationFrame").mockImplementation(id => { pending.delete(id); });
+    try {
+      for (let iteration = 0; iteration < 3; iteration++) {
+        const element = renderTableElement(<CominsTable columns={columns} data={rows} getRowId={getPersonRowId} expandedRowIds={["a"]} onChangeExpandedRowIds={() => {}} renderRowDetail={() => <input data-testid="detail-input" />} />);
+        act(() => element.querySelector<HTMLInputElement>("[data-testid='detail-input']")!.focus());
+        act(() => root?.unmount()); root = undefined;
+        element.remove();
+        expect(pending.size).toBe(0);
+      }
+    } finally {
+      requestFrame.mockRestore(); cancelFrame.mockRestore();
     }
   });
 

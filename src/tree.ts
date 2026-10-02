@@ -1,4 +1,4 @@
-import type { CominsRowId } from "./core";
+import type { CominsRowId } from "./model";
 
 export type CominsTreeNode<TItem> = {
   children?: readonly CominsTreeNode<TItem>[];

@@ -1,16 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
-import type { CominsCellAddress, CominsCellRange, CominsRowId, CominsTableState } from "./core";
-import { getCominsDragAutoScrollTop, getCominsDragAutoScrollVelocity } from "./drag-autoscroll";
-
-type Bounds = { top: number; bottom: number; left: number; right: number };
-function bounds(range: CominsCellRange, rows: readonly CominsRowId[], columns: readonly string[]): Bounds | null {
-  const a = rows.indexOf(range.anchor.rowId), b = rows.indexOf(range.focus.rowId);
-  const c = columns.indexOf(range.anchor.columnId), d = columns.indexOf(range.focus.columnId);
-  return Math.min(a, b, c, d) < 0 ? null : { top: Math.min(a, b), bottom: Math.max(a, b), left: Math.min(c, d), right: Math.max(c, d) };
-}
-function rangeOf(box: Bounds, rows: readonly CominsRowId[], columns: readonly string[]): CominsCellRange {
-  return { anchor: { rowId: rows[box.top]!, columnId: columns[box.left]! }, focus: { rowId: rows[box.bottom]!, columnId: columns[box.right]! } };
-}
+import type { CominsCellAddress, CominsCellRange, CominsRowId, CominsTableState } from "./react/core-compat";
+import { getCominsDragAutoScrollVelocity, getCoreCellBounds as bounds, getCoreCellRange as rangeOf, resolveCoreFillTarget } from "./core/selection/navigation";
+import { applyCominsDragScroll, captureCominsPointer, focusCominsPointerTarget, registerCominsPointerListeners, startCominsPointerFrames } from "./browser/pointer";
 
 /** Private gesture controller. All writes go through the owning Table's batch callback. */
 export function useCominsCellFill<TData>(options: {
@@ -37,7 +28,7 @@ export function useCominsCellFill<TData>(options: {
   const selection = options.state.selection;
   const source = options.enabled ? selection.range ?? ((selection.cells?.length ?? 0) > 1 || !selection.cell ? null : { anchor: selection.cell, focus: selection.cell }) : null;
   const box = source ? bounds(source, options.rowIds, options.columnIds) : null;
-  const closeMenu = (focus = true) => { setMenu(null); if (focus) triggerRef.current?.focus({ preventScroll: true }); };
+  const closeMenu = (focus = true) => { setMenu(null); if (focus) focusCominsPointerTarget(triggerRef.current); };
   useEffect(() => () => cancelRef.current?.(), []);
   useEffect(() => {
     if (!menu) return;
@@ -63,12 +54,12 @@ export function useCominsCellFill<TData>(options: {
   };
   const begin = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (!source || !box || event.button !== 0 || !options.canUseRange(source)) return;
-    event.preventDefault(); event.stopPropagation(); event.currentTarget.focus({ preventScroll: true });
+    event.preventDefault(); event.stopPropagation(); focusCominsPointerTarget(event.currentTarget);
     // Touch keeps the gesture on this control while hit testing uses viewport coordinates.
-    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* Synthetic pointer or detached control. */ }
+    const releasePointer = captureCominsPointer(event.currentTarget, event.pointerId);
     setMenu(null); suppressClick.current = false;
-    const initial = options, initialSource = source, initialBox = box, pointerId = event.pointerId;
-    let x = event.clientX, y = event.clientY, moved = false, target: CominsCellRange | null = null, targetKey = "", frame = 0, lastTime = 0;
+    const initial = options, initialSource = source, pointerId = event.pointerId;
+    let x = event.clientX, y = event.clientY, moved = false, target: CominsCellRange | null = null, targetKey = "", lastTime = 0;
     const validSnapshot = () => latest.current.enabled && latest.current.state.rows === initial.state.rows
       && latest.current.state.columnOrder === initial.state.columnOrder && latest.current.state.selection === initial.state.selection
       && latest.current.rowIds === initial.rowIds;
@@ -78,17 +69,8 @@ export function useCominsCellFill<TData>(options: {
       if (!viewport) return;
       const rect = viewport.getBoundingClientRect();
       const address = latest.current.addressAtPoint(Math.max(rect.left + 1, Math.min(rect.right - 1, x)), Math.max(rect.top + 1, Math.min(rect.bottom - 1, y)));
-      const row = address ? initial.rowIds.indexOf(address.rowId) : -1, column = address ? initial.columnIds.indexOf(address.columnId) : -1;
-      let next: CominsCellRange | null = null;
-      if (row >= 0 && column >= 0) {
-        const dy = Math.max(initialBox.top - row, row - initialBox.bottom, 0), dx = Math.max(initialBox.left - column, column - initialBox.right, 0);
-        if (dy || dx) {
-          const extended = dy >= dx ? { ...initialBox, top: Math.min(initialBox.top, row), bottom: Math.max(initialBox.bottom, row) }
-            : { ...initialBox, left: Math.min(initialBox.left, column), right: Math.max(initialBox.right, column) };
-          const candidate = rangeOf(extended, initial.rowIds, initial.columnIds);
-          if ((extended.bottom - extended.top + 1) * (extended.right - extended.left + 1) <= 100000 && latest.current.canUseRange(candidate)) next = candidate;
-        }
-      }
+      const candidate = resolveCoreFillTarget({ source: initialSource, address, rowIds: initial.rowIds, columnIds: initial.columnIds });
+      const next = candidate && latest.current.canUseRange(candidate) ? candidate : null;
       const key = JSON.stringify(next);
       if (key !== targetKey) { targetKey = key; target = next; setPreview(next); }
     };
@@ -97,13 +79,12 @@ export function useCominsCellFill<TData>(options: {
       const viewport = initial.viewport.current;
       if (moved && viewport) {
         const rect = viewport.getBoundingClientRect(), deltaMs = lastTime ? time - lastTime : 16;
-        const velocity = getCominsDragAutoScrollVelocity({ top: rect.top, bottom: rect.bottom, clientY: y });
-        viewport.scrollTop = getCominsDragAutoScrollTop({ scrollTop: viewport.scrollTop, scrollHeight: viewport.scrollHeight, clientHeight: viewport.clientHeight, velocity, deltaMs });
+        applyCominsDragScroll(viewport, { top: rect.top, bottom: rect.bottom, clientY: y, deltaMs });
         const horizontal = getCominsDragAutoScrollVelocity({ top: rect.left, bottom: rect.right, clientY: x });
         if (horizontal) latest.current.scrollHorizontal(horizontal * Math.min(deltaMs, 32) / 1000);
         update();
       }
-      lastTime = time; frame = requestAnimationFrame(tick);
+      lastTime = time;
     };
     const move = (next: PointerEvent) => {
       if (next.pointerId !== pointerId) return;
@@ -112,8 +93,7 @@ export function useCominsCellFill<TData>(options: {
       if (moved) { suppressClick.current = true; update(); }
     };
     const cleanup = () => {
-      cancelAnimationFrame(frame); window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", cancel); window.removeEventListener("blur", cancel); window.removeEventListener("keydown", key, true);
+      stopFrames(); removeListeners(); releasePointer();
       initial.releaseGesture(cleanup);
       if (cancelRef.current === cleanup) cancelRef.current = null;
       setPreview(null);
@@ -127,9 +107,8 @@ export function useCominsCellFill<TData>(options: {
     };
     const key = (next: KeyboardEvent) => { if (next.key === "Escape") { next.preventDefault(); cancel(); } };
     initial.registerGesture(cleanup); cancelRef.current = cleanup;
-    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up); window.addEventListener("pointercancel", cancel);
-    window.addEventListener("blur", cancel); window.addEventListener("keydown", key, true);
-    frame = requestAnimationFrame(tick);
+    const removeListeners = registerCominsPointerListeners({ move, up, cancel, blur: cancel, key, keyCapture: true });
+    const stopFrames = startCominsPointerFrames(tick);
   };
   const previewBox = preview ? bounds(preview, options.rowIds, options.columnIds) : null;
   const rowPositions = useMemo(() => options.enabled ? new Map(options.rowIds.map((id, index) => [id, index])) : new Map<CominsRowId, number>(), [options.enabled, options.rowIds]);

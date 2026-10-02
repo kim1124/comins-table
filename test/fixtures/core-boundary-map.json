@@ -1,0 +1,384 @@
+{
+  "baselineCommit": "34b7727",
+  "areas": {
+    "B1": {
+      "sources": [
+        "src/core.ts",
+        "src/core/model.ts",
+        "src/core/state/table.ts",
+        "src/core/state/reconcile.ts",
+        "src/core/state/access.ts",
+        "src/react/model.ts",
+        "src/react/core-compat.ts",
+        "src/react/state.ts",
+        "src/model.ts",
+        "src/table-state.ts",
+        "src/row-value.ts",
+        "src/index.tsx"
+      ],
+      "targetLayers": [
+        "core",
+        "react"
+      ],
+      "invariants": [
+        "동일 data에서 옵션만 변경되면 로컬 편집 rows를 유지한다.",
+        "새 data는 authoritative이며 컬럼 순서 이력·선택을 기존 기준으로 조정한다."
+      ],
+      "existingTests": [
+        "test/core-state-reconciliation.test.ts",
+        "test/table-interaction.test.tsx",
+        "test/table-calculations.test.ts"
+      ],
+      "plannedTests": [
+        "test/core-state-reconciliation.test.ts"
+      ],
+      "characterizationCases": [
+        {
+          "id": "B1-option-only-keeps-edits",
+          "status": "verified",
+          "input": "data=[{id:'a',score:1}] 참조 유지, 내부 편집 rows=[{id:'a',score:9}], score 컬럼 label만 Score에서 Updated score로 변경",
+          "expected": "조정 후 score=9와 편집 rows 참조 유지, 새 label 반영; 이전 data의 score=1로 복원하지 않음",
+          "plannedTest": "test/core-state-reconciliation.test.ts"
+        }
+      ],
+      "implementationStage": "3+4"
+    },
+    "B2": {
+      "sources": [
+        "src/index.tsx",
+        "src/core/state/changes.ts",
+        "src/react/state.ts",
+        "src/table-state.ts",
+        "src/core.ts"
+      ],
+      "targetLayers": [
+        "core",
+        "react"
+      ],
+      "invariants": [
+        "복합 변경 통지는 data → selection → columnLayout → sort → sortModel 순서를 유지한다.",
+        "변경 감지의 참조 비교·정렬 비교·layout 플래그를 보존한다. 변경 없는 동일 state와 layout 플래그 부재 시 통지하지 않는다."
+      ],
+      "existingTests": [
+        "test/core-state-changes.test.ts",
+        "test/table-interaction.test.tsx"
+      ],
+      "plannedTests": [
+        "test/core-state-changes.test.ts"
+      ],
+      "characterizationCases": [
+        {
+          "id": "B2-composite-notification-order",
+          "status": "verified",
+          "input": "rows/selection 참조 변경, layout 통지 플래그 true, sort와 sortModel 변경, 모든 callback 등록",
+          "expected": "data → selection → columnLayout → sort → sortModel 순서로 각각 1회 통지; 동일 state와 layout 플래그 false 대조군은 통지 0회",
+          "plannedTest": "test/core-state-changes.test.ts"
+        }
+      ],
+      "implementationStage": "3+4"
+    },
+    "B3": {
+      "sources": [
+        "src/core/rows/projection.ts",
+        "src/core/rows/filtering.ts",
+        "src/core/rows/grouping.ts",
+        "src/react/rows.ts",
+        "src/index.tsx",
+        "src/core.ts",
+        "src/filtering.ts",
+        "src/grouping.ts",
+        "src/tree.ts",
+        "src/virtual-layout.ts"
+      ],
+      "targetLayers": [
+        "core",
+        "react"
+      ],
+      "invariants": [
+        "그룹 순서를 유지하면서 그룹 안에서 정렬하고 접힌 멤버는 표시 projection에서 제외한다.",
+        "Flat/Filtered/Grouped/Tree/Viewport의 기존 지원 조합과 페이지·가상화 분기를 보존한다.",
+        "rowId, 원본 dataIndex, 표시 위치, Viewport 절대 위치와 슬롯을 구분한다."
+      ],
+      "existingTests": [
+        "test/core-row-projection.test.ts",
+        "test/filtering.test.ts",
+        "test/grouping.test.ts",
+        "test/tree-core.test.ts",
+        "test/virtual-layout.test.ts"
+      ],
+      "plannedTests": [
+        "test/core-row-projection.test.ts"
+      ],
+      "characterizationCases": [
+        {
+          "id": "B3-filtered-group-projection",
+          "status": "verified",
+          "input": "groups=[B,A], rows=[a9(A,9),b4(B,4),a1(A,1),a2(A,2)], score>=2 필터와 score 오름차순, B 접힘",
+          "expected": "그룹 header 순서 [B,A] 유지, 표시 데이터 행 [a2,a9]; a1은 필터 제외, b4는 접힘으로 제외; 원본 data 순서 불변",
+          "plannedTest": "test/core-row-projection.test.ts"
+        }
+      ],
+      "implementationStage": "3+4"
+    },
+    "B4": {
+      "sources": [
+        "src/core/rows/summary.ts",
+        "src/react-types.ts",
+        "src/component-renderer.tsx",
+        "src/column-filter.tsx",
+        "src/row-detail.tsx",
+        "src/tooltip.tsx",
+        "src/table-icons.tsx",
+        "src/summary.ts",
+        "src/grouping.ts",
+        "src/core.ts",
+        "src/index.tsx"
+      ],
+      "targetLayers": [
+        "core",
+        "browser",
+        "react"
+      ],
+      "invariants": [
+        "집계값·데이터 계약과 React label/renderer/style을 분리한다.",
+        "기존 custom aggregate의 ReactNode 반환은 루트에서 보존한다. 컬럼·셀 payload의 Row/Value 제네릭을 넓히지 않는다."
+      ],
+      "existingTests": [
+        "test/core-render-contract.test.ts",
+        "test/summary-core.test.ts",
+        "test/grouping.test.ts",
+        "test/typecheck/component-renderer-api.tsx"
+      ],
+      "plannedTests": [
+        "test/core-render-contract.test.ts"
+      ],
+      "characterizationCases": [
+        {
+          "id": "B4-react-render-payload-identity",
+          "status": "verified",
+          "input": "JSX label과 custom aggregate ReactElement, score>3 필터 및 원본 column callback",
+          "expected": "필터 index=[1], 원본 column/filtered rows 참조 및 custom aggregate ReactElement 반환 보존; Core의 숫자 집계는 유한 값만 계산",
+          "plannedTest": "test/core-render-contract.test.ts"
+        }
+      ],
+      "implementationStage": "3+4"
+    },
+    "B5": {
+      "sources": [
+        "src/core.ts",
+        "src/core/editing/cells.ts",
+        "src/core/editing/clipboard.ts",
+        "src/core/editing/export.ts",
+        "src/react/edit-policy.ts",
+        "src/clipboard.ts",
+        "src/clipboard-text.ts",
+        "src/row-value.ts",
+        "src/cell-fill.tsx",
+        "src/selection-data.ts",
+        "src/index.tsx"
+      ],
+      "targetLayers": [
+        "core",
+        "browser",
+        "react"
+      ],
+      "invariants": [
+        "copyable/pasteable/disabled/parseClipboard/validateFill의 데이터 규칙을 보존한다.",
+        "보호 셀의 행렬 위치를 유지하고 파서·Fill 검증 예외 시 부분 변경을 내보내지 않는다.",
+        "값이 바뀌지 않는 셀 편집은 기존 no-op 참조 계약을 유지한다."
+      ],
+      "existingTests": [
+        "test/clipboard-edit-core.test.ts",
+        "test/clipboard-edit-table.test.tsx",
+        "test/clipboard-core.test.ts",
+        "test/core-edit-policy.test.ts"
+      ],
+      "plannedTests": [
+        "test/core-edit-policy.test.ts"
+      ],
+      "characterizationCases": [
+        {
+          "id": "B5-fill-validation-atomicity",
+          "status": "verified",
+          "input": "score=[7,1,2]인 3행, 첫 행을 나머지 두 행에 Fill; 첫 대상 검증 성공 후 두 번째 대상 validateFill에서 예외",
+          "expected": "Fill 전체 실패, 원본 rows/값 [7,1,2] 보존, 첫 대상의 score=7인 부분 결과를 발행하지 않음",
+          "plannedTest": "test/core-edit-policy.test.ts"
+        }
+      ],
+      "implementationStage": "3+4"
+    },
+    "B6": {
+      "sources": [
+        "src/core/viewport/data.ts",
+        "src/core/viewport/requests.ts",
+        "src/browser/viewport-requests.ts",
+        "src/react/viewport.ts",
+        "src/viewport-data.ts",
+        "src/viewport-requests.ts",
+        "src/use-viewport.ts",
+        "src/index.tsx"
+      ],
+      "targetLayers": [
+        "core",
+        "browser",
+        "react"
+      ],
+      "invariants": [
+        "requestId/revision으로 오래된·불완전한 응답을 거부하고 최신 로컬 편집을 덮어쓰지 않는다.",
+        "Core descriptor와 실행 AbortSignal을 분리하되 루트의 signal 지원·aborted reducer 동작은 호환 wrapper로 유지한다.",
+        "중복 억제·동시 실행 수·재시도는 정책이며 취소·Promise·listener 해제는 실행 계층이다."
+      ],
+      "existingTests": [
+        "test/viewport-data.test.ts",
+        "test/viewport-table.test.tsx",
+        "test/core-request-policy.test.ts",
+        "test/browser-viewport-requests.test.ts",
+        "test/table-interaction.test.tsx"
+      ],
+      "plannedTests": [
+        "test/core-request-policy.test.ts"
+      ],
+      "characterizationCases": [
+        {
+          "id": "B6-pending-response-keeps-local-edit",
+          "status": "verified",
+          "input": "revision=a, blockSize=2, index 0~1의 rows=[{id:0},{id:1}] 로드 후 refresh 요청; index 0을 {id:999}로 patch 후 옛 rows 응답 도착",
+          "expected": "index 0의 id=999 유지, 완료된 refresh 요청 정리; pending 응답의 id=0으로 덮어쓰지 않음",
+          "plannedTest": "test/core-request-policy.test.ts"
+        }
+      ],
+      "implementationStage": "3+4"
+    },
+    "B7": {
+      "sources": [
+        "src/core/transfer/policy.ts",
+        "src/browser/table-transfer.ts",
+        "src/react/table-transfer.ts",
+        "src/table-transfer.ts",
+        "src/index.tsx"
+      ],
+      "targetLayers": [
+        "core",
+        "browser",
+        "react"
+      ],
+      "invariants": [
+        "이동·충돌 정책은 Core, DOM snapshot 등록은 Browser, feedback renderer는 React에 둔다.",
+        "coordinator별 격리와 중복 table ID 거부를 유지한다.",
+        "그룹의 한 멤버라도 충돌 거부이면 전체 transfer를 원자적으로 거부한다."
+      ],
+      "existingTests": [
+        "test/table-transfer.test.ts",
+        "test/core-transfer-policy.test.ts",
+        "test/browser-transfer-registration.test.ts"
+      ],
+      "plannedTests": [
+        "test/core-transfer-policy.test.ts"
+      ],
+      "characterizationCases": [
+        {
+          "id": "B7-group-transfer-atomicity",
+          "status": "verified",
+          "input": "source의 group g 멤버 [a,b], target에는 다른 group h의 b 존재; g 이동 중 b 충돌 정책이 reject 반환",
+          "expected": "전체 transfer 결과 null, source/target의 rows와 groups 불변; 충돌 없는 a만 옮기는 부분 결과 없음",
+          "plannedTest": "test/core-transfer-policy.test.ts"
+        }
+      ],
+      "implementationStage": "3+4"
+    },
+    "B8": {
+      "sources": [
+        "src/core/selection/navigation.ts",
+        "src/browser/pointer.ts",
+        "src/selection.ts",
+        "src/core/selection/state.ts",
+        "src/selection-data.ts",
+        "src/column-pointer.ts",
+        "src/drag-autoscroll.ts",
+        "src/tree-drag.tsx",
+        "src/cell-fill.tsx",
+        "src/index.tsx",
+        "src/core.ts"
+      ],
+      "targetLayers": [
+        "core",
+        "browser",
+        "react"
+      ],
+      "invariants": [
+        "주소·범위·이동 목적지 계산을 이벤트·포인터 캡처·focus와 분리한다.",
+        "중첩 입력 및 사용자 preventDefault 우선권을 보존한다.",
+        "정렬·필터·숨김 컬럼 이후 clipboard/Fill과 선택은 동일한 표시 순서를 사용한다."
+      ],
+      "existingTests": [
+        "test/selection-core.test.ts",
+        "test/tree-row-drag-core.test.ts",
+        "test/table-interaction.test.tsx",
+        "test/core-navigation.test.ts",
+        "test/browser-pointer.test.ts",
+        "test/clipboard-edit-table.test.tsx"
+      ],
+      "plannedTests": [
+        "test/core-navigation.test.ts"
+      ],
+      "characterizationCases": [
+        {
+          "id": "B8-typed-displayed-copy-navigation",
+          "status": "verified",
+          "input": "표시 rows=['last','1',1], columns=['a','b']; 복사 cells=[last/a,1/b] 및 숨긴 b 컬럼을 제외한 React 소비자",
+          "expected": "typed ID와 표시 순서, 가운데 빈 행과 선택 hole 유지; 숨긴 컬럼 제외; Tree 목적지는 parent/sibling 좌표로 계산",
+          "plannedTest": "test/core-navigation.test.ts"
+        }
+      ],
+      "implementationStage": "3+4"
+    },
+    "B9": {
+      "sources": [
+        "src/core/layout/virtual.ts",
+        "src/core/layout/viewport.ts",
+        "src/core/layout/row-height.ts",
+        "src/browser/measurements.ts",
+        "src/browser/scroll.ts",
+        "src/browser/clipboard.ts",
+        "src/column-layout.ts",
+        "src/core/layout/columns.ts",
+        "src/column-pinning.ts",
+        "src/row-height.ts",
+        "src/virtual-layout.ts",
+        "src/viewport-layout.ts",
+        "src/row-detail.tsx",
+        "src/index.tsx"
+      ],
+      "targetLayers": [
+        "core",
+        "browser",
+        "react"
+      ],
+      "invariants": [
+        "숫자 1과 문자열 1은 서로 다른 slot ID이며 앵커 제거 시 기존 fallback을 유지한다.",
+        "측정은 row 참조·layoutKey·contentRevision에 맞춰 재사용하고 변경 시 무효화한다.",
+        "sparse 높이 인덱스의 복제·캐시 한도·retain 정책과 높이 상한 계산을 보존한다."
+      ],
+      "existingTests": [
+        "test/virtual-layout.test.ts",
+        "test/core-layout-invalidation.test.ts",
+        "test/browser-measurements.test.ts",
+        "test/viewport-data.test.ts",
+        "test/table-calculations.test.ts"
+      ],
+      "plannedTests": [
+        "test/core-layout-invalidation.test.ts"
+      ],
+      "characterizationCases": [
+        {
+          "id": "B9-typed-slot-identity",
+          "status": "verified",
+          "input": "숫자 rowId=1과 문자열 rowId='1'인 두 데이터 슬롯에 서로 다른 측정 높이 적용",
+          "expected": "slot key는 data:number:1과 data:string:1로 구분, 한 슬롯의 높이 갱신이 다른 슬롯의 측정값을 덮어쓰지 않음",
+          "plannedTest": "test/core-layout-invalidation.test.ts"
+        }
+      ],
+      "implementationStage": "3+4"
+    }
+  }
+}

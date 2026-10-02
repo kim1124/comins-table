@@ -8,7 +8,7 @@ export {
   selectCell,
   selectCellRange,
   selectRow,
-} from "./core";
+} from "./react/core-compat";
 
 export type {
   CominsCellAddress,
@@ -16,4 +16,4 @@ export type {
   CominsCellSelectionOptions,
   CominsRowSelectionOptions,
   CominsSelectionState,
-} from "./core";
+} from "./react/core-compat";

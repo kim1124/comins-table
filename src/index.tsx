@@ -1,3 +1,26 @@
+import { createCrossTableAutoScroll, isCominsNativeEditor as isNativeEditor } from "./browser/pointer";
+import { createMeasurementObserver, hasCominsResizeObserver, measureCominsElement, observeCominsViewport, observeCominsFontChanges, getCominsElementRect } from "./browser/measurements";
+import { setCominsScrollTop, setCominsScrollLeft, scrollCominsRowIntoView, focusCominsElement, createCominsDetailFocusRestorer } from "./browser/scroll";
+import { writeCominsClipboardText, readCominsClipboardEvent, writeCominsClipboardEvent } from "./browser/clipboard";
+import { getCrossTableTransferHit as getBrowserTransferHit } from "./browser/table-transfer";
+import {
+  getEffectiveColumnMinWidth,
+  getEffectiveColumnMaxWidth,
+  clampColumnWidth,
+  setColumnWidthInsideParentGroup,
+} from "./column-layout";
+import { setCominsNestedInputValue } from "./row-value";
+import {
+  getNextSortModel,
+  getSortRule,
+  getSortIndicatorState,
+  getAriaSortState,
+  reconcileColumnOrderHistory,
+} from "./table-state";
+import { reconcileReactState, notifyReactInputChanges, notifyReactStateChanges } from "./react/state";
+import { getSortedReactTree, projectReactRows, projectCoreViewportWindow, getCorePageProjection } from "./react/rows";
+import type { CominsEventRow } from "./model";
+export type { CominsEventRow } from "./model";
 import type React from "react";
 import {
   Fragment,
@@ -45,7 +68,7 @@ import {
   setCominsSortModel,
   setCominsSortState,
   updateCominsRows,
-} from "./core";
+} from "./react/core-compat";
 import { copySelectionData, selectedCellValues, selectedRowData, type CominsCopyTarget, type CominsSelectedCell } from "./selection-data";
 export type { CominsCopyTarget, CominsSelectedCell, CominsSelectionCopy } from "./selection-data";
 import { getCominsColumnMouseIntent } from "./column-pointer";
@@ -78,16 +101,16 @@ import {
 import {
   emitCominsTableTransfer,
   emitCominsTableTransferRejected,
-  getCominsTableTransferRegistration,
+  getRegisteredTransferSnapshot as getReactTransferSnapshot,
   isCominsTableTransferCoordinator,
-  registerCominsTableTransfer,
+  useCominsTableTransferRegistration,
   transferCominsGroupBetweenTables,
   transferCominsRowBetweenTables,
 } from "./table-transfer";
 import { CominsPointerTooltip } from "./tooltip";
-import { createCominsViewportData, reduceCominsViewportData, reconcileCominsViewportSelection, normalizeCominsViewportInteger, type CominsViewportData, type CominsViewportRequest } from "./viewport-data";
+import { createCominsViewportData, reduceCominsViewportData, normalizeCominsViewportInteger, type CominsViewportData, type CominsViewportRequest } from "./viewport-data";
 import { CominsViewportHeightIndex } from "./viewport-layout";
-import { useCominsViewportRequests } from "./viewport-requests";
+import { useCominsViewportRequests } from "./react/viewport";
 import type { CominsViewportDatasource } from "./use-viewport";
 import { normalizeCominsRowHeight, resolveCominsRowHeight, type CominsRowHeight, type CominsRowHeightParams, type CominsRowMeasurement } from "./row-height";
 import { useCominsTreeDrag, type CominsBeforeTreeRowDragPayload, type CominsTreeRowDragPayload, type CominsAfterTreeRowDragPayload } from "./tree-drag";
@@ -95,7 +118,6 @@ import { getCominsSummaryValues } from "./summary";
 import {
   flattenCominsTree,
   getCominsTreeLeafItems,
-  sortCominsTreeSiblings,
   toggleCominsTreeNode,
   updateCominsTreeItem,
 } from "./tree";
@@ -103,7 +125,6 @@ import {
   CominsHeightIndex,
   captureCominsScrollAnchor,
   createCominsDataVirtualSlot,
-  getCominsDataSlotKey,
   getCominsMixedVirtualRange,
   getCominsPhysicalScrollTop,
   getCominsScrollScale,
@@ -119,7 +140,151 @@ import {
   type CominsVirtualSlot,
 } from "./virtual-layout";
 
-export * from "./core";
+export {
+  setCominsColumnWidth,
+  setCominsColumnHidden,
+  setCominsColumnGroupHidden,
+  setCominsColumnGroupWidth,
+  moveCominsColumn,
+  moveCominsColumnGroup,
+  serializeCominsColumnLayout,
+  applyCominsColumnLayout,
+  getCominsVisibleColumns,
+  getCominsHeaderRows,
+  selectRow,
+  selectRows,
+  selectCell,
+  selectCellRange,
+  clearCominsCellRange,
+  clearCominsSelection,
+  isCominsRowSelected,
+  isCominsCellSelected,
+  getCominsSelectedCellRange,
+  isCominsCellInSelectedRange,
+  createCominsTableState,
+  queryCominsRows,
+  replaceCominsRows,
+  addCominsRows,
+  updateCominsRows,
+  deleteCominsRows,
+  setCominsHeaderVisible,
+  setCominsPagination,
+  setCominsSortState,
+  setCominsSortModel,
+  clearCominsSortState,
+  getCominsSortedRowIndexes,
+  sortCominsRows,
+  getCominsPageRows,
+  getCominsVirtualRows,
+  moveCominsRow,
+  moveCominsRowToGroup,
+  getCominsCellValue,
+} from "./react/core-compat";
+
+export {
+  parseCominsClipboardText,
+} from "./clipboard-text";
+
+export type { CominsColumnPinned } from "./column-pinning";
+
+export type {
+  CominsRowId,
+  CominsTableDensity,
+  CominsSortDirection,
+  CominsSortState,
+  CominsSortModel,
+  CominsComponentPrimitiveValue,
+  CominsComponentAlign,
+  CominsComponentDirection,
+  CominsComponentPlacement,
+  CominsComponentRowPayload,
+  CominsColumnRuntimeState,
+  CominsColumnGroupRuntimeState,
+  CominsColumnLayout,
+  CominsPaginationState,
+  CominsSelectionState,
+  CominsRowUpdate,
+  CominsVirtualRowsOptions,
+  CominsVirtualRows,
+  CominsCopiedRow,
+  CominsCopiedCell,
+  CominsCopiedCellRangeCell,
+  CominsCopiedCellRange,
+  CominsExportFormat,
+  CominsExportValueSource,
+  CominsExportColumn,
+  CominsExportRowsOptions,
+  CominsCellAddress,
+  CominsCellRange,
+  CominsPasteRowOptions,
+  CominsRowSelectionOptions,
+  CominsCellSelectionOptions,
+  CominsFillCellRangeOptions,
+} from "./model";
+
+export type {
+  CominsTableTheme,
+  CominsCellFormatParams,
+  CominsColumnValueResolver,
+  CominsTableComponentOption,
+  CominsVirtualListItem,
+  CominsTableMenuItem,
+  CominsComponentColumnPayload,
+  CominsCellComponentPayload,
+  CominsHeaderComponentPayload,
+  CominsClipboardGuard,
+  CominsColumnProps,
+  CominsTableComponentProps,
+  CominsTableOptions,
+  CominsTableMenuItems,
+  CominsVirtualListItems,
+  CominsButtonComponentConfig,
+  CominsInputCommitEvent,
+  CominsInputComponentConfig,
+  CominsCheckboxComponentConfig,
+  CominsRadioComponentConfig,
+  CominsSelectComponentConfig,
+  CominsToggleComponentConfig,
+  CominsProgressComponentConfig,
+  CominsMenuComponentConfig,
+  CominsVirtualListSearchFilterPayload,
+  CominsVirtualListComponentConfig,
+  CominsHeaderComponentConfig,
+  CominsCellComponentConfig,
+  CominsHeaderComponent,
+  CominsCellComponent,
+  CominsTableCellConfig,
+  CominsTableHeaderConfig,
+  CominsTableColumn,
+  CominsTableColumnGroup,
+  CominsTableRuntimeColumn,
+  CominsTableRuntimeColumnGroup,
+  CominsEventColumn,
+  CominsTableState,
+  CominsTableStateInput,
+  CominsHeaderColumnCell,
+  CominsHeaderGroupCell,
+  CominsHeaderCell,
+} from "./react-types";
+
+export type { CominsRowGroupMoveOptions } from "./core/state/table";
+
+export {
+  setCominsTableTheme,
+  formatCominsCellValue,
+  isCominsCellDisabled,
+  getCominsCellClassName,
+  getCominsCellStyle,
+  copyCominsRow,
+  pasteCominsRow,
+  copyCominsCell,
+  pasteCominsCell,
+  copyCominsCellRange,
+  pasteCominsCellRange,
+  pasteCominsText,
+  fillCominsCellRange,
+} from "./react/core-compat";
+export { exportCominsRowsToCsv, exportCominsRowsToJson } from "./core/editing/export";
 export * from "./summary";
 export * from "./tree";
 export { createCominsViewportData, reduceCominsViewportData } from "./viewport-data";
@@ -178,7 +343,6 @@ export type {
 import type { CominsTableSummaryConfig } from "./summary";
 import type { CominsTreeNode, CominsVisibleTreeRow, CominsTreeRowDragConfig, CominsTreeMoveDestination, CominsTreeDropPosition } from "./tree";
 import type {
-  CominsGroupingProjectionEntry,
   CominsRowGroupingConfig,
 } from "./grouping";
 import type {
@@ -221,7 +385,7 @@ import type {
   CominsSelectionState,
   CominsSortModel,
   CominsSortState,
-} from "./core";
+} from "./react/core-compat";
 
 type CominsClassValue = string | Record<string, boolean> | undefined;
 type CominsRowPropValue<TData, TValue> = TValue | ((row: TData, index: number) => TValue);
@@ -331,7 +495,6 @@ function areCominsRowDragTargetsEqual(
   );
 }
 
-const COMINS_MIN_COLUMN_WIDTH = 88;
 function getCominsColumnDropStatus(
   source: CominsColumnMoveHeader,
   target: CominsColumnMoveHeader,
@@ -358,13 +521,6 @@ export type CominsTableRowProps<TData> = {
   /** Row dragging is opt-in. False or undefined hides the drag handle. */
   draggable?: CominsRowPropValue<TData, boolean | undefined>;
   style?: CominsRowPropValue<TData, React.CSSProperties | undefined>;
-};
-
-export type CominsEventRow<TData> = {
-  data: TData;
-  dataIndex: number;
-  id: CominsRowId;
-  index: number;
 };
 
 export type CominsRowDragTarget = {
@@ -1296,385 +1452,6 @@ function renderCominsContentWithComponents<TData>(
   );
 }
 
-function getEffectiveColumnMinWidth<TData>(column: CominsTableRuntimeColumn<TData>) {
-  return Math.max(COMINS_MIN_COLUMN_WIDTH, column.minWidth ?? COMINS_MIN_COLUMN_WIDTH);
-}
-
-function getEffectiveColumnMaxWidth<TData>(column: CominsTableRuntimeColumn<TData>) {
-  return column.maxWidth ?? Number.POSITIVE_INFINITY;
-}
-
-function getRuntimeColumnWidth<TData>(
-  state: CominsTableState<TData>,
-  column: CominsTableRuntimeColumn<TData>,
-) {
-  return state.columnState[column.id]?.width ?? column.width ?? 100;
-}
-
-function clampColumnWidth(width: number, minWidth: number, maxWidth: number) {
-  return Math.min(maxWidth, Math.max(minWidth, width));
-}
-
-function distributeRuntimeColumnWidths<TData>(
-  state: CominsTableState<TData>,
-  columns: Array<CominsTableRuntimeColumn<TData>>,
-  targetWidth: number,
-) {
-  const widths = columns.map((column) =>
-    clampColumnWidth(getRuntimeColumnWidth(state, column), getEffectiveColumnMinWidth(column), getEffectiveColumnMaxWidth(column)),
-  );
-  const active = new Set(columns.map((_column, index) => index));
-  const minWidths = columns.map(getEffectiveColumnMinWidth);
-  const maxWidths = columns.map(getEffectiveColumnMaxWidth);
-  const boundedTargetWidth = clampColumnWidth(
-    targetWidth,
-    minWidths.reduce((sum, width) => sum + width, 0),
-    maxWidths.reduce((sum, width) => sum + width, 0),
-  );
-
-  while (active.size > 0) {
-    const currentTotal = widths.reduce((sum, width) => sum + width, 0);
-    const delta = boundedTargetWidth - currentTotal;
-
-    if (Math.abs(delta) < 0.001) {
-      break;
-    }
-
-    const activeIndexes = [...active];
-    const activeWeight = activeIndexes.reduce((sum, index) => sum + Math.max(widths[index] ?? 0, 0), 0);
-    let clamped = false;
-
-    for (const index of activeIndexes) {
-      const width = widths[index] ?? 0;
-      const weight = activeWeight > 0 ? width / activeWeight : 1 / activeIndexes.length;
-      const nextWidth = width + delta * weight;
-      const clampedWidth = clampColumnWidth(nextWidth, minWidths[index] ?? 0, maxWidths[index] ?? Number.POSITIVE_INFINITY);
-
-      widths[index] = clampedWidth;
-
-      if (Math.abs(clampedWidth - nextWidth) > 0.001) {
-        active.delete(index);
-        clamped = true;
-      }
-    }
-
-    if (!clamped) {
-      break;
-    }
-  }
-
-  return widths;
-}
-
-function setColumnWidthInsideParentGroup<TData>(
-  state: CominsTableState<TData>,
-  columnId: string,
-  width: number,
-) {
-  const group = state.columnGroups.find((candidate) => candidate.children.includes(columnId));
-
-  if (!group || state.columnGroupState[group.id]?.hidden === true) {
-    return setCominsColumnWidth(state, columnId, width);
-  }
-
-  const childColumns = group.children
-    .map((childId) => state.columns.find((column) => column.id === childId))
-    .filter((column): column is CominsTableRuntimeColumn<TData> => Boolean(column))
-    .filter((column) => state.columnState[column.id]?.hidden !== true);
-  const targetColumn = childColumns.find((column) => column.id === columnId);
-
-  if (!targetColumn) {
-    return setCominsColumnWidth(state, columnId, width);
-  }
-
-  const siblingColumns = childColumns.filter((column) => column.id !== columnId);
-
-  if (siblingColumns.length === 0) {
-    const currentGroupWidth = getRuntimeColumnWidth(state, targetColumn);
-
-    return setCominsColumnWidth(
-      state,
-      columnId,
-      clampColumnWidth(width, getEffectiveColumnMinWidth(targetColumn), Math.min(getEffectiveColumnMaxWidth(targetColumn), currentGroupWidth)),
-    );
-  }
-
-  const currentGroupWidth = childColumns.reduce((sum, column) => sum + getRuntimeColumnWidth(state, column), 0);
-  const siblingMinWidth = siblingColumns.reduce((sum, column) => sum + getEffectiveColumnMinWidth(column), 0);
-  const siblingMaxWidth = siblingColumns.reduce((sum, column) => sum + getEffectiveColumnMaxWidth(column), 0);
-  const minWidth = Math.max(getEffectiveColumnMinWidth(targetColumn), currentGroupWidth - siblingMaxWidth);
-  const maxWidth = Math.max(minWidth, Math.min(getEffectiveColumnMaxWidth(targetColumn), currentGroupWidth - siblingMinWidth));
-  const nextTargetWidth = clampColumnWidth(width, minWidth, maxWidth);
-  const nextSiblingWidths = distributeRuntimeColumnWidths(state, siblingColumns, currentGroupWidth - nextTargetWidth);
-  let next = setCominsColumnWidth(state, columnId, nextTargetWidth);
-
-  siblingColumns.forEach((column, index) => {
-    next = setCominsColumnWidth(next, column.id, nextSiblingWidths[index] ?? getRuntimeColumnWidth(next, column));
-  });
-
-  return next;
-}
-
-function setCominsNestedInputValue<TData>(row: TData, field: string, value: string): TData {
-  if (!row || typeof row !== "object") {
-    return row;
-  }
-
-  const keys = field.split(".");
-  const [firstKey] = keys;
-
-  if (!firstKey) {
-    return row;
-  }
-
-  if (keys.length === 1) {
-    return { ...row, [firstKey]: value };
-  }
-
-  const root = { ...(row as Record<string, unknown>) };
-  let current: Record<string, unknown> = root;
-
-  keys.slice(0, -1).forEach((key, index) => {
-    const nextKey = keys[index + 1];
-    const existing = current[key];
-    const next =
-      existing && typeof existing === "object" && !Array.isArray(existing)
-        ? { ...(existing as Record<string, unknown>) }
-        : {};
-
-    current[key] = next;
-
-    if (nextKey) {
-      current = next;
-    }
-  });
-
-  current[keys.at(-1)!] = value;
-
-  return root as TData;
-}
-
-function getNextSort(current: CominsSortState | null, columnId: string): CominsSortState | null {
-  if (current?.columnId !== columnId) {
-    return { columnId, direction: "asc" };
-  }
-
-  if (current.direction === "asc") {
-    return { columnId, direction: "desc" };
-  }
-
-  return null;
-}
-
-function getNextSortModel(current: CominsSortModel, columnId: string, additive: boolean): CominsSortState[] {
-  const currentIndex = current.findIndex((rule) => rule.columnId === columnId);
-  const currentRule = currentIndex < 0 ? null : current[currentIndex] ?? null;
-  const nextRule = getNextSort(currentRule, columnId);
-
-  if (!additive) {
-    return nextRule ? [nextRule] : [];
-  }
-
-  if (!nextRule) {
-    return current.filter((rule) => rule.columnId !== columnId);
-  }
-
-  if (currentIndex < 0) {
-    return [...current, nextRule];
-  }
-
-  return current.map((rule, index) => (index === currentIndex ? nextRule : rule));
-}
-
-function getSortRule(current: CominsSortModel, columnId: string) {
-  const index = current.findIndex((rule) => rule.columnId === columnId);
-
-  return index < 0 ? null : { priority: index + 1, rule: current[index]! };
-}
-
-function getSortIndicatorState(current: CominsSortModel, columnId: string) {
-  const currentRule = getSortRule(current, columnId)?.rule;
-
-  if (!currentRule) {
-    return "none";
-  }
-
-  return currentRule.direction;
-}
-
-function getAriaSortState(current: CominsSortModel, columnId: string) {
-  const currentRule = getSortRule(current, columnId);
-
-  if (!currentRule) {
-    return current.length > 1 ? undefined : "none";
-  }
-
-  if (currentRule.priority > 1) {
-    return undefined;
-  }
-
-  return currentRule.rule.direction === "asc" ? "ascending" : "descending";
-}
-
-function areSortStatesEqual(left: CominsSortState | null, right: CominsSortState | null) {
-  if (!left || !right) {
-    return left === right;
-  }
-
-  return left.columnId === right.columnId && left.direction === right.direction;
-}
-
-function areSortModelsEqual(left: CominsSortModel, right: CominsSortModel) {
-  if (left.length !== right.length) {
-    return false;
-  }
-
-  return left.every(
-    (rule, index) => rule.columnId === right[index]?.columnId && rule.direction === right[index]?.direction,
-  );
-}
-
-function areRowIdSequencesEqual(left: readonly CominsRowId[], right: readonly CominsRowId[]) {
-  return left.length === right.length && left.every((id, index) => id === right[index]);
-}
-
-function insertDeclaredColumnsIntoOrder(
-  order: readonly string[],
-  declaredOrder: readonly string[],
-) {
-  const next = [...order];
-
-  for (let declaredIndex = 0; declaredIndex < declaredOrder.length; declaredIndex += 1) {
-    const columnId = declaredOrder[declaredIndex];
-
-    if (columnId === undefined || next.includes(columnId)) {
-      continue;
-    }
-
-    const followingColumnId = declaredOrder
-      .slice(declaredIndex + 1)
-      .find((candidate) => next.includes(candidate));
-
-    if (followingColumnId !== undefined) {
-      next.splice(next.indexOf(followingColumnId), 0, columnId);
-      continue;
-    }
-
-    const precedingColumnId = [...declaredOrder.slice(0, declaredIndex)]
-      .reverse()
-      .find((candidate) => next.includes(candidate));
-
-    if (precedingColumnId === undefined) {
-      next.push(columnId);
-    } else {
-      next.splice(next.lastIndexOf(precedingColumnId) + 1, 0, columnId);
-    }
-  }
-
-  return next;
-}
-
-function reconcileColumnOrderHistory(
-  history: readonly string[],
-  currentOrder: readonly string[],
-  declaredOrder: readonly string[],
-) {
-  const merged = insertDeclaredColumnsIntoOrder(history, declaredOrder);
-  const currentIds = new Set(currentOrder);
-  let currentIndex = 0;
-
-  return merged.map((columnId) => {
-    if (!currentIds.has(columnId)) {
-      return columnId;
-    }
-
-    const currentColumnId = currentOrder[currentIndex];
-    currentIndex += 1;
-    return currentColumnId ?? columnId;
-  });
-}
-
-function canPreserveSelection<TData>(
-  current: CominsTableState<TData>,
-  next: CominsTableState<TData>,
-) {
-  if (!areRowIdSequencesEqual(current.rowIds, next.rowIds)) {
-    return false;
-  }
-
-  const nextColumnIds = new Set(next.columns.map((column) => column.id));
-  const selectedCell = current.selection.cell;
-  const selectedCells = current.selection.cells ?? [];
-  const selectedRange = current.selection.range;
-
-  if (selectedCell && !nextColumnIds.has(selectedCell.columnId)) {
-    return false;
-  }
-
-  if (selectedCells.some((cell) => !nextColumnIds.has(cell.columnId))) {
-    return false;
-  }
-
-  if (
-    selectedRange &&
-    (!nextColumnIds.has(selectedRange.anchor.columnId) || !nextColumnIds.has(selectedRange.focus.columnId))
-  ) {
-    return false;
-  }
-
-  return true;
-}
-
-function getTreeNestedFieldValue(row: unknown, field: string): unknown {
-  return field.split(".").reduce<unknown>((value, key) => {
-    if (value == null || typeof value !== "object") {
-      return undefined;
-    }
-
-    return (value as Record<string, unknown>)[key];
-  }, row);
-}
-
-function compareTreeValues(left: unknown, right: unknown) {
-  if (typeof left === "number" && typeof right === "number") {
-    return left - right;
-  }
-
-  return String(left ?? "").localeCompare(String(right ?? ""));
-}
-
-function getSortedCominsTree<TData>(
-  data: readonly CominsTreeNode<TData>[],
-  columns: readonly CominsTableColumn<TData>[],
-  sortModel: CominsSortModel,
-) {
-  if (sortModel.length === 0) {
-    return data;
-  }
-
-  return sortCominsTreeSiblings(data, (leftRow, rightRow) => {
-    for (const rule of sortModel) {
-      const column = columns.find((candidate) => (candidate.id ?? candidate.field) === rule.columnId);
-
-      if (!column?.sort) {
-        continue;
-      }
-
-      const leftValue = getTreeNestedFieldValue(leftRow, column.field);
-      const rightValue = getTreeNestedFieldValue(rightRow, column.field);
-      const result =
-        typeof column.sort === "function"
-          ? column.sort(leftValue, rightValue, leftRow, rightRow)
-          : compareTreeValues(leftValue, rightValue);
-
-      if (result !== 0) {
-        return rule.direction === "desc" ? result * -1 : result;
-      }
-    }
-
-    return 0;
-  });
-}
 
 function setCominsTreeExpansion<TData>(
   data: readonly CominsTreeNode<TData>[],
@@ -1836,6 +1613,7 @@ function CominsTableInner<TData, TGroup>(
   ref: React.ForwardedRef<CominsTableRef<TData>>,
 ) {
   const rowHeight = normalizeCominsRowHeight(providedRowHeight);
+  const [detailFocusRestorer] = useState(createCominsDetailFocusRestorer);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const footerRef = useRef<HTMLDivElement | null>(null);
   const headerRef = useRef<HTMLDivElement | null>(null);
@@ -1854,8 +1632,7 @@ function CominsTableInner<TData, TGroup>(
     new Map<Element, CominsObservedDetail>(),
   );
   const fallbackMeasuredDetailElementsRef = useRef(new Set<Element>());
-  const detailObserverRef = useRef<ResizeObserver | null>(null);
-  const detailObserverTargetsRef = useRef(new Set<Element>());
+  const detailObserverRef = useRef<ReturnType<typeof createMeasurementObserver> | null>(null);
   const committedDetailObserverSnapshotRef = useRef<
     CominsCommittedDetailObserverSnapshot<TData> | null
   >(null);
@@ -2097,70 +1874,12 @@ function CominsTableInner<TData, TGroup>(
       element.dataset.cominsCrossRowDropPosition = "before";
     }
   };
-  const getRegisteredTransferSnapshot = (tableId: string) => {
-    if (!normalizedTableTransfer) {
-      return null;
-    }
-
-    const registration = getCominsTableTransferRegistration(
-      normalizedTableTransfer.coordinator,
-      normalizedTableTransfer.scope,
-      tableId,
-    );
-    const snapshot = registration?.getSnapshot() ?? null;
-
-    if (
-      !snapshot ||
-      snapshot.config.coordinator !== normalizedTableTransfer.coordinator ||
-      snapshot.config.scope !== normalizedTableTransfer.scope ||
-      snapshot.config.tableId !== tableId ||
-      snapshot.endpoint.tableId !== tableId
-    ) {
-      return null;
-    }
-
-    return snapshot;
-  };
-  const getCrossTableTransferHit = (
-    clientX: number,
-    clientY: number,
-  ): CominsTransferTableHit<TData, TGroup> | null => {
-    if (!normalizedTableTransfer) {
-      return null;
-    }
-
-    const sourceSnapshot = getRegisteredTransferSnapshot(normalizedTableTransfer.tableId);
-    const element = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
-    const root = element?.closest<HTMLElement>("[data-comins-table-instance-id]") ?? null;
-    const tableId = root?.dataset.cominsTransferTableId;
-
-    if (
-      !sourceSnapshot ||
-      sourceSnapshot.instanceId !== tableInstanceId ||
-      sourceSnapshot.root !== tableRootRef.current ||
-      !element ||
-      !root ||
-      !tableId ||
-      tableId === normalizedTableTransfer.tableId ||
-      root.dataset.cominsTransferScope !== normalizedTableTransfer.scope
-    ) {
-      return null;
-    }
-
-    const snapshot = getRegisteredTransferSnapshot(tableId);
-
-    if (
-      !snapshot ||
-      snapshot.root !== root ||
-      snapshot.instanceId !== root.dataset.cominsTableInstanceId ||
-      !snapshot.viewport ||
-      !root.contains(snapshot.viewport)
-    ) {
-      return null;
-    }
-
-    return { element, root, snapshot };
-  };
+  const getRegisteredTransferSnapshot = (tableId: string) => normalizedTableTransfer
+    ? getReactTransferSnapshot(normalizedTableTransfer.coordinator, normalizedTableTransfer.scope, tableId)
+    : null;
+  const getCrossTableTransferHit = (clientX: number, clientY: number): CominsTransferTableHit<TData, TGroup> | null => normalizedTableTransfer
+    ? getBrowserTransferHit({ sourceTableId: normalizedTableTransfer.tableId, scope: normalizedTableTransfer.scope, instanceId: tableInstanceId, root: tableRootRef.current, clientX, clientY, document, getSnapshot: getRegisteredTransferSnapshot })
+    : null;
   const scheduleTransferFocus = (
     targetTableId: string,
     kind: "group" | "row",
@@ -2197,7 +1916,7 @@ function CominsTableInner<TData, TGroup>(
         : row;
 
       if (focusTarget) {
-        focusTarget.focus({ preventScroll: true });
+        focusCominsElement(focusTarget, { preventScroll: true });
         return;
       }
 
@@ -2208,106 +1927,10 @@ function CominsTableInner<TData, TGroup>(
         return;
       }
 
-      root.focus({ preventScroll: true });
+      focusCominsElement(root, { preventScroll: true });
     };
 
     pendingTransferFocusFrameRef.current = window.requestAnimationFrame(attemptFocus);
-  };
-  const createCrossTableAutoScroll = (
-    resolveTarget: (clientX: number, clientY: number) => void,
-  ) => {
-    let animationFrame: number | null = null;
-    let clientX = 0;
-    let clientY = 0;
-    let lastTimestamp: number | null = null;
-    let viewport: HTMLElement | null = null;
-
-    const stop = () => {
-      if (animationFrame !== null) {
-        window.cancelAnimationFrame(animationFrame);
-      }
-
-      animationFrame = null;
-      lastTimestamp = null;
-      viewport = null;
-    };
-    const runFrame = (timestamp: number) => {
-      animationFrame = null;
-      const currentViewport = viewport;
-
-      if (!currentViewport?.isConnected) {
-        stop();
-        return;
-      }
-
-      if (lastTimestamp === null) {
-        lastTimestamp = timestamp;
-        animationFrame = window.requestAnimationFrame(runFrame);
-        return;
-      }
-
-      const bounds = currentViewport.getBoundingClientRect();
-      const velocity = getCominsDragAutoScrollVelocity({ bottom: Math.min(window.innerHeight, bounds.bottom), clientY, top: Math.max(0, bounds.top) });
-      const nextScrollTop = getCominsDragAutoScrollTop({
-        clientHeight: currentViewport.clientHeight,
-        deltaMs: timestamp - lastTimestamp,
-        scrollHeight: currentViewport.scrollHeight,
-        scrollTop: currentViewport.scrollTop,
-        velocity,
-      });
-      const moved = Math.abs(nextScrollTop - currentViewport.scrollTop) > 0.01;
-
-      lastTimestamp = timestamp;
-
-      if (!moved) {
-        stop();
-        return;
-      }
-
-      currentViewport.scrollTop = nextScrollTop;
-      resolveTarget(clientX, clientY);
-    };
-    const update = (
-      nextViewport: HTMLElement | null,
-      nextClientX: number,
-      nextClientY: number,
-      valid: boolean,
-    ) => {
-      if (!valid || !nextViewport?.isConnected) {
-        stop();
-        return;
-      }
-
-      const bounds = nextViewport.getBoundingClientRect();
-      const velocity = getCominsDragAutoScrollVelocity({
-        bottom: Math.min(window.innerHeight, bounds.bottom),
-        clientY: nextClientY,
-        top: Math.max(0, bounds.top),
-      });
-      const maxScrollTop = Math.max(0, nextViewport.scrollHeight - nextViewport.clientHeight);
-      const canScroll = velocity < 0
-        ? nextViewport.scrollTop > 0
-        : velocity > 0 && nextViewport.scrollTop < maxScrollTop;
-
-      if (!canScroll) {
-        stop();
-        return;
-      }
-
-      if (viewport !== nextViewport) {
-        lastTimestamp = null;
-      }
-
-      viewport = nextViewport;
-      clientX = nextClientX;
-      clientY = nextClientY;
-
-      if (animationFrame === null) {
-        animationFrame = window.requestAnimationFrame(runFrame);
-      }
-    };
-
-    return { stop, update };
   };
 
   useLayoutEffect(() => {
@@ -2339,7 +1962,7 @@ function CominsTableInner<TData, TGroup>(
       pendingScrollTopRef.current = 0;
       setScrollTop(0);
       if (containerRef.current) {
-        containerRef.current.scrollTop = 0;
+        setCominsScrollTop(containerRef.current, 0);
       }
     }
     let result: Promise<void> | void;
@@ -2402,64 +2025,20 @@ function CominsTableInner<TData, TGroup>(
 
     stateInputRef.current = { columnGroups, columns, data: effectiveData, getRowId, pagination: effectivePagination, showHeader };
     const current = stateRef.current;
-    const declaredColumnOrder = columns.map((column) => String(column.id ?? column.field));
-    const currentLayout = serializeCominsColumnLayout(current);
-    const historicalOrder = reconcileColumnOrderHistory(
-      columnOrderHistoryRef.current,
-      current.columnOrder,
-      current.columns.map((column) => column.id),
-    );
-    const nextState = createCominsTableState({
-      columnLayout: {
-        ...currentLayout,
-        order: insertDeclaredColumnsIntoOrder(historicalOrder, declaredColumnOrder),
-      },
-      columnGroups,
-      columns,
-      getRowId,
-      pagination: effectivePagination,
-      // New data is authoritative; option-only renders keep local edits/reordering.
-      rows: previousInput.data === effectiveData ? current.rows : effectiveData,
-      showHeader,
-      sortModel: current.sortModel,
-      theme: current.theme,
+    const result = reconcileReactState({
+      current,
+      nextInput: { columnGroups, columns, getRowId, pagination: effectivePagination, rows: effectiveData, showHeader },
+      columnOrderHistory: columnOrderHistoryRef.current,
+      dataChanged: previousInput.data !== effectiveData,
+      getRowIdChanged: previousInput.getRowId !== getRowId,
+      viewportIndices: viewportContext?.indices,
     });
-    const next = viewportContext
-      ? { ...nextState, selection: reconcileCominsViewportSelection(current.selection, nextState.rowIds, viewportContext.indices, nextState.columns.map(column => column.id)) }
-      : canPreserveSelection(current, nextState)
-      ? { ...nextState, selection: current.selection }
-      : nextState;
-
-    columnOrderHistoryRef.current = reconcileColumnOrderHistory(
-      historicalOrder,
-      next.columnOrder,
-      declaredColumnOrder,
-    );
-
-    if (previousInput.getRowId !== getRowId) {
-      const previousRowById = new Map(
-        current.rowIds.map((rowId, index) => [rowId, current.rows[index]]),
-      );
-
-      next.rowIds.forEach((rowId, index) => {
-        if (previousRowById.has(rowId) && previousRowById.get(rowId) !== next.rows[index]) {
-          detailMeasurementsRef.current.delete(rowId);
-        }
-      });
-    }
-
+    const next = result.state;
+    columnOrderHistoryRef.current = result.columnOrderHistory;
+    result.invalidatedDetailRowIds.forEach(rowId => detailMeasurementsRef.current.delete(rowId));
     stateRef.current = next;
     setState(next);
-
-    if (viewportContext && next.selection !== current.selection) onChangeSelection?.(next.selection);
-
-    if (!areSortStatesEqual(next.sort, current.sort)) {
-      onChangeSort?.(next.sort);
-    }
-
-    if (!areSortModelsEqual(next.sortModel, current.sortModel)) {
-      onChangeSortModel?.(next.sortModel);
-    }
+    notifyReactInputChanges(current, next, { onChangeSelection, onChangeSort, onChangeSortModel }, Boolean(viewportContext));
   }, [columnGroups, columns, effectiveData, effectivePagination, getRowId, showHeader]);
 
   useEffect(() => {
@@ -2475,6 +2054,7 @@ function CominsTableInner<TData, TGroup>(
   useEffect(() => {
     return () => {
       clearActivePointerGesture();
+      detailFocusRestorer.dispose();
       clearExternalDropMarker();
       clearTransferRejectionFeedback(false);
 
@@ -2495,22 +2075,17 @@ function CominsTableInner<TData, TGroup>(
   useEffect(() => {
     const element = containerRef.current;
 
-    if (!element || typeof ResizeObserver === "undefined") {
+    if (!element) {
       return undefined;
     }
 
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry) {
-        setContainerHeight(entry.contentRect.height);
-        setContainerWidth(entry.contentRect.width);
-        setHorizontalScrollContentWidth(element.scrollWidth);
-        setHorizontalViewportOuterWidth(element.offsetWidth);
-        setHorizontalViewportWidth(element.clientWidth);
-      }
+    return observeCominsViewport(element, measurement => {
+      setContainerHeight(measurement.height);
+      setContainerWidth(measurement.width);
+      setHorizontalScrollContentWidth(measurement.scrollWidth);
+      setHorizontalViewportOuterWidth(measurement.outerWidth);
+      setHorizontalViewportWidth(measurement.viewportWidth);
     });
-    observer.observe(element);
-
-    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -2522,10 +2097,9 @@ function CominsTableInner<TData, TGroup>(
     for (const id of rowMeasurementsRef.current.keys()) if (!ids.has(id)) rowMeasurementsRef.current.delete(id);
   }, [state.rowIds]);
   useEffect(() => {
-    if (!getRowHeight || !document.fonts) return;
+    if (!getRowHeight) return;
     const changed = () => setRowFontRevision(value => value + 1);
-    document.fonts.addEventListener("loadingdone", changed);
-    return () => document.fonts.removeEventListener("loadingdone", changed);
+    return observeCominsFontChanges(changed);
   }, [Boolean(getRowHeight)]);
 
   const updateMixedProjectionDetailHeight = (
@@ -2674,45 +2248,27 @@ function CominsTableInner<TData, TGroup>(
   };
 
   const createDetailObserver = () => {
-    if (typeof ResizeObserver === "undefined") {
+    if (!hasCominsResizeObserver()) {
       return null;
     }
 
-    const observer = new ResizeObserver((entries) => {
-      const updates: Array<{
-        height: number;
-        rowId: CominsRowId;
-        width: number;
-        kind?: "row";
-      }> = [];
-
-      for (const entry of entries) {
-        const observed = detailElementsRef.current.get(entry.target);
-
-        if (!observed) {
-          continue;
-        }
-
-        const borderBox = Array.isArray(entry.borderBoxSize)
-          ? entry.borderBoxSize[0]
-          : entry.borderBoxSize;
-        const height = observed.kind === "row" ? observed.element.getBoundingClientRect().height : borderBox?.blockSize ?? observed.element.getBoundingClientRect().height;
-        const width = Math.round(
-          (entry.target as HTMLElement).getBoundingClientRect().width,
-        );
-
+    const updates: Array<{ height: number; rowId: CominsRowId; width: number; kind?: "row" }> = [];
+    const observer = createMeasurementObserver({
+      onMeasure: measurement => {
+        const observed = detailElementsRef.current.get(measurement.element);
+        if (!observed) return;
+        const height = observed.kind === "row" ? measurement.rectHeight : measurement.height;
+        const width = measurement.width;
         if (Number.isFinite(height) && height > 0) {
           updates.push({ height, rowId: observed.rowId, width, kind: observed.kind });
         }
-      }
-
-      applyDetailMeasurementUpdates(updates);
+      },
+      onBatchComplete: () => applyDetailMeasurementUpdates(updates.splice(0)),
     });
 
     detailObserverRef.current = observer;
 
     for (const observed of detailElementsRef.current.values()) {
-      detailObserverTargetsRef.current.add(observed.element);
       observer.observe(observed.element);
     }
 
@@ -2721,9 +2277,8 @@ function CominsTableInner<TData, TGroup>(
 
   useLayoutEffect(() => {
     return () => {
-      detailObserverRef.current?.disconnect();
+      detailObserverRef.current?.dispose();
       detailObserverRef.current = null;
-      detailObserverTargetsRef.current.clear();
       detailElementsRef.current.clear();
       fallbackMeasuredDetailElementsRef.current.clear();
       committedDetailObserverSnapshotRef.current = null;
@@ -2732,9 +2287,8 @@ function CominsTableInner<TData, TGroup>(
 
   const disconnectDetailObserverIfIdle = () => {
     if (detailElementsRef.current.size === 0) {
-      detailObserverRef.current?.disconnect();
+      detailObserverRef.current?.dispose();
       detailObserverRef.current = null;
-      detailObserverTargetsRef.current.clear();
     }
   };
 
@@ -2747,7 +2301,6 @@ function CominsTableInner<TData, TGroup>(
     for (const [currentElement, observed] of detailElementsRef.current) {
       if (observed.rowId === rowId && observed.kind === kind && currentElement !== element) {
         detailObserverRef.current?.unobserve(currentElement);
-        detailObserverTargetsRef.current.delete(currentElement);
         detailElementsRef.current.delete(currentElement);
         fallbackMeasuredDetailElementsRef.current.delete(currentElement);
       }
@@ -2766,25 +2319,7 @@ function CominsTableInner<TData, TGroup>(
     next: CominsTableState<TData>,
     options: { columnLayoutChanged?: boolean } = {},
   ) => {
-    if (next.rows !== current.rows) {
-      onChangeData?.(next.rows);
-    }
-
-    if (next.selection !== current.selection) {
-      onChangeSelection?.(next.selection);
-    }
-
-    if (options.columnLayoutChanged) {
-      onChangeColumnLayout?.(serializeCominsColumnLayout(next));
-    }
-
-    if (!areSortStatesEqual(next.sort, current.sort)) {
-      onChangeSort?.(next.sort);
-    }
-
-    if (!areSortModelsEqual(next.sortModel, current.sortModel)) {
-      onChangeSortModel?.(next.sortModel);
-    }
+    notifyReactStateChanges(current, next, { onChangeData, onChangeSelection, onChangeColumnLayout, onChangeSort, onChangeSortModel }, options);
   };
 
   const commitState = (
@@ -3155,33 +2690,7 @@ function CominsTableInner<TData, TGroup>(
       }
     : null;
 
-  const transferCoordinator = normalizedTableTransfer?.coordinator;
-  const transferScope = normalizedTableTransfer?.scope;
-  const transferTableId = normalizedTableTransfer?.tableId;
-  useEffect(() => {
-    if (!transferCoordinator || !transferScope || !transferTableId) {
-      return undefined;
-    }
-
-    return registerCominsTableTransfer(
-      transferCoordinator,
-      transferScope,
-      transferTableId,
-      {
-        getSnapshot: () => {
-          const snapshot = transferSnapshotRef.current;
-
-          return snapshot
-            ? {
-                ...snapshot,
-                root: tableRootRef.current,
-                viewport: containerRef.current,
-              }
-            : null;
-        },
-      },
-    );
-  }, [transferCoordinator, transferScope, transferTableId]);
+  useCominsTableTransferRegistration({ config: normalizedTableTransfer, snapshot: transferSnapshotRef, root: tableRootRef, viewport: containerRef });
 
   useLayoutEffect(() => {
     if (!groupingProjection || !orderedGroupModel) {
@@ -3198,7 +2707,7 @@ function CominsTableInner<TData, TGroup>(
       if (disclosure) {
         pendingGroupDisclosureFocusRef.current = null;
         focusedLeafDataIndexRef.current = null;
-        disclosure.focus();
+        focusCominsElement(disclosure);
       }
     }
 
@@ -3235,7 +2744,7 @@ function CominsTableInner<TData, TGroup>(
     const fallbackGroupId = leafGroup?.groupId;
 
     if (fallbackGroupId !== undefined) {
-      groupDisclosureElementsRef.current.get(fallbackGroupId)?.focus();
+      focusCominsElement(groupDisclosureElementsRef.current.get(fallbackGroupId));
     }
   }, [groupingProjection, orderedGroupModel]);
   const sortedRowIndexes = useMemo(
@@ -3251,10 +2760,7 @@ function CominsTableInner<TData, TGroup>(
   const selectionRowIds = useMemo(() => projectedDataIndexes.map(index => state.rowIds[index]!), [projectedDataIndexes, state.rowIds]);
   const visibleRowCount = projectedDataIndexes.length;
   const visibleSlotCount = viewportContext?.data.rowCount ?? groupingProjection?.entries.length ?? visibleRowCount;
-  const pageSize = Math.max(1, state.pagination.pageSize);
-  const maxPageIndex = Math.max(0, Math.ceil(visibleRowCount / pageSize) - 1);
-  const effectivePageIndex = Math.min(Math.max(0, state.pagination.pageIndex), maxPageIndex);
-  const pageStartIndex = effectivePageIndex * pageSize;
+  const { pageSize, maxPageIndex, effectivePageIndex, pageStartIndex } = getCorePageProjection(visibleRowCount, state.pagination);
   useEffect(() => {
     if (!groupingProjection && !filteringRequested) {
       return;
@@ -3352,25 +2858,16 @@ function CominsTableInner<TData, TGroup>(
   const rowLayoutKey = `${detailContentWidth}:${visibleColumns.map((column, index) => `${column.id}:${columnWidths[index]}`).join("|")}:${JSON.stringify(theme ?? state.theme)}:${rowHeight}`;
   const rowContentRevision = useMemo(() => ({}), [columns, rowProps?.style, className, style, theme, rowFontRevision]);
   const viewportIndexById = useMemo(() => viewportContext ? new Map(effectiveData.map((row, index) => [getRowId!(row, index), viewportContext.indices[index]!] as const)) : null, [effectiveData, getRowId, viewportContext?.indices]);
+  const rowProjection = useMemo(() => {
+    const source = { rows: state.rows, rowIds: state.rowIds, dataIndexes: projectedDataIndexes };
+    if (viewportIndexById) return projectReactRows({ ...source, mode: "viewport", absoluteIndexById: viewportIndexById, rowCount: viewportContext!.data.rowCount });
+    if (groupingProjection) return projectReactRows({ ...source, mode: "grouped", projection: groupingProjection });
+    return treeContext ? projectReactRows({ ...source, mode: "tree" }) : projectReactRows({ ...source, mode: "flat", virtualized: true });
+  }, [state.rows, state.rowIds, projectedDataIndexes, viewportIndexById, groupingProjection, treeContext !== undefined]);
   const fullProjectionSlots = useMemo<Array<CominsVirtualSlot<TData>>>(() => {
     const safeRowHeight = Math.max(1, rowHeight);
-    const entries: readonly CominsGroupingProjectionEntry[] = groupingProjection?.entries ?? projectedDataIndexes.map(
-      (dataIndex, visibleLeafIndex) => {
-        const rowId = state.rowIds[dataIndex];
-
-        return rowId === undefined
-          ? null
-          : {
-              dataIndex,
-              key: getCominsDataSlotKey(rowId),
-              kind: "data" as const,
-              rowId,
-              visibleLeafIndex,
-            };
-      },
-    ).filter((entry): entry is Extract<CominsGroupingProjectionEntry, { kind: "data" }> => entry !== null);
-
-    return entries.flatMap<CominsVirtualSlot<TData>>((projectionEntry) => {
+    return rowProjection.entries.flatMap<CominsVirtualSlot<TData>>((projectionEntry) => {
+      if (projectionEntry.kind === "placeholder") return [];
       if (projectionEntry.kind === "group") {
         return [{
           groupId: projectionEntry.groupId,
@@ -3381,7 +2878,7 @@ function CominsTableInner<TData, TGroup>(
       }
 
       const { dataIndex, rowId } = projectionEntry;
-      const absoluteIndex = viewportIndexById?.get(rowId);
+      const absoluteIndex = projectionEntry.absoluteIndex;
       const visibleIndex = absoluteIndex ?? projectionEntry.visibleLeafIndex;
       if (viewportIndexById && absoluteIndex === undefined) return [];
         const row = state.rows[dataIndex];
@@ -3437,8 +2934,7 @@ function CominsTableInner<TData, TGroup>(
     effectiveExpandedRowIdSet,
     estimatedRowDetailHeight,
     getRowDetailHeight,
-    groupingProjection,
-    projectedDataIndexes,
+    rowProjection,
     rowHeight,
     state.rowIds,
     state.rows,
@@ -3484,7 +2980,7 @@ function CominsTableInner<TData, TGroup>(
       const index = fullProjectionSlots.findIndex(slot => slot.kind === "data" && slot.rowId === rowId);
       if (!viewport || index < 0) return;
       if (!virtualized) {
-        viewport.querySelector<HTMLElement>(`[data-comins-row-data-index="${index}"]`)?.scrollIntoView?.({ block: "nearest" });
+        scrollCominsRowIntoView(viewport, index);
         return;
       }
       const total = mixedProjection?.heightIndex.getTotalHeight() ?? fullProjectionSlots.length * rowHeight;
@@ -3493,7 +2989,7 @@ function CominsTableInner<TData, TGroup>(
       const scale = getCominsScrollScale(total, viewport.clientHeight).scrollScale;
       const logicalTop = viewport.scrollTop * scale;
       const target = top < logicalTop ? top : top + height > logicalTop + viewport.clientHeight ? top + height - viewport.clientHeight : logicalTop;
-      if (target !== logicalTop) viewport.scrollTop = getCominsPhysicalScrollTop(target, total, viewport.clientHeight);
+      if (target !== logicalTop) setCominsScrollTop(viewport, getCominsPhysicalScrollTop(target, total, viewport.clientHeight));
     };
     return () => { treeContext.drag.navigateRef.current = null; };
   }, [treeContext, fullProjectionSlots, mixedProjection, rowHeight, virtualized]);
@@ -3525,7 +3021,7 @@ function CominsTableInner<TData, TGroup>(
     if (element && viewportAnchorLogical !== undefined) {
       const targetLogical = Math.min(Math.max(0, viewportAnchorLogical), Math.max(0, viewportHeightIndex.getTotalHeight() - viewportHeight));
       const requestedPhysical = getCominsPhysicalScrollTop(targetLogical, viewportHeightIndex.getTotalHeight(), viewportHeight);
-      element.scrollTop = requestedPhysical;
+      setCominsScrollTop(element, requestedPhysical);
       const transaction = { actualPhysical: element.scrollTop, requestedPhysical, targetLogical, revision: ++anchorRevisionRef.current };
       logicalAnchorTransactionRef.current = transaction;
       setLogicalAnchorTransaction(transaction);
@@ -3557,16 +3053,13 @@ function CominsTableInner<TData, TGroup>(
       return;
     }
 
-    if (typeof ResizeObserver !== "undefined") {
+    if (hasCominsResizeObserver()) {
       const currentObserver = detailObserverRef.current;
       const observer = currentObserver ?? createDetailObserver();
 
       if (currentObserver) {
         for (const observed of detailElementsRef.current.values()) {
-          if (!detailObserverTargetsRef.current.has(observed.element)) {
-            detailObserverTargetsRef.current.add(observed.element);
-            observer?.observe(observed.element);
-          }
+          observer?.observe(observed.element);
         }
       }
       return;
@@ -3585,7 +3078,7 @@ function CominsTableInner<TData, TGroup>(
       }
 
       fallbackMeasuredDetailElementsRef.current.add(observed.element);
-      const rect = observed.element.getBoundingClientRect();
+      const rect = measureCominsElement(observed.element);
 
       if (Number.isFinite(rect.height) && rect.height > 0) {
         updates.push({
@@ -3604,9 +3097,8 @@ function CominsTableInner<TData, TGroup>(
       const transaction = logicalAnchorTransaction && Math.abs(scrollTop - logicalAnchorTransaction.actualPhysical) <= .5 ? logicalAnchorTransaction : null;
       const logical = viewportAnchorLogical ?? transaction?.targetLogical;
       const range = getCominsMixedVirtualRange({ heightIndex: viewportHeightIndex, overscan: virtualBufferSize, physicalScrollTop: logical === undefined ? scrollTop : getCominsPhysicalScrollTop(logical, viewportHeightIndex.getTotalHeight(), viewportHeight), viewportHeight });
-      const byIndex = new Map(fullProjectionSlots.flatMap(slot => slot.kind === "data" && slot.absoluteIndex !== undefined ? [[slot.absoluteIndex, slot] as const] : []));
-      const slots: CominsVirtualSlot<TData>[] = [];
-      for (let index = range.startIndex; index < Math.min(viewportHeightIndex.rowCount, range.endIndex); index++) slots.push(byIndex.get(index) ?? { kind: "placeholder", key: `viewport:${index}`, absoluteIndex: index, height: viewportHeightIndex.getHeight(index) });
+      const slots: CominsVirtualSlot<TData>[] = projectCoreViewportWindow(fullProjectionSlots.filter((slot): slot is CominsDataVirtualSlot<TData> => slot.kind === "data"), range, viewportHeightIndex.rowCount)
+        .map(slot => slot.kind === "placeholder" ? { ...slot, height: viewportHeightIndex.getHeight(slot.absoluteIndex) } : slot);
       return { mixed: true, renderOffset: logical === undefined ? range.renderOffset : scrollTop - (logical - range.logicalStartOffset), scrollHeight: range.physicalScrollHeight, slots };
     }
     if (virtualized) {
@@ -3782,7 +3274,7 @@ function CominsTableInner<TData, TGroup>(
     if (viewport && rowMoveScrollTop !== null) {
       // Tree controlled data reaches the inner Table on the following state reconciliation.
       if (treeMoveScrollTop !== null && state.rows !== effectiveData) return;
-      viewport.scrollTop = rowMoveScrollTop;
+      setCominsScrollTop(viewport, rowMoveScrollTop);
       pendingRowMoveScrollTopRef.current = null;
       if (treeContext) treeContext.drag.pendingScrollTop.current = null;
       pendingDetailAnchorRef.current = null;
@@ -3843,7 +3335,7 @@ function CominsTableInner<TData, TGroup>(
       scrollFrameRef.current = null;
     }
 
-    viewport.scrollTop = nextPhysicalScrollTop;
+    setCominsScrollTop(viewport, nextPhysicalScrollTop);
 
     if (pendingDetailAnchor) {
       const currentPendingDetailAnchor = pendingDetailAnchorRef.current;
@@ -4101,7 +3593,7 @@ function CominsTableInner<TData, TGroup>(
       const header = focused instanceof HTMLElement && focused.classList.contains("comins-sort-indicator")
         ? focused.closest<HTMLElement>("[data-comins-column-id]") : null;
       if (header?.dataset.cominsColumnId === column.id && tableRootRef.current?.contains(header) && !nextModel.some(rule => rule.columnId === column.id)) {
-        header.focus({ preventScroll: true });
+        focusCominsElement(header, { preventScroll: true });
       }
       return setCominsSortModel(current, nextModel);
     });
@@ -4163,8 +3655,7 @@ function CominsTableInner<TData, TGroup>(
       copySelection: async (target = "auto") => {
         const result = prepareSelectionCopy(target);
         if (!result) return null;
-        if (!navigator.clipboard?.writeText) throw new Error("Clipboard writing is unavailable.");
-        await navigator.clipboard.writeText(result.text);
+        await writeCominsClipboardText(result.text);
         return result.text;
       },
       fillSelection: (direction) => cellFill.fillSelection(direction),
@@ -4354,7 +3845,7 @@ function CominsTableInner<TData, TGroup>(
     const snapshot = new Map<HTMLElement, number>();
 
     for (const element of elements) {
-      snapshot.set(element, element.getBoundingClientRect().left);
+      snapshot.set(element, getCominsElementRect(element).left);
     }
 
     columnMoveAnimationSnapshotRef.current = snapshot;
@@ -4375,7 +3866,7 @@ function CominsTableInner<TData, TGroup>(
         continue;
       }
 
-      const offset = previousLeft - element.getBoundingClientRect().left;
+      const offset = previousLeft - getCominsElementRect(element).left;
 
       if (Math.abs(offset) < 0.5) {
         continue;
@@ -4390,7 +3881,7 @@ function CominsTableInner<TData, TGroup>(
       return undefined;
     }
 
-    void animatedElements[0]?.getBoundingClientRect();
+    void getCominsElementRect(animatedElements[0]);
     let frame = 0;
     let timeout = 0;
     const cleanup = () => {
@@ -4807,7 +4298,6 @@ function CominsTableInner<TData, TGroup>(
     copiedRowRef.current = null;
     return result;
   };
-  const isNativeEditor = (target: EventTarget | null) => target instanceof Element && Boolean(target.closest('input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]), textarea, select, [contenteditable]:not([contenteditable="false"])'));
   const handleCellKeyDown = (
     event: React.KeyboardEvent<HTMLTableCellElement>,
     entry: VisibleRowEntry<TData>,
@@ -4890,7 +4380,7 @@ function CominsTableInner<TData, TGroup>(
     // route the native copy event outside the focused Table.
     event.preventDefault();
     event.currentTarget.ownerDocument.getSelection()?.removeAllRanges();
-    event.currentTarget.focus({ preventScroll: true });
+    focusCominsElement(event.currentTarget, { preventScroll: true });
     // Shift extends the existing Cell anchor in onClick; it must not start a drag.
     if (event.shiftKey) return false;
 
@@ -5509,7 +4999,7 @@ function CominsTableInner<TData, TGroup>(
           structurallyValid = false;
         } else {
           targetGroupId = targetGrouped!.getGroupId(targetGroup);
-          const bounds = groupElement.getBoundingClientRect();
+          const bounds = getCominsElementRect(groupElement);
           position = clientY >= bounds.top + bounds.height / 2 ? "after" : "before";
         }
       } else if (!targetGrouped || targetGrouped.groups.length > 0) {
@@ -5569,7 +5059,7 @@ function CominsTableInner<TData, TGroup>(
           return;
         }
 
-        const bounds = targetRow.getBoundingClientRect();
+        const bounds = getCominsElementRect(targetRow);
         const position = clientY >= bounds.top + bounds.height / 2 ? "after" : "before";
 
         setActiveGroupMoveState({ position, sourceGroupId, targetGroupId });
@@ -5898,7 +5388,7 @@ function CominsTableInner<TData, TGroup>(
               event.preventDefault();
               event.stopPropagation();
               const startX = event.clientX;
-              const measuredWidth = event.currentTarget.closest<HTMLTableCellElement>("th")?.getBoundingClientRect().width;
+              const measuredWidth = getCominsElementRect(event.currentTarget.closest<HTMLTableCellElement>("th"))?.width;
               const visibleWidthSnapshot = new Map<string, number>();
 
               for (const childId of cell.group.children) {
@@ -5911,7 +5401,7 @@ function CominsTableInner<TData, TGroup>(
                 const headerCell = Array.from(
                   headerRef.current?.querySelectorAll<HTMLTableCellElement>("[data-comins-column-id]") ?? [],
                 ).find((element) => element.dataset.cominsColumnId === visibleColumn.id);
-                const measuredColumnWidth = headerCell?.getBoundingClientRect().width;
+                const measuredColumnWidth = getCominsElementRect(headerCell)?.width;
                 const fallbackWidth = stateRef.current.columnState[visibleColumn.id]?.width ?? visibleColumn.width ?? 160;
 
                 visibleWidthSnapshot.set(
@@ -6204,14 +5694,14 @@ function CominsTableInner<TData, TGroup>(
             event.preventDefault();
             event.stopPropagation();
             const startX = event.clientX;
-            const measuredWidth = event.currentTarget.closest<HTMLTableCellElement>("th")?.getBoundingClientRect().width;
+            const measuredWidth = getCominsElementRect(event.currentTarget.closest<HTMLTableCellElement>("th"))?.width;
             const visibleWidthSnapshot = new Map<string, number>();
 
             for (const visibleColumn of visibleColumns) {
               const headerCell = Array.from(
                 headerRef.current?.querySelectorAll<HTMLTableCellElement>("[data-comins-column-id]") ?? [],
               ).find((element) => element.dataset.cominsColumnId === visibleColumn.id);
-              const measuredColumnWidth = headerCell?.getBoundingClientRect().width;
+              const measuredColumnWidth = getCominsElementRect(headerCell)?.width;
               const fallbackWidth = stateRef.current.columnState[visibleColumn.id]?.width ?? visibleColumn.width ?? 160;
 
               visibleWidthSnapshot.set(
@@ -6355,7 +5845,7 @@ function CominsTableInner<TData, TGroup>(
 
     for (const element of scrollContainers) {
       if (Math.abs(element.scrollLeft - nextScrollLeft) > 0.5) {
-        element.scrollLeft = nextScrollLeft;
+        setCominsScrollLeft(element, nextScrollLeft);
       }
     }
 
@@ -6475,8 +5965,8 @@ function CominsTableInner<TData, TGroup>(
       if (firstRow >= 0 && firstColumn >= 0) target = { rowId: editingRowIds[firstRow]!, columnId: editingColumnIds[firstColumn]! };
     }
     try {
-      if (!event.clipboardData.types.includes("text/plain")) return;
-      const text = event.clipboardData.getData("text/plain");
+      const text = readCominsClipboardEvent(event.clipboardData);
+      if (text === null) return;
       const matrix = parseCominsClipboardText(text);
       const start = editingRowIds.indexOf(target.rowId), end = Math.min(editingRowIds.length - 1, start + matrix.length - 1);
       if (viewportContext) {
@@ -6512,7 +6002,7 @@ function CominsTableInner<TData, TGroup>(
         event.preventDefault();
         event.stopPropagation();
         const result = prepareSelectionCopy();
-        event.clipboardData.setData("text/plain", result?.text ?? "");
+        writeCominsClipboardEvent(event.clipboardData, result?.text ?? "");
       }}
       ref={tableRootRef}
       style={{ ...currentTheme.style, ...style }}
@@ -7224,6 +6714,7 @@ function CominsTableInner<TData, TGroup>(
                   ownerId={String(entry.rowId)}
                   testId={`row-detail-content-${String(entry.rowId)}`}
                   getToggleElement={() => rowDetailToggleElementsRef.current.get(entry.rowId) ?? null}
+                  restoreFocus={detailFocusRestorer.restore}
                 >
                   {renderRowDetail?.(rowDetailParams)}
                 </CominsRowDetailRow>
@@ -7424,7 +6915,7 @@ function CominsTreeTableInner<TData>(
   );
   const treeColumnId = treeColumns[0]?.id ?? treeColumns[0]?.field ?? null;
   const sortedTree = useMemo(
-    () => getSortedCominsTree(data, treeColumns, treeSortModel),
+    () => getSortedReactTree(data, treeColumns, treeSortModel),
     [data, treeColumns, treeSortModel],
   );
   const visibleTreeRows = useMemo(

@@ -1,4 +1,5 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { runViewportRequest } from "./browser/viewport-requests";
 import { createCominsViewportData, reduceCominsViewportData, type CominsViewportData, type CominsViewportDataEvent, type CominsViewportPatch, type CominsViewportRequest, type CominsViewportRevision } from "./viewport-data";
 
 export type CominsViewportDatasource = {
@@ -37,17 +38,7 @@ export function useCominsViewport<T>(options: CominsViewportOptions<T>) {
   }, [initial]);
   const onViewportRequest = useCallback(async (request: CominsViewportRequest) => {
     if (request.signal.aborted || request.revision !== initial.revision) return;
-    dispatch({ type: "request", request });
-    const cancel = () => dispatch({ type: "cancel", request });
-    request.signal.addEventListener("abort", cancel, { once: true });
-    try {
-      const rows = await latest.current.getRows(request);
-      if (!request.signal.aborted) dispatch({ type: "success", request, rows });
-    } catch {
-      if (!request.signal.aborted) dispatch({ type: "error", request });
-    } finally {
-      request.signal.removeEventListener("abort", cancel);
-    }
+    return runViewportRequest({ request, getRows: request => latest.current.getRows(request), dispatch });
   }, [initial, dispatch]);
   const onChangeData = useCallback((next: CominsViewportData<T>) => {
     if (next.revision !== initial.revision) return;

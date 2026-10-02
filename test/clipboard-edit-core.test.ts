@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createCominsTableState, fillCominsCellRange, parseCominsClipboardText, pasteCominsText } from "../src/core";
+import { createCominsTableState, fillCominsCellRange, parseCominsClipboardText, pasteCominsText } from "../src";
 
 const address = (rowId: number, columnId = "a") => ({ rowId, columnId });
 const range = (a: number, b: number, first = "a", last = first) => ({ anchor: address(a, first), focus: address(b, last) });

@@ -1,7 +1,7 @@
 import { createRef } from "react";
 import { CominsTable, type CominsTableColumn, type CominsTableRef } from "../../src";
 import { parseCominsClipboardText, pasteCominsText, fillCominsCellRange } from "../../src/clipboard";
-import { createCominsTableState } from "../../src/core";
+import { createCominsTableState } from "../../src";
 type Row = { id: number; amount: number };
 const columns: CominsTableColumn<Row>[] = [{ field: "amount", label: "amount", cell: {
   parseClipboard: ({ text, row }) => Number(text) + row.data.amount * 0,

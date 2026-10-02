@@ -9,7 +9,7 @@ import type {
   CominsHeaderComponentConfig,
   CominsHeaderComponentPayload,
   CominsVirtualListItem,
-} from "./core";
+} from "./react/core-compat";
 
 type CominsAnyComponentPayload<TData, TValue> =
   | CominsCellComponentPayload<TData, TValue>

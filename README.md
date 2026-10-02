@@ -169,12 +169,14 @@ Set `multiSort` to opt into ordered multi-column sorting. Normal Header click or
 
 ## Package Entry Points
 
+**0.2.0 development branch (unreleased):** `/core` uses neutral state and string labels. Existing React state helpers and JSX/renderer/theme types belong to the root; `/clipboard` and `/selection` retain React-state contracts. Published 0.1.x behavior is not changed by this guide. See the [English migration guide](https://github.com/kim1124/comins-table/blob/main/docs/user/26-migration-0.2.0.md) or [한국어 마이그레이션](https://github.com/kim1124/comins-table/blob/main/docs/ko/26-migration-0.2.0.md). React peers and the client-only Table boundary remain unchanged; Vue support is not included.
+
 | Import | Purpose |
 | --- | --- |
 | `comins-table` | React component, public types, and root helper exports |
-| `comins-table/core` | State, row, column, pagination, sorting, layout, selection, clipboard, export, and virtualization helpers |
-| `comins-table/clipboard` | Clipboard helper subset |
-| `comins-table/selection` | Selection helper subset |
+| `comins-table/core` | Neutral state, row, column, pagination, sorting, layout, selection, clipboard, export, and virtualization helpers |
+| `comins-table/clipboard` | React-state clipboard helper subset |
+| `comins-table/selection` | React-state selection helper subset |
 | `comins-table/styles.css` | Optional table shell, theme, and built-in component skin |
 
 ## Header And Layout
@@ -183,7 +185,7 @@ Sortable headers support pointer and keyboard activation and expose `aria-sort`.
 
 A left-button mouse interaction activates column movement after a 6-pixel horizontal drag, provided horizontal movement remains greater than vertical movement. The source becomes a source placeholder while a ghost and target marker show the proposed move. Pointer Up commits only over a valid target; vertical intent, pointer cancellation, `Escape`, and window blur cancel the pending move. Non-mouse pointers retain one-second long-press compatibility. Parent header groups move their children as one block.
 
-Use `getColumnLayout()` and `setColumnLayout()` through the Ref API, or `serializeCominsColumnLayout()` and `applyCominsColumnLayout()` from `comins-table/core`, to persist and restore order, widths, and visibility.
+Use `getColumnLayout()` and `setColumnLayout()` through the Ref API, or `serializeCominsColumnLayout()` and `applyCominsColumnLayout()` to persist and restore order, widths, and visibility. Import helpers from the root for React state or from `comins-table/core` for neutral state.
 
 ### Column Pinning
 

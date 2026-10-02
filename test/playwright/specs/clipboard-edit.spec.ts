@@ -16,6 +16,35 @@ async function drag(page: Page, to: number, column = "column1", finish = true) {
   if (finish) await page.mouse.up();
 }
 
+test("TSV sources remain readable without clipping at desktop and narrow widths", async ({ page }) => {
+  await page.goto("/examples/fill-handle");
+  for (const width of [1280, 760]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const name of ["두 값 TSV 원본", "붙여넣기 TSV 원본"]) {
+      const source = page.getByRole("textbox", { name, exact: true });
+      const layout = await source.evaluate((element: HTMLTextAreaElement) => {
+        const field = element.getBoundingClientRect();
+        const label = element.closest("label")!;
+        const caption = document.createRange();
+        caption.selectNodeContents(label.firstChild!);
+        return {
+          fieldWidth: field.width,
+          labelWidth: label.getBoundingClientRect().width,
+          captionBottom: caption.getBoundingClientRect().bottom,
+          fieldTop: field.top,
+          clientHeight: element.clientHeight,
+          scrollHeight: element.scrollHeight,
+          border: parseFloat(getComputedStyle(element).borderTopWidth),
+        };
+      });
+      expect(layout.fieldWidth).toBeGreaterThanOrEqual(layout.labelWidth * 0.9);
+      expect(layout.fieldTop).toBeGreaterThan(layout.captionBottom);
+      expect(layout.border).toBeGreaterThan(0);
+      expect(layout.scrollHeight).toBeLessThanOrEqual(layout.clientHeight + 1);
+    }
+  }
+});
+
 test("pastes OS TSV atomically with typed values, native textarea, and guarded rows", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await start(page);

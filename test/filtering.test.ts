@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { CominsTableRuntimeColumn } from "../src/core";
+import type { CominsTableRuntimeColumn } from "../src";
 import {
   getCominsFilteredRowIndexes,
   normalizeCominsColumnFilterModel,

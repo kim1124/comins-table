@@ -1,0 +1,1058 @@
+{
+  "baselineCommit": "34b7727",
+  "entrypoints": {
+    "comins-table": [
+      "CominsAfterDragRowPayload",
+      "CominsAfterTreeRowDragPayload",
+      "CominsBeforeRowDragPayload",
+      "CominsBeforeTreeRowDragPayload",
+      "CominsButtonComponentConfig",
+      "CominsCellAddress",
+      "CominsCellComponent",
+      "CominsCellComponentConfig",
+      "CominsCellComponentPayload",
+      "CominsCellEventPayload",
+      "CominsCellFormatParams",
+      "CominsCellKeyboardEventPayload",
+      "CominsCellRange",
+      "CominsCellSelectionOptions",
+      "CominsCheckboxComponentConfig",
+      "CominsClipboardGuard",
+      "CominsColumnFilterConfig",
+      "CominsColumnFilterKind",
+      "CominsColumnFilterModel",
+      "CominsColumnFilterOperator",
+      "CominsColumnFilterRule",
+      "CominsColumnFilteringConfig",
+      "CominsColumnGroupRuntimeState",
+      "CominsColumnLayout",
+      "CominsColumnPinned",
+      "CominsColumnProps",
+      "CominsColumnRuntimeState",
+      "CominsColumnValueResolver",
+      "CominsComponentAlign",
+      "CominsComponentColumnPayload",
+      "CominsComponentDirection",
+      "CominsComponentPlacement",
+      "CominsComponentPrimitiveValue",
+      "CominsComponentRowPayload",
+      "CominsCopiedCell",
+      "CominsCopiedCellRange",
+      "CominsCopiedCellRangeCell",
+      "CominsCopiedRow",
+      "CominsCopyTarget",
+      "CominsEventColumn",
+      "CominsEventRow",
+      "CominsExportColumn",
+      "CominsExportFormat",
+      "CominsExportRowsOptions",
+      "CominsExportValueSource",
+      "CominsFillCellRangeOptions",
+      "CominsGroupBetweenTablesInput",
+      "CominsHeaderCell",
+      "CominsHeaderColumnCell",
+      "CominsHeaderComponent",
+      "CominsHeaderComponentConfig",
+      "CominsHeaderComponentPayload",
+      "CominsHeaderGroupCell",
+      "CominsInputCommitEvent",
+      "CominsInputComponentConfig",
+      "CominsLazyLoadReason",
+      "CominsLazyLoadRequest",
+      "CominsMenuComponentConfig",
+      "CominsPaginationState",
+      "CominsPasteRowOptions",
+      "CominsProgressComponentConfig",
+      "CominsRadioComponentConfig",
+      "CominsRowBetweenTablesInput",
+      "CominsRowDetailHeight",
+      "CominsRowDetailParams",
+      "CominsRowDetailProps",
+      "CominsRowDragPayload",
+      "CominsRowDragReason",
+      "CominsRowDragResult",
+      "CominsRowDragTarget",
+      "CominsRowEventPayload",
+      "CominsRowGroupAggregation",
+      "CominsRowGroupDropPosition",
+      "CominsRowGroupMoveDetails",
+      "CominsRowGroupMoveOptions",
+      "CominsRowGroupProps",
+      "CominsRowGroupRenderParams",
+      "CominsRowGroupingConfig",
+      "CominsRowGroupingSourceRow",
+      "CominsRowHeight",
+      "CominsRowHeightParams",
+      "CominsRowId",
+      "CominsRowKeyboardEventPayload",
+      "CominsRowSelectionOptions",
+      "CominsRowUpdate",
+      "CominsSelectComponentConfig",
+      "CominsSelectedCell",
+      "CominsSelectionCopy",
+      "CominsSelectionState",
+      "CominsSetRowGroupIdParams",
+      "CominsSortDirection",
+      "CominsSortModel",
+      "CominsSortState",
+      "CominsSummaryAggregator",
+      "CominsSummaryBuiltin",
+      "CominsSummaryColumn",
+      "CominsSummaryColumnConfig",
+      "CominsSummaryFormatPayload",
+      "CominsTable",
+      "CominsTableCellConfig",
+      "CominsTableColumn",
+      "CominsTableColumnGroup",
+      "CominsTableComponentOption",
+      "CominsTableComponentProps",
+      "CominsTableDensity",
+      "CominsTableGroupTransferDetails",
+      "CominsTableHeaderConfig",
+      "CominsTableMenuItem",
+      "CominsTableMenuItems",
+      "CominsTableOptions",
+      "CominsTableProps",
+      "CominsTableRef",
+      "CominsTableRowProps",
+      "CominsTableRowTransferDetails",
+      "CominsTableRuntimeColumn",
+      "CominsTableRuntimeColumnGroup",
+      "CominsTableState",
+      "CominsTableStateInput",
+      "CominsTableSummaryConfig",
+      "CominsTableTheme",
+      "CominsTableTransferConfig",
+      "CominsTableTransferConflict",
+      "CominsTableTransferConflictPolicy",
+      "CominsTableTransferConflictResolver",
+      "CominsTableTransferCoordinator",
+      "CominsTableTransferCoordinatorOptions",
+      "CominsTableTransferDetails",
+      "CominsTableTransferDropPosition",
+      "CominsTableTransferEndpoint",
+      "CominsTableTransferGroupEndpoint",
+      "CominsTableTransferIntent",
+      "CominsTableTransferRejection",
+      "CominsTableTransferRejectionFeedback",
+      "CominsTableTransferResolvedConflict",
+      "CominsTableTransferResult",
+      "CominsTableTransferRowEndpoint",
+      "CominsToggleComponentConfig",
+      "CominsTreeDropContext",
+      "CominsTreeDropPosition",
+      "CominsTreeExpansionOptions",
+      "CominsTreeMoveDestination",
+      "CominsTreeNode",
+      "CominsTreeRowDragConfig",
+      "CominsTreeRowDragPayload",
+      "CominsTreeTableProps",
+      "CominsViewportBlock",
+      "CominsViewportData",
+      "CominsViewportDataEvent",
+      "CominsViewportDataOptions",
+      "CominsViewportDatasource",
+      "CominsViewportOptions",
+      "CominsViewportPatch",
+      "CominsViewportRange",
+      "CominsViewportRequest",
+      "CominsViewportRequestState",
+      "CominsViewportRevision",
+      "CominsViewportTableProps",
+      "CominsVirtualListComponentConfig",
+      "CominsVirtualListItem",
+      "CominsVirtualListItems",
+      "CominsVirtualListSearchFilterPayload",
+      "CominsVirtualRows",
+      "CominsVirtualRowsOptions",
+      "CominsVisibleTreeRow",
+      "addCominsRows",
+      "applyCominsColumnLayout",
+      "clearCominsCellRange",
+      "clearCominsSelection",
+      "clearCominsSortState",
+      "cominsTablePackage",
+      "copyCominsCell",
+      "copyCominsCellRange",
+      "copyCominsRow",
+      "createCominsTableState",
+      "createCominsTableTransferCoordinator",
+      "createCominsViewportData",
+      "deleteCominsRows",
+      "exportCominsRowsToCsv",
+      "exportCominsRowsToJson",
+      "fillCominsCellRange",
+      "flattenCominsTree",
+      "formatCominsCellValue",
+      "getCominsCellClassName",
+      "getCominsCellStyle",
+      "getCominsCellValue",
+      "getCominsHeaderRows",
+      "getCominsPageRows",
+      "getCominsSelectedCellRange",
+      "getCominsSortedRowIndexes",
+      "getCominsSummaryValues",
+      "getCominsTreeLeafItems",
+      "getCominsVirtualRows",
+      "getCominsVisibleColumns",
+      "isCominsCellDisabled",
+      "isCominsCellInSelectedRange",
+      "isCominsCellSelected",
+      "isCominsRowSelected",
+      "moveCominsColumn",
+      "moveCominsColumnGroup",
+      "moveCominsRow",
+      "moveCominsRowGroup",
+      "moveCominsRowToGroup",
+      "moveCominsTreeNode",
+      "parseCominsClipboardText",
+      "pasteCominsCell",
+      "pasteCominsCellRange",
+      "pasteCominsRow",
+      "pasteCominsText",
+      "queryCominsRows",
+      "reduceCominsViewportData",
+      "replaceCominsRows",
+      "selectCell",
+      "selectCellRange",
+      "selectRow",
+      "selectRows",
+      "serializeCominsColumnLayout",
+      "setCominsColumnGroupHidden",
+      "setCominsColumnGroupWidth",
+      "setCominsColumnHidden",
+      "setCominsColumnWidth",
+      "setCominsHeaderVisible",
+      "setCominsPagination",
+      "setCominsSortModel",
+      "setCominsSortState",
+      "setCominsTableTheme",
+      "sortCominsRows",
+      "sortCominsTreeSiblings",
+      "toggleCominsTreeNode",
+      "transferCominsGroupBetweenTables",
+      "transferCominsRowBetweenTables",
+      "updateCominsRows",
+      "updateCominsTreeItem",
+      "useCominsViewport"
+    ],
+    "comins-table/core": [
+      "CominsButtonComponentConfig",
+      "CominsCellAddress",
+      "CominsCellComponent",
+      "CominsCellComponentConfig",
+      "CominsCellComponentPayload",
+      "CominsCellFormatParams",
+      "CominsCellRange",
+      "CominsCellSelectionOptions",
+      "CominsCheckboxComponentConfig",
+      "CominsClipboardGuard",
+      "CominsColumnGroupRuntimeState",
+      "CominsColumnLayout",
+      "CominsColumnPinned",
+      "CominsColumnProps",
+      "CominsColumnRuntimeState",
+      "CominsColumnValueResolver",
+      "CominsComponentAlign",
+      "CominsComponentColumnPayload",
+      "CominsComponentDirection",
+      "CominsComponentPlacement",
+      "CominsComponentPrimitiveValue",
+      "CominsComponentRowPayload",
+      "CominsCopiedCell",
+      "CominsCopiedCellRange",
+      "CominsCopiedCellRangeCell",
+      "CominsCopiedRow",
+      "CominsEventColumn",
+      "CominsExportColumn",
+      "CominsExportFormat",
+      "CominsExportRowsOptions",
+      "CominsExportValueSource",
+      "CominsFillCellRangeOptions",
+      "CominsHeaderCell",
+      "CominsHeaderColumnCell",
+      "CominsHeaderComponent",
+      "CominsHeaderComponentConfig",
+      "CominsHeaderComponentPayload",
+      "CominsHeaderGroupCell",
+      "CominsInputCommitEvent",
+      "CominsInputComponentConfig",
+      "CominsMenuComponentConfig",
+      "CominsPaginationState",
+      "CominsPasteRowOptions",
+      "CominsProgressComponentConfig",
+      "CominsRadioComponentConfig",
+      "CominsRowGroupMoveOptions",
+      "CominsRowId",
+      "CominsRowSelectionOptions",
+      "CominsRowUpdate",
+      "CominsSelectComponentConfig",
+      "CominsSelectionState",
+      "CominsSortDirection",
+      "CominsSortModel",
+      "CominsSortState",
+      "CominsTableCellConfig",
+      "CominsTableColumn",
+      "CominsTableColumnGroup",
+      "CominsTableComponentOption",
+      "CominsTableComponentProps",
+      "CominsTableDensity",
+      "CominsTableHeaderConfig",
+      "CominsTableMenuItem",
+      "CominsTableMenuItems",
+      "CominsTableOptions",
+      "CominsTableRuntimeColumn",
+      "CominsTableRuntimeColumnGroup",
+      "CominsTableState",
+      "CominsTableStateInput",
+      "CominsTableTheme",
+      "CominsToggleComponentConfig",
+      "CominsVirtualListComponentConfig",
+      "CominsVirtualListItem",
+      "CominsVirtualListItems",
+      "CominsVirtualListSearchFilterPayload",
+      "CominsVirtualRows",
+      "CominsVirtualRowsOptions",
+      "addCominsRows",
+      "applyCominsColumnLayout",
+      "clearCominsCellRange",
+      "clearCominsSelection",
+      "clearCominsSortState",
+      "copyCominsCell",
+      "copyCominsCellRange",
+      "copyCominsRow",
+      "createCominsTableState",
+      "deleteCominsRows",
+      "exportCominsRowsToCsv",
+      "exportCominsRowsToJson",
+      "fillCominsCellRange",
+      "formatCominsCellValue",
+      "getCominsCellClassName",
+      "getCominsCellStyle",
+      "getCominsCellValue",
+      "getCominsHeaderRows",
+      "getCominsPageRows",
+      "getCominsSelectedCellRange",
+      "getCominsSortedRowIndexes",
+      "getCominsVirtualRows",
+      "getCominsVisibleColumns",
+      "isCominsCellDisabled",
+      "isCominsCellInSelectedRange",
+      "isCominsCellSelected",
+      "isCominsRowSelected",
+      "moveCominsColumn",
+      "moveCominsColumnGroup",
+      "moveCominsRow",
+      "moveCominsRowToGroup",
+      "parseCominsClipboardText",
+      "pasteCominsCell",
+      "pasteCominsCellRange",
+      "pasteCominsRow",
+      "pasteCominsText",
+      "queryCominsRows",
+      "replaceCominsRows",
+      "selectCell",
+      "selectCellRange",
+      "selectRow",
+      "selectRows",
+      "serializeCominsColumnLayout",
+      "setCominsColumnGroupHidden",
+      "setCominsColumnGroupWidth",
+      "setCominsColumnHidden",
+      "setCominsColumnWidth",
+      "setCominsHeaderVisible",
+      "setCominsPagination",
+      "setCominsSortModel",
+      "setCominsSortState",
+      "setCominsTableTheme",
+      "sortCominsRows",
+      "updateCominsRows"
+    ],
+    "comins-table/clipboard": [
+      "CominsClipboardGuard",
+      "CominsCopiedCell",
+      "CominsCopiedCellRange",
+      "CominsCopiedCellRangeCell",
+      "CominsCopiedRow",
+      "CominsFillCellRangeOptions",
+      "CominsPasteRowOptions",
+      "copyCominsCell",
+      "copyCominsCellRange",
+      "copyCominsRow",
+      "fillCominsCellRange",
+      "parseCominsClipboardText",
+      "pasteCominsCell",
+      "pasteCominsCellRange",
+      "pasteCominsRow",
+      "pasteCominsText"
+    ],
+    "comins-table/selection": [
+      "CominsCellAddress",
+      "CominsCellRange",
+      "CominsCellSelectionOptions",
+      "CominsRowSelectionOptions",
+      "CominsSelectionState",
+      "clearCominsCellRange",
+      "clearCominsSelection",
+      "getCominsSelectedCellRange",
+      "isCominsCellInSelectedRange",
+      "isCominsCellSelected",
+      "isCominsRowSelected",
+      "selectCell",
+      "selectCellRange",
+      "selectRow"
+    ]
+  },
+  "coreDisposition": {
+    "CominsButtonComponentConfig": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsCellAddress": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsCellComponent": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsCellComponentConfig": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsCellComponentPayload": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "CominsCellFormatParams": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "CominsCellRange": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsCellSelectionOptions": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsCheckboxComponentConfig": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsClipboardGuard": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "CominsColumnGroupRuntimeState": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsColumnLayout": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsColumnPinned": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsColumnProps": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsColumnRuntimeState": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsColumnValueResolver": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "CominsComponentAlign": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsComponentColumnPayload": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "CominsComponentDirection": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsComponentPlacement": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsComponentPrimitiveValue": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsComponentRowPayload": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsCopiedCell": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsCopiedCellRange": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsCopiedCellRangeCell": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsCopiedRow": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsEventColumn": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "CominsExportColumn": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsExportFormat": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsExportRowsOptions": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsExportValueSource": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsFillCellRangeOptions": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsHeaderCell": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "CominsHeaderColumnCell": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "CominsHeaderComponent": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsHeaderComponentConfig": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsHeaderComponentPayload": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "CominsHeaderGroupCell": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "CominsInputCommitEvent": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsInputComponentConfig": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsMenuComponentConfig": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsPaginationState": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsPasteRowOptions": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsProgressComponentConfig": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsRadioComponentConfig": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsRowGroupMoveOptions": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsRowId": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsRowSelectionOptions": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsRowUpdate": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsSelectComponentConfig": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsSelectionState": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsSortDirection": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsSortModel": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsSortState": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsTableCellConfig": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsTableColumn": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "CominsTableColumnGroup": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "CominsTableComponentOption": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsTableComponentProps": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsTableDensity": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsTableHeaderConfig": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsTableMenuItem": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsTableMenuItems": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsTableOptions": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsTableRuntimeColumn": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "CominsTableRuntimeColumnGroup": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "CominsTableState": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "CominsTableStateInput": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "CominsTableTheme": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsToggleComponentConfig": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsVirtualListComponentConfig": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsVirtualListItem": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsVirtualListItems": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsVirtualListSearchFilterPayload": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "CominsVirtualRows": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "CominsVirtualRowsOptions": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "프레임워크 중립 데이터 의미와 이름을 유지한다."
+    },
+    "addCominsRows": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "applyCominsColumnLayout": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "clearCominsCellRange": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "clearCominsSelection": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "clearCominsSortState": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "copyCominsCell": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "copyCominsCellRange": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "copyCominsRow": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "createCominsTableState": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "deleteCominsRows": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "exportCominsRowsToCsv": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "exportCominsRowsToJson": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "fillCominsCellRange": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "formatCominsCellValue": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "getCominsCellClassName": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "getCominsCellStyle": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "getCominsCellValue": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "getCominsHeaderRows": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "getCominsPageRows": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "getCominsSelectedCellRange": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "getCominsSortedRowIndexes": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "getCominsVirtualRows": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "getCominsVisibleColumns": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "isCominsCellDisabled": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "isCominsCellInSelectedRange": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "isCominsCellSelected": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "isCominsRowSelected": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "moveCominsColumn": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "moveCominsColumnGroup": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "moveCominsRow": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "moveCominsRowToGroup": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "parseCominsClipboardText": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "pasteCominsCell": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "pasteCominsCellRange": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "pasteCominsRow": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "pasteCominsText": {
+      "kind": "split-contract",
+      "target": "comins-table/core",
+      "reason": "Core 데이터 계약과 React payload를 분리하며 루트 호환 타입·guard·변경 규칙을 보존한다."
+    },
+    "queryCominsRows": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "replaceCominsRows": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "selectCell": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "selectCellRange": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "selectRow": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "selectRows": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "serializeCominsColumnLayout": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "setCominsColumnGroupHidden": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "setCominsColumnGroupWidth": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "setCominsColumnHidden": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "setCominsColumnWidth": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "setCominsHeaderVisible": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "setCominsPagination": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "setCominsSortModel": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "setCominsSortState": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "setCominsTableTheme": {
+      "kind": "react-only",
+      "target": "comins-table",
+      "reason": "React 표시·스타일·컴포넌트 계약은 루트의 기존 이름과 동작으로 유지한다."
+    },
+    "sortCominsRows": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    },
+    "updateCominsRows": {
+      "kind": "retain-core",
+      "target": "comins-table/core",
+      "reason": "계산·상태 전이와 이름을 유지하며 입력 state의 중립 모델 전환을 연결한다."
+    }
+  }
+}

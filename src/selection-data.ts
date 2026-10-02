@@ -1,7 +1,9 @@
+import { planCoreSelectionCopy } from "./core/selection/navigation";
 import {
   copyCominsCell, getCominsCellValue, getCominsSelectedCellRange, getCominsVisibleColumns,
-  type CominsCellAddress, type CominsCopiedCellRange, type CominsRowId, type CominsTableState,
-} from "./core";
+} from "./react/core-compat";
+import type { CominsCellAddress, CominsCopiedCellRange, CominsRowId } from "./model";
+import type { CominsTableState } from "./react-types";
 
 export type CominsSelectedCell = CominsCellAddress & { value: unknown };
 export type CominsCopyTarget = "auto" | "cells" | "rows";
@@ -32,32 +34,12 @@ function encodeTsv(value: unknown): string {
 // Enumeration happens on demand; rendering does not materialize the selected rectangle.
 export function copySelectionData<T>(state: CominsTableState<T>, target: CominsCopyTarget = "auto", order: readonly CominsRowId[] = state.rowIds): CominsSelectionCopy | null {
   const cells = selectedCellValues(state, order);
-  const kind = target === "auto" ? (cells.length > 1 ? "cells" : state.selection.rowIds.length ? "rows" : "cells") : target;
   const visible = getCominsVisibleColumns(state);
-  const selectedRows = new Set(state.selection.rowIds);
-  const rowPositions = new Map(order.map((id, index) => [id, index]));
-  const columnPositions = new Map(visible.map((column, index) => [column.id, index]));
-  let rowIds: readonly CominsRowId[];
-  let columns = visible;
-  const selected = new Map<CominsRowId, Set<string>>();
-  if (kind === "rows") {
-    rowIds = order.filter(id => selectedRows.has(id));
-  } else {
-    const positions = cells.filter(cell => rowPositions.has(cell.rowId)).map(cell => ({ row: rowPositions.get(cell.rowId)!, column: columnPositions.get(cell.columnId)! }));
-    if (!positions.length) return null;
-    let firstRow = Infinity, lastRow = -1, firstColumn = Infinity, lastColumn = -1;
-    for (const position of positions) {
-      firstRow = Math.min(firstRow, position.row); lastRow = Math.max(lastRow, position.row);
-      firstColumn = Math.min(firstColumn, position.column); lastColumn = Math.max(lastColumn, position.column);
-    }
-    rowIds = order.slice(firstRow, lastRow + 1);
-    columns = visible.slice(firstColumn, lastColumn + 1);
-    for (const cell of cells) {
-      if (!selected.has(cell.rowId)) selected.set(cell.rowId, new Set());
-      selected.get(cell.rowId)!.add(cell.columnId);
-    }
-  }
-  if (!rowIds.length || !columns.length) return null;
+  const plan = planCoreSelectionCopy({ cells, selectedRowIds: state.selection.rowIds, rowIds: order, columnIds: visible.map(column => column.id), target });
+  if (!plan) return null;
+  const { target: kind, rowIds, selected } = plan;
+  const columnsById = new Map(visible.map(column => [column.id, column]));
+  const columns = plan.columnIds.map(id => columnsById.get(id)!);
   const rows = rowIds.map(rowId => columns.map(column => {
     if (kind === "cells" && !selected.get(rowId)?.has(column.id)) return null;
     const cell = copyCominsCell(state, { rowId, columnId: column.id });

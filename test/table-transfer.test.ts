@@ -44,6 +44,32 @@ function groupedEndpoint(
 }
 
 describe("cross-table transfer", () => {
+  it("isolates actual coordinators and preserves the callback options receiver", () => {
+    const calls: string[] = [];
+    const options = { onTransfer() { expect(this).toBe(options); calls.push("first"); } };
+    const first = createCominsTableTransferCoordinator<Row>(options);
+    const second = createCominsTableTransferCoordinator<Row>({ onTransfer() { calls.push("second"); } });
+    const registration = { getSnapshot: () => null };
+    const remove = registerCominsTableTransfer(first, "scope", "source", registration);
+    expect(getCominsTableTransferRegistration(second, "scope", "source")).toBeNull();
+    const result = transferCominsRowBetweenTables({ source: flatEndpoint("source", [{ id: "a", label: "A" }]), target: flatEndpoint("target", []), sourceRowId: "a" })!;
+    emitCominsTableTransfer(first, result);
+    expect(calls).toEqual(["first"]);
+    emitCominsTableTransfer(second, result);
+    expect(calls).toEqual(["first", "second"]);
+    remove();
+  });
+  it("keeps a replacement registered after repeated cleanup of the old registration", () => {
+    const coordinator = createCominsTableTransferCoordinator<Row>({ onTransfer() {} });
+    const old = { getSnapshot: () => null }, replacement = { getSnapshot: () => null };
+    const removeSibling = registerCominsTableTransfer(coordinator, "scope", "sibling", old);
+    const removeOld = registerCominsTableTransfer(coordinator, "scope", "target", old);
+    removeOld();
+    const removeReplacement = registerCominsTableTransfer(coordinator, "scope", "target", replacement);
+    removeOld();
+    expect(getCominsTableTransferRegistration(coordinator, "scope", "target")).toBe(replacement);
+    removeReplacement(); removeSibling();
+  });
   it("isolates registrations per Coordinator and fails closed for duplicate table IDs", () => {
     const onTransfer = vi.fn();
     const onTransferRejected = vi.fn();

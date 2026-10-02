@@ -2,6 +2,8 @@
 
 These guides describe **0.1.11**. See the [migration notes](../README.md#version-0111) for opt-in Row Drag, local versus controlled data ownership, and Clipboard/Fill requirements, and the [changelog](../CHANGELOG.md) for publication dates.
 
+This development branch also documents the **unreleased 0.2.0 Core contract**: [English migration](user/26-migration-0.2.0.md) · [한국어 마이그레이션](ko/26-migration-0.2.0.md). It does not change the published package version. Core-specific guidance on this branch follows that neutral contract; existing React UI behavior remains as described for 0.1.11.
+
 [Design contract](../DESIGN.md) · [Componentization guide](design/componentization.md) · [Canonical Feature Manifest](feature-manifest.json)
 
 Comins Table documentation is organized by feature and language. Every guide links a runnable local Playground route and the matching guide in the other language.
