@@ -1,8 +1,8 @@
 # 한글 기능 가이드
 
-이 가이드는 0.1.11 기준이며, 선택적으로 활성화하는 TSV 붙여넣기와 Fill Handle을 포함합니다. [Clipboard와 Fill](09-clipboard.md) · [Row Drag 마이그레이션](07-row.md).
+이 가이드는 0.2.0 기준이며, 선택적으로 활성화하는 TSV 붙여넣기와 Fill Handle을 포함합니다. [Clipboard와 Fill](09-clipboard.md) · [Row Drag 마이그레이션](07-row.md).
 
-이 브랜치는 [0.2.0 Core 마이그레이션(미배포)](26-migration-0.2.0.md)도 설명합니다. 중립 Core 계약은 배포된 0.1.x 패키지에 대한 설명이 아니며 기존 React UI 계약은 호환성을 유지합니다.
+[0.2.0 Core 마이그레이션](26-migration-0.2.0.md)은 중립 Core 계약으로의 전환을 설명합니다. 중립 Core 계약은 배포된 0.1.x 패키지에 대한 설명이 아니며 기존 React UI 계약은 호환성을 유지합니다.
 
 [문서 홈](../README.md) · [English guides](../user/README.md) · [Playground](http://127.0.0.1:4002/docs/getting-started)
 
