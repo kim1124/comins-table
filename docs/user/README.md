@@ -1,8 +1,8 @@
 # English Feature Guides
 
-These guides target 0.1.11, including opt-in TSV paste and Fill Handle. [Clipboard and Fill](09-clipboard.md) · [Row Drag migration](07-row.md).
+These guides target 0.2.0, including opt-in TSV paste and Fill Handle. [Clipboard and Fill](09-clipboard.md) · [Row Drag migration](07-row.md).
 
-This branch additionally documents the [0.2.0 Core migration (unreleased)](26-migration-0.2.0.md). Its neutral Core contract is not a claim about the published 0.1.x package; React UI contracts remain compatible.
+The [0.2.0 Core migration](26-migration-0.2.0.md) explains the neutral Core contract. This contract is not a claim about the published 0.1.x package; React UI contracts remain compatible.
 
 [Documentation home](../README.md) · [한글 가이드](../ko/README.md) · [Playground](http://127.0.0.1:4002/docs/getting-started)
 

@@ -31,7 +31,7 @@ const sorted = setCominsSortModel(state, [
 
 Core helpers do not own React state. They return the next state, and the application decides where to store it.
 
-## 0.2.0 migration (unreleased)
+## 0.2.0 migration
 
 See the [complete migration guide](26-migration-0.2.0.md) for entry-point selection, React and neutral examples, installation boundaries, and the consumer verification checklist.
 
