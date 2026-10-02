@@ -1,8 +1,8 @@
-# Migrating to 0.2.0 (unreleased)
+# Migrating to 0.2.0
 
 [English guides](README.md) · [한국어](../ko/26-migration-0.2.0.md) · [Core State](03-core-state.md)
 
-This guide describes the source prepared for 0.2.0. The package version is 0.2.0, but publication is pending separate approval. Do not assume installing the published 0.1.x package provides the neutral Core contract below.
+This guide describes the neutral Core contract in 0.2.0. Do not assume installing the published 0.1.x package provides the neutral Core contract below.
 
 ## Choose the contract owning your state
 
