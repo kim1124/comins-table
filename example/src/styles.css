@@ -2344,6 +2344,39 @@ body {
   resize: vertical;
 }
 
+.clipboard-tsv-source {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.clipboard-tsv-source > span {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.clipboard-tsv-source textarea {
+  background: #ffffff;
+  border: 1px solid rgba(57, 99, 88, 0.18);
+  border-radius: 8px;
+  box-sizing: border-box;
+  font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  min-height: 44px;
+  min-width: 0;
+  padding: 10px;
+  resize: vertical;
+  width: 100%;
+}
+
+.cross-table-conflict-help {
+  color: #334155;
+  flex-shrink: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
 .error-message {
   border: 1px solid rgba(239, 68, 68, 0.35);
   border-radius: 8px;

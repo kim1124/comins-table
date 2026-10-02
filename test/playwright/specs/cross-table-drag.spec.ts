@@ -60,7 +60,7 @@ test("Cross-Table Drag moves flat Rows and overwrites duplicate IDs only when se
     { x: tooltipBox!.x + tooltipBox!.width / 2, y: tooltipBox!.y + tooltipBox!.height / 2 },
   )).toBe("flat-right");
 
-  await page.getByRole("button", { name: "Conflict: reject" }).click();
+  await page.getByRole("button", { name: "Duplicate IDs: Reject" }).click();
   await dragPointer(page, left.getByTestId("row-drag-handle-shared"), right.getByTestId("row-shared"));
   await expect(left.getByTestId("row-shared")).toHaveCount(0);
   await expect(right.getByTestId("row-shared")).toHaveCount(1);

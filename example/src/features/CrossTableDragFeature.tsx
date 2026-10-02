@@ -158,10 +158,20 @@ export function CrossTableDragFeature() {
         title={text(defineLocalizedText("Flat Row Transfer", "Flat Row Transfer"))}
       >
         <FeatureControls actions={(
-          <Button onClick={() => setConflictPolicy((current) => current === "reject" ? "overwrite" : "reject")} variant="outline">
-            {`Conflict: ${conflictPolicy}`}
+          <Button aria-describedby="cross-table-conflict-help" onClick={() => setConflictPolicy((current) => current === "reject" ? "overwrite" : "reject")} variant="outline">
+            {conflictPolicy === "reject"
+              ? text(defineLocalizedText("중복 ID: 이동 거부", "Duplicate IDs: Reject"))
+              : text(defineLocalizedText("중복 ID: 덮어쓰기", "Duplicate IDs: Overwrite"))}
           </Button>
         )} />
+        <p className="cross-table-conflict-help" id="cross-table-conflict-help" aria-live="polite">
+          {conflictPolicy === "reject"
+            ? text(defineLocalizedText("대상에 같은 ID가 있으면 이동을 거부하고 양쪽 데이터를 유지합니다.", "If the target already has the same ID, the move is rejected and both tables keep their data."))
+            : text(defineLocalizedText("대상의 같은 ID 행·그룹을 이동한 데이터로 교체하고 원본에서 제거합니다.", "The moved data replaces the target Row or Group with the same ID and is removed from the source."))}
+        </p>
+        <p className="cross-table-conflict-help">
+          {text(defineLocalizedText("왼쪽 Shared from left 행을 오른쪽 Table로 드래그하여 비교합니다. 이 설정은 아래 두 예제에 적용되며, 버튼 변경만으로 데이터가 바뀌지는 않습니다. 중복 ID가 없는 행은 두 설정 모두 동일하게 이동합니다.", "Drag Shared from left into the right Table to compare. This setting applies to both examples below; changing the button alone does not change data. Rows without duplicate IDs move the same way in either mode."))}
+        </p>
         <div className="cross-table-grid">
           <div>
             <strong>{text(defineLocalizedText("왼쪽 Flat Table", "flat-left"))}</strong>
