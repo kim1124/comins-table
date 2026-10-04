@@ -22,6 +22,8 @@ import {
 
 React users can subscribe to `onChangeSelection` on `CominsTable`.
 
+The callback also reports selection cleared during input synchronization. For flat and Tree tables, changing the row ID sequence (including Tree collapse/expand) clears selection; updating values with the same IDs in the same order preserves it. An already empty selection does not emit another change notification when rows change.
+
 <!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable

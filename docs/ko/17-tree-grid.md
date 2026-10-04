@@ -108,3 +108,31 @@ Tree callback 타입은 `CominsBeforeTreeRowDragPayload`, `CominsTreeRowDragPayl
 `moveCominsTreeNode(nodes, rowId, destination, getRowId, { allowReparent })`는 immutable 이동 연산입니다. `CominsTreeMoveDestination`의 `parentId: null`은 루트, `beforeRowId: null`은 형제 배열 끝입니다. 변화가 없거나 유효하지 않은 이동은 원본 참조를 반환하고 중복 ID는 거부합니다. 위치가 바뀌어도 ID는 유지되어야 합니다.
 
 Playground의 Tree 이동 예제는 부모 변경과 자동 Row 높이를 켠 상태로 시작하여 두 동작을 바로 확인할 수 있습니다. 예제 기본 설정이며 패키지 기본값을 변경하지 않습니다.
+
+## Tree 슬롯 (0.2.1, 미출시)
+
+Tree Grid의 `treeSlots`로 첫 번째 열의 `leading`, `content`, `trailing` 영역을 변경할 수 있습니다. 들여쓰기, 펼침 버튼과 leaf 간격은 테이블이 유지합니다. `leading`은 펼침 버튼 다음에 위치하고, `trailing`은 셀 끝에 정렬됩니다. 다른 열은 기존 렌더러를 유지합니다.
+
+사용 가능한 너비를 넘는 콘텐츠는 잘라서 오른쪽 버튼을 덮지 않도록 합니다. 왼쪽·오른쪽 컨트롤은 간결하게 구성하고 컨트롤이 들어갈 만큼 열 너비를 지정합니다.
+
+`CominsTreeSlots<TData>` 콜백은 `CominsTreeSlotParams<TData>`를 받습니다. `item`, `rowId`, `depth`, `path`, `expanded`, `hasChildren`, `defaultContent`를 제공합니다. 노드 정보는 `CominsVisibleTreeRow`를 따릅니다. `expanded`는 leaf에서도 설정된 펼침 상태를 반영하므로, branch 여부는 `hasChildren`으로 구분합니다. `defaultContent`는 기존 셀 렌더러, 내장 컴포넌트 또는 표시 값입니다. `content`를 생략하면 기본 내용을 유지하며 `null`을 반환하면 의도적으로 숨깁니다. 애플리케이션 소유의 `item`과 `path`는 직접 변경하지 않습니다.
+
+<!-- comins-doc-example: fragment -->
+```tsx
+<CominsTable
+  tree
+  data={nodes}
+  columns={columns}
+  getRowId={(item) => item.id}
+  onChangeData={setNodes}
+  treeSlots={{
+    leading: ({ hasChildren }) => <span aria-hidden="true">{hasChildren ? "▸" : "·"}</span>,
+    content: ({ defaultContent }) => <strong>{defaultContent}</strong>,
+    trailing: ({ item }) => <button type="button" onClick={() => showDetails(item)}>상세</button>,
+  }}
+/>
+```
+
+모든 슬롯에서 이미지나 React 컴포넌트를 반환할 수 있습니다. 기본 버튼·링크·폼 입력과 연결된 라벨·편집 가능한 요소·포커스 가능한 요소와 button/checkbox/switch/menuitem 역할의 컨트롤은 클릭·포인터·문맥 메뉴·키보드·복사·붙여넣기 이벤트가 테이블의 선택·편집과 콜백으로 전달되지 않습니다. 컨트롤 자체의 기본 동작은 취소하지 않습니다. 일반 텍스트 슬롯은 기존처럼 행 선택과 테이블 복사·붙여넣기가 가능합니다. 사용자 컨트롤의 접근성 라벨, 비활성 상태와 동작은 애플리케이션이 관리하며, 동작에 맞는 의미 있는 요소를 사용합니다. 전체를 독립 컨트롤로 사용할 의도가 없다면 일반 행 텍스트를 포커스 가능한 래퍼로 감싸지 않습니다.
+
+이 콜백은 `comins-table`에서 제공하는 React 렌더링 계약이며 `/core`에 React·DOM 타입을 추가하지 않습니다. Playground의 **Tree 노드 슬롯** 예제에서 왼쪽 이미지, 중앙 콘텐츠, 오른쪽 버튼을 사용하고 선택·버튼 실행 횟수를 확인할 수 있습니다.

@@ -3,6 +3,7 @@ import {
   type CominsTableState,
   pasteCominsText, fillCominsCellRange, isCominsCellDisabled,
   type CominsHeaderComponentPayload,
+  importCominsRowsFromCsv, type CominsCsvImportOptions, type CominsCsvImportRow,
 } from "comins-table/core";
 
 type Row = { id: string; score: number };
@@ -24,3 +25,12 @@ const filled: CominsTableState<Row> = fillCominsCellRange(pasted, { source: addr
 const header: CominsHeaderComponentPayload<Row> = { column: { definition: state.columns[0]!, field: "score", id: "score", index: 0, label: "Score" }, layout: { hidden: false }, sort: { count: 0, direction: null, enabled: true, priority: null } };
 const label: string = header.column.label;
 void [filled, label, isCominsCellDisabled(state, rows[0]!, "a", state.columns[0]!)];
+
+const importOptions: CominsCsvImportOptions<Row> = {
+  text: "id,score\na,42",
+  mapRow: (row: CominsCsvImportRow) => ({ id: row.cells[0]!, score: Number(row.cells[1]) }),
+};
+const importedRows: Row[] = importCominsRowsFromCsv(importOptions);
+// @ts-expect-error Generic import results must retain the mapper return type.
+const incorrectRows: { score: string }[] = importCominsRowsFromCsv(importOptions);
+void [importedRows, incorrectRows];

@@ -10,8 +10,14 @@ const boundaryPath = "test/fixtures/core-boundary-map.json";
 const actual = collectDocumentationContractEvidence(root, loadDocumentationManifest(root)).entrypointExports;
 const areaIds = ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9"];
 const baseline = readJson(baselinePath);
-const coreTarget = baseline.entrypoints["comins-table/core"].filter((name: string) => baseline.coreDisposition[name].kind !== "react-only");
-const target = { ...baseline.entrypoints, "comins-table/core": coreTarget };
+const migrationCoreTarget = baseline.entrypoints["comins-table/core"].filter((name: string) => baseline.coreDisposition[name].kind !== "react-only");
+const csvImportExports = ["CominsCsvImportOptions", "CominsCsvImportRow", "importCominsRowsFromCsv"];
+const structuredExportSymbols = ["CominsExportMetadata", "CominsExportTreeOptions", "CominsExportGroupedOptions", "createCominsTreeExportOptions", "createCominsGroupedExportOptions"];
+const coreTarget = [...migrationCoreTarget, ...csvImportExports, ...structuredExportSymbols].sort();
+const target = { ...baseline.entrypoints,
+  "comins-table": [...baseline.entrypoints["comins-table"], "CominsTreeSlotParams", "CominsTreeSlots", ...csvImportExports, ...structuredExportSymbols].sort(),
+  "comins-table/core": coreTarget,
+};
 function compareCore(names: string[]) {
   return { missing: coreTarget.filter((name: string) => !names.includes(name)), extra: names.filter(name => !coreTarget.includes(name)) };
 }
@@ -93,7 +99,7 @@ describe("public Core migration baseline", () => {
       "comins-table", "comins-table/clipboard", "comins-table/core", "comins-table/selection",
     ]);
     expect(baseline.entrypoints["comins-table/core"]).toHaveLength(130);
-    expect(coreTarget).toHaveLength(100);
+    expect(migrationCoreTarget).toHaveLength(100);
     expect(actual).toEqual(target);
     for (const names of Object.values(baseline.entrypoints) as string[][]) {
       expect(names).toEqual([...new Set(names)].sort());

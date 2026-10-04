@@ -1,6 +1,6 @@
 # Comins Table
 
-<img src="https://raw.githubusercontent.com/kim1124/comins-table/main/example/public/comins-symbol.svg" width="64" height="64" alt="Comins" />
+<a href="https://comins-website.vercel.app/ko/"><img src="https://raw.githubusercontent.com/kim1124/comins-table/main/example/public/comins-symbol.svg" width="64" height="64" alt="Comins brand website" /></a>
 
 A React data table backed by a framework-neutral TypeScript core. Build data-heavy screens with application-owned data, virtualized rows, Tree Grid, grouping, and customizable cells.
 
@@ -11,7 +11,7 @@ A React data table backed by a framework-neutral TypeScript core. Build data-hea
 
 [한국어 가이드](https://github.com/kim1124/comins-table/blob/main/docs/ko/README.md)
 · [English Guide](https://github.com/kim1124/comins-table/blob/main/docs/user/README.md)
-· [Website](https://comins-website.vercel.app/ko/)
+· [Comins Brand](https://comins-website.vercel.app/ko/)
 · [Changelog](https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md)
 
 ![Comins Table: clipboard and Fill Handle, Tree drag, automatic row heights, and Viewport loading](https://raw.githubusercontent.com/kim1124/comins-table/main/docs/assets/comins-table-overview.gif)

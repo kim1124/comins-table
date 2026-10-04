@@ -208,7 +208,7 @@ describe("comins-table user documentation contract", () => {
 
     expect(introduction).toContain("[한국어 가이드](https://github.com/kim1124/comins-table/blob/main/docs/ko/README.md)");
     expect(introduction).toContain("[English Guide](https://github.com/kim1124/comins-table/blob/main/docs/user/README.md)");
-    expect(introduction).toContain("[Website](https://comins-website.vercel.app/ko/)");
+    expect(introduction).toContain("[Comins Brand](https://comins-website.vercel.app/ko/)");
     expect(readme).toContain("npm run dev");
     expect(readme).toContain("docs/user/01-quick-start.md");
     expect(readme).toContain("docs/ko/01-quick-start.md");

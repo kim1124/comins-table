@@ -6,6 +6,8 @@ Selection은 Row, 단일/비연속 Cell, 직사각형 Cell range를 지원한다
 
 [0.2.0 개발 브랜치](26-migration-0.2.0.md)에서 루트와 `/selection`은 React state 계약을 사용합니다. 중립 state에는 `/core`의 선택 helper를 사용하며 state 생성과 선택 연산의 계약을 일치시킵니다.
 
+일반·Tree 테이블에서 행 ID 순서가 바뀌면(Tree 접기·펼치기 포함) 선택이 초기화되고 `onChangeSelection`으로 전달된다. 동일한 ID와 순서를 유지하는 값 변경은 선택을 보존한다. 이미 빈 선택은 행이 바뀌어도 중복 변경 알림을 발생시키지 않는다.
+
 <!-- comins-doc-example: fragment -->
 ```tsx
 const tableRef = useRef<CominsTableRef<Row>>(null);

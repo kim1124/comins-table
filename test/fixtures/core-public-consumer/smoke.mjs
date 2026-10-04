@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createCominsTableState, queryCominsRows, setCominsSortModel, pasteCominsText, fillCominsCellRange } from "comins-table/core";
+import { createCominsTableState, queryCominsRows, setCominsSortModel, pasteCominsText, fillCominsCellRange, importCominsRowsFromCsv } from "comins-table/core";
 
 const rows = [{ id: "a", score: 20 }, { id: "b", score: 10 }];
 const original = structuredClone(rows);
@@ -28,3 +28,4 @@ assert.deepEqual(filled.rows.map(row => row.score), [30, 30]);
 assert.throws(() => pasteCominsText(state, address, "50\nbad"), /invalid score/);
 assert.deepEqual(rows, original);
 assert.equal("theme" in state, false);
+assert.deepEqual(importCominsRowsFromCsv({ text: 'id,score\r\n"001",42', mapRow: ({ cells }) => ({ id: cells[0], score: Number(cells[1]) }) }), [{ id: "001", score: 42 }]);

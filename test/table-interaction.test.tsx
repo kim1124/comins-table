@@ -136,7 +136,7 @@ describe("state reconciliation notification contract", () => {
     expect(onChangeData).not.toHaveBeenCalled();
   });
 
-  it("does not notify data, layout or ordinary selection when props remove selected sorted columns", () => {
+  it("notifies cleared selection and sort without echoing data or layout when props replace selected rows", () => {
     const events: string[] = [];
     const ref = createRef<CominsTableRef<PersonRow>>();
     const callbacks = { onChangeData: () => { events.push("data"); }, onChangeSelection: () => { events.push("selection"); }, onChangeColumnLayout: () => { events.push("layout"); }, onChangeSort: () => { events.push("sort"); }, onChangeSortModel: () => { events.push("sortModel"); } };
@@ -147,7 +147,7 @@ describe("state reconciliation notification contract", () => {
     act(() => root?.render(render(columns)));
     expect(events).toEqual([]);
     act(() => root?.render(render([{ field: "name", label: "Name" }], [{ id: "c", name: "C", age: 7 }])));
-    expect(events).toEqual(["sort", "sortModel"]);
+    expect(events).toEqual(["selection", "sort", "sortModel"]);
     expect(ref.current?.getSelection().rowIds).toEqual([]);
   });
 });

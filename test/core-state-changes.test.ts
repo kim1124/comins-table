@@ -42,17 +42,14 @@ describe("React notification routes", () => {
     react().notifyReactStateChanges(next, next, callbacks(events), { columnLayoutChanged: false });
     expect(events).toEqual([]);
   });
-  it("props synchronization notifies only viewport selection and changed sorts", () => {
+  it("props synchronization notifies selection and sorts without echoing data or layout", () => {
     const current = createReactState(input);
     const next = createReactState({ ...input, rows: [...input.rows], sortModel: [{ columnId: "score", direction: "desc" }] });
     const events: string[] = [];
-    react().notifyReactInputChanges(current, next, callbacks(events), true);
+    react().notifyReactInputChanges(current, next, callbacks(events));
     expect(events).toEqual(["selection", "sort", "sortModel"]);
     events.length = 0;
-    react().notifyReactInputChanges(current, next, callbacks(events), false);
-    expect(events).toEqual(["sort", "sortModel"]);
-    events.length = 0;
-    react().notifyReactInputChanges(next, next, callbacks(events), true);
+    react().notifyReactInputChanges(next, next, callbacks(events));
     expect(events).toEqual([]);
   });
 });

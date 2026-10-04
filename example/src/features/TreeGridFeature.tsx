@@ -9,6 +9,7 @@ import {
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { Button } from "../components/ui/button";
 import { TreeDragSample } from "./TreeDragSample";
+import { TreeSlotsSample } from "./TreeSlotsSample";
 import { createBaseColumns } from "../fixtures/columns";
 import type { PersonRow } from "../fixtures/people";
 import { createTenThousandNodeTree, createThirtyNodeTree } from "../fixtures/treeGrid";
@@ -94,6 +95,7 @@ export function TreeGridFeature() {
   return (
     <section className="feature-panel feature-panel--tree-grid">
       <TreeDragSample />
+      <TreeSlotsSample />
       <FeatureSampleSection
         description={text(defineLocalizedText(
           "defaultExpandAll의 기본값 true로 3개 Department, 9개 Team, 18개 Member를 모두 출력합니다.",
