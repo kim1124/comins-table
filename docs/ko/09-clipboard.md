@@ -8,7 +8,7 @@
 
 Core helper와 keyboard handler는 row copy/paste, cell copy/paste, multi-cell clipboard를 제공한다. Column별 `cell.props.copyable`, `cell.props.pasteable`, `cell.props.disabled` guard로 복사/붙여넣기 가능 여부를 제한할 수 있다.
 
-[0.2.0 개발 브랜치](26-migration-0.2.0.md)에서 루트와 `/clipboard`는 `cell.props` guard를 사용하는 React state 계약입니다. `/core`는 `cell.copyable`·`cell.pasteable`·`cell.disabled`를 직접 사용하는 중립 state 계약이며 두 계약을 혼용하지 않습니다.
+0.2.x에서 루트와 `/clipboard`는 `cell.props` guard를 사용하는 React state 계약입니다. `/core`는 `cell.copyable`·`cell.pasteable`·`cell.disabled`를 직접 사용하는 중립 state 계약입니다. [0.2.0 마이그레이션](26-migration-0.2.0.md)을 참고하고 두 계약을 혼용하지 않습니다.
 `fillCominsCellRange`는 단일 값 또는 사각형 패턴을 반복하는 Core helper이며, 0.1.11부터 Visual Fill Handle UI도 옵션으로 제공합니다.
 
 <!-- comins-doc-example: fragment -->

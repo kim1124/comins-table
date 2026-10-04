@@ -91,7 +91,7 @@ Open [the Playground](http://127.0.0.1:4002/docs/getting-started). The [Playgrou
 
 ## Version and support
 
-**0.2.0** introduces the framework-neutral `comins-table/core` contract. React helpers and rendering types remain at `comins-table`; `/clipboard` and `/selection` retain their React-state contracts. See the migration guides above and the [changelog](https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md) for version history.
+**0.2.1** adds framework-neutral CSV import, Tree/Group export metadata, and React Tree node slots. The framework-neutral `comins-table/core` contract introduced in 0.2.0 remains compatible; React helpers and rendering types stay at `comins-table`, while `/clipboard` and `/selection` retain their React-state contracts. See the migration guides above and the [changelog](https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md) for version history.
 
 The Table UI is client-only React; SSR and a Vue adapter are not currently supported. Chrome and Edge are the supported browser targets, with automated browser checks using Playwright Chromium. Firefox and Safari are outside the current support contract. Feature combinations and limits are documented in the corresponding guides.
 

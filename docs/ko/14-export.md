@@ -4,7 +4,7 @@
 
 `exportCominsRowsToCsv`와 `exportCominsRowsToJson`은 table UI와 분리된 dependency-free helper다. 현재 `rows`와 export column 정의를 입력받아 CSV 또는 JSON 문자열을 반환한다.
 
-Playground의 **CSV 파일 가져오기·내보내기** 예제(0.2.1 미출시)는 Core 헬퍼를 브라우저의 로컬 파일과 연결합니다. 예제 CSV를 다운로드하거나 `id,name,score` 헤더를 가진 최대 1 MB UTF-8 파일을 선택합니다. ID는 비어 있지 않고 고유해야 하며, 이름과 유한한 숫자 점수가 필요합니다. 모든 행의 검증이 성공해야 테이블 데이터를 교체하고, 빈 파일은 예제에서 거부합니다. 초기화하면 예제 행을 복원합니다. 서버로 파일을 전송하지 않습니다.
+Playground의 **CSV 파일 가져오기·내보내기** 예제(0.2.1)는 Core 헬퍼를 브라우저의 로컬 파일과 연결합니다. 예제 CSV를 다운로드하거나 `id,name,score` 헤더를 가진 최대 1 MB UTF-8 파일을 선택합니다. ID는 비어 있지 않고 고유해야 하며, 이름과 유한한 숫자 점수가 필요합니다. 모든 행의 검증이 성공해야 테이블 데이터를 교체하고, 빈 파일은 예제에서 거부합니다. 초기화하면 예제 행을 복원합니다. 서버로 파일을 전송하지 않습니다.
 
 예제는 다운로드할 ID·이름이 공백 뒤 수식 접두사로 시작하거나 첫 문자가 탭·줄바꿈이면 작은따옴표를 앞에 추가합니다. 다시 가져오면 이 문자도 보존됩니다. 이는 예제의 애플리케이션 정책이며 Core Export는 수식을 자동으로 escape하지 않습니다. CSV 해석은 스프레드시트 애플리케이션에 따라 다를 수 있습니다.
 
@@ -41,7 +41,7 @@ CSV export는 comma, quote, newline을 RFC4180 방식으로 escape한다. `null`
 
 Export helper는 현재 화면의 sort, filter, selection 상태를 자동으로 읽지 않는다. 필요한 row 집합은 호출자가 명시적으로 `rows`에 전달한다. 이 방식은 UI state와 export 책임을 분리해 대용량 데이터 처리와 서버 export 전략을 별도로 선택할 수 있게 한다.
 
-## CSV Import (0.2.1, 미출시)
+## CSV Import (0.2.1)
 
 `importCominsRowsFromCsv<TData>`는 `comins-table/core`와 `comins-table`에서 제공합니다. CSV 문자열을 일반 업무 행 배열로 반환하며 Table 갱신, ID 생성, Tree·Group 구조 복원과 파일 읽기는 수행하지 않습니다. 파일은 애플리케이션에서 읽고 디코딩한 문자열을 Core로 전달합니다.
 
@@ -70,7 +70,7 @@ const rows = importCominsRowsFromCsv<Row>({
 
 `maxCharacters` 기본값은 초기 BOM을 포함한 UTF-16 코드 단위 `1_000_000`, `maxCells` 기본값은 헤더 셀을 포함한 `100_000`입니다. 양의 안전한 정수만 허용하며 잘못된 제한값이나 한도 초과는 `RangeError`를 발생시킵니다. 신뢰할 수 있는 처리량에 맞춰 명시적으로 늘릴 수 있습니다. 동기 메모리 처리 방식이며 스트리밍이 아닙니다. 수식을 실행하거나 이후 스프레드시트 Export·HTML 렌더링용으로 값을 정제하지 않습니다. 기존 CSV·JSON Export 동작은 유지합니다.
 
-## Tree·Group 메타데이터 (0.2.1 미출시)
+## Tree·Group 메타데이터 (0.2.1)
 
 Playground의 **Tree·Group 내보내기** 카드에서 원본 구조와 CSV/JSON 미리보기를 전환합니다. 원본 테이블을 접어도 전체 입력 행이 Export에 포함되는지 확인할 수 있습니다. 다운로드는 JSON 미리보기 중에도 선택한 구조의 CSV를 생성합니다. Group 예제에는 빈 그룹이 있으며 Export에 가상 데이터 행을 추가하지 않습니다.
 

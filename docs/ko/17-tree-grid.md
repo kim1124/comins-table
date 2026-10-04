@@ -109,7 +109,7 @@ Tree callback 타입은 `CominsBeforeTreeRowDragPayload`, `CominsTreeRowDragPayl
 
 Playground의 Tree 이동 예제는 부모 변경과 자동 Row 높이를 켠 상태로 시작하여 두 동작을 바로 확인할 수 있습니다. 예제 기본 설정이며 패키지 기본값을 변경하지 않습니다.
 
-## Tree 슬롯 (0.2.1, 미출시)
+## Tree 슬롯 (0.2.1)
 
 Tree Grid의 `treeSlots`로 첫 번째 열의 `leading`, `content`, `trailing` 영역을 변경할 수 있습니다. 들여쓰기, 펼침 버튼과 leaf 간격은 테이블이 유지합니다. `leading`은 펼침 버튼 다음에 위치하고, `trailing`은 셀 끝에 정렬됩니다. 다른 열은 기존 렌더러를 유지합니다.
 

@@ -124,7 +124,7 @@ Tree callbacks use `CominsBeforeTreeRowDragPayload`, `CominsTreeRowDragPayload` 
 
 The Playground Tree drag sample starts with `allowReparent` and automatic Row heights enabled so both behaviors can be exercised immediately. These example defaults do not change the package defaults.
 
-## Tree slots (0.2.1, unreleased)
+## Tree slots (0.2.1)
 
 Use `treeSlots` on a Tree Grid to customize the first column with `leading`, `content`, and `trailing` callbacks. The Table keeps indentation, the expander, and the leaf spacer. Leading content follows the expander; trailing content aligns with the end of the cell. Other columns keep their existing renderers.
 

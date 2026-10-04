@@ -4,7 +4,7 @@
 
 Selection supports Row selection, single and discontiguous Cell selection, and rectangular range selection.
 
-On the [0.2.0 development branch](26-migration-0.2.0.md), the root and `/selection` use React state. For neutral state, import selection helpers from `/core` instead. State creation and selection operations must use the same contract.
+In 0.2.x, the root and `/selection` use React state. For neutral state, import selection helpers from `/core` instead. See the [0.2.0 migration](26-migration-0.2.0.md); state creation and selection operations must use the same contract.
 
 <!-- comins-doc-example: fragment -->
 ```ts

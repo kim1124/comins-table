@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.1 - 2026-10-04
+
 ### Fixed
 
 - Tree slot controls now isolate copy and paste events, preserving control clipboard content and preventing unintended edits to table cells.

@@ -4,7 +4,7 @@
 
 Export helpers are pure functions. They do not read table UI state automatically.
 
-The Playground's **CSV file import and export** sample (0.2.1, unreleased) connects Core helpers to local browser files. Download the sample CSV or select a UTF-8 file up to 1 MB with `id,name,score` headers, unique nonblank IDs, nonblank names and finite numeric scores. All rows must pass validation before replacing the table data; empty files are rejected by this sample. Reset restores the sample rows. No upload to a server occurs.
+The Playground's **CSV file import and export** sample (0.2.1) connects Core helpers to local browser files. Download the sample CSV or select a UTF-8 file up to 1 MB with `id,name,score` headers, unique nonblank IDs, nonblank names and finite numeric scores. All rows must pass validation before replacing the table data; empty files are rejected by this sample. Reset restores the sample rows. No upload to a server occurs.
 
 The sample prefixes spreadsheet-like ID/name values with an apostrophe when downloading (formula prefixes after optional whitespace, or an initial tab/newline). Reimporting preserves this extra character. This is an application policy for the sample; Core Export does not escape formulas automatically and spreadsheet applications may interpret CSV differently.
 
@@ -21,7 +21,7 @@ const json = exportCominsRowsToJson({ columns: exportColumns, rows });
 
 Pass the exact rows and export columns you want to export. This keeps CSV and JSON output independent from pagination, filtering, or selection UI unless your application chooses to pass those rows.
 
-## CSV Import (0.2.1, unreleased)
+## CSV Import (0.2.1)
 
 `importCominsRowsFromCsv<TData>` is available from `comins-table/core` and `comins-table`. It accepts CSV text and returns ordinary application rows. It does not update a Table, create IDs, rebuild Tree/Group structures, or read files. Read a file in the application and pass its decoded text to Core.
 
@@ -50,7 +50,7 @@ Unclosed quotes, quotes inside unquoted fields, text after closing quotes, and i
 
 `maxCharacters` defaults to `1_000_000` UTF-16 code units, including an initial BOM. `maxCells` defaults to `100_000`, including header cells. Both accept only positive safe integers and throw `RangeError` when invalid or exceeded. Increase them explicitly for trusted workloads; this is a synchronous, in-memory importer, not streaming. The importer does not evaluate formulas or sanitize text for a later spreadsheet export or HTML renderer. Existing CSV/JSON Export behavior is unchanged.
 
-## Tree and Group metadata (0.2.1, unreleased)
+## Tree and Group metadata (0.2.1)
 
 The Playground's **Tree and Group export** card switches between the two source structures and CSV/JSON previews. Collapse the source table to verify that export still includes all supplied rows. Its CSV download always uses the selected structure, even while previewing JSON. The Group example includes an empty group to show that it contributes no synthetic data row.
 
