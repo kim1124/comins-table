@@ -111,6 +111,20 @@ export type CominsCopiedCellRange = {
 
 export type CominsExportFormat = "csv" | "json";
 
+export type CominsCsvImportRow = {
+  cells: readonly string[];
+  headers: readonly string[] | null;
+  rowIndex: number;
+};
+
+export type CominsCsvImportOptions<TData> = {
+  text: string;
+  mapRow: (row: CominsCsvImportRow) => TData;
+  hasHeader?: boolean;
+  maxCharacters?: number;
+  maxCells?: number;
+};
+
 export type CominsExportValueSource = "formatted" | "raw";
 
 export type CominsExportColumn<TData> = {
@@ -125,7 +139,28 @@ export type CominsExportRowsOptions<TData> = {
   columns: Array<CominsExportColumn<TData>>;
   headerOverrides?: Record<string, string>;
   rows: readonly TData[];
+  metadata?: CominsExportMetadata<TData>;
   valueSource?: CominsExportValueSource;
+};
+
+/** Export-only management columns. These values are never assigned to application rows. */
+export type CominsExportMetadata<TData> = {
+  __rowId?: (row: TData, rowIndex: number) => CominsRowId;
+  __parentId?: (row: TData, rowIndex: number) => CominsRowId | null;
+  __depth?: (row: TData, rowIndex: number) => number;
+  __groupId?: (row: TData, rowIndex: number) => CominsRowId | null;
+};
+
+export type CominsExportTreeOptions<TData> = Omit<CominsExportRowsOptions<TData>, "rows" | "metadata"> & {
+  nodes: readonly import("./tree").CominsTreeNode<TData>[];
+  getRowId: (row: TData, sourceIndex: number) => CominsRowId;
+};
+
+export type CominsExportGroupedOptions<TData, TGroup> = Omit<CominsExportRowsOptions<TData>, "metadata"> & {
+  groups: readonly TGroup[];
+  getGroupId: (group: TGroup) => CominsRowId;
+  getRowGroupId: (row: TData, sourceIndex: number) => CominsRowId;
+  getRowId: (row: TData, sourceIndex: number) => CominsRowId;
 };
 
 export type CominsCellAddress = {

@@ -3,14 +3,24 @@ import { createRoot } from "react-dom/client";
 import {
   CominsTable, createCominsTableState, type CominsTableColumn,
   type CominsTableState,
+  createCominsTreeExportOptions, type CominsExportMetadata,
 } from "comins-table";
 import { pasteCominsText } from "comins-table/clipboard";
 import { selectCell } from "comins-table/selection";
-import { createCominsTableState as createCoreState } from "comins-table/core";
+import { createCominsTableState as createCoreState, createCominsGroupedExportOptions } from "comins-table/core";
 import "comins-table/styles.css";
 
 type Row = { id: string; score: number };
 const rows: Row[] = [{ id: "a", score: 10 }];
+const exportMetadata: CominsExportMetadata<Row> = { __rowId: row => row.id };
+const treeExport = createCominsTreeExportOptions({ nodes: [{ item: rows[0]! }], getRowId: row => row.id,
+  columns: [{ id: "score", value: row => row.score }] });
+const groupExport = createCominsGroupedExportOptions({ rows, groups: [{ id: "all" }], getGroupId: group => group.id,
+  getRowGroupId: () => "all", getRowId: row => row.id, columns: [{ id: "score", value: row => row.score }] });
+const exportScore: number = treeExport.rows[0]!.score;
+// @ts-expect-error Structured export must retain the application row type.
+const invalidExportScore: string = groupExport.rows[0]!.score;
+void [exportMetadata, exportScore, invalidExportScore];
 const columns: CominsTableColumn<Row>[] = [{
   field: "score", label: <strong>Score</strong>,
   cell: {
@@ -57,3 +67,19 @@ export function Example() {
 const container = document.getElementById("app");
 if (container) createRoot(container).render(<Example />);
 void [label, color, coreLabel, numeric, rejectReactLabelsInCore];
+
+// Tree rendering extensions retain generic item types in the packed package.
+import type { CominsTreeSlotParams, CominsTreeSlots } from "comins-table";
+const treeSlots: CominsTreeSlots<Row> = {
+  content: (params: CominsTreeSlotParams<Row>) => <strong>{params.defaultContent}</strong>,
+};
+const treeExample = <CominsTable tree columns={columns} data={[{ item: rows[0]! }]} getRowId={row => row.id}
+  treeSlots={{ ...treeSlots, trailing: ({ item, depth }) => {
+    const score: number = item.score;
+    // @ts-expect-error Tree items must retain TData, not become any.
+    item.missing;
+    return <button type="button">{score}:{depth}</button>;
+  } }} />;
+// @ts-expect-error Tree slots are not a flat-table prop.
+const invalidFlatSlots = <CominsTable columns={columns} data={rows} treeSlots={treeSlots} />;
+void [treeExample, invalidFlatSlots];

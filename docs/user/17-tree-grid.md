@@ -123,3 +123,31 @@ Tree callbacks use `CominsBeforeTreeRowDragPayload`, `CominsTreeRowDragPayload` 
 `moveCominsTreeNode(nodes, rowId, destination, getRowId, { allowReparent })` exposes the immutable operation. `CominsTreeMoveDestination` uses `parentId: null` for the root and `beforeRowId: null` for the sibling-list end. It returns the original reference for unchanged or invalid moves and rejects duplicate IDs. IDs must remain stable when positions change.
 
 The Playground Tree drag sample starts with `allowReparent` and automatic Row heights enabled so both behaviors can be exercised immediately. These example defaults do not change the package defaults.
+
+## Tree slots (0.2.1)
+
+Use `treeSlots` on a Tree Grid to customize the first column with `leading`, `content`, and `trailing` callbacks. The Table keeps indentation, the expander, and the leaf spacer. Leading content follows the expander; trailing content aligns with the end of the cell. Other columns keep their existing renderers.
+
+Content that exceeds the available width is clipped so it cannot overlap the trailing action. Keep leading and trailing controls compact and size their column to fit them.
+
+`CominsTreeSlots<TData>` callbacks receive `CominsTreeSlotParams<TData>`: `item`, `rowId`, `depth`, `path`, `expanded`, `hasChildren`, and `defaultContent`. Node fields follow `CominsVisibleTreeRow`; `expanded` reflects the configured expansion state, including on leaves, so use `hasChildren` to distinguish branches. `defaultContent` is the existing cell renderer, built-in component, or formatted value. Omitting `content` preserves it; returning `null` intentionally hides it. Read the payload without mutating the application-owned item or path.
+
+<!-- comins-doc-example: fragment -->
+```tsx
+<CominsTable
+  tree
+  data={nodes}
+  columns={columns}
+  getRowId={(item) => item.id}
+  onChangeData={setNodes}
+  treeSlots={{
+    leading: ({ hasChildren }) => <span aria-hidden="true">{hasChildren ? "▸" : "·"}</span>,
+    content: ({ defaultContent }) => <strong>{defaultContent}</strong>,
+    trailing: ({ item }) => <button type="button" onClick={() => showDetails(item)}>Details</button>,
+  }}
+/>
+```
+
+Images and React components can be returned from any slot. Native buttons, links, form inputs and their associated labels, editable elements, focusable elements, and common button/checkbox/switch/menuitem roles keep their click, pointer, context-menu, keyboard, copy, and paste events separate from Table selection, editing, and callbacks without cancelling native defaults. Plain slot labels remain selectable as part of the row and retain Table copy/paste behavior. Applications own the accessibility labels, disabled state, and behavior of custom controls; use semantic controls for actions. Do not put a focusable wrapper around unrelated row text unless the entire wrapper is intended to be an independent control.
+
+The callbacks are React rendering contracts exported from `comins-table`; they do not add React or DOM types to `/core`. The Playground's **Tree node slots** example combines a leading image, custom content, and a trailing action while showing selection and action counts.

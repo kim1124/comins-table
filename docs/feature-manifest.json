@@ -430,7 +430,9 @@
         "CominsTreeNode",
         "CominsTreeTableProps",
         "moveCominsTreeNode",
-        "CominsTreeRowDragConfig"
+        "CominsTreeRowDragConfig",
+        "CominsTreeSlotParams",
+        "CominsTreeSlots"
       ],
       "guides": {
         "en": [
@@ -447,7 +449,8 @@
         "test/tree-core.test.ts",
         "test/playwright/specs/tree-grid.spec.ts",
         "test/tree-row-drag-core.test.ts",
-        "test/playwright/specs/tree-row-drag.spec.ts"
+        "test/playwright/specs/tree-row-drag.spec.ts",
+        "test/tree-slots.test.tsx"
       ]
     },
     {
@@ -480,7 +483,15 @@
       "category": "api-utilities",
       "apiSymbols": [
         "exportCominsRowsToCsv",
-        "exportCominsRowsToJson"
+        "exportCominsRowsToJson",
+        "CominsCsvImportOptions",
+        "CominsCsvImportRow",
+        "importCominsRowsFromCsv",
+        "CominsExportMetadata",
+        "CominsExportTreeOptions",
+        "CominsExportGroupedOptions",
+        "createCominsTreeExportOptions",
+        "createCominsGroupedExportOptions"
       ],
       "guides": {
         "en": [
@@ -495,7 +506,9 @@
       ],
       "tests": [
         "test/export-core.test.ts",
-        "test/playwright/specs/export-helper.spec.ts"
+        "test/playwright/specs/export-helper.spec.ts",
+        "test/csv-import-core.test.ts",
+        "test/structured-export-core.test.ts"
       ]
     },
     {
@@ -908,6 +921,14 @@
     "cross-table-drag": {
       "guide": "docs/user/23-cross-table-drag.md",
       "fixture": "test/typecheck/docs/cross-table-drag.tsx"
+    },
+    "csv-import": {
+      "guide": "docs/user/14-export.md",
+      "fixture": "test/typecheck/docs/csv-import.ts"
+    },
+    "structured-export": {
+      "guide": "docs/user/14-export.md",
+      "fixture": "test/typecheck/docs/structured-export.ts"
     }
   },
   "publicApi": {
@@ -926,7 +947,12 @@
         "CominsColumnFilteringConfig",
         "CominsColumnPinned",
         "CominsCopyTarget",
+        "CominsCsvImportOptions",
+        "CominsCsvImportRow",
         "CominsEventRow",
+        "CominsExportGroupedOptions",
+        "CominsExportMetadata",
+        "CominsExportTreeOptions",
         "CominsRowDetailHeight",
         "CominsRowDetailParams",
         "CominsRowDetailProps",
@@ -951,6 +977,8 @@
         "CominsTreeNode",
         "CominsTreeRowDragConfig",
         "CominsTreeRowDragPayload",
+        "CominsTreeSlotParams",
+        "CominsTreeSlots",
         "CominsViewportData",
         "CominsViewportDatasource",
         "CominsViewportOptions",
@@ -963,22 +991,27 @@
         "copyCominsCell",
         "copyCominsCellRange",
         "copyCominsRow",
+        "createCominsGroupedExportOptions",
         "createCominsTableState",
         "createCominsTableTransferCoordinator",
+        "createCominsTreeExportOptions",
         "createCominsViewportData",
         "deleteCominsRows",
         "exportCominsRowsToCsv",
         "exportCominsRowsToJson",
         "fillCominsCellRange",
         "getCominsSelectedCellRange",
+        "importCominsRowsFromCsv",
         "isCominsCellSelected",
         "isCominsRowSelected",
         "moveCominsRowGroup",
         "moveCominsRowToGroup",
         "moveCominsTreeNode",
+        "parseCominsClipboardText",
         "pasteCominsCell",
         "pasteCominsCellRange",
         "pasteCominsRow",
+        "pasteCominsText",
         "queryCominsRows",
         "reduceCominsViewportData",
         "selectCell",
@@ -992,9 +1025,7 @@
         "transferCominsGroupBetweenTables",
         "transferCominsRowBetweenTables",
         "updateCominsRows",
-        "useCominsViewport",
-        "parseCominsClipboardText",
-        "pasteCominsText"
+        "useCominsViewport"
       ],
       "reference": [
         "CominsButtonComponentConfig",
@@ -1194,11 +1225,16 @@
           "CominsCopiedCellRangeCell",
           "CominsCopiedRow",
           "CominsCopyTarget",
+          "CominsCsvImportOptions",
+          "CominsCsvImportRow",
           "CominsEventColumn",
           "CominsEventRow",
           "CominsExportColumn",
           "CominsExportFormat",
+          "CominsExportGroupedOptions",
+          "CominsExportMetadata",
           "CominsExportRowsOptions",
+          "CominsExportTreeOptions",
           "CominsExportValueSource",
           "CominsFillCellRangeOptions",
           "CominsGroupBetweenTablesInput",
@@ -1299,6 +1335,8 @@
           "CominsTreeNode",
           "CominsTreeRowDragConfig",
           "CominsTreeRowDragPayload",
+          "CominsTreeSlotParams",
+          "CominsTreeSlots",
           "CominsTreeTableProps",
           "CominsViewportBlock",
           "CominsViewportData",
@@ -1328,8 +1366,10 @@
           "copyCominsCell",
           "copyCominsCellRange",
           "copyCominsRow",
+          "createCominsGroupedExportOptions",
           "createCominsTableState",
           "createCominsTableTransferCoordinator",
+          "createCominsTreeExportOptions",
           "createCominsViewportData",
           "deleteCominsRows",
           "exportCominsRowsToCsv",
@@ -1348,6 +1388,7 @@
           "getCominsTreeLeafItems",
           "getCominsVirtualRows",
           "getCominsVisibleColumns",
+          "importCominsRowsFromCsv",
           "isCominsCellDisabled",
           "isCominsCellInSelectedRange",
           "isCominsCellSelected",
@@ -1358,9 +1399,11 @@
           "moveCominsRowGroup",
           "moveCominsRowToGroup",
           "moveCominsTreeNode",
+          "parseCominsClipboardText",
           "pasteCominsCell",
           "pasteCominsCellRange",
           "pasteCominsRow",
+          "pasteCominsText",
           "queryCominsRows",
           "reduceCominsViewportData",
           "replaceCominsRows",
@@ -1385,9 +1428,7 @@
           "transferCominsRowBetweenTables",
           "updateCominsRows",
           "updateCominsTreeItem",
-          "useCominsViewport",
-          "parseCominsClipboardText",
-          "pasteCominsText"
+          "useCominsViewport"
         ]
       },
       "comins-table/core": {
@@ -1414,10 +1455,15 @@
           "CominsCopiedCellRange",
           "CominsCopiedCellRangeCell",
           "CominsCopiedRow",
+          "CominsCsvImportOptions",
+          "CominsCsvImportRow",
           "CominsEventColumn",
           "CominsExportColumn",
           "CominsExportFormat",
+          "CominsExportGroupedOptions",
+          "CominsExportMetadata",
           "CominsExportRowsOptions",
+          "CominsExportTreeOptions",
           "CominsExportValueSource",
           "CominsFillCellRangeOptions",
           "CominsHeaderCell",
@@ -1451,7 +1497,9 @@
           "copyCominsCell",
           "copyCominsCellRange",
           "copyCominsRow",
+          "createCominsGroupedExportOptions",
           "createCominsTableState",
+          "createCominsTreeExportOptions",
           "deleteCominsRows",
           "exportCominsRowsToCsv",
           "exportCominsRowsToJson",
@@ -1463,6 +1511,7 @@
           "getCominsSortedRowIndexes",
           "getCominsVirtualRows",
           "getCominsVisibleColumns",
+          "importCominsRowsFromCsv",
           "isCominsCellDisabled",
           "isCominsCellInSelectedRange",
           "isCominsCellSelected",
@@ -1471,9 +1520,11 @@
           "moveCominsColumnGroup",
           "moveCominsRow",
           "moveCominsRowToGroup",
+          "parseCominsClipboardText",
           "pasteCominsCell",
           "pasteCominsCellRange",
           "pasteCominsRow",
+          "pasteCominsText",
           "queryCominsRows",
           "replaceCominsRows",
           "selectCell",
@@ -1490,9 +1541,7 @@
           "setCominsSortModel",
           "setCominsSortState",
           "sortCominsRows",
-          "updateCominsRows",
-          "parseCominsClipboardText",
-          "pasteCominsText"
+          "updateCominsRows"
         ]
       },
       "comins-table/clipboard": {

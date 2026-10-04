@@ -1,5 +1,25 @@
 # Comins Table
 
+## Unreleased
+
+## 0.2.1 - 2026-10-04
+
+### Fixed
+
+- Tree slot controls now isolate copy and paste events, preserving control clipboard content and preventing unintended edits to table cells.
+- React selection callbacks now report selection cleared by input changes, including Tree collapse and external row replacement. Already empty selections retain their identity to avoid duplicate notifications.
+
+### Added
+
+- Tree/Group Export preparation helpers and opt-in `__rowId`, `__parentId`, `__depth`, `__groupId` management columns for CSV/JSON. Original rows remain unchanged; colliding export headers are rejected. Tree exports include collapsed descendants, and grouped exports follow explicit group order.
+- A Tree/Group Export Playground sample with source tables, CSV/JSON previews, and CSV downloads containing the management columns.
+- Framework-neutral `importCominsRowsFromCsv` with application-owned row mapping, quoted fields, optional headers, BOM handling, and configurable input limits. Malformed CSV is rejected before row mapping; values remain strings until the application converts them.
+- React Tree Grid `treeSlots.leading`, `content`, and `trailing` callbacks with typed node context and `defaultContent`. Slots preserve disclosure and indentation; interactive controls keep their events separate from Table selection and callbacks.
+
+### Changed
+
+- A concise README with explicit Korean and English guides, the public website, and the representative GIF. Detailed state and Ref API contracts live in the language guides.
+
 ## 0.2.0 - 2026-10-02
 
 ### Changed

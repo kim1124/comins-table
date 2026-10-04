@@ -41,9 +41,9 @@ export function notifyReactStateChanges<TData>(current: CominsTableState<TData>,
 }
 
 /** Prop synchronization deliberately does not notify data or column layout. */
-export function notifyReactInputChanges<TData>(current: CominsTableState<TData>, next: CominsTableState<TData>, callbacks: ChangeCallbacks<TData>, isViewport: boolean) {
+export function notifyReactInputChanges<TData>(current: CominsTableState<TData>, next: CominsTableState<TData>, callbacks: ChangeCallbacks<TData>) {
   const changes = getCoreStateChanges(current, next);
-  if (isViewport && changes.selection) callbacks.onChangeSelection?.(next.selection);
+  if (changes.selection) callbacks.onChangeSelection?.(next.selection);
   if (changes.sort) callbacks.onChangeSort?.(next.sort);
   if (changes.sortModel) callbacks.onChangeSortModel?.(next.sortModel);
 }

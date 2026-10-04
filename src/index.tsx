@@ -214,6 +214,9 @@ export type {
   CominsExportValueSource,
   CominsExportColumn,
   CominsExportRowsOptions,
+  CominsExportMetadata,
+  CominsExportTreeOptions,
+  CominsExportGroupedOptions,
   CominsCellAddress,
   CominsCellRange,
   CominsPasteRowOptions,
@@ -285,6 +288,9 @@ export {
   fillCominsCellRange,
 } from "./react/core-compat";
 export { exportCominsRowsToCsv, exportCominsRowsToJson } from "./core/editing/export";
+export { createCominsTreeExportOptions, createCominsGroupedExportOptions } from "./core/editing/export-structure";
+export { importCominsRowsFromCsv } from "./core/editing/import";
+export type { CominsCsvImportOptions, CominsCsvImportRow } from "./model";
 export * from "./summary";
 export * from "./tree";
 export { createCominsViewportData, reduceCominsViewportData } from "./viewport-data";
@@ -691,6 +697,7 @@ type CominsFlatTableBaseProps<TData> = {
   summary?: CominsTableSummaryConfig<TData>;
   theme?: CominsTableTheme;
   tree?: false;
+  treeSlots?: never;
   virtualized?: boolean;
 };
 
@@ -815,6 +822,16 @@ export type CominsTableProps<TData, TGroup = unknown> = (
   | CominsUngroupedTableProps<TData>
 ) & CominsRowDetailProps<TData>;
 
+export type CominsTreeSlotParams<TData> = CominsVisibleTreeRow<TData> & {
+  defaultContent: React.ReactNode;
+};
+
+export type CominsTreeSlots<TData> = {
+  leading?: (params: CominsTreeSlotParams<TData>) => React.ReactNode;
+  content?: (params: CominsTreeSlotParams<TData>) => React.ReactNode;
+  trailing?: (params: CominsTreeSlotParams<TData>) => React.ReactNode;
+};
+
 export type CominsTreeTableProps<TData> = Omit<
   CominsFlatTableBaseProps<TData>,
   | "data"
@@ -845,6 +862,7 @@ export type CominsTreeTableProps<TData> = Omit<
   | "onChangeExpandedRowIds"
   | "renderRowDetail"
   | "tree"
+  | "treeSlots"
 > & {
   data: readonly CominsTreeNode<TData>[];
   columnFiltering?: never;
@@ -867,6 +885,7 @@ export type CominsTreeTableProps<TData> = Omit<
   pagination?: never;
   rowProps?: CominsTableRowProps<TData>;
   treeRowDrag?: CominsTreeRowDragConfig<TData>;
+  treeSlots?: CominsTreeSlots<TData>;
   estimatedRowDetailHeight?: never;
   expandedRowIds?: never;
   getRowDetailHeight?: never;
@@ -954,6 +973,7 @@ type CominsTreeRenderContext<TData> = {
   onToggle: (rowId: CominsRowId) => void;
   summaryRows: readonly TData[];
   treeColumnId: string | null;
+  slots?: CominsTreeSlots<TData>;
 };
 
 type CominsTableInnerProps<TData, TGroup = unknown> = CominsFlatTableBaseProps<TData> & CominsRowDetailProps<TData> & {
@@ -1197,6 +1217,30 @@ function resolveRenderableCellProps<TData>(
   const props = column.cell?.props;
 
   return typeof props === "function" ? props(payload) : props;
+}
+
+function stopTreeSlotControlEvent(event: React.SyntheticEvent<HTMLElement>) {
+  const target = event.target instanceof Element ? event.target : null;
+  const label = target?.closest("label");
+  const control = (label?.control ? label : null)
+    ?? target?.closest('input, textarea, select, button, a[href], [contenteditable]:not([contenteditable="false"]), [tabindex], [role="button"], [role="checkbox"], [role="switch"], [role="menuitem"]');
+  if (target && control && (event.currentTarget.contains(control) || !event.currentTarget.contains(target))) {
+    event.stopPropagation();
+  }
+}
+
+function renderTreeSlot(name: "leading" | "content" | "trailing", content: React.ReactNode) {
+  if (content == null || typeof content === "boolean") return null;
+  return (
+    <span className={`comins-tree-slot comins-tree-slot--${name}`} data-comins-tree-slot={name}
+      onClick={stopTreeSlotControlEvent} onDoubleClick={stopTreeSlotControlEvent}
+      onContextMenu={stopTreeSlotControlEvent} onMouseDown={stopTreeSlotControlEvent}
+      onPointerDown={stopTreeSlotControlEvent} onKeyDown={stopTreeSlotControlEvent}
+      onKeyUp={stopTreeSlotControlEvent} onCopy={stopTreeSlotControlEvent}
+      onPaste={stopTreeSlotControlEvent}>
+      {content}
+    </span>
+  );
 }
 
 function resolveRenderableCellGuard<TData>(
@@ -2038,7 +2082,7 @@ function CominsTableInner<TData, TGroup>(
     result.invalidatedDetailRowIds.forEach(rowId => detailMeasurementsRef.current.delete(rowId));
     stateRef.current = next;
     setState(next);
-    notifyReactInputChanges(current, next, { onChangeSelection, onChangeSort, onChangeSortModel }, Boolean(viewportContext));
+    notifyReactInputChanges(current, next, { onChangeSelection, onChangeSort, onChangeSortModel });
   }, [columnGroups, columns, effectiveData, effectivePagination, getRowId, showHeader]);
 
   useEffect(() => {
@@ -6447,9 +6491,12 @@ function CominsTableInner<TData, TGroup>(
                     column.id === treeContext?.treeColumnId
                       ? treeContext.entriesByRowId.get(entry.rowId)
                       : undefined;
+                  const treeSlots = treeContext?.slots;
+                  const treeSlotParams = treeEntry ? { ...treeEntry, defaultContent: cellContent } : null;
+                  const hasTreeSlots = Boolean(treeSlots?.leading || treeSlots?.content || treeSlots?.trailing);
                   const renderedCellContent = treeEntry ? (
                     <span
-                      className="comins-tree-cell-content"
+                      className={`comins-tree-cell-content${hasTreeSlots ? " comins-tree-cell-content--slots" : ""}`}
                       style={{ "--comins-tree-depth": treeEntry.depth } as React.CSSProperties}
                     >
                       {treeEntry.hasChildren ? (
@@ -6470,7 +6517,11 @@ function CominsTableInner<TData, TGroup>(
                       ) : (
                         <span aria-hidden="true" className="comins-tree-expander-spacer" />
                       )}
-                      <span className="comins-tree-cell-value">{cellContent}</span>
+                      {treeSlotParams && treeSlots?.leading ? renderTreeSlot("leading", treeSlots.leading(treeSlotParams)) : null}
+                      <span className="comins-tree-cell-value">
+                        {treeSlotParams && treeSlots?.content ? renderTreeSlot("content", treeSlots.content(treeSlotParams)) : cellContent}
+                      </span>
+                      {treeSlotParams && treeSlots?.trailing ? renderTreeSlot("trailing", treeSlots.trailing(treeSlotParams)) : null}
                     </span>
                   ) : (
                     cellContent
@@ -6890,6 +6941,7 @@ function CominsTreeTableInner<TData>(
     tableTransfer: _tableTransfer,
     rowProps,
     treeRowDrag,
+    treeSlots,
     onBeforeRowDrag,
     onRowDrag,
     onAfterDragRow,
@@ -6949,8 +7001,9 @@ function CominsTreeTableInner<TData>(
         onChangeData?.(toggleCominsTreeNode(data, rowId, getRowId, { defaultExpandAll: initialDefaultExpandAll })),
       summaryRows: getCominsTreeLeafItems(data),
       treeColumnId,
+      slots: treeSlots,
     }),
-    [data, entriesByRowId, getRowId, initialDefaultExpandAll, onChangeData, treeColumnId, treeDrag],
+    [data, entriesByRowId, getRowId, initialDefaultExpandAll, onChangeData, treeColumnId, treeDrag, treeSlots],
   );
   const handleFlatDataChange = (nextRows: TData[]) => {
     let nextTree: readonly CominsTreeNode<TData>[] = data;

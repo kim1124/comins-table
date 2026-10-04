@@ -169,13 +169,15 @@
         "src/core/editing/cells.ts",
         "src/core/editing/clipboard.ts",
         "src/core/editing/export.ts",
+        "src/core/editing/import.ts",
         "src/react/edit-policy.ts",
         "src/clipboard.ts",
         "src/clipboard-text.ts",
         "src/row-value.ts",
         "src/cell-fill.tsx",
         "src/selection-data.ts",
-        "src/index.tsx"
+        "src/index.tsx",
+        "src/core/editing/export-structure.ts"
       ],
       "targetLayers": [
         "core",

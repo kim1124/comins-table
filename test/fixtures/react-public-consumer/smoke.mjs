@@ -8,6 +8,17 @@ import * as clipboard from "comins-table/clipboard";
 import * as selection from "comins-table/selection";
 import { JSDOM } from "jsdom";
 
+for (const api of [root, core]) {
+  const row = { id: "001", score: 42 };
+  const columns = [{ id: "score", value: item => item.score }];
+  assert.equal(api.exportCominsRowsToCsv(api.createCominsTreeExportOptions({ columns, nodes: [{ item: row }], getRowId: item => item.id })),
+    "score,__rowId,__parentId,__depth\n42,001,,0");
+  assert.deepEqual(JSON.parse(api.exportCominsRowsToJson(api.createCominsGroupedExportOptions({
+    columns, rows: [row], groups: ["all"], getGroupId: group => group, getRowGroupId: () => "all", getRowId: item => item.id,
+  }))), [{ score: 42, __rowId: "001", __groupId: "all" }]);
+  assert.deepEqual(row, { id: "001", score: 42 });
+}
+
 const label = createElement("strong", null, "Score");
 let guardCalls = 0;
 const state = root.createCominsTableState({

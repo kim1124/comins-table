@@ -89,3 +89,51 @@ test("Tree Grid virtualizes exactly 10000 expanded nodes @perf", async ({ page }
   });
   await expect(viewport.getByTestId("row-virtual-member-100-9-10")).toBeVisible();
 });
+
+test("Tree slots preserve selection, disclosure, and trailing action alignment", async ({ page }) => {
+  await page.goto("/examples/tree-grid");
+  const table = page.getByTestId("tree-slots-viewport");
+  const cell = table.getByTestId("cell-documents-name");
+  const action = table.getByRole("button", { name: "Documents details", exact: true });
+  await action.click();
+  await expect(page.getByTestId("tree-slots-actions")).toHaveText("1");
+  await expect(page.getByTestId("tree-slots-selected")).toHaveText("0");
+  await action.focus();
+  await page.keyboard.press("Space");
+  await expect(page.getByTestId("tree-slots-actions")).toHaveText("2");
+  await expect(page.getByTestId("tree-slots-selected")).toHaveText("0");
+  await cell.locator('[data-comins-tree-slot="content"]').click();
+  await expect(page.getByTestId("tree-slots-selected")).toHaveText("1");
+  await action.click();
+  await expect(page.getByTestId("tree-slots-selected")).toHaveText("1");
+  await table.getByTestId("cell-guide-name").locator('[data-comins-tree-slot="content"]').click();
+  await expect(page.getByTestId("tree-slots-selected")).toHaveText("1");
+  const expander = table.getByTestId("tree-expander-documents");
+  await expander.click();
+  await expect(table.getByTestId("cell-guide-name")).toHaveCount(0);
+  await expect(page.getByTestId("tree-slots-selected")).toHaveText("0");
+  await expander.click();
+  await expect(table.getByTestId("cell-guide-name")).toBeVisible();
+  await expect(page.getByTestId("tree-slots-selected")).toHaveText("0");
+  for (const width of [1280, 640]) {
+    await page.setViewportSize({ width, height: 720 });
+    await action.scrollIntoViewIfNeeded();
+    const bounds = await cell.boundingBox();
+    const trailing = await cell.locator('[data-comins-tree-slot="trailing"]').boundingBox();
+    const leading = await cell.locator('[data-comins-tree-slot="leading"]').boundingBox();
+    const disclosure = await expander.boundingBox();
+    expect(bounds).not.toBeNull();
+    expect(trailing).not.toBeNull();
+    expect(trailing!.x + trailing!.width).toBeLessThanOrEqual(bounds!.x + bounds!.width);
+    expect(trailing!.x + trailing!.width).toBeGreaterThan(bounds!.x + bounds!.width - 20);
+    expect(leading!.x).toBeGreaterThanOrEqual(disclosure!.x + disclosure!.width);
+  }
+  // Stress the same rendered slot with a long label without changing the row model.
+  const content = cell.locator('[data-comins-tree-slot="content"]');
+  await content.locator(".comins-table__cell-value").evaluate(element => { element.textContent = "Long_tree_node_title_".repeat(30); });
+  const contentBounds = await content.boundingBox();
+  const actionBounds = await action.boundingBox();
+  expect(contentBounds!.x + contentBounds!.width).toBeLessThanOrEqual(actionBounds!.x);
+  await action.click();
+  await expect(page.getByTestId("tree-slots-actions")).toHaveText("4");
+});

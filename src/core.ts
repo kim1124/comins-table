@@ -65,6 +65,9 @@ export {
   exportCominsRowsToJson,
 } from "./core/editing/export";
 
+export { importCominsRowsFromCsv } from "./core/editing/import";
+export { createCominsTreeExportOptions, createCominsGroupedExportOptions } from "./core/editing/export-structure";
+
 export {
   parseCominsClipboardText,
 } from "./clipboard-text";
@@ -76,6 +79,8 @@ export type {
   CominsCellRange,
   CominsCellSelectionOptions,
   CominsClipboardGuard,
+  CominsCsvImportOptions,
+  CominsCsvImportRow,
   CominsColumnGroupRuntimeState,
   CominsColumnLayout,
   CominsColumnPinned,
@@ -95,6 +100,9 @@ export type {
   CominsExportColumn,
   CominsExportFormat,
   CominsExportRowsOptions,
+  CominsExportMetadata,
+  CominsExportTreeOptions,
+  CominsExportGroupedOptions,
   CominsExportValueSource,
   CominsFillCellRangeOptions,
   CominsHeaderCell,

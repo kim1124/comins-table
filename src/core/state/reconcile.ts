@@ -35,7 +35,11 @@ export function reconcileCoreState<TData>({ current, nextInput, columnOrderHisto
   });
   const state = viewportIndices
     ? { ...nextState, selection: reconcileCoreViewportSelection(current.selection, nextState.rowIds, viewportIndices, nextState.columns.map(column => column.id)) }
-    : canPreserveSelection(current, nextState)
+    : canPreserveSelection(current, nextState) || (
+      // An already empty selection is unchanged even if the visible row IDs change.
+      current.selection.rowIds.length === 0 && current.selection.cell === null &&
+      current.selection.range === null && !current.selection.cells?.length
+    )
       ? { ...nextState, selection: current.selection }
       : nextState;
   const invalidatedDetailRowIds: CominsRowId[] = [];

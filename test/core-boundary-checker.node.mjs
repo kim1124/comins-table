@@ -204,6 +204,10 @@ function publicFixture(t, suffix = "") {
         const value = state.rows[state.rowIds.indexOf(source.rowId)][source.columnId];
         return pasteCominsText(state, target.focus, String(value));
       }
+      // Fixed consumer scenario only; CSV parsing is tested against the real package.
+      export function importCominsRowsFromCsv({mapRow}) {
+        return [mapRow({cells: ["001", "42"], headers: ["id", "score"], rowIndex: 0})];
+      }
       ${suffix}
     `,
     "package/core.d.ts": `
@@ -229,6 +233,9 @@ function publicFixture(t, suffix = "") {
       export declare function isCominsCellDisabled<T>(state: CominsTableState<T>, row: T, rowId: string, column: Column<T>): boolean;
       export declare function pasteCominsText<T>(state: CominsTableState<T>, address: Address, text: string): CominsTableState<T>;
       export declare function fillCominsCellRange<T>(state: CominsTableState<T>, range: {source: Address; target: {anchor: Address; focus: Address}}): CominsTableState<T>;
+      export type CominsCsvImportRow = { cells: readonly string[]; headers: readonly string[] | null; rowIndex: number };
+      export type CominsCsvImportOptions<T> = { text: string; mapRow: (row: CominsCsvImportRow) => T; hasHeader?: boolean; maxCharacters?: number; maxCells?: number };
+      export declare function importCominsRowsFromCsv<T>(options: CominsCsvImportOptions<T>): T[];
     `,
     "package/src/core.ts": "export const pure = 1;",
   });

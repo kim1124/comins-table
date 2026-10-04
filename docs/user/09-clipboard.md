@@ -8,7 +8,7 @@
 
 Clipboard helpers are available from the root export, `comins-table/core`, and the `comins-table/clipboard` subpath.
 
-On the [0.2.0 development branch](26-migration-0.2.0.md), the root and `/clipboard` operate on React state with `cell.props` guards. `/core` operates on neutral state with direct `cell.copyable`/`cell.pasteable`/`cell.disabled` policies. Do not mix these state contracts.
+In 0.2.x, the root and `/clipboard` operate on React state with `cell.props` guards. `/core` operates on neutral state with direct `cell.copyable`/`cell.pasteable`/`cell.disabled` policies. See the [0.2.0 migration](26-migration-0.2.0.md) and do not mix these state contracts.
 
 <!-- comins-doc-example: fragment -->
 ```ts

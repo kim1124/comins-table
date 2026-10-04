@@ -1,4 +1,15 @@
-import type { CominsExportColumn, CominsExportRowsOptions, CominsExportValueSource } from "../model";
+import type { CominsExportColumn, CominsExportRowsOptions, CominsExportValueSource, CominsExportMetadata } from "../model";
+
+const metadataKeys = ["__rowId", "__parentId", "__depth", "__groupId"] as const;
+
+function getMetadataColumns<TData>(metadata: CominsExportMetadata<TData> | undefined, headers: readonly (string | undefined)[]) {
+  return metadataKeys.flatMap(key => {
+    const value = metadata?.[key];
+    if (!value) return [];
+    if (headers.includes(key)) throw new Error(`Export metadata column collision: ${key}`);
+    return [{ key, value }];
+  });
+}
 
 function normalizeCominsExportColumns<TData>({
   columnOrder,
@@ -61,13 +72,17 @@ export function exportCominsRowsToCsv<TData>({
   columns,
   headerOverrides,
   rows,
+  metadata,
   valueSource = "raw",
 }: CominsExportRowsOptions<TData>) {
   const exportColumns = normalizeCominsExportColumns({ columnOrder, columns });
+  const headers = exportColumns.map(column => getCominsExportHeader(column, headerOverrides));
+  const managementColumns = getMetadataColumns(metadata, headers);
   const lines = [
-    exportColumns.map((column) => escapeCominsCsvCell(getCominsExportHeader(column, headerOverrides))).join(","),
+    [...headers, ...managementColumns.map(column => column.key)].map(escapeCominsCsvCell).join(","),
     ...rows.map((row, rowIndex) =>
-      exportColumns.map((column) => escapeCominsCsvCell(getCominsExportValue(column, row, rowIndex, valueSource))).join(","),
+      [...exportColumns.map(column => getCominsExportValue(column, row, rowIndex, valueSource)),
+        ...managementColumns.map(column => column.value(row, rowIndex))].map(escapeCominsCsvCell).join(","),
     ),
   ];
 
@@ -79,15 +94,17 @@ export function exportCominsRowsToJson<TData>({
   columns,
   headerOverrides,
   rows,
+  metadata,
   valueSource = "raw",
 }: CominsExportRowsOptions<TData>) {
   const exportColumns = normalizeCominsExportColumns({ columnOrder, columns });
+  const managementColumns = getMetadataColumns(metadata, exportColumns.map(column => getCominsExportHeader(column, headerOverrides)));
   const data = rows.map((row, rowIndex) =>
     Object.fromEntries(
-      exportColumns.map((column) => [
+      [...exportColumns.map((column) => [
         getCominsExportHeader(column, headerOverrides),
         getCominsExportValue(column, row, rowIndex, valueSource),
-      ]),
+      ]), ...managementColumns.map(column => [column.key, column.value(row, rowIndex)])],
     ),
   );
 

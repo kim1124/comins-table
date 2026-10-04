@@ -4,7 +4,7 @@
 
 Selection supports Row selection, single and discontiguous Cell selection, and rectangular range selection.
 
-On the [0.2.0 development branch](26-migration-0.2.0.md), the root and `/selection` use React state. For neutral state, import selection helpers from `/core` instead. State creation and selection operations must use the same contract.
+In 0.2.x, the root and `/selection` use React state. For neutral state, import selection helpers from `/core` instead. See the [0.2.0 migration](26-migration-0.2.0.md); state creation and selection operations must use the same contract.
 
 <!-- comins-doc-example: fragment -->
 ```ts
@@ -21,6 +21,8 @@ import {
 `selectRow`, `selectCell`, and `selectCellRange` update the core state. `CominsCellSelectionOptions` adds `multi` and `toggle` behavior to `selectCell`; `getCominsSelectedCellRange` reads only the active rectangular range.
 
 React users can subscribe to `onChangeSelection` on `CominsTable`.
+
+The callback also reports selection cleared during input synchronization. For flat and Tree tables, changing the row ID sequence (including Tree collapse/expand) clears selection; updating values with the same IDs in the same order preserves it. An already empty selection does not emit another change notification when rows change.
 
 <!-- comins-doc-example: fragment -->
 ```tsx

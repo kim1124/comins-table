@@ -202,30 +202,28 @@ describe("comins-table user documentation contract", () => {
     }
   });
 
-  it("keeps README aligned with the shipped playground and user docs", () => {
+  it("keeps README as an introduction with explicit language guides and the overview GIF", () => {
     const readme = readWorkspaceFile("README.md");
+    const introduction = readme.split("![Comins Table")[0];
 
+    expect(introduction).toContain("[한국어 가이드](https://github.com/kim1124/comins-table/blob/main/docs/ko/README.md)");
+    expect(introduction).toContain("[English Guide](https://github.com/kim1124/comins-table/blob/main/docs/user/README.md)");
+    expect(introduction).toContain("[Comins Brand](https://comins-website.vercel.app/ko/)");
     expect(readme).toContain("npm run dev");
     expect(readme).toContain("docs/user/01-quick-start.md");
-    expect(readme).toContain("/examples/summary-row");
-    expect(readme).toContain("/examples/tree-grid");
-    expect(readme).toContain("/examples/row-expand");
-    expect(readme).toContain("/examples/row-grouping");
-    expect(readme).toContain("/examples/column-filtering");
-    expect(readme).toContain("/examples/column-pinning");
-    expect(readme).toContain("/examples/cross-table-drag");
-    expect(readme).toContain("/examples/selection-clipboard");
-    expect(readme).toContain("docs/user/17-tree-grid.md");
-    expect(readme).toContain("docs/user/18-summary-row.md");
-    expect(readme).toContain("docs/user/19-row-expand.md");
-    expect(readme).toContain("docs/user/20-row-grouping.md");
-    expect(readme).toContain("docs/user/21-column-filtering.md");
-    expect(readme).toContain("docs/user/22-column-pinning.md");
-    expect(readme).toContain("docs/user/23-cross-table-drag.md");
+    expect(readme).toContain("docs/ko/01-quick-start.md");
+    expect(readme).toContain("/docs/getting-started");
     expect(readme).toContain("docs/README.md");
     expect(readme).toContain("docs/user/README.md");
     expect(readme).toContain("docs/ko/README.md");
     expect(readme).toContain("docs/assets/comins-table-overview.gif");
+    expect(readme).toContain("CHANGELOG.md");
+    expect(readme).toContain("docs/user/26-migration-0.2.0.md");
+    expect(readme).toContain("docs/ko/26-migration-0.2.0.md");
+    for (const language of ["user", "ko"]) {
+      const index = readWorkspaceFile(`docs/${language}/README.md`);
+      for (const guide of userDocs) expect(index, `${language}: ${guide}`).toContain(`(${guide})`);
+    }
     for (const [guide, asset] of [
       ["09-clipboard.md", "comins-table-clipboard-fill.gif"],
       ["20-row-grouping.md", "comins-table-row-grouping.gif"],
@@ -285,9 +283,9 @@ describe("comins-table user documentation contract", () => {
     const optionGuide = readWorkspaceFile("example/src/docs/dataTableOptionGuide.ts");
     const advancedFeature = readWorkspaceFile("example/src/features/AdvancedFeature.tsx");
 
-    expect(readme).toContain("CSR-focused controlled component");
-    expect(readme).toContain("CSR");
-    expect(readme).toContain("The visual fill handle repeats values or selected patterns");
+    expect(readme).toContain("client-only");
+    expect(readWorkspaceFile("docs/user/02-data-and-crud.md")).toContain("controlled CSR data flow");
+    expect(readWorkspaceFile("docs/user/09-clipboard.md")).toContain("Automatic numeric/date series and clearing on shrink are not supported.");
     expect(readme).not.toContain("first public release");
 
     expect(optionGuide).toContain("data + onChangeData");
@@ -528,13 +526,12 @@ describe("comins-table user documentation contract", () => {
     expect(optionGuide).toContain('name: "onChangeExpandedRowIds"');
   });
 
-  it("keeps README Row Expand height guidance aligned with measured automatic Details", () => {
-    const readme = readWorkspaceFile("README.md");
+  it("keeps detailed Row Expand height guidance in the linked feature guide", () => {
+    const guide = readWorkspaceFile("docs/user/19-row-expand.md").replace(/\s+/gu, " ");
 
-    expect(readme).not.toMatch(/\b300px\b/u);
-    expect(readme).toContain(
-      'A finite positive CSS pixel height is fixed and retains its inline height. Missing values, invalid numeric values, and `"auto"` use measured automatic height with no inline height. Before an automatic Detail has a matching-width measurement, a valid finite positive `estimatedRowDetailHeight` is used; otherwise the resolved `rowHeight` is the estimate.',
-    );
+    expect(guide).toContain("Only a finite positive number is fixed: its Detail keeps that inline height.");
+    expect(guide).toContain('Missing values, invalid numeric values, and `"auto"` use automatic measurement, so the rendered Detail has no inline height.');
+    expect(guide).toContain("Before an automatic Detail has a matching-width measurement, `estimatedRowDetailHeight` is used when it is a finite positive value; otherwise the current resolved `rowHeight` is the estimate.");
   });
 
   it("keeps the option guide Row Expand height guidance aligned with measured automatic Details", () => {
@@ -638,9 +635,7 @@ describe("comins-table user documentation contract", () => {
     const koreanHeader = readWorkspaceFile("docs/ko/06-header.md");
     const playground = readWorkspaceFile("example/src/features/HeaderFeature.tsx");
     const optionGuide = readWorkspaceFile("example/src/docs/dataTableOptionGuide.ts");
-    const readme = readWorkspaceFile("README.md");
-
-    for (const document of [englishHeader, koreanHeader, readme]) {
+    for (const document of [englishHeader, koreanHeader]) {
       expect(document).toContain("multiSort");
       expect(document).toContain("onChangeSortModel");
       expect(document).toContain("getSortModel");
