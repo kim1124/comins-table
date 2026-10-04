@@ -39,6 +39,16 @@ Column layout persistence는 Column 순서와 지원되는 Column/Group runtime 
 
 `setCominsSortState`는 전체 정렬 모델을 단일 조건으로 교체한다. `setCominsSortModel`은 우선순위가 있는 `CominsSortModel`을 적용하여 다중 컬럼 정렬을 수행한다. 중복 조건과 존재하지 않거나 정렬할 수 없는 Column 조건은 정규화 과정에서 제거한다.
 
+## React Ref API
+
+`getColumnLayout`, `setColumnLayout`, `getSortState`, `setSortState`, `getSortModel`, `setSortModel`, `clearSort`는 `CominsTableRef`를 통해 현재 Header 화면 상태를 조회하거나 변경합니다. 이 메서드는 React 컴포넌트에 속하며 중립 Core 상태 helper와 구분합니다.
+
+일반 배열 기반 테이블의 `setSelectedRow`, `setSelectedRows`, `setMoveTargetRow`는 현재 정렬과 페이지 처리가 반영된 표시 Row 인덱스를 사용합니다. Viewport의 선택 설정 메서드는 데이터셋 절대 인덱스를 사용하고 미로딩 Row를 건너뜁니다. Viewport에서는 Row 이동을 지원하지 않습니다. `expand(nodeIds?)`와 `fold(nodeIds?)`는 readonly Tree Grid 노드 ID 배열을 받으며 일반 테이블에서는 동작하지 않습니다.
+
+`getSelectedRows()`는 로딩된 선택 데이터를 데이터 순서로 반환합니다. `getSelectedCells()`는 사용 가능한 선택 Cell의 `{ rowId, columnId, value }`를 반환하며 범위는 표시 순서를 따릅니다. `getSelection()`은 선택 ID와 주소를 복사하며 Viewport 캐시에서 제거된 Row의 유지된 ID도 포함합니다. Row 객체와 Cell 값은 애플리케이션 소유 참조를 유지합니다.
+
+선택, 복사, Fill과 펼침 제어는 [Selection](10-selection.md), [Clipboard](09-clipboard.md), [Tree Grid](17-tree-grid.md)를 참고합니다.
+
 ## 0.2.0 마이그레이션
 
 진입점 선택, React·중립 예제, 설치 경계와 소비자 검증 체크리스트는 [전체 마이그레이션 가이드](26-migration-0.2.0.md)를 참고합니다.

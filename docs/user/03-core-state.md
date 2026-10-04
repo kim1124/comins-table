@@ -31,6 +31,17 @@ const sorted = setCominsSortModel(state, [
 
 Core helpers do not own React state. They return the next state, and the application decides where to store it.
 
+## React Ref API
+
+The following methods belong to `CominsTableRef`, not the neutral Core state helpers.
+
+For ordinary array-backed Tables, `setSelectedRow`, `setSelectedRows`, and `setMoveTargetRow` use the visible Row index after current sorting and pagination. Viewport selection setters use absolute dataset indexes and skip unloaded Rows; movement is unavailable. `getColumnLayout`, `setColumnLayout`, `getSortState`, `setSortState`, `getSortModel`, `setSortModel`, and `clearSort` read and update the current Header view state. `expand(nodeIds?)` and `fold(nodeIds?)` accept readonly Tree Grid node-id arrays; flat tables ignore them.
+
+`getSelectedRows()` returns loaded selected business data in data order. `getSelectedCells()` returns `{ rowId, columnId, value }` for available selected Cells; ranges use projected display order. `getSelection()` copies the selection IDs and addresses, including Row IDs retained after Viewport cache eviction. Row objects and Cell values remain application-owned references.
+
+
+See [Selection](10-selection.md), [Clipboard](09-clipboard.md), and [Tree Grid](17-tree-grid.md) for selection, copy, Fill, and expansion controls.
+
 ## 0.2.0 migration
 
 See the [complete migration guide](26-migration-0.2.0.md) for entry-point selection, React and neutral examples, installation boundaries, and the consumer verification checklist.

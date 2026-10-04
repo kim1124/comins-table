@@ -53,10 +53,9 @@ describe("README preview contract", () => {
     expect(verifyJob).toContain("$result\" != 'success' && \"$result\" != 'skipped'");
   });
 
-  it("separates controlled data mutations and Row Expand write-back from internal view state", () => {
-    const readme = readFileSync("README.md", "utf8");
-    const controlledModel = getReadmeSection(readme, "Controlled Model");
-    const rowsAndCells = getReadmeSection(readme, "Rows, Cells, And Selection");
+  it("preserves data ownership and Row Expand write-back in the linked guides", () => {
+    const controlledModel = readFileSync("docs/user/02-data-and-crud.md", "utf8");
+    const rowExpand = readFileSync("docs/user/19-row-expand.md", "utf8").replace(/\s+/gu, " ");
 
     expect(controlledModel).toContain("For table-owned data mutations, `onChangeData` emits");
     expect(controlledModel).toContain("Other controlled models use their matching callback and value prop");
@@ -67,131 +66,75 @@ describe("README preview contract", () => {
     expect(controlledModel).toContain("`setColumnLayout`");
     expect(controlledModel).toContain("`setSortState` and `clearSort`");
     expect(controlledModel).not.toContain("Apply each callback payload to the owning state");
-    expect(rowsAndCells).toContain(
-      "feed the next value from `onChangeExpandedRowIds` back into `expandedRowIds`",
-    );
-    expect(rowsAndCells).toContain("the disclosure is disabled and read-only");
+    expect(rowExpand).toContain("application writes it back to keep the UI controlled");
+    expect(rowExpand).toContain("the read-only controlled disclosure reflects the supplied state but is disabled");
+    const koreanModel = readFileSync("docs/ko/02-data-and-crud.md", "utf8");
+    for (const api of ["onChangeData", "onChangeSelection", "onChangeColumnLayout", "onChangeSort", "onChangeSortModel", "setSelectedRows", "setColumnLayout", "clearSort"]) {
+      expect(koreanModel).toContain(api);
+    }
   });
 
-  it("describes the Ref API as current Header view state access", () => {
-    const readme = readFileSync("README.md", "utf8");
-    const refApi = getReadmeSection(readme, "Ref API");
-
+  it("describes the Ref API as current Header view state access in the Core guide", () => {
+    const refApi = readFileSync("docs/user/03-core-state.md", "utf8");
     expect(refApi).toContain("read and update the current Header view state");
     expect(refApi).not.toContain("controlled Header state");
-  });
-
-  it("keeps the README architecture and public boundaries structurally stable", () => {
-    const readme = readFileSync("README.md", "utf8");
-    const headings = readme.match(/^## .+$/gmu) ?? [];
-
-    expect(headings).toEqual([
-      "## Why Comins Table",
-      "## Support",
-      "## Installation",
-      "## Quick Start",
-      "## Controlled Model",
-      "## Package Entry Points",
-      "## Header And Layout",
-      "## Rows, Cells, And Selection",
-      "## Row Grouping",
-      "## Cross-Table Row And Group Drag",
-      "## Automatic Heights and Viewport Loading",
-      "## Column Filtering",
-      "## Virtualization And Loading",
-      "## Summary Row",
-      "## Tree Grid",
-      "## Components And Renderers",
-      "## Clipboard And Export",
-      "## Styling And Themes",
-      "## Ref API",
-      "## Playground",
-      "## Documentation",
-      "## Current Boundaries",
-      "## Development",
-      "## Trusted Publishing",
-    ]);
-
-    const packageEntries = getReadmeSection(readme, "Package Entry Points")
-      .split("\n")
-      .filter((line) => line.startsWith("| `comins-table"));
-    expect(packageEntries).toHaveLength(5);
-    expect(packageEntries.map((line) => line.split("|")[1]?.trim())).toEqual([
-      "`comins-table`",
-      "`comins-table/core`",
-      "`comins-table/clipboard`",
-      "`comins-table/selection`",
-      "`comins-table/styles.css`",
-    ]);
-
-    const support = getReadmeSection(readme, "Support");
-    for (const surface of ["React", "React DOM", "TypeScript", "Chrome and Edge", "Firefox and Safari", "SSR", "Runtime network behavior"]) {
-      expect(support).toContain(`| ${surface} |`);
-    }
-    expect(support).toContain("| React | `>=18.0.0 <20.0.0` |");
-    expect(support).toContain("| React DOM | `>=18.0.0 <20.0.0` |");
-    expect(support).toContain("| SSR | Client boundary required; server rendering is not currently supported |");
-    expect(support).toContain("| Runtime network behavior | No package-owned requests, remote assets, telemetry, or error reporting |");
-
-    const boundaries = getReadmeSection(readme, "Current Boundaries");
-    for (const boundary of ["Server-side Row models", "pivoting", "charts", "AI assistance", "remote Tree loading", "hierarchy pagination", "Tree Row copy/paste", "visual fill handle", "Firefox", "Safari", "SSR"]) {
-      expect(boundaries).toContain(boundary);
-    }
-
-    expect(boundaries).not.toContain("Tree Row drag");
-    expect(getReadmeSection(readme, "Automatic Heights and Viewport Loading")).toContain("treeRowDrag");
-    const tree = getReadmeSection(readme, "Tree Grid");
-    expect(tree).toContain("`expand(nodeIds?)`");
-    expect(tree).toContain("`fold(nodeIds?)`");
-    expect(tree).toContain("ancestor remains folded");
-    expect(tree).toContain("an omitted argument targets every branch and an empty array is a no-op");
-
-    const trustedPublishing = getReadmeSection(readme, "Trusted Publishing");
-    for (const term of ["`publish.yml`", "OIDC", "`npm stage publish`", "protected `npm` environment"]) {
-      expect(trustedPublishing).toContain(term);
+    for (const language of ["user", "ko"]) {
+      const guide = readFileSync(`docs/${language}/03-core-state.md`, "utf8");
+      for (const api of ["CominsTableRef", "getColumnLayout", "setColumnLayout", "getSortModel", "setSortModel", "getSelectedRows", "getSelectedCells", "getSelection"]) {
+        expect(guide).toContain(api);
+      }
     }
   });
 
-  it("keeps the README consumer-first and feature-complete", () => {
+  it("keeps a concise README structure and preserves detailed contracts in guides", () => {
     const readme = readFileSync("README.md", "utf8");
-    const required = [
-      "https://img.shields.io/npm/v/comins-table",
-      "https://img.shields.io/npm/types/comins-table",
-      "actions/workflows/verify.yml/badge.svg?branch=main",
-      "License-MIT",
+    expect(readme.match(/^## .+$/gmu)).toEqual([
+      "## Highlights", "## Installation", "## Quick Start", "## Documentation",
+      "## Run the Playground locally", "## Version and support", "## License and support",
+    ]);
+    const migration = readFileSync("docs/user/26-migration-0.2.0.md", "utf8");
+    for (const entry of ["comins-table", "comins-table/core", "comins-table/clipboard", "comins-table/selection", "comins-table/styles.css"]) {
+      expect(migration).toContain(`\`${entry}\``);
+    }
+    const support = getReadmeSection(readme, "Version and support");
+    for (const term of ["client-only", "SSR", "Vue", "Chrome and Edge", "Firefox and Safari", "telemetry"]) {
+      expect(support).toContain(term);
+    }
+    expect(getReadmeSection(readme, "Installation")).toContain("React and React DOM `>=18.0.0 <20.0.0`");
+    const tree = readFileSync("docs/user/17-tree-grid.md", "utf8");
+    for (const term of ["`expand(nodeIds?)`", "`fold(nodeIds?)`", "ancestor remains folded", "Omitting the argument targets every branch; an empty array is a no-op", "treeRowDrag"]) {
+      expect(tree).toContain(term);
+    }
+    const security = readFileSync("SECURITY.md", "utf8");
+    for (const term of ["publish.yml", "OIDC", "npm stage publish", "GitHub `npm` environment"]) expect(security).toContain(term);
+  });
+
+  it("keeps the README focused on shipped highlights and consumer entry points", () => {
+    const readme = readFileSync("README.md", "utf8");
+    for (const text of [
+      "https://img.shields.io/npm/v/comins-table", "https://img.shields.io/npm/types/comins-table",
+      "actions/workflows/verify.yml/badge.svg?branch=main", "License-MIT",
       "https://raw.githubusercontent.com/kim1124/comins-table/main/docs/assets/comins-table-overview.gif",
-      "Controlled data",
-      "100,000-row",
-      "6-pixel",
-      "Virtual List",
-      "Column Filtering",
-      "Summary Row",
-      "Tree Grid",
-      "comins-table/core",
-      "comins-table/styles.css",
-      "Client boundary required",
-      "Trusted publishing",
-    ];
-
-    for (const text of required) expect(readme).toContain(text);
+      "Application-owned data", "virtualization", "Tree Grid", "row grouping",
+      "comins-table/core", "comins-table/styles.css", "client-only",
+    ]) expect(readme).toContain(text);
     expect(readme).not.toContain("does not yet exist on the npm registry");
     expect(readme).not.toContain("first public version must be published interactively");
     expect(readme).not.toContain("comins-table-demo.gif");
   });
 
-  it("places repository Playground setup immediately after package installation", () => {
-    const installation = getReadmeSection(readFileSync("README.md", "utf8"), "Installation");
-    const packageInstall = installation.indexOf("npm install comins-table react react-dom");
-    const clone = installation.indexOf("git clone https://github.com/kim1124/comins-table.git");
-    const cleanInstall = installation.indexOf("npm ci");
-    const dev = installation.indexOf("npm run dev");
-
-    expect(packageInstall).toBeGreaterThanOrEqual(0);
-    expect(clone).toBeGreaterThan(packageInstall);
-    expect(cleanInstall).toBeGreaterThan(clone);
-    expect(dev).toBeGreaterThan(cleanInstall);
-    expect(installation).toContain("http://127.0.0.1:4002/docs/getting-started");
-    expect(installation).toContain("not a command installed into a consumer application");
+  it("separates consumer installation from repository Playground setup", () => {
+    const readme = readFileSync("README.md", "utf8");
+    const installation = getReadmeSection(readme, "Installation");
+    const playground = getReadmeSection(readme, "Run the Playground locally");
+    expect(installation).toContain("npm install comins-table react react-dom");
+    expect(installation).not.toContain("git clone");
+    const clone = playground.indexOf("git clone https://github.com/kim1124/comins-table.git");
+    expect(clone).toBeGreaterThanOrEqual(0);
+    expect(playground.indexOf("npm ci")).toBeGreaterThan(clone);
+    expect(playground.indexOf("npm run dev")).toBeGreaterThan(playground.indexOf("npm ci"));
+    expect(playground).toContain("http://127.0.0.1:4002/docs/getting-started");
+    expect(playground).toContain("the Playground is not installed into consumer applications");
   });
 
   it("uses an explicit non-personal placeholder in the packaged Quick Start", () => {
@@ -204,7 +147,6 @@ describe("README preview contract", () => {
 
   it("keeps packaged documentation and maintenance links valid on npm", () => {
     const readme = readFileSync("README.md", "utf8");
-    const documentation = getReadmeSection(readme, "Documentation");
 
     for (const url of [
       "https://github.com/kim1124/comins-table/blob/main/docs/user/01-quick-start.md",
@@ -215,18 +157,19 @@ describe("README preview contract", () => {
       "https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md",
       "https://github.com/kim1124/comins-table/blob/main/SECURITY.md",
     ]) {
-      expect(documentation).toContain(url);
+      expect(readme).toContain(url);
     }
     expect(readme).not.toMatch(/\]\(docs\//u);
   });
 
   it("scopes declarations to JavaScript entries and styles to the stylesheet export", () => {
     const readme = readFileSync("README.md", "utf8");
-    const support = getReadmeSection(readme, "Support");
+    const support = getReadmeSection(readme, "Installation");
 
     expect(support).toContain(
-      "Declarations bundled with every JavaScript entry point; CSS available through the stylesheet export",
+      "TypeScript declarations are included for JavaScript entry points.",
     );
+    expect(support).toContain("comins-table/styles.css");
     expect(support).not.toContain("Declarations bundled with every package entry point");
   });
 

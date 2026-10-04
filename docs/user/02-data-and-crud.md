@@ -32,6 +32,19 @@ const nextRows = queryCominsRows(deleted);
 
 Use `onClickRow` and `onClickCell` when the UI needs to open an editor, context panel, or details view from row or cell interaction payloads.
 
+## Data ownership and view state
+
+Comins Table is a CSR-focused controlled component for application-owned data. The application owns the Row array or Viewport snapshot passed through `data`.
+
+For table-owned data mutations, `onChangeData` emits the next flat Row array or Tree Grid node array; pass that array back through `data` to retain the mutation. Viewport mode uses a controlled block snapshot instead of a full array; `useCominsViewport` connects that snapshot and its callbacks. Other controlled models use their matching callback and value prop rather than `onChangeData`.
+
+Selection, column layout, and sort are internal view state. `onChangeSelection`, `onChangeColumnLayout`, `onChangeSort`, and `onChangeSortModel` observe those changes so an application can coordinate or persist them externally; the table updates the corresponding view state even when a callback is omitted.
+
+Where restoration is supported, use the supported Ref API: `setSelectedRow` and `setSelectedRows` restore Row selection by visible index, `setColumnLayout` restores layout, and `setSortState` and `clearSort` restore or clear sorting. `setSortModel` restores the complete ordered model; `getColumnLayout`, `getSortState`, and `getSortModel` read the current layout and sort state.
+
+
+See [Core State and Ref API](03-core-state.md) and [controlled Row Expand](19-row-expand.md) for related contracts.
+
 ## Playground data
 
 The CRUD example uses `column1` through `column6` for both editable data keys and Column labels. A separate internal `id` remains stable for selection and deletion and is omitted from the JSON editor. All six displayed fields, including `column4`, can be updated without changing the Row identity. These are example field names; the library accepts application-defined fields and labels. For range-loaded data and loaded Cell edits, use [Viewport Datasource](25-viewport-datasource.md) instead of the array CRUD helpers.
