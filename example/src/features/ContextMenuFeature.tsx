@@ -111,8 +111,8 @@ export function ContextMenuFeature() {
                   setContextMenu({
                     data: null,
                     selectionCount: selectedRowIdsRef.current.length,
-                    x: rect.left,
-                    y: rect.bottom + 6,
+                    x: Math.min(rect.left, window.innerWidth - 220),
+                    y: Math.min(rect.bottom + 6, window.innerHeight - 150),
                   });
                 }}
               >

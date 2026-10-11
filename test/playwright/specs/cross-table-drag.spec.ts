@@ -9,9 +9,11 @@ async function dragPointer(page: Page, source: Locator, target: Locator, targetY
   await target.scrollIntoViewIfNeeded();
   await source.hover();
   await page.mouse.down();
+  await target.scrollIntoViewIfNeeded();
   const targetBox = await target.boundingBox();
 
   expect(targetBox).not.toBeNull();
+  expect(targetBox!.y + targetBox!.height * targetYRatio).toBeLessThan(page.viewportSize()!.height);
   await page.mouse.move(
     targetBox!.x + targetBox!.width / 2,
     targetBox!.y + targetBox!.height * targetYRatio,
@@ -145,10 +147,12 @@ test("Cross-Table Row Drag accepts the visible empty Body area as a target", asy
 });
 
 test("Cross-Table Row Drag moves a grouped Row into an empty target Group", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 400 });
   await page.goto("/examples/cross-table-drag");
 
   const left = page.getByTestId("cross-table-group-left");
   const right = page.getByTestId("cross-table-group-right");
+  await right.evaluate((element) => { element.style.marginTop = "400px"; });
 
   await dragPointer(
     page,
