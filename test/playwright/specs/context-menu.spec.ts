@@ -16,6 +16,17 @@ function collectBrowserDiagnostics(page: Page) {
   return diagnostics;
 }
 
+test("context menu stays inside the viewport when its opener is at the bottom edge", async ({ page }) => {
+  await page.goto("/examples/context-menu");
+  const opener = page.getByRole("button", { exact: true, name: "메뉴 열기" });
+  await opener.evaluate((element) => element.scrollIntoView({ block: "end" }));
+  await opener.click();
+  const menu = page.getByRole("menu", { name: "데이터 테이블 컨텍스트 메뉴" });
+  await expect(menu).toBeInViewport({ ratio: 1 });
+  await menu.getByRole("menuitem", { exact: true, name: "조회" }).click();
+  await expect(page.getByTestId("context-menu-alert")).toContainText("조회 기능을 선택했습니다");
+});
+
 test("playground context menu follows the zero, single, and multiple selection matrix", async ({ page, browserName }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/examples/context-menu");
