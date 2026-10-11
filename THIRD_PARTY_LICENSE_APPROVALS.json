@@ -114,6 +114,29 @@
         "use-surface",
         "distribution"
       ]
+    },
+    {
+      "components": [
+        "lru-cache"
+      ],
+      "version": "11.5.3",
+      "license": "BlueOak-1.0.0",
+      "useSurface": "development-only-tooling",
+      "distributed": false,
+      "conditions": [
+        "Remain development-only tooling.",
+        "Remain unmodified and absent from source, generated bundles, source maps, and npm artifacts."
+      ],
+      "rationale": "Maintainer approved the same development-only conditions; license text is unchanged from approved 11.5.2.",
+      "approvedBy": "maintainer",
+      "reviewDate": "2026-10-11",
+      "invalidatesOn": [
+        "component",
+        "version",
+        "license",
+        "use-surface",
+        "distribution"
+      ]
     }
   ]
 }
