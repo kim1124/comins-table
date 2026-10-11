@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- The Playground Context Menu opener keeps its menu inside the viewport when the button is near the bottom edge.
+
 ## 0.2.1 - 2026-10-04
 
 ### Fixed

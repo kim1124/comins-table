@@ -84,6 +84,7 @@ test("Column Pinning keeps sticky surfaces aligned and demotes responsively", as
 
   await horizontalScrollbar.hover();
   await page.mouse.wheel(10_000, 0);
+  await expect.poll(() => horizontalScrollbar.evaluate((element) => element.scrollLeft)).toBeGreaterThan(500);
 
   await expect
     .poll(async () =>
@@ -197,6 +198,7 @@ test("Column Pinning keeps every surface at the same end with a reserved vertica
 
   await horizontalScrollbar.hover();
   await page.mouse.wheel(10_000, 0);
+  await expect.poll(() => horizontalScrollbar.evaluate((element) => element.scrollLeft)).toBeGreaterThan(500);
   await expect.poll(() => root.evaluate((element) => {
     const positions = [
       element.querySelector<HTMLElement>(".comins-table__header")?.scrollLeft,
