@@ -451,11 +451,12 @@ export const featureRegistry: FeatureDefinitionSource[] = [
     id: "export",
     label: defineLocalizedText("내보내기 헬퍼", "Export Helper"),
     options: [
+      { apiKind: "method", description: defineLocalizedText("별도 xlsx 진입점에서 XLSX bytes를 생성하고 타입을 유지하여 가져옵니다. 예제는 Worker에서 처리합니다.", "Creates/imports typed XLSX bytes through the separate xlsx entry; the sample uses a Worker."), example: "import { importCominsRowsFromXlsx, exportCominsRowsToXlsx } from 'comins-table/xlsx'", name: "XLSX files" },
       { apiKind: "method", description: defineLocalizedText("CSV 문자열을 생성합니다.", "Creates a CSV string."), example: "exportCominsRowsToCsv({ columns, rows })", name: "exportCominsRowsToCsv" },
       { apiKind: "method", description: defineLocalizedText("JSON 문자열을 생성합니다.", "Creates a JSON string."), example: "exportCominsRowsToJson({ columns, rows })", name: "exportCominsRowsToJson" },
       { description: defineLocalizedText("출력 순서와 Header 이름을 덮어씁니다.", "Overrides output order and header names."), example: "{ columnOrder, headerOverrides }", name: "export options" },
     ],
-    summary: defineLocalizedText("CSV와 JSON export helper 출력 예제입니다.", "CSV and JSON export helper output example."),
+    summary: defineLocalizedText("CSV·JSON과 XLSX 파일 입출력 예제입니다.", "CSV/JSON helpers and XLSX file import/export examples."),
   },
   {
     Component: RefApiFeature,

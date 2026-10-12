@@ -177,6 +177,8 @@
         "src/core/editing/clipboard.ts",
         "src/core/editing/export.ts",
         "src/core/editing/import.ts",
+        "src/core/editing/xlsx-data.ts",
+        "src/core/editing/xlsx-model.ts",
         "src/react/edit-policy.ts",
         "src/clipboard.ts",
         "src/clipboard-text.ts",
@@ -184,7 +186,13 @@
         "src/cell-fill.tsx",
         "src/selection-data.ts",
         "src/index.tsx",
-        "src/core/editing/export-structure.ts"
+        "src/core/editing/export-structure.ts",
+        "src/xlsx.ts",
+        "src/xlsx/engine.ts",
+        "src/xlsx/errors.ts",
+        "src/xlsx/workbook.ts",
+        "src/xlsx/xml.ts",
+        "src/xlsx/zip.ts"
       ],
       "targetLayers": [
         "core",
@@ -200,7 +208,12 @@
         "test/clipboard-edit-core.test.ts",
         "test/clipboard-edit-table.test.tsx",
         "test/clipboard-core.test.ts",
-        "test/core-edit-policy.test.ts"
+        "test/core-edit-policy.test.ts",
+        "test/xlsx-data.test.ts",
+        "test/xlsx-codec.test.ts",
+        "test/xlsx-zip.test.ts",
+        "test/xlsx-package.test.ts",
+        "test/xlsx-resource.test.ts"
       ],
       "plannedTests": [
         "test/core-edit-policy.test.ts"

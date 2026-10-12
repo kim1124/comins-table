@@ -28,10 +28,12 @@ const valueRootSymbols = [
   "CominsValueFilterActions", "CominsValueFilterOptionRenderParams", "CominsValueFilterPanelRenderParams", "CominsValueFilterPart",
   "CominsValueFilterTriggerRenderParams", "getCominsColumnFilterOptions", "setCominsColumnFilterValues",
 ];
+const xlsxTarget = ["CominsXlsxCellValue", "CominsXlsxError", "CominsXlsxErrorCode", "CominsXlsxExportOptions", "CominsXlsxImportLimits", "CominsXlsxImportOptions", "CominsXlsxImportRow", "CominsXlsxInspectOptions", "CominsXlsxSheetInfo", "CominsXlsxWorkbookInfo", "exportCominsRowsToXlsx", "importCominsRowsFromXlsx", "inspectCominsXlsx"];
 const coreTarget = [...migrationCoreTarget, ...csvImportExports, ...structuredExportSymbols, ...valueCoreSymbols].sort();
 const target = { ...baseline.entrypoints,
   "comins-table": [...baseline.entrypoints["comins-table"], "CominsTreeSlotParams", "CominsTreeSlots", "CominsSummaryRenderPayload", ...csvImportExports, ...structuredExportSymbols, ...valueRootSymbols].sort(),
   "comins-table/core": coreTarget,
+  "comins-table/xlsx": xlsxTarget,
 };
 function compareCore(names: string[]) {
   return { missing: coreTarget.filter((name: string) => !names.includes(name)), extra: names.filter(name => !coreTarget.includes(name)) };
@@ -103,7 +105,7 @@ describe("public Core migration baseline", () => {
 
   it("preserves every public entrypoint", () => {
     expect(Object.keys(readJson("package.json").exports).sort()).toEqual([
-      ".", "./clipboard", "./core", "./selection", "./styles.css",
+      ".", "./clipboard", "./core", "./selection", "./styles.css", "./xlsx",
     ]);
   });
 
@@ -121,6 +123,11 @@ describe("public Core migration baseline", () => {
     }
   });
 
+  it("rejects a missing XLSX API and accidental XLSX symbols at Core", () => {
+    expect(actual["comins-table/xlsx"]).toEqual(xlsxTarget);
+    expect(xlsxTarget.filter(name => !actual["comins-table/xlsx"].filter((n: string) => n !== "inspectCominsXlsx").includes(name))).toEqual(["inspectCominsXlsx"]);
+    expect(compareCore([...coreTarget, "importCominsRowsFromXlsx"])).toEqual({ missing: [], extra: ["importCominsRowsFromXlsx"] });
+  });
   it("classifies every core symbol exactly once", () => {
     const baseline = readJson(baselinePath);
     expect(validateDisposition(baseline.coreDisposition, baseline.entrypoints["comins-table/core"])).toEqual([]);

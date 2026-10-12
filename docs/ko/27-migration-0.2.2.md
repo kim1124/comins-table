@@ -58,3 +58,7 @@ hover·셀 포커스·Escape·툴팁 표면으로의 포인터 이동을 지원�
 ## 신규 값 목록 필터
 
 [값 목록 가이드](21-column-filtering.md): filter.mode:values, operator:in과 trigger/option/panel.render는 0.2.2 신규 기능이다. 기존 조건 필터와 속성을 유지한다.
+
+## XLSX files
+
+미발행 0.2.2 후보는 일반 행 타입을 유지하는 `comins-table/xlsx`를 추가합니다. 엔진은 기본 설치에 포함되고 기존 root/Core API는 독립성을 유지합니다. 수식 캐시·날짜·시트·한도·Worker 계약은 [파일 API](14-export.md#xlsx-022-candidate)를 참고하십시오.

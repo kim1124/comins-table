@@ -6,6 +6,7 @@ import { Button } from "../components/ui/button";
 import { createBaseColumns } from "../fixtures/columns";
 import { createExampleRows, type PersonRow } from "../fixtures/people";
 import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
+import { XlsxFileSample } from "./XlsxFileSample";
 import { CsvFileSample } from "./CsvFileSample";
 import { StructuredExportSample } from "./StructuredExportSample";
 
@@ -63,6 +64,7 @@ export function ExportFeature() {
         </pre>
       </FeatureSampleSection>
       <CsvFileSample />
+      <XlsxFileSample />
       <StructuredExportSample />
     </section>
   );

@@ -1,5 +1,10 @@
 # Comins Table
 
+## Unreleased — XLSX (0.2.2 candidate)
+
+- Add `comins-table/xlsx` byte APIs for typed ordinary-row import/export, cached formula results and formatted dates.
+- Validate actual inflated ZIP bytes/CRC, visible sheet selection and atomic mapping; add Worker-based Playground with cancellation and bounded preview.
+
 ## Unreleased — 0.2.2 value list filtering
 
 - Add framework-neutral value-list filtering, search-scoped selection, other-column facet counts and JSON-compatible controlled models.

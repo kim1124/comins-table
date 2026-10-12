@@ -105,3 +105,58 @@ const groupedCsv = exportCominsRowsToCsv(createCominsGroupedExportOptions({
 `createCominsGroupedExportOptions`는 `CominsExportGroupedOptions<TData, TGroup>`를 받습니다. 명시한 `groups` 순서를 따르고, 그룹 내부는 입력 행 순서를 유지합니다. `getRowId`·`getRowGroupId`에는 원래 입력 인덱스, Column value/format에는 최종 Export 행 인덱스가 전달됩니다. 중복 그룹/행 ID와 등록되지 않은 그룹을 참조하는 행은 거부합니다. 빈 그룹은 데이터 행을 추가하지 않습니다. 현재 단일 계층 Group의 소속은 `__groupId`로 표현하며 제목·집계·보고서용 가상 행은 추가하지 않습니다.
 
 두 함수는 동일한 CSV·JSON 헬퍼가 소비하는 `CominsExportRowsOptions<TData>`를 반환합니다. 업무 행 객체 참조는 유지하고 준비 시점의 메타데이터를 연결합니다. 반환된 옵션의 rows를 따로 교체·재정렬하지 말고 함께 사용하며, 데이터나 구조가 바뀌면 옵션을 다시 생성합니다. 정렬·필터·페이지·선택 범위는 앱이 결정하여 내보낼 원본 rows/tree/groups를 명시적으로 전달합니다. Import는 mapper로 일반 행 데이터를 반환하며 Tree·Group을 자동 복원하지 않습니다. React·DOM은 필요하지 않습니다.
+
+## XLSX (0.2.2 candidate)
+
+`comins-table/xlsx`는 `inspectCominsXlsx`, `importCominsRowsFromXlsx`, `exportCominsRowsToXlsx`를 제공합니다. 엔진은 기본 설치에 포함되지만 이 진입점에서만 로딩합니다. 미발행 0.2.2 후보에 구현된 API이며 발행된 0.2.1 API에는 포함되지 않습니다. 일반 값과 수식 캐시의 문자열·숫자·boolean·null 타입을 유지하며 날짜는 파일 서식을 사용하고 기본 날짜 서식 14는 `yyyy-mm-dd`로 고정합니다. 수식 재계산과 Tree/Group 계층 복원은 지원하지 않습니다.
+
+<!-- comins-doc-example: compile=xlsx-files -->
+```ts
+import { CominsXlsxError, inspectCominsXlsx, importCominsRowsFromXlsx, exportCominsRowsToXlsx } from "comins-table/xlsx";
+type Row = { id: string; score: number; active: boolean };
+async function roundTrip() {
+  const bytes = await exportCominsRowsToXlsx<Row>({
+    rows: [{ id: "001", score: 0, active: false }],
+    columns: [
+      { id: "id", value: row => row.id },
+      { id: "score", value: row => row.score },
+      { id: "active", value: row => row.active },
+    ],
+  });
+  const workbook = await inspectCominsXlsx({ bytes });
+  try {
+    return await importCominsRowsFromXlsx<Row>({
+      bytes, sheetName: workbook.sheets.find(sheet => sheet.visibility === "visible")?.name,
+      mapRow: ({ cells, headers }) => {
+        const [id, score, active] = cells;
+        if (headers?.join(",") !== "id,score,active" || typeof id !== "string" || typeof score !== "number" || typeof active !== "boolean") throw new Error("Invalid application row");
+        return { id, score, active };
+      },
+    });
+  } catch (error) {
+    if (error instanceof CominsXlsxError) throw new Error(`File error: ${error.code}`);
+    throw error;
+  }
+}
+void roundTrip;
+```
+
+함수는 `Uint8Array`(offset view 포함) 또는 `ArrayBuffer`를 받고 Promise를 반환합니다. `CominsXlsxImportOptions<TData>`는 `bytes`와 `mapRow`를 요구하고 `hasHeader` 기본값은 true입니다. `CominsXlsxImportRow`에는 readonly `cells`, readonly 문자열 `headers` 또는 null, 데이터 기준 0부터 시작하는 `rowIndex`, 시트 기준 1부터 시작하는 `sheetRowNumber`가 있습니다. 헤더는 문자열로 변환하고 빈 헤더는 빈 문자열, 중복 이름은 그대로 유지합니다. 열 위치로 매핑하며 객체 경로를 추론하지 않습니다. 실제 빈 셀은 null이고 캐시의 빈 문자열·false·0과 앞자리 0 식별자는 구분합니다. 날짜는 스칼라 타입 보존의 예외입니다.
+
+`inspectCominsXlsx({ bytes, limits? })`는 엔진 Workbook이나 리소스 handle 대신 이름과 visible/hidden/veryHidden 상태를 담은 `CominsXlsxWorkbookInfo`를 반환합니다. 보이는 시트가 하나면 자동 선택하고 여러 개면 대소문자를 포함한 정확한 `sheetName`을 지정해야 합니다. 숨긴 시트는 가져오지 않지만 숨긴 행·열은 포함합니다. 보이는 시트 없음, 없는 이름, 선택 시트의 병합, 잘못된 XML·ZIP, 암호화 파일과 매크로 Workbook은 실패합니다. 다른 시트의 병합만으로 선택 시트를 실패시키지는 않습니다. OOXML XLSX를 지원하며 XLS·XLSB·이름만 바꾼 CSV·PDF는 지원하지 않습니다.
+
+A1부터 마지막 실제 값·수식까지 직사각형으로 가져오고 중간 빈 행·열을 포함합니다. 빈 시트와 헤더만 있는 시트는 `[]`를 반환합니다. 스타일만 있는 뒤쪽 셀은 데이터 행을 추가하지 않지만 과장된 선언 범위도 엔진 파싱 전에 검사합니다. `CominsXlsxImportLimits` 기본값은 `maxBytes: 10 * 1024 * 1024`, `maxUncompressedBytes: 50 * 1024 * 1024`, `maxCells: 100_000`입니다. 셀 수에는 헤더·빈 슬롯을 포함하고 선택 시트에 적용하며 bytes 예산은 inspect에도 적용합니다. 정확히 한도는 허용하고 초과 시 전체 실패하며 잘라서 반환하지 않습니다. 양의 안전한 정수만 허용하고 신뢰할 수 있는 작업에서 명시적으로 올릴 수 있습니다. 선택하지 않은 시트를 포함한 **모든** 항목의 실제 해제 bytes를 누적합니다. 원본 ZIP의 CRC·디렉터리 검증을 완료한 컨테이너만 엔진에 전달합니다. XML DTD·잘못된 entity·256단계를 초과하는 중첩도 거절합니다.
+
+한도는 입력 예산이며 JS heap의 절대 상한이 아닙니다. 디코딩 XML·메타데이터·정규화 ZIP·결과 행이 메모리에 함께 존재할 수 있습니다. 파일을 업로드하거나 Workbook URL을 요청하지 않으며 정상 캐시가 있는 외부 참조 수식도 가져올 수 있습니다. 수식 텍스트를 반환하거나 재계산하지 않고 캐시 누락·Excel 오류 셀은 전체 실패합니다. 저장된 결과의 최신 여부는 보증하지 않습니다. 날짜 결과는 파일 숫자 서식 문자열로 반환하고 지역 의존 기본 서식 ID 14만 `yyyy-mm-dd`로 고정합니다. 1900·1904 체계와 사용자 시간 서식, Excel의 가상 날짜 `1900-02-29`를 지원합니다. ISO 날짜 셀은 기록된 달력·시간 요소를 유지하고 로컬 시간대를 임의로 부여하지 않습니다. Date Export는 원본을 변경하지 않고 UTC 요소를 복사하여 `yyyy-mm-dd hh:mm:ss.000`으로 기록합니다. 잘못된 날짜는 실패합니다.
+
+`CominsXlsxExportOptions<TData>`는 일반 `rows`, 기존 export `columns`, `columnOrder`, `headerOverrides`, `valueSource`, 선택적 `sheetName`(기본 Sheet1), `maxCells`(기본 100,000)를 받습니다. raw는 원래 타입을, formatted는 애플리케이션 `format` getter 결과를 사용합니다. `=`, `+`, `-`, `@`로 시작하는 문자열은 수식이나 apostrophe를 추가하지 않은 명시적 텍스트 셀입니다. null·undefined는 빈 셀이며 유한 숫자·boolean·문자열·유효 Date를 지원합니다. 객체·배열·BigInt·유한하지 않은 숫자·잘못된 Date는 실패합니다. 문자열은 32,767 UTF-16 code units로 제한하며 supplementary 문자는 2개 단위를 사용합니다. Excel의 1,048,576행·16,384열 상한에는 헤더도 포함합니다. 잘못된 시트명을 자동 변경하지 않습니다. 단일 시트를 만들고 임의 셀 스타일 round-trip을 지원하지 않습니다. `metadata`, `nodes`, `groups`는 runtime 오류이며 `metadata?: never`는 호환 변수의 metadata도 타입 단계에서 거절합니다. `__` 업무 열은 일반 열로 유지하고 관리용 메타데이터를 자동 생성하거나 Tree·Group 계층을 복원하지 않습니다. 기존 CSV·JSON 동작은 그대로입니다.
+
+`CominsXlsxError`에는 `CominsXlsxErrorCode`와 선택적 `sheetName`, `cellAddress`, `rowNumber`, `sheetNames`만 제공합니다. 메시지에 원본 셀 값·엔진 진단을 복사하지 않습니다. 오류 코드는 INVALID_OPTIONS, UNSUPPORTED_FILE, INVALID_WORKBOOK, LIMIT_EXCEEDED, SHEET_SELECTION_REQUIRED, SHEET_NOT_FOUND, MERGED_CELLS, MISSING_FORMULA_RESULT, CELL_ERROR, UNSUPPORTED_VALUE입니다. 파일·셀 전체 검증 후에만 `mapRow`를 호출합니다. 사용자 getter·mapper 예외는 그대로 전파하고 부분 결과 배열을 반환하지 않습니다. 콜백 부작용을 롤백하지 못하므로 순수 매핑을 사용하고 성공 후에만 애플리케이션 데이터를 교체해야 합니다.
+
+[Export Playground](/examples/export)의 독립 Excel 카드에서 수식 캐시·날짜 예제 다운로드, 시트 선택, 취소·재시도, 최대 100행 미리보기를 제공합니다. inspect·Import·Export는 전용 module Worker에서 처리하며 main의 콜백을 전송하지 않습니다. id/name/score/active/date 타입과 고유 ID를 애플리케이션에서 검증한 뒤 교체하며 빈 Import는 기존 예제 데이터를 보존합니다. 취소·파일 교체·unmount에서 Worker를 종료하고 늦은 결과·다운로드를 무시합니다. Worker 시작 실패 시 main 전체 파싱으로 자동 우회하지 않습니다. 파일 크기는 할당 전에 검사하고 다운로드 object URL을 해제합니다. Promise 반환 자체는 백그라운드 실행을 의미하지 않으므로 byte API를 직접 사용하는 앱은 자신의 Worker 전략을 선택해야 합니다.
+
+Transitional·Strict OOXML namespace를 모두 지원합니다. 마지막 날짜 `9999-12-31`의 일반 달력 시간과 기본 밀리초 Date 서식은 지원하지만 시간 fraction이 있는 elapsed·숫자 조건 custom 서식은 합계를 변경하지 않고 UNSUPPORTED_VALUE로 실패합니다. 엔진이 지원하지 않는 날짜 서식 문법도 이 자체 오류로 변환합니다.
+
+선택하지 않은 XML은 노드 트리를 보관하지 않고 검증합니다. Workbook·스타일·선택 시트 메타데이터는 XML 문서별 `max(1_000_000, 8 * maxCells)` 노드로 제한하고 다음 객체 생성 전에 검사합니다. 신뢰할 수 있는 복잡한 메타데이터에서만 `maxCells`를 명시적으로 올릴 수 있습니다. 이 구조 제한은 선택 시트의 직사각형 셀 수와 별개이며 inspect에도 적용합니다. 서로 겹치는 수식 범위는 잘못된 파일로 거절하고 중복 순회하지 않습니다.
+
+0.2.2 후보의 CSV·Excel 파일 예제에는 **1000행 예제**, **10000행 예제** 버튼을 제공합니다. 크기를 선택해 전체 파일을 다운로드한 후 초기화하고 해당 파일을 가져오면 전체 행 수를 확인할 수 있습니다. 표는 최대 100행이며 CSV 텍스트 미리보기도 데이터 100행으로 제한합니다. 이 제한으로 Import 데이터나 다운로드 파일이 잘리지는 않습니다. CSV 변환은 동기 Core 헬퍼를 사용하고 XLSX 변환은 전용 Worker에서 수행합니다.

@@ -518,7 +518,11 @@
         "test/export-core.test.ts",
         "test/playwright/specs/export-helper.spec.ts",
         "test/csv-import-core.test.ts",
-        "test/structured-export-core.test.ts"
+        "test/structured-export-core.test.ts",
+        "test/xlsx-codec.test.ts",
+        "test/xlsx-zip.test.ts",
+        "test/xlsx-package.test.ts",
+        "test/playwright/specs/xlsx-file.spec.ts"
       ]
     },
     {
@@ -943,6 +947,10 @@
     "render-api": {
       "guide": "docs/user/27-migration-0.2.2.md",
       "fixture": "test/typecheck/docs/render-api.tsx"
+    },
+    "xlsx-files": {
+      "guide": "docs/user/14-export.md",
+      "fixture": "test/typecheck/docs/xlsx-files.ts"
     }
   },
   "publicApi": {
@@ -1659,6 +1667,24 @@
           "selectCell",
           "selectCellRange",
           "selectRow"
+        ]
+      },
+      "comins-table/xlsx": {
+        "source": "src/xlsx.ts",
+        "exports": [
+          "CominsXlsxCellValue",
+          "CominsXlsxError",
+          "CominsXlsxErrorCode",
+          "CominsXlsxExportOptions",
+          "CominsXlsxImportLimits",
+          "CominsXlsxImportOptions",
+          "CominsXlsxImportRow",
+          "CominsXlsxInspectOptions",
+          "CominsXlsxSheetInfo",
+          "CominsXlsxWorkbookInfo",
+          "exportCominsRowsToXlsx",
+          "importCominsRowsFromXlsx",
+          "inspectCominsXlsx"
         ]
       }
     }

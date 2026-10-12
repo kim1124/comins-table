@@ -105,3 +105,58 @@ void [treeCsv, groupedCsv, groupedJson];
 `createCominsGroupedExportOptions` accepts `CominsExportGroupedOptions<TData, TGroup>`. Rows follow the explicit `groups` order and retain input order within each group. `getRowId` and `getRowGroupId` receive the original input row index; column value/format callbacks receive the final export row index. Duplicate group/row IDs and rows referencing unknown groups throw. Empty groups add no data rows. Current grouping is one level, so `__groupId` identifies membership; there are no synthetic heading, aggregate, or report rows.
 
 Both functions return `CominsExportRowsOptions<TData>` for the same CSV and JSON helpers. They retain the original row objects and capture the corresponding metadata when prepared. Use the returned options together without replacing/reordering `rows`, and rebuild them after data or structure changes. Sorting, filtering, pagination and selection are application decisions: pass the intended source rows/tree/groups explicitly. Import still returns ordinary rows through your mapper and does not reconstruct Tree/Group structures. No React or DOM is required.
+
+## XLSX (0.2.2 candidate)
+
+`comins-table/xlsx` provides `inspectCominsXlsx`, `importCominsRowsFromXlsx` and `exportCominsRowsToXlsx`. The engines are included in installation but imported only through this entry. These APIs are implemented for the unpublished 0.2.2 candidate and are not part of the published 0.2.1 API. Import preserves string, number, boolean and null values including cached formula results. Dates use file formats; default date format 14 becomes `yyyy-mm-dd`. No formula recalculation or Tree/Group hierarchy support is provided.
+
+<!-- comins-doc-example: compile=xlsx-files -->
+```ts
+import { CominsXlsxError, inspectCominsXlsx, importCominsRowsFromXlsx, exportCominsRowsToXlsx } from "comins-table/xlsx";
+type Row = { id: string; score: number; active: boolean };
+async function roundTrip() {
+  const bytes = await exportCominsRowsToXlsx<Row>({
+    rows: [{ id: "001", score: 0, active: false }],
+    columns: [
+      { id: "id", value: row => row.id },
+      { id: "score", value: row => row.score },
+      { id: "active", value: row => row.active },
+    ],
+  });
+  const workbook = await inspectCominsXlsx({ bytes });
+  try {
+    return await importCominsRowsFromXlsx<Row>({
+      bytes, sheetName: workbook.sheets.find(sheet => sheet.visibility === "visible")?.name,
+      mapRow: ({ cells, headers }) => {
+        const [id, score, active] = cells;
+        if (headers?.join(",") !== "id,score,active" || typeof id !== "string" || typeof score !== "number" || typeof active !== "boolean") throw new Error("Invalid application row");
+        return { id, score, active };
+      },
+    });
+  } catch (error) {
+    if (error instanceof CominsXlsxError) throw new Error(`File error: ${error.code}`);
+    throw error;
+  }
+}
+void roundTrip;
+```
+
+The functions accept `Uint8Array` (including an offset view) or `ArrayBuffer` and return Promises. `CominsXlsxImportOptions<TData>` requires `bytes` and `mapRow`; `hasHeader` defaults to true. `CominsXlsxImportRow` has readonly `cells`, readonly string `headers` or null, zero-based data `rowIndex`, and one-based `sheetRowNumber`. Headers are converted to strings; blank headers become empty strings and duplicate names are preserved. Mapping is positional; no object paths are inferred. Blank cells become null; cached empty strings, false, zero, and identifiers with leading zeros remain distinct. Dates are the exception to scalar type preservation.
+
+`inspectCominsXlsx({ bytes, limits? })` returns `CominsXlsxWorkbookInfo` with names and visible/hidden/veryHidden states, without exposing an engine workbook or a resource handle. One visible sheet is selected automatically; multiple visible sheets require an exact, case-sensitive `sheetName`. Hidden sheets cannot be imported, while hidden rows and columns are included. No visible sheet, a missing name, any selected-sheet merge, malformed XML/ZIP, encrypted files or macro workbooks fail the operation. Other sheets' merges do not cause a selected sheet to fail. This entry supports OOXML XLSX, not XLS, XLSB, CSV renamed as XLSX or PDF.
+
+The import rectangle starts at A1 and ends at the last actual value or formula, including empty intermediate rows/columns. Empty and header-only sheets return `[]`. Styling alone does not add trailing data rows, but exaggerated declared dimensions are still checked before engine parsing. `CominsXlsxImportLimits` defaults to `maxBytes: 10 * 1024 * 1024`, `maxUncompressedBytes: 50 * 1024 * 1024`, `maxCells: 100_000`. `maxCells` includes header and blank slots and applies to the selected sheet; byte budgets also apply to inspect. Exact limits are accepted; an over-budget file fails without truncation. Limits must be positive safe integers and can be raised explicitly for trusted workloads. Actual inflated bytes are counted across **all** entries, including unselected sheets. ZIP CRC and directory checks run before the verified container reaches the engine. XML DTDs, invalid entities and nesting deeper than 256 levels are rejected.
+
+These limits are input budgets, not a hard heap cap. Decoded XML, metadata, normalized ZIP bytes and result rows can coexist in memory. The functions do not upload files or fetch workbook URLs; external formula references with valid cached results can still be imported. Formula text is not returned, formulas are not evaluated, and missing cached results or Excel error cells fail the complete import. The library cannot know whether stored results are current. Date results use the file's number format; regional built-in format ID 14 is fixed to `yyyy-mm-dd`. The 1900 and 1904 systems, custom time formats and the Excel phantom date `1900-02-29` are supported. ISO date cells preserve their recorded calendar/time fields without assigning a local timezone. Export Date inputs are copied into UTC fields and written with `yyyy-mm-dd hh:mm:ss.000`; no original Date is changed. Invalid dates fail.
+
+`CominsXlsxExportOptions<TData>` accepts ordinary `rows`, existing export `columns`, `columnOrder`, `headerOverrides`, `valueSource`, optional `sheetName` (default Sheet1) and `maxCells` (default 100,000). Raw values preserve types; formatted mode uses the application's `format` getter. Strings beginning with `=`, `+`, `-`, or `@` are explicit text cells, with no formula or added apostrophe. Null/undefined become blank cells; finite numbers, booleans, strings and valid Date inputs are supported. Objects, arrays, BigInt, non-finite numbers and invalid Date inputs fail. Strings are limited to 32,767 UTF-16 code units; supplementary characters use two units. Excel's 1,048,576-row/16,384-column limits include the header. Invalid sheet names are rejected rather than rewritten. Export creates one sheet and does not preserve arbitrary cell styles. `metadata`, `nodes` and `groups` options are rejected at runtime; `metadata?: never` also rejects compatible metadata variables in TypeScript. Business columns named with `__` remain ordinary columns; this API does not generate management metadata or rebuild Tree/Group structures. Existing CSV/JSON helpers are unchanged.
+
+`CominsXlsxError` carries `CominsXlsxErrorCode` and optional `sheetName`, `cellAddress`, `rowNumber`, `sheetNames`, without source cell values or engine diagnostics in the message. Codes are INVALID_OPTIONS, UNSUPPORTED_FILE, INVALID_WORKBOOK, LIMIT_EXCEEDED, SHEET_SELECTION_REQUIRED, SHEET_NOT_FOUND, MERGED_CELLS, MISSING_FORMULA_RESULT, CELL_ERROR and UNSUPPORTED_VALUE. Full file and cell validation completes before `mapRow` is invoked. User getter and mapper exceptions propagate unchanged; no partial row array is returned. Side effects inside callbacks cannot be rolled back. Keep callbacks pure and replace application data only after success.
+
+The [Export Playground](/examples/export) offers an independent Excel file card with a downloadable cached-formula/date fixture, visible-sheet selection, cancel/retry and a maximum 100-row preview. It uses a dedicated module Worker for inspect/import/export; main-thread callbacks are never transferred. Application validation checks typed id/name/score/active/date rows before replacement, and empty imports preserve the prior sample data. Cancellation, file replacement and unmount terminate pending Workers and ignore late results/downloads. A Worker startup failure reports an error without parsing on the main thread. File size is checked before allocation and download object URLs are revoked. A Promise alone does not mean background execution; applications using the byte API directly should choose their own Worker strategy.
+
+Both Transitional and Strict OOXML namespaces are supported. At the final day `9999-12-31`, ordinary calendar time and the default millisecond Date format are supported; elapsed or numeric-conditional custom formats with time fractions fail with UNSUPPORTED_VALUE rather than return a shifted total. Unsupported engine date-format syntax is also converted to this owned error.
+
+Unselected XML uses validation without retaining node trees. Retained workbook/style/selected-sheet metadata is limited to `max(1_000_000, 8 * maxCells)` nodes per XML document before allocating another node; increase `maxCells` explicitly only for trusted complex metadata. This structural guard is separate from the selected rectangular cell quota and also protects inspect. Overlapping formula ranges are invalid and fail before repeated traversal.
+
+The 0.2.2 candidate CSV and Excel file samples include **1000-row** and **10000-row** buttons. Select a size, download the complete file, reset, and import that file to verify the full row count. Tables show at most 100 rows; CSV text previews are also capped at 100 data rows. This preview limit does not truncate the imported data or exported file. CSV uses synchronous Core conversion; XLSX conversion runs in a dedicated Worker.

@@ -105,6 +105,7 @@ export const dataTableOptionGuide: DataTableOptionGuideSource = [
       { description: defineLocalizedText("Core helper는 selection, Clipboard와 layout serialization을 위한 pure state logic을 제공합니다.", "Core helpers provide pure state logic for selection, clipboard, and layout serialization."), name: "core helper" },
       { description: defineLocalizedText("UI Drag와 같은 reject/overwrite 규칙으로 Row 또는 Group bundle의 immutable source/target model을 계산합니다.", "Computes immutable source/target models for a Row or Group bundle with the same reject/overwrite rules as UI Drag."), name: "transferCominsRowBetweenTables / transferCominsGroupBetweenTables" },
       { description: defineLocalizedText("Row와 export Column 정의를 CSV 문자열로 변환합니다.", "Converts rows and export column definitions into a CSV string."), name: "exportCominsRowsToCsv" },
+      { description: defineLocalizedText("comins-table/xlsx의 bytes API입니다. 수식의 저장된 결과 타입을 유지하고 날짜는 파일 서식 문자열로 가져옵니다. 예제는 전용 Worker와 100행 미리보기를 사용합니다.", "Byte APIs from comins-table/xlsx preserve cached formula types and import formatted date strings. The example uses a dedicated Worker and a 100-row preview."), name: "inspectCominsXlsx / importCominsRowsFromXlsx / exportCominsRowsToXlsx" },
       { description: defineLocalizedText("Row와 export Column 정의를 JSON 문자열로 변환합니다.", "Converts rows and export column definitions into a JSON string."), name: "exportCominsRowsToJson" },
     ],
     title: defineLocalizedText("Ref / Core", "Ref / Core"),

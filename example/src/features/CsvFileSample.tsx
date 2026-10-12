@@ -12,6 +12,11 @@ const initialRows: Row[] = [
   { id: "002", name: "Beta", score: 75 },
   { id: "003", name: "Gamma", score: 90 },
 ];
+const exportColumns = [
+  { id: "id", value: (row: Row) => spreadsheetText(row.id) },
+  { id: "name", value: (row: Row) => spreadsheetText(row.name) },
+  { id: "score", value: (row: Row) => row.score },
+];
 const columns: CominsTableColumn<Row>[] = [
   { field: "id", label: "ID", width: 100 },
   { field: "name", label: "Name", minWidth: 180 },
@@ -29,14 +34,15 @@ export function CsvFileSample() {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [imported, setImported] = useState(false);
-  const output = useMemo(() => exportCominsRowsToCsv({
-    rows,
-    columns: [
-      { id: "id", value: (row: Row) => spreadsheetText(row.id) },
-      { id: "name", value: (row: Row) => spreadsheetText(row.name) },
-      { id: "score", value: (row: Row) => row.score },
-    ],
-  }), [rows]);
+  const output = useMemo(() => exportCominsRowsToCsv({ rows, columns: exportColumns }), [rows]);
+  const preview = useMemo(() => rows.slice(0, 100), [rows]);
+  const previewOutput = useMemo(() => exportCominsRowsToCsv({ rows: preview, columns: exportColumns }), [preview]);
+  function loadExample(count: number) {
+    setRows(Array.from({ length: count }, (_, index) => ({
+      id: String(index + 1).padStart(5, "0"), name: `Row ${index + 1}`, score: index % 101,
+    })));
+    setFailed(false); setImported(false);
+  }
 
   async function importFile(file: File) {
     setBusy(true);
@@ -82,8 +88,8 @@ export function CsvFileSample() {
   return <FeatureSampleSection id="csv-files"
     title={text(defineLocalizedText("CSV 파일 가져오기·내보내기", "CSV file import and export"))}
     description={text(defineLocalizedText(
-      "UTF-8 CSV(최대 1 MB)의 id,name,score 열을 사용합니다. ID는 고유해야 하며 이름과 숫자 점수가 필요합니다. 모든 행이 유효하면 현재 데이터를 교체합니다. 파일은 서버로 전송하지 않습니다.",
-      "Use a UTF-8 CSV (up to 1 MB) with id,name,score columns. IDs must be unique, with a name and numeric score. Valid files replace the current rows. Files are not sent to a server.",
+      "UTF-8 CSV(최대 1 MB)의 id,name,score 열을 사용합니다. ID는 고유해야 하며 이름과 숫자 점수가 필요합니다. 모든 행이 유효하면 현재 데이터를 교체합니다. 1000·10000행 예제를 다운로드한 뒤 다시 가져올 수 있습니다. 전체 행을 내보내며 표와 CSV 미리보기는 최대 100행입니다. 파일은 서버로 전송하지 않습니다.",
+      "Use a UTF-8 CSV (up to 1 MB) with id,name,score columns. IDs must be unique, with a name and numeric score. Valid files replace the current rows. Load a 1000/10000-row example, download it and import it again. Exports include all rows; table and CSV previews show at most 100 rows. Files are not sent to a server.",
     ))}>
     <div className="table-toolbar">
       <label style={{ minWidth: 0, maxWidth: "100%" }}>
@@ -101,17 +107,20 @@ export function CsvFileSample() {
       <Button variant="outline" disabled={busy} onClick={() => { setRows(initialRows); setFailed(false); setImported(false); }}>
         {text(defineLocalizedText("예제 초기화", "Reset sample"))}
       </Button>
+      {[1000, 10000].map(count => <Button key={count} variant="outline" disabled={busy} onClick={() => loadExample(count)}>
+        {text(defineLocalizedText(`${count}행 예제`, `${count}-row example`))}
+      </Button>)}
     </div>
     <p role="status">{busy ? text(defineLocalizedText("읽는 중…", "Reading…"))
       : imported ? text(defineLocalizedText(`${rows.length}개 행을 가져왔습니다.`, `Imported ${rows.length} rows.`))
-      : text(defineLocalizedText(`${rows.length}개 행`, `${rows.length} rows`))}</p>
+      : text(defineLocalizedText(`${rows.length}개 행 · 미리보기 ${preview.length}행`, `${rows.length} rows · preview ${preview.length} rows`))}</p>
     {failed && <p role="alert">{text(defineLocalizedText(
       "가져오지 못했습니다. UTF-8 인코딩, 1 MB 제한, CSV 구문과 열·행 값을 확인하십시오. 기존 데이터는 유지됩니다.",
       "Import failed. Check UTF-8 encoding, the 1 MB limit, CSV syntax, columns and row values. Existing data is unchanged.",
     ))}</p>}
-    <CominsTable className="example-table" columns={columns} data={rows} getRowId={row => row.id}
+    <CominsTable data-testid="csv-file-preview" className="example-table" columns={columns} data={preview} getRowId={row => row.id}
       theme={{ density: "compact" }} />
-    <pre className="state-output" data-testid="csv-file-output">{output}</pre>
+    <pre className="state-output" data-testid="csv-file-output">{previewOutput}</pre>
     <p>{text(defineLocalizedText(
       "다운로드할 ID·이름이 수식 접두사(=, +, -, @) 또는 탭·줄바꿈으로 시작하면 작은따옴표를 앞에 추가합니다. 다시 가져오면 이 문자도 값에 포함됩니다.",
       "Downloaded IDs and names starting with a formula prefix (=, +, -, @), tab or newline receive a leading apostrophe. Reimporting keeps that character in the value.",

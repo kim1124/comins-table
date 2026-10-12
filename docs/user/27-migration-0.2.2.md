@@ -58,3 +58,7 @@ The planned value-list filter paths `filter.trigger.render`, `filter.option.rend
 ## New value list filters
 
 [Value list guide](21-column-filtering.md): `filter.mode: "values"`, `operator: "in"` and trigger/option/panel.render are new in 0.2.2; existing condition filters and names remain unchanged.
+
+## XLSX files
+
+The unpublished 0.2.2 candidate adds `comins-table/xlsx` for typed ordinary-row import/export. Engines install with the package; existing root/Core APIs remain independent. See [file APIs](14-export.md#xlsx-022-candidate) for cached formula, date, sheet, budget and Worker contracts.
