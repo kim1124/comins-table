@@ -184,7 +184,7 @@ export function ColumnFilteringFeature() {
             aggregations: { amount: "sum" },
             expandedGroupIds,
             getGroupId: getFilteringGroupId,
-            getGroupLabel: getFilteringGroupLabel,
+            label: { render: getFilteringGroupLabel },
             getRowGroupId: (row) => row.region,
             groupDraggable: true,
             groups,
@@ -223,7 +223,7 @@ export function ColumnFilteringFeature() {
               aggregations: { amount: "sum" },
               expandedGroupIds: ["east", "empty", "west"],
               getGroupId: getFilteringGroupId,
-              getGroupLabel: getFilteringGroupLabel,
+              label: { render: getFilteringGroupLabel },
               getRowGroupId: (row) => row.region,
               groups: filteringGroups,
             }}

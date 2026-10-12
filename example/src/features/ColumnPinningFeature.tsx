@@ -146,7 +146,7 @@ export function ColumnPinningFeature() {
           rowGrouping={{
             expandedGroupIds,
             getGroupId: (group: { id: string }) => group.id,
-            getGroupLabel: (group) => group.id,
+            label: { render: (group) => group.id },
             getRowGroupId: (row) => row.region,
             groups,
             groupDraggable: true,

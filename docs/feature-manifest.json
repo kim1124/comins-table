@@ -211,7 +211,10 @@
       ],
       "tests": [
         "test/component-renderer-api.test.tsx",
-        "test/playwright/specs/cell-row-examples.spec.ts"
+        "test/playwright/specs/cell-row-examples.spec.ts",
+        "test/cell-tooltip.test.tsx",
+        "test/playwright/specs/cell-tooltip.spec.ts",
+        "test/render-api-compat.test.tsx"
       ]
     },
     {
@@ -404,7 +407,8 @@
       "category": "structured-rows",
       "apiSymbols": [
         "CominsTableSummaryConfig",
-        "getCominsSummaryValues"
+        "getCominsSummaryValues",
+        "CominsSummaryRenderPayload"
       ],
       "guides": {
         "en": [
@@ -929,6 +933,10 @@
     "structured-export": {
       "guide": "docs/user/14-export.md",
       "fixture": "test/typecheck/docs/structured-export.ts"
+    },
+    "render-api": {
+      "guide": "docs/user/27-migration-0.2.2.md",
+      "fixture": "test/typecheck/docs/render-api.tsx"
     }
   },
   "publicApi": {
@@ -1096,6 +1104,7 @@
         "CominsSummaryColumn",
         "CominsSummaryColumnConfig",
         "CominsSummaryFormatPayload",
+        "CominsSummaryRenderPayload",
         "CominsTableCellConfig",
         "CominsTableColumnGroup",
         "CominsTableComponentOption",
@@ -1289,6 +1298,7 @@
           "CominsSummaryColumn",
           "CominsSummaryColumnConfig",
           "CominsSummaryFormatPayload",
+          "CominsSummaryRenderPayload",
           "CominsTable",
           "CominsTableCellConfig",
           "CominsTableColumn",

@@ -100,7 +100,8 @@ export function SummaryRowFeature() {
               item: { aggregate: () => text(defineLocalizedText("포맷 적용", "Formatted")), colSpan: 3 },
               amount: {
                 aggregate: "sum",
-                format: ({ value }) => <strong>{`₩${Number(value).toLocaleString("en-US")}`}</strong>,
+                format: ({ value }) => `₩${Number(value).toLocaleString("en-US")}`,
+                render: ({ formattedValue }) => <strong>{formattedValue}</strong>,
               },
               score: {
                 aggregate: "avg",

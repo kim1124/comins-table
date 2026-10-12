@@ -44,6 +44,8 @@ export type CominsRowGroupingConfig<TData, TGroup = unknown> = {
   aggregations?: Readonly<Partial<Record<string, CominsRowGroupAggregation>>>;
   expandedGroupIds?: readonly CominsRowId[];
   getGroupId: (group: TGroup) => CominsRowId;
+  label?: { render?: (group: TGroup) => React.ReactNode };
+  /** @deprecated Use label.render. Retained throughout 0.x; removal target: 1.0.0. */
   getGroupLabel?: (group: TGroup) => React.ReactNode;
   getGroupRowProps?: (
     params: CominsRowGroupRenderParams<TData, TGroup>,
@@ -56,6 +58,8 @@ export type CominsRowGroupingConfig<TData, TGroup = unknown> = {
     groups: TGroup[],
     details: CominsRowGroupMoveDetails,
   ) => void;
+  content?: { render?: (params: CominsRowGroupRenderParams<TData, TGroup>) => React.ReactNode };
+  /** @deprecated Use content.render. Retained throughout 0.x; removal target: 1.0.0. */
   renderGroupContent?: (
     params: CominsRowGroupRenderParams<TData, TGroup>,
   ) => React.ReactNode;
@@ -119,7 +123,11 @@ export function normalizeCominsRowGrouping<TData, TGroup>(input: { columns: read
     aggregations: input.config.aggregations, groups: input.config.groups,
     getGroupId(group: TGroup) {
       const id = input.config.getGroupId(group);
-      if (!labels.has(id)) labels.set(id, input.config.getGroupLabel?.(group) ?? String(id));
+      if (!labels.has(id)) {
+        const render = input.config.label?.render;
+        const label = render ? render(group) : input.config.getGroupLabel?.(group);
+        labels.set(id, render ? label === undefined ? String(id) : label : label ?? String(id));
+      }
       return id;
     },
   } });

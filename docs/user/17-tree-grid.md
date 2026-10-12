@@ -2,6 +2,8 @@
 
 ![Tree subtree drag with parent changes](../assets/comins-table-tree-row-drag.gif)
 
+Starting with 0.2.2, `.render` is the standard UI customization entry point. Legacy properties remain supported throughout 0.x, with removal targeted for 1.0.0. See the [migration rules](27-migration-0.2.2.md).
+
 <!-- comins-restriction: tree-no-pagination -->
 
 [Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/17-tree-grid.md) · [Playground](http://127.0.0.1:4002/examples/tree-grid)
@@ -84,7 +86,7 @@ Expanding a descendant is blocked while an ancestor remains folded. Include the 
 
 ## Styles, components, and renderers
 
-Tree Grid reuses the current row and cell contracts. Use `rowProps.className` and `rowProps.style` for hierarchy-aware row styling. Existing column `cell.components` types such as `checkbox`, `select`, and `toggle` read and update the node's `item`. `cell.renderer` can return a custom React component for any tree node; no separate component-row API is required.
+Tree Grid reuses the current row and cell contracts. Use `rowProps.className` and `rowProps.style` for hierarchy-aware row styling. Existing column `cell.components` types such as `checkbox`, `select`, and `toggle` read and update the node's `item`. `cell.render` can return a custom React component for any tree node; no separate component-row API is required.
 
 The Playground includes a fixed-row-height virtualized tree with exactly `10000` nodes. Virtualization renders only the current window while hierarchy flattening and ref expansion continue to operate on the controlled tree.
 
@@ -141,9 +143,9 @@ Content that exceeds the available width is clipped so it cannot overlap the tra
   getRowId={(item) => item.id}
   onChangeData={setNodes}
   treeSlots={{
-    leading: ({ hasChildren }) => <span aria-hidden="true">{hasChildren ? "▸" : "·"}</span>,
-    content: ({ defaultContent }) => <strong>{defaultContent}</strong>,
-    trailing: ({ item }) => <button type="button" onClick={() => showDetails(item)}>Details</button>,
+    leading: { render: ({ hasChildren }) => <span aria-hidden="true">{hasChildren ? "▸" : "·"}</span> },
+    content: { render: ({ defaultContent }) => <strong>{defaultContent}</strong> },
+    trailing: { render: ({ item }) => <button type="button" onClick={() => showDetails(item)}>Details</button> },
   }}
 />
 ```

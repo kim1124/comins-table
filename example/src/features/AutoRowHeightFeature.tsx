@@ -12,7 +12,7 @@ function ExpandingContent({ value }: { value: unknown }) {
 }
 const columns: CominsTableColumn<Row>[] = [
   { field: "id", label: "id", width: 100, pinned: "left", cell: { props: { style: { textAlign: "right" } } } },
-  { field: "text", label: "text", width: 400, cell: { renderer: ({ value, row }) => <div style={{ whiteSpace: "normal", lineHeight: "20px" }}>{row.id === 0 ? <ExpandingContent value={value} /> : String(value)}</div> } },
+  { field: "text", label: "text", width: 400, cell: { render: ({ value, row }) => <div style={{ whiteSpace: "normal", lineHeight: "20px" }}>{row.id === 0 ? <ExpandingContent value={value} /> : String(value)}</div> } },
 ];
 const auto = () => "auto" as const;
 const id = (row: Row) => row.id;
@@ -31,7 +31,7 @@ export function AutoRowHeightFeature() {
         <Button aria-pressed={detail} onClick={() => setDetail(value => !value)} data-testid="auto-height-detail" variant="outline">{text(defineLocalizedText("Row Detail", "Row Detail"))}</Button>
       </div>
       <div style={{ height: 420, width: narrow ? 420 : 760, maxWidth: "100%" }}>
-        <CominsTable data={data} columns={activeColumns} expandedRowIds={detail ? [0] : []} renderRowDetail={() => <div style={{ height: 120 }}>{text(defineLocalizedText("독립적으로 측정하는 Detail 콘텐츠", "Independently measured detail content"))}</div>} getRowId={id} getRowHeight={auto} estimatedRowHeight={56} rowProps={{ draggable: false }} virtualized data-testid="auto-height-viewport" />
+        <CominsTable data={data} columns={activeColumns} expandedRowIds={detail ? [0] : []} rowDetail={{ render: () => <div style={{ height: 120 }}>{text(defineLocalizedText("독립적으로 측정하는 Detail 콘텐츠", "Independently measured detail content"))}</div> }} getRowId={id} getRowHeight={auto} estimatedRowHeight={56} rowProps={{ draggable: false }} virtualized data-testid="auto-height-viewport" />
       </div>
     </FeatureSampleSection>
   </section>;

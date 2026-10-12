@@ -159,10 +159,10 @@ export function LoadingStateFeature() {
           columns={columns}
           data={rows}
           data-testid="loading-state-viewport"
-          emptyComponent={<span>{text(defineLocalizedText("표시할 데이터가 없습니다.", "No rows to display."))}</span>}
+          emptyContent={{ render: () => (<span>{text(defineLocalizedText("표시할 데이터가 없습니다.", "No rows to display."))}</span>) }}
           getRowId={(row) => row.id}
           loading={isLoading}
-          loadingComponent={<span>{text(defineLocalizedText("데이터를 갱신하는 중입니다.", "Refreshing rows."))}</span>}
+          loadingContent={{ render: () => (<span>{text(defineLocalizedText("데이터를 갱신하는 중입니다.", "Refreshing rows."))}</span>) }}
           pagination={{ pageIndex: 0, pageSize: PRIMARY_PAGE_SIZE }}
           persistHeaderWhenEmpty
           skeletonRowCount={5}
@@ -204,7 +204,7 @@ export function LoadingStateFeature() {
             columns={columns}
             data={remoteTableRows}
             data-testid="loading-lazy-viewport"
-            emptyComponent={<span>{text(defineLocalizedText("표시할 데이터가 없습니다.", "No rows to display."))}</span>}
+            emptyContent={{ render: () => (<span>{text(defineLocalizedText("표시할 데이터가 없습니다.", "No rows to display."))}</span>) }}
             getRowId={(row) => row.id}
             lazyLoad
             lazyLoadBatchSize={5}

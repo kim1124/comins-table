@@ -30,10 +30,10 @@ export function TreeSlotsSample() {
         rowHeight={48} className="example-table" data-testid="tree-slots-viewport"
         onChangeSelection={selection => setSelectedCount(selection.rowIds.length)}
         treeSlots={{
-          leading: ({ item }) => <img src="/comins-symbol.svg" alt={item.kind} width={20} height={20} />,
-          content: ({ defaultContent, depth }) => <span>{defaultContent} <small>({depth})</small></span>,
-          trailing: ({ item }) => <Button variant="outline" aria-label={`${item.name} ${text(defineLocalizedText("상세", "details"))}`}
-            onClick={() => setActionCount(count => count + 1)}>{text(defineLocalizedText("상세", "Details"))}</Button>,
+          leading: { render: ({ item }) => <img src="/comins-symbol.svg" alt={item.kind} width={20} height={20} /> },
+          content: { render: ({ defaultContent, depth }) => <span>{defaultContent} <small>({depth})</small></span> },
+          trailing: { render: ({ item }) => <Button variant="outline" aria-label={`${item.name} ${text(defineLocalizedText("상세", "details"))}`}
+            onClick={() => setActionCount(count => count + 1)}>{text(defineLocalizedText("상세", "Details"))}</Button> },
         }} />
       <p className="state-output">
         {text(defineLocalizedText("선택한 행", "Selected rows"))}: <output data-testid="tree-slots-selected">{selectedCount}</output>

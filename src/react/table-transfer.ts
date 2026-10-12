@@ -6,6 +6,8 @@ export * from "../core/transfer/policy";
 
 export type CominsTableTransferRejectionFeedback<TData, TGroup = never> = {
   duration?: number;
+  tooltip?: { render?: (rejection: CominsTableTransferRejection<TData, TGroup>) => React.ReactNode };
+  /** @deprecated Use tooltip.render. Retained throughout 0.x; removal target: 1.0.0. */
   renderTooltip?: (
     rejection: CominsTableTransferRejection<TData, TGroup>,
   ) => React.ReactNode;

@@ -25,6 +25,14 @@ const state = createCominsTableState({
 });
 
 describe("comins-table summary core", () => {
+  it("renders the formatted aggregate once without exposing the internal resolver", () => {
+    const format = vi.fn(({ value }) => `Sum ${value}`);
+    const render = vi.fn(({ value, formattedValue }) => `${value}:${formattedValue}`);
+    expect(getCominsSummaryValues(state.rows, state.columns, { columns: { age: { aggregate: "sum", format, render } } })).toEqual({ age: "73:Sum 73" });
+    expect(format).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledOnce();
+    expect(render).toHaveBeenCalledWith(expect.objectContaining({ value: 73, formattedValue: "Sum 73", rows: state.rows }));
+  });
   it("aggregates every controlled row before pagination", () => {
     expect(
       getCominsSummaryValues(state.rows, state.columns, {

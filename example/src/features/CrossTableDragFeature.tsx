@@ -118,14 +118,14 @@ export function CrossTableDragFeature() {
   );
   const flatTransfer = (tableId: string) => ({
     coordinator: flatCoordinator,
-    rejectionFeedback: { duration: 2400, renderTooltip: renderRejectionTooltip },
+    rejectionFeedback: { duration: 2400, tooltip: { render: renderRejectionTooltip } },
     resolveConflict: () => conflictPolicy,
     scope: "flat-example",
     tableId,
   } as const);
   const groupedTransfer = (tableId: string) => ({
     coordinator: groupedCoordinator,
-    rejectionFeedback: { duration: 2400, renderTooltip: renderRejectionTooltip },
+    rejectionFeedback: { duration: 2400, tooltip: { render: renderRejectionTooltip } },
     resolveConflict: () => conflictPolicy,
     scope: "group-example",
     tableId,
@@ -133,7 +133,7 @@ export function CrossTableDragFeature() {
   const grouping = (tableId: string, groups: TransferGroup[]) => ({
     expandedGroupIds: groups.map((group) => group.id).filter((id) => !collapsedGroupIds[tableId]?.includes(id)),
     getGroupId: (group: TransferGroup) => group.id,
-    getGroupLabel: (group: TransferGroup) => group.label,
+    label: { render: (group: TransferGroup) => group.label },
     getRowGroupId: (row: TransferRow) => row.groupId,
     groupDraggable: true,
     groups,

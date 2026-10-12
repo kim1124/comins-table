@@ -2,6 +2,8 @@
 
 <!-- comins-restriction: transfer-duplicate-default-reject -->
 
+Starting with 0.2.2, `.render` is the standard UI customization entry point. Legacy properties remain supported throughout 0.x, with removal targeted for 1.0.0. See the [migration rules](27-migration-0.2.2.md).
+
 [Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/23-cross-table-drag.md) · [Playground](http://127.0.0.1:4002/examples/cross-table-drag)
 
 ![Cross-Table Drag moves a complete Group bundle and reports a duplicate Row ID](../assets/comins-table-cross-table-drag.gif)
@@ -27,7 +29,7 @@ const tableTransfer = (tableId: string) => ({
   resolveConflict: () => "reject" as const,
   rejectionFeedback: {
     duration: 2400,
-    renderTooltip: (rejection) => (
+    tooltip: { render: (rejection) => (
       <>
         <strong>Duplicate ID</strong>
         <span>{`The ID "${String(
@@ -36,7 +38,7 @@ const tableTransfer = (tableId: string) => ({
             : rejection.conflict.rowId,
         )}" already exists.`}</span>
       </>
-    ),
+    ) },
   },
 });
 
@@ -64,7 +66,7 @@ The target Table owns `canTransfer` and `resolveConflict`. `canTransfer(intent)`
 
 When a pointer drop resolves a duplicate conflict to `"reject"`, the target Table receives a restrained error outline and a compact `Duplicate ID` Tooltip appears next to the release coordinates. The feedback is created only after `pointerup`, uses `pointer-events: none`, stays outside the semantic Table body, clamps to the browser viewport, and is announced as a polite live status. It therefore does not replace the hit-tested Drop target or block a later interaction.
 
-`tableTransfer.rejectionFeedback` belongs to the target Table. Use `renderTooltip(rejection)` to replace the Tooltip body and `duration` to set its visible time from 500 through 10000 milliseconds; the default is 1800 milliseconds. Set `rejectionFeedback: false` to suppress the built-in Tooltip and outline. `Coordinator.onTransferRejected(rejection)` still receives the structured `reason: "duplicate-id"`, source/target Table IDs, transfer kind, and exact rejected conflict, including when built-in feedback is disabled. `canTransfer()` rejection remains application-owned and does not emit the duplicate-conflict notification.
+`tableTransfer.rejectionFeedback` belongs to the target Table. Use `tooltip.render(rejection)` to replace the Tooltip body and `duration` to set its visible time from 500 through 10000 milliseconds; the default is 1800 milliseconds. Set `rejectionFeedback: false` to suppress the built-in Tooltip and outline. `Coordinator.onTransferRejected(rejection)` still receives the structured `reason: "duplicate-id"`, source/target Table IDs, transfer kind, and exact rejected conflict, including when built-in feedback is disabled. `canTransfer()` rejection remains application-owned and does not emit the duplicate-conflict notification.
 
 The Tooltip visuals are customizable without replacing its positioning or accessibility behavior:
 

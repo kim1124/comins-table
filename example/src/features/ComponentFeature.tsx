@@ -476,7 +476,7 @@ export function ComponentFeature() {
 
     if (componentId.startsWith("virtual-list")) {
       componentColumn.header = {
-        renderer: ({ column }) => <span>{column.label}</span>,
+        render: ({ column }) => <span>{column.label}</span>,
       };
       componentColumn.cell = {
         components: [
@@ -505,14 +505,14 @@ export function ComponentFeature() {
 
     if (componentId === "renderer") {
       componentColumn.header = {
-        renderer: ({ column }) => (
+        render: ({ column }) => (
           <span data-testid="component-header-renderer">
             {`${text(defineLocalizedText("사용자 renderer", "Custom renderer"))}:${column.label}`}
           </span>
         ),
       };
       componentColumn.cell = {
-        renderer: ({ row, value }) => (
+        render: ({ row, value }) => (
           <span data-testid={`component-cell-renderer-${String(row.id)}`}>
             {`${text(defineLocalizedText("사용자 renderer", "Custom renderer"))}:${String(value)}`}
           </span>

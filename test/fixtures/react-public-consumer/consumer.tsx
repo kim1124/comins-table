@@ -27,6 +27,8 @@ const columns: CominsTableColumn<Row>[] = [{
     props: ({ row }) => ({ pasteable: row.data.score >= 0 }),
     parseClipboard: ({ text }) => Number(text),
     renderer: ({ row }) => <output>{row.data.score}</output>,
+    render: ({ row }) => <output>{row.data.score}</output>,
+    tooltip: { render: ({ row }) => <b>{row.data.score}</b> },
   },
 }];
 const state = createCominsTableState({ rows, columns, getRowId: row => row.id });

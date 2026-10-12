@@ -20,7 +20,7 @@ const columns: CominsTableColumn<ScaleRow>[] = [
   { field: "id", label: "id", width: 110, pinned: "left" },
   {
     field: "text", label: "text", width: 740,
-    cell: { renderer: ({ row, value }) => <div className="readme-demo__wrapped-content">
+    cell: { render: ({ row, value }) => <div className="readme-demo__wrapped-content">
       {row.id === 0 ? <ExpandablePreview value={value} /> : String(value)}
     </div> },
   },

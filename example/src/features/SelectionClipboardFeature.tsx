@@ -37,7 +37,7 @@ export function SelectionClipboardFeature() {
   const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(
     () => [
       { field: "id", label: "id", width: 120, cell: {
-        renderer: ({ row }) => <label><input type="checkbox" aria-label={`Select Row ${row.id}`}
+        render: ({ row }) => <label><input type="checkbox" aria-label={`Select Row ${row.id}`}
           checked={selection.rowIds.includes(row.id)}
           onClick={event => event.stopPropagation()}
           onChange={event => {

@@ -7,7 +7,7 @@ import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-loc
 type Row = { id: number; text: string };
 const columns: CominsTableColumn<Row>[] = [
   { field: "id", label: "id", width: 100, pinned: "left", cell: { props: { style: { textAlign: "right" } } } },
-  { field: "text", label: "text", width: 450, cell: { renderer: ({ value }) => <div style={{ whiteSpace: "normal", lineHeight: "20px" }}>{String(value)}</div> } },
+  { field: "text", label: "text", width: 450, cell: { render: ({ value }) => <div style={{ whiteSpace: "normal", lineHeight: "20px" }}>{String(value)}</div> } },
 ];
 const id = (row: Row) => row.id;
 const auto = () => "auto" as const;
@@ -19,7 +19,7 @@ export function ViewportFeature() {
   const [slow, setSlow] = useState(false);
   const [fail, setFail] = useState(false);
   const [expandedContent, setExpandedContent] = useState(false);
-  const activeColumns = useMemo(() => columns.map(column => column.field === "text" ? { ...column, cell: { renderer: ({ value }: { value: unknown }) => <div style={{ whiteSpace: automatic ? "normal" : "nowrap", lineHeight: "20px", overflow: "hidden", textOverflow: "ellipsis" }}>{String(value)}{expandedContent ? " Additional content changes the measured row height.".repeat(6) : ""}</div> } } : column), [automatic, expandedContent]);
+  const activeColumns = useMemo(() => columns.map(column => column.field === "text" ? { ...column, cell: { render: ({ value }: { value: unknown }) => <div style={{ whiteSpace: automatic ? "normal" : "nowrap", lineHeight: "20px", overflow: "hidden", textOverflow: "ellipsis" }}>{String(value)}{expandedContent ? " Additional content changes the measured row height.".repeat(6) : ""}</div> } } : column), [automatic, expandedContent]);
   const getRows = async ({ startIndex, endIndex, signal }: CominsViewportRequest): Promise<Row[]> => {
     await new Promise<void>((resolve, reject) => {
       if (signal.aborted) { reject(new Error("Cancelled")); return; }

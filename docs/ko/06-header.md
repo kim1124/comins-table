@@ -2,6 +2,8 @@
 
 [문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/06-header.md) · [Header](http://127.0.0.1:4002/examples/header) · [Header Group](http://127.0.0.1:4002/examples/column-groups)
 
+0.2.2부터 렌더링의 표준 경로는 `.render`입니다. 기존 속성은 0.x에서 유지하며 1.0.0 제거 대상으로 안내합니다. [전환 규칙](27-migration-0.2.2.md)을 참고하십시오.
+
 Header는 표시/숨김, DOM props, label, column boundary resize, column move, keyboard sort, `aria-sort`, animated sort indicator, layout save/load를 제공한다. Layout save/load는 ref method로 처리한다.
 
 <!-- comins-doc-example: fragment -->
@@ -104,7 +106,7 @@ Multi-column Sort 중에는 첫 번째 조건에만 `aria-sort="ascending" | "de
 - Header 전체 hide/show(`showHeader`)는 2 Depth와 별개이며 전체 header area를 표시하거나 제거한다.
 - 2 Depth parent header cell은 child header 상단 border와 선이 겹치지 않도록 하단 border를 출력하지 않는다.
 
-Header custom UI는 `header.renderer` 또는 `header.components`로 렌더링한다. `renderer`가 있으면 label과 components를 모두 대체한다.
+Header custom UI는 `header.render` 또는 `header.components`로 렌더링한다. `renderer`가 있으면 label과 components를 모두 대체한다.
 
 <!-- comins-doc-example: fragment -->
 ```tsx
@@ -112,7 +114,7 @@ Header custom UI는 `header.renderer` 또는 `header.components`로 렌더링한
   field: "name",
   label: "Name",
   header: {
-    renderer: ({ column }) => <span>{column.label}</span>,
+    render: ({ column }) => <span>{column.label}</span>,
   },
 }
 ```

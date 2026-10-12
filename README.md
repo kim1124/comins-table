@@ -14,6 +14,8 @@ A React data table backed by a framework-neutral TypeScript core. Build data-hea
 · [Comins Brand](https://comins-website.vercel.app/ko/)
 · [Changelog](https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md)
 
+Upcoming 0.2.2: standard `render` customization with 0.x compatibility. [한국어 전환 안내](https://github.com/kim1124/comins-table/blob/main/docs/ko/27-migration-0.2.2.md) · [English migration](https://github.com/kim1124/comins-table/blob/main/docs/user/27-migration-0.2.2.md).
+
 ![Comins Table: clipboard and Fill Handle, Tree drag, automatic row heights, and Viewport loading](https://raw.githubusercontent.com/kim1124/comins-table/main/docs/assets/comins-table-overview.gif)
 
 The preview was recorded with 0.1.11. Feature-specific recordings and examples are available in the guides.

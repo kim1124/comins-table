@@ -15,7 +15,7 @@ const csvImportExports = ["CominsCsvImportOptions", "CominsCsvImportRow", "impor
 const structuredExportSymbols = ["CominsExportMetadata", "CominsExportTreeOptions", "CominsExportGroupedOptions", "createCominsTreeExportOptions", "createCominsGroupedExportOptions"];
 const coreTarget = [...migrationCoreTarget, ...csvImportExports, ...structuredExportSymbols].sort();
 const target = { ...baseline.entrypoints,
-  "comins-table": [...baseline.entrypoints["comins-table"], "CominsTreeSlotParams", "CominsTreeSlots", ...csvImportExports, ...structuredExportSymbols].sort(),
+  "comins-table": [...baseline.entrypoints["comins-table"], "CominsTreeSlotParams", "CominsTreeSlots", "CominsSummaryRenderPayload", ...csvImportExports, ...structuredExportSymbols].sort(),
   "comins-table/core": coreTarget,
 };
 function compareCore(names: string[]) {

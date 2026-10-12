@@ -2,6 +2,8 @@
 
 [Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/19-row-expand.md) · [Playground](http://127.0.0.1:4002/examples/row-expand)
 
+Starting with 0.2.2, `.render` is the standard UI customization entry point. Legacy properties remain supported throughout 0.x, with removal targeted for 1.0.0. See the [migration rules](27-migration-0.2.2.md).
+
 Row Expand adds a controlled full-width Detail region immediately after a flat
 owner business Row. The application owns the expanded IDs and Detail content;
 Comins Table keeps sorting, pagination, loading, movement, selection, clipboard,
@@ -28,13 +30,13 @@ export type CominsRowDetailProps<TData> = {
   ) => CominsRowDetailHeight;
   isRowExpandable?: (params: CominsRowDetailParams<TData>) => boolean;
   onChangeExpandedRowIds?: (rowIds: CominsRowId[]) => void;
-  renderRowDetail?: (
+  rowDetail?: { render?: (
     params: CominsRowDetailParams<TData>,
-  ) => React.ReactNode;
+  ) => React.ReactNode };
 };
 ```
 
-`renderRowDetail` enables the flat Row Expand surface. Without it, all other
+`rowDetail.render` enables the flat Row Expand surface. Without it, all other
 Detail props remain inert.
 
 ## Controlled State
@@ -49,7 +51,7 @@ const [expandedRowIds, setExpandedRowIds] = useState<readonly string[]>([]);
   expandedRowIds={expandedRowIds}
   getRowId={(row) => row.id}
   onChangeExpandedRowIds={setExpandedRowIds}
-  renderRowDetail={({ row }) => <Detail row={row.data} />}
+  rowDetail={{ render: ({ row }) => <Detail row={row.data} /> }}
 />;
 ```
 
@@ -97,7 +99,7 @@ so the rendered Detail has no inline height.
 <CominsTable
   estimatedRowDetailHeight={300}
   getRowDetailHeight={({ row }) => (row.id === "large" ? 480 : "auto")}
-  renderRowDetail={({ row }) => <Detail row={row.data} />}
+  rowDetail={{ render: ({ row }) => <Detail row={row.data} /> }}
 />
 ```
 
@@ -171,3 +173,5 @@ height. One shared `ResizeObserver` observes mounted automatic Rows and Detail b
 - Nested managed Details are unsupported. An application may render ordinary
   content inside one Detail, but Comins Table does not manage a second Detail
   hierarchy.
+
+Legacy `renderRowDetail` remains supported in 0.x; see the migration guide.

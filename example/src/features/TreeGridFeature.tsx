@@ -79,7 +79,7 @@ export function TreeGridFeature() {
   const rendererColumns: Array<CominsTableColumn<PersonRow>> = [
     {
       cell: {
-        renderer: ({ row, value }) => (
+        render: ({ row, value }) => (
           <span data-testid={`tree-custom-renderer-${String(row.id)}`}>
             <strong>{String(value)}</strong> <small>{row.data.role}</small>
           </span>

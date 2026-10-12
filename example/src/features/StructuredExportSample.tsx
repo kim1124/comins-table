@@ -60,7 +60,7 @@ export function StructuredExportSample() {
         getRowId={getRowId} onChangeData={setTree} data-testid="structured-tree-viewport" theme={{ density: "compact" }} />
       : <CominsTable key="group" className="example-table" columns={columns} data={groupedRows}
         getRowId={getRowId} data-testid="structured-group-viewport" theme={{ density: "compact" }}
-        rowGrouping={{ groups, getGroupId: group => group.id, getGroupLabel: group => group.label, getRowGroupId,
+        rowGrouping={{ groups, getGroupId: group => group.id, label: { render: group => group.label }, getRowGroupId,
           expandedGroupIds: expandedGroups, onChangeExpandedGroupIds: setExpandedGroups }} />}
     <p role="status">{text(defineLocalizedText(
       `${options.rows.length}개 행 내보내기 · 접기/펼치기와 무관 · 다운로드는 CSV`,

@@ -1859,3 +1859,16 @@
 .comins-fill-menu button:hover { background: var(--comins-table-accent-soft); }
 .comins-fill-menu button:focus-visible { outline: 2px solid var(--comins-table-accent-strong); outline-offset: -2px; }
 .comins-fill-menu button:disabled { color: var(--comins-table-muted); cursor: not-allowed; }
+
+.comins-cell-tooltip {
+  background: var(--comins-table-surface, #fff);
+  border: 1px solid var(--comins-table-border, #d1d5db);
+  border-radius: 4px;
+  color: var(--comins-table-foreground, #111827);
+  font-size: 13px;
+  max-width: min(360px, calc(100vw - 16px));
+  overflow-wrap: anywhere;
+  padding: 8px 10px;
+  position: fixed;
+  z-index: 90;
+}

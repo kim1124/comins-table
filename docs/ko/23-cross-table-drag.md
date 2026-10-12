@@ -2,6 +2,8 @@
 
 <!-- comins-restriction: transfer-duplicate-default-reject -->
 
+0.2.2부터 렌더링의 표준 경로는 `.render`입니다. 기존 속성은 0.x에서 유지하며 1.0.0 제거 대상으로 안내합니다. [전환 규칙](27-migration-0.2.2.md)을 참고하십시오.
+
 [문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/23-cross-table-drag.md) · [Playground](http://127.0.0.1:4002/examples/cross-table-drag)
 
 ![전체 Group bundle 이동과 중복 Row ID 거부를 보여주는 Cross-Table Drag](../assets/comins-table-cross-table-drag.gif)
@@ -27,7 +29,7 @@ const tableTransfer = (tableId: string) => ({
   resolveConflict: () => "reject" as const,
   rejectionFeedback: {
     duration: 2400,
-    renderTooltip: (rejection) => (
+    tooltip: { render: (rejection) => (
       <>
         <strong>Duplicate ID</strong>
         <span>{`"${String(
@@ -36,7 +38,7 @@ const tableTransfer = (tableId: string) => ({
             : rejection.conflict.rowId,
         )}" ID가 이미 존재합니다.`}</span>
       </>
-    ),
+    ) },
   },
 });
 
@@ -64,7 +66,7 @@ Target Table이 `canTransfer`와 `resolveConflict`를 소유합니다. `canTrans
 
 Pointer Drop의 duplicate conflict가 `"reject"`로 확정되면 target Table에 절제된 error outline을 표시하고 pointer release 좌표 옆에 compact한 `Duplicate ID` Tooltip을 표시합니다. Feedback은 `pointerup` 이후에만 생성되고 `pointer-events: none`이며 semantic Table Body 외부에 위치합니다. Browser viewport 안으로 위치를 보정하고 polite live status로 알리므로 hit-test 대상 Drop 영역을 대체하거나 이후 interaction을 차단하지 않습니다.
 
-`tableTransfer.rejectionFeedback`은 target Table 설정입니다. `renderTooltip(rejection)`으로 Tooltip body를 교체하고 `duration`으로 500~10000ms 범위의 표시 시간을 지정할 수 있으며 기본값은 1800ms입니다. `rejectionFeedback: false`이면 기본 Tooltip과 outline을 표시하지 않습니다. Built-in feedback을 꺼도 `Coordinator.onTransferRejected(rejection)`은 `reason: "duplicate-id"`, source/target Table ID, transfer kind와 실제 reject된 conflict를 전달합니다. `canTransfer()` 거부는 application-owned 정책이므로 duplicate conflict notification을 발생시키지 않습니다.
+`tableTransfer.rejectionFeedback`은 target Table 설정입니다. `tooltip.render(rejection)`으로 Tooltip body를 교체하고 `duration`으로 500~10000ms 범위의 표시 시간을 지정할 수 있으며 기본값은 1800ms입니다. `rejectionFeedback: false`이면 기본 Tooltip과 outline을 표시하지 않습니다. Built-in feedback을 꺼도 `Coordinator.onTransferRejected(rejection)`은 `reason: "duplicate-id"`, source/target Table ID, transfer kind와 실제 reject된 conflict를 전달합니다. `canTransfer()` 거부는 application-owned 정책이므로 duplicate conflict notification을 발생시키지 않습니다.
 
 Tooltip의 positioning과 accessibility 동작을 유지하면서 다음 CSS 변수로 디자인을 변경할 수 있습니다.
 

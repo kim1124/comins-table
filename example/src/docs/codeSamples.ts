@@ -175,10 +175,10 @@ async function loadRows(mode: "initial" | "ready" | "refetch", empty = false) {
 <CominsTable
   columns={columns}
   data={rows}
-  emptyComponent={<span>No rows to display.</span>}
+  emptyContent={{ render: () => <span>No rows to display.</span> }}
   getRowId={(row) => row.id}
   loading={loadingMode === "initial" || loadingMode === "refetch"}
-  loadingComponent={<span>Refreshing rows.</span>}
+  loadingContent={{ render: () => <span>Refreshing rows.</span> }}
   persistHeaderWhenEmpty
   skeletonRowCount={5}
 />;`,
@@ -269,7 +269,7 @@ const overrides = useState({});
     { field: "name", label: "name" },
     { field: "active", label: "active", cell: { components: [{ type: "checkbox" }] } },
     { field: "name", label: "name", cell: { components: [{ type: "button" }] } },
-    { field: "role", label: "role", cell: { renderer: ({ row }) => <select defaultValue={row.role}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> } },
+    { field: "role", label: "role", cell: { render: ({ row }) => <select defaultValue={row.role}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> } },
     { field: "age", label: "age", cell: { components: [{ type: "progress" }] } },
     { field: "name", label: "name", cell: { components: [{ type: "virtual-list", items }] } },
     { field: "role", label: "role", cell: { components: [{ type: "radio", options }] } },
@@ -448,7 +448,7 @@ export const cellSamples: DocsCodeSample[] = [
     field: "status",
     label: "Status",
     cell: {
-      renderer: ({ value }) => <strong className="status-badge">{value}</strong>,
+      render: ({ value }) => <strong className="status-badge">{value}</strong>,
       props: {
         className: ({ value }) =>
           value === "Owner" ? "cell-role-owner" : "cell-role-muted",
@@ -573,7 +573,7 @@ export const rowExpandSamples: DocsCodeSample[] = [
   getRowDetailHeight={({ row }) => (row.id === "large" ? 480 : "auto")}
   getRowId={(row) => row.id}
   onChangeExpandedRowIds={setExpandedRowIds}
-  renderRowDetail={({ row }) => <Detail row={row.data} />}
+  rowDetail={{ render: ({ row }) => <Detail row={row.data} /> }}
 />;`,
     language: "tsx",
     title: "Controlled Row Expand",
@@ -599,7 +599,7 @@ const [expandedGroupIds, setExpandedGroupIds] = useState<CominsRowId[]>([]);
     aggregations: { amount: "sum", id: "count" },
     expandedGroupIds,
     getGroupId: (group) => group.id,
-    getGroupLabel: (group) => group.label,
+    label: { render: (group) => group.label },
     getGroupRowProps: ({ isEmpty }) => ({
       className: isEmpty ? "empty-group-row" : undefined,
       style: {

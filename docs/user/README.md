@@ -1,5 +1,7 @@
 # English Feature Guides
 
+Upcoming 0.2.2: [render API migration](27-migration-0.2.2.md), with legacy compatibility throughout 0.x. Development examples may require 0.2.2.
+
 These guides target 0.2.1, including CSV import, structured export, Tree slots, opt-in TSV paste, and Fill Handle. [Export](14-export.md) · [Tree Grid](17-tree-grid.md) · [Clipboard and Fill](09-clipboard.md).
 
 The [0.2.0 Core migration](26-migration-0.2.0.md) explains the neutral Core contract that remains in effect for 0.2.1. React UI contracts remain compatible.

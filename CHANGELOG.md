@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Added
+
+- Standard `render` paths for cell/header content, row details, group labels/content, Tree slots, transfer rejection tooltips, loading and empty content. Legacy APIs retain their 0.x behavior; removal targets 1.0.0.
+- Summary `render` after aggregation and formatting, with original `value` and `formattedValue` payloads.
+- Informational custom cell tooltips via `cell.tooltip.render`, including hover/focus, Escape and virtualization cleanup. Existing native string tooltips remain compatible.
+
+### Changed
+
+- Playground examples use standard rendering paths. English and Korean 0.2.2 migration guides document precedence, return values and content boundaries.
+
 ### Fixed
 
 - The Playground Context Menu opener keeps its menu inside the viewport when the button is near the bottom edge.

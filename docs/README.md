@@ -2,6 +2,8 @@
 
 These guides describe **0.2.1**. The [0.2.0 Core migration](user/26-migration-0.2.0.md) remains the entry-point and state-contract migration reference; see the [changelog](../CHANGELOG.md) for version history.
 
+Upcoming 0.2.2 rendering changes: [English migration](user/27-migration-0.2.2.md) · [한국어 전환](ko/27-migration-0.2.2.md). Development examples may require 0.2.2; the published package remains 0.2.1.
+
 Version 0.2.1 adds framework-neutral CSV import, Tree/Group export metadata, and React Tree slots. [English migration](user/26-migration-0.2.0.md) · [한국어 마이그레이션](ko/26-migration-0.2.0.md).
 
 [Design contract](../DESIGN.md) · [Componentization guide](design/componentization.md) · [Canonical Feature Manifest](feature-manifest.json)

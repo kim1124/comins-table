@@ -155,7 +155,7 @@ export function RowExpandFeature() {
           getRowId={(row) => row.id}
           onChangeExpandedRowIds={(rowIds) => setFixedExpandedRowIds(keepLastExpandedRowId(rowIds))}
           pagination={{ pageIndex: fixedPageIndex, pageSize: 4 }}
-          renderRowDetail={({ row }) => (
+          rowDetail={{ render: ({ row }) => (
             <div
               data-testid={`fixed-detail-${row.id}`}
               style={{
@@ -180,7 +180,7 @@ export function RowExpandFeature() {
                 {text(defineLocalizedText("이 고정 Detail 접기", "Collapse this fixed Detail"))}
               </button>
             </div>
-          )}
+          ) }}
           rowHeight={36}
           rowProps={{ draggable: true }}
           theme={{ density: "compact" }}
@@ -210,7 +210,7 @@ export function RowExpandFeature() {
           getRowId={(row) => row.id}
           onChangeExpandedRowIds={(rowIds) => setAutoExpandedRowIds(keepLastExpandedRowId(rowIds))}
           pagination={{ pageIndex: 0, pageSize: autoRows.length }}
-          renderRowDetail={({ row }) => (
+          rowDetail={{ render: ({ row }) => (
             <div data-testid={`auto-detail-${row.id}`} style={{ display: "grid", gap: 10 }}>
               <strong>
                 {locale === "ko" ? `${row.data.name}의 자동 Detail` : `Automatic Detail for ${row.data.name}`}
@@ -266,7 +266,7 @@ export function RowExpandFeature() {
                 </div>
               ) : null}
             </div>
-          )}
+          ) }}
           rowHeight={36}
           theme={{ density: "compact" }}
           virtualized
@@ -296,7 +296,7 @@ export function RowExpandFeature() {
             getRowId={(row) => row.id}
             onChangeExpandedRowIds={(rowIds) => setTallExpandedRowIds(keepLastExpandedRowId(rowIds))}
             pagination={{ pageIndex: 0, pageSize: tallRows.length }}
-            renderRowDetail={({ row }) => (
+            rowDetail={{ render: ({ row }) => (
               <div
                 data-testid={`tall-detail-${row.id}`}
                 style={{ alignContent: "start", display: "grid", gap: 12, height: "100%" }}
@@ -312,7 +312,7 @@ export function RowExpandFeature() {
                   {text(defineLocalizedText("큰 Detail 마지막 동작", "Tall Detail final action"))}
                 </button>
               </div>
-            )}
+            ) }}
             rowHeight={36}
             theme={{ density: "compact" }}
             virtualized

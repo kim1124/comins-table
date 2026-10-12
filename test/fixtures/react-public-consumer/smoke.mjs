@@ -54,6 +54,25 @@ try {
   })));
   assert.ok(container.querySelector("strong"));
   assert.ok(container.textContent.includes("42"), "Packed React table renders edited data");
+  let legacyCalls = 0;
+  await act(async () => mounted.render(createElement(root.CominsTable, {
+    columns: [{ field: "score", label: "Score", header: { render: () => createElement("b", null, "Standard header") },
+      cell: { renderer: () => { legacyCalls++; return "Legacy"; }, render: ({ value }) => createElement("output", null, String(value)),
+        tooltip: { render: ({ value }) => createElement("b", null, `Tooltip ${value}`) } } }],
+    data: edited.rows, getRowId: row => row.id, expandedRowIds: ["a"],
+    rowDetail: { render: ({ row }) => createElement("span", { "data-testid": "packed-detail" }, `Detail ${row.data.score}`) },
+    summary: { columns: { score: { aggregate: "sum", render: ({ formattedValue }) => createElement("b", null, `Summary ${formattedValue}`) } } },
+  })));
+  assert.equal(legacyCalls, 0, "Standard render must suppress the legacy callback");
+  assert.equal(container.querySelector("output").textContent, "42");
+  assert.equal(container.querySelector('[data-testid="packed-detail"]').textContent, "Detail 42");
+  assert.equal(container.querySelector('[data-testid="summary-cell-score"]').textContent, "Summary 42");
+  const cell = container.querySelector('[data-testid="cell-a-score"]');
+  await act(async () => { cell.focus(); await new Promise(resolve => setTimeout(resolve, 70)); });
+  assert.equal(document.querySelector('[role="tooltip"]').textContent, "Tooltip 42");
+  await act(async () => cell.dispatchEvent(new dom.window.KeyboardEvent("keydown", { bubbles: true, key: "Escape" })));
+  assert.equal(document.querySelector('[role="tooltip"]'), null);
+  assert.equal(root.resolveCominsSummaryValues, undefined);
 } finally {
   await act(async () => mounted.unmount());
   assert.equal(container.childElementCount, 0);

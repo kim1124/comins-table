@@ -2,6 +2,8 @@
 
 [문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/19-row-expand.md) · [Playground](http://127.0.0.1:4002/examples/row-expand)
 
+0.2.2부터 렌더링의 표준 경로는 `.render`입니다. 기존 속성은 0.x에서 유지하며 1.0.0 제거 대상으로 안내합니다. [전환 규칙](27-migration-0.2.2.md)을 참고하십시오.
+
 Row Expand는 flat owner business Row 바로 다음에 controlled full-width Detail
 영역을 추가한다. 애플리케이션이 expanded ID와 Detail content를 소유하며, Comins
 Table의 sorting, pagination, loading, movement, selection, clipboard, callback은
@@ -28,13 +30,13 @@ export type CominsRowDetailProps<TData> = {
   ) => CominsRowDetailHeight;
   isRowExpandable?: (params: CominsRowDetailParams<TData>) => boolean;
   onChangeExpandedRowIds?: (rowIds: CominsRowId[]) => void;
-  renderRowDetail?: (
+  rowDetail?: { render?: (
     params: CominsRowDetailParams<TData>,
-  ) => React.ReactNode;
+  ) => React.ReactNode };
 };
 ```
 
-`renderRowDetail`이 flat Row Expand를 활성화한다. 이 prop이 없으면 나머지 Detail
+`rowDetail.render`이 flat Row Expand를 활성화한다. 이 prop이 없으면 나머지 Detail
 prop도 동작하지 않는다.
 
 ## Controlled State
@@ -49,7 +51,7 @@ const [expandedRowIds, setExpandedRowIds] = useState<readonly string[]>([]);
   expandedRowIds={expandedRowIds}
   getRowId={(row) => row.id}
   onChangeExpandedRowIds={setExpandedRowIds}
-  renderRowDetail={({ row }) => <Detail row={row.data} />}
+  rowDetail={{ render: ({ row }) => <Detail row={row.data} /> }}
 />;
 ```
 
@@ -94,7 +96,7 @@ Detail에는 inline height가 없다.
 <CominsTable
   estimatedRowDetailHeight={300}
   getRowDetailHeight={({ row }) => (row.id === "large" ? 480 : "auto")}
-  renderRowDetail={({ row }) => <Detail row={row.data} />}
+  rowDetail={{ render: ({ row }) => <Detail row={row.data} /> }}
 />
 ```
 
@@ -170,3 +172,5 @@ bounded panel, large list 또는 nested application widget에는 finite fixed he
 - Nested managed Detail은 지원하지 않는다. 하나의 Detail 안에 일반 application
   content를 렌더링할 수 있지만 Comins Table은 두 번째 Detail hierarchy를 관리하지
   않는다.
+
+기존 `renderRowDetail`은 0.x에서 호환되며 전환 가이드를 참고하십시오.

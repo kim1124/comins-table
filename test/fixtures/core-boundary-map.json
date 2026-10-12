@@ -128,6 +128,7 @@
         "src/column-filter.tsx",
         "src/row-detail.tsx",
         "src/tooltip.tsx",
+        "src/react/cell-tooltip.tsx",
         "src/table-icons.tsx",
         "src/summary.ts",
         "src/grouping.ts",

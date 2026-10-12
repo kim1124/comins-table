@@ -130,16 +130,16 @@ export function LazyLoadFeature() {
           columns={columns}
           data={rows}
           data-testid="lazy-load-viewport"
-          emptyComponent={<span>{text(defineLocalizedText("표시할 데이터가 없습니다.", "No data to display."))}</span>}
+          emptyContent={{ render: () => (<span>{text(defineLocalizedText("표시할 데이터가 없습니다.", "No data to display."))}</span>) }}
           getRowId={(row) => row.id}
           hasMoreRows={rows.length < total}
           lazyLoad
           lazyLoadBatchSize={BATCH_SIZE}
           lazyLoadThreshold={140}
-          loadingComponent={<span>{text(defineLocalizedText(
+          loadingContent={{ render: () => (<span>{text(defineLocalizedText(
             "예제 데이터를 다시 불러오는 중입니다.",
             "Reloading sample data.",
-          ))}</span>}
+          ))}</span>) }}
           loading={loading}
           loadingMore={loadingMore}
           onLazyLoad={loadRows}
