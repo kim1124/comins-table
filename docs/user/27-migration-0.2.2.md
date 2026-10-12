@@ -54,3 +54,7 @@ Render callbacks are ordinary functions. Return `<StatusBadge />` so React runs 
 Custom tooltips support hover, cell focus, Escape and pointer movement onto the tooltip. Scroll, resize, cell removal/reuse and unmount clear the tooltip and aria-describedby relationship. They use role=tooltip and are informational; focusable buttons/forms belong in a separate application popover. Native title and custom tooltips are not displayed together.
 
 The planned value-list filter paths `filter.trigger.render`, `filter.option.render`, and `filter.panel.render` require separate filter implementation and are not available in this development change. Excel/CSV and official Vue support have separate scope and completion checks.
+
+## New value list filters
+
+[Value list guide](21-column-filtering.md): `filter.mode: "values"`, `operator: "in"` and trigger/option/panel.render are new in 0.2.2; existing condition filters and names remain unchanged.

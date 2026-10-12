@@ -88,7 +88,9 @@
         "src/filtering.ts",
         "src/grouping.ts",
         "src/tree.ts",
-        "src/virtual-layout.ts"
+        "src/virtual-layout.ts",
+        "src/core/rows/filter-value.ts",
+        "src/core/rows/values-filter.ts"
       ],
       "targetLayers": [
         "core",
@@ -104,7 +106,8 @@
         "test/filtering.test.ts",
         "test/grouping.test.ts",
         "test/tree-core.test.ts",
-        "test/virtual-layout.test.ts"
+        "test/virtual-layout.test.ts",
+        "test/value-list-filter.test.ts"
       ],
       "plannedTests": [
         "test/core-row-projection.test.ts"
@@ -133,7 +136,9 @@
         "src/summary.ts",
         "src/grouping.ts",
         "src/core.ts",
-        "src/index.tsx"
+        "src/index.tsx",
+        "src/react/value-filter-types.ts",
+        "src/react/value-filter.tsx"
       ],
       "targetLayers": [
         "core",
@@ -148,7 +153,8 @@
         "test/core-render-contract.test.ts",
         "test/summary-core.test.ts",
         "test/grouping.test.ts",
-        "test/typecheck/component-renderer-api.tsx"
+        "test/typecheck/component-renderer-api.tsx",
+        "test/column-filter-control.test.tsx"
       ],
       "plannedTests": [
         "test/core-render-contract.test.ts"

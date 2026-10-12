@@ -12,7 +12,7 @@ export function projectReactColumn<TData>(column: React.CominsTableRuntimeColumn
     hidden: column.hidden, lockPosition: column.lockPosition,
     minWidth: column.minWidth, maxWidth: column.maxWidth, width: column.width, pinned: column.pinned,
     sort: typeof sort === "function" ? (left, right, leftRow, rightRow) => sort.call(column, left, right, leftRow, rightRow) : sort,
-    filter: filter && { ...filter, getValue: filter.getValue
+    filter: filter && { kind: filter.kind, caseSensitive: filter.caseSensitive, getOptionLabel: filter.getOptionLabel, getValue: filter.getValue
       ? params => filter.getValue!({ ...params, column }) : undefined },
   };
 }

@@ -116,3 +116,51 @@ Selected Row IDs and expanded Row Detail IDs that are filtered out stay dormant 
 Column Filtering is a CSR flat-data feature. It cannot be combined with Tree Grid, Viewport Datasource, Infinite Scroll, Lazy Load, `loadingMore`, or Row Drag. Passing a `columnFiltering` configuration disables Row Drag even when the model is empty, because movement through a potentially partial projection is ambiguous. Grouped Filtering also inherits the Row Grouping prohibition on pagination.
 
 Server-side filtering, custom Filter editor renderers, OR groups, multi-rule-per-Column evaluation, locale-aware text collation, fuzzy search, relative dates, Tree filtering, and remote datasource filtering are outside this release. Applications can still implement these policies by producing their own controlled `data` before passing it to Comins Table.
+
+## Value lists and custom UI — introduced in 0.2.2
+
+The 0.2.2 candidate adds `filter.mode: "values"`; the default remains `"condition"`. Keep `kind` for text/number/boolean/UTC date comparisons. Checked values use OR within one column and AND across columns. Every check immediately proposes the complete application-owned model through `onChangeModel`; update local state immediately and persist remotely separately. Without this callback, selection and Clear are readonly, while search remains available.
+
+<!-- comins-doc-example: fragment -->
+```tsx
+const model: CominsColumnFilterModel = [
+  { columnId: "status", operator: "in", values: ["Ready", "Blocked"] },
+];
+const columns: CominsTableColumn<{ status: string }>[] = [{
+  field: "status", label: "Status", filter: {
+    kind: "text", mode: "values",
+    option: { props: { className: "status-option" }, render: ({ option }) => <strong>{option.label}</strong> },
+    panel: { render: p => <section>
+      <input {...p.getSearchInputProps()} />
+      <label><input {...p.getSelectAllProps()} />Select matching values</label>
+      <ul>{p.visibleOptions.map(option => <li key={option.id} {...p.getOptionContainerProps(option)}>
+        <input {...p.getOptionProps(option)} />{p.renderOption(option)}<small>{option.count}</small>
+      </li>)}</ul>
+      <button {...p.getClearProps()}>Clear</button><button {...p.getCloseProps()}>Close</button>
+    </section> },
+  },
+}];
+```
+
+No rule means unrestricted, including future values. `in.values: []` means no matches and stays active. Explicitly checking every current value preserves a snapshot; only Clear or selecting all with an empty search removes the rule. Searching narrows the option list, not table data. Select/deselect all during search affects only matching options and preserves other selections. Close/Escape keeps applied choices; reopening resets search.
+
+Options come from all supplied leaf rows, before pagination, grouping or virtualization. Counts apply other columns' conditions while ignoring this column's rule. Zero-count options stay visible and selectable. A selected value missing from new data remains with `present: false` and count 0; data changes never silently rewrite the model. Model values are JSON primitives (`CominsColumnFilterValue`); objects require a scalar `getValue`. Null, undefined and empty source strings share a null option, while 0, false and whitespace remain distinct. Numbers must be finite actual numbers. Text uses the existing caseSensitive policy; dates compare UTC calendar days. An invalid member invalidates the whole in rule; a valid empty array does not. First valid rule per column still wins.
+
+`filter.getOptionLabel(value)` returns a plain string used for display, case-insensitive substring search and accessible names. It does not change identity or comparison. Do not derive search text from JSX. `CominsColumnFilterOption.id` is an opaque stable key, not an array index or DOM ID. `selectionMode` distinguishes all/unrestricted from include/explicit; counts of selected options are not row counts. Missing selections count as options too.
+
+| Setting | Replacement and bindings |
+| --- | --- |
+| `trigger.render` | The actual opener. Spread `getTriggerProps()` on a button; `{ element: "custom" }` supports a focusable HTMLElement with button role/Enter/Space. |
+| `option.render` | Badge/icon/label content; the built-in checkbox remains owned. |
+| `panel.render` | Search, selection controls and inner tags such as section/ul/li. Use getters on the real elements; owned dialog positioning/outside close remains. |
+| `trigger.props`, `option.props`, `panel.props` | className/style or a payload callback. Option wrapper styling uses getOptionContainerProps, selection uses getOptionProps. |
+
+`CominsValueFilterTriggerRenderParams`, `CominsValueFilterOptionRenderParams`, `CominsValueFilterPanelRenderParams` and `CominsValueFilterActions` describe the React contracts. The panel provides query/options/visibleOptions, selection summaries, setQuery/setOptionSelected/setVisibleSelected/clear/close and renderOption. Custom panels explicitly call renderOption; option.render is not inserted again automatically. Trigger selection summaries are available while the values panel is open; closed triggers do not eagerly collect all options. Restored condition rules retain the condition editor, skip values panel/option render and have no values summary until cleared.
+
+Use native checkbox getters by default. For custom tags, `getOptionProps(option, { element: "custom" })` supplies checkbox role, aria-checked and Space/click handling. getSelectAllProps also supports native indeterminate/custom mixed. Getters compose user handlers and refs; preventDefault cancels internal behavior. Required controlled values/roles/ARIA are protected. Do not attach an additional toggle to the label or wrapper. Helpers must reach actual DOM elements; an unbound custom component cannot inherit focus/keyboard guarantees. Hooks belong inside returned components, not render callbacks.
+
+Undefined render returns select built-in content; null/false/empty strings clear only that region, and errors propagate. Empty trigger content requires externally controlled opening. Empty panel content preserves the dialog boundary. Escape/Close restores a live trigger; outside pointer or Tab departure closes without stealing external focus. The dialog is non-modal and does not trap Tab. Refs/listeners are cleaned on removal; the table's ownerDocument is used. Styling retains `comins-column-filter` classes and table theme tokens, plus data-active/data-selected/data-readonly/data-present. Custom panel.props style an inner wrapper, not the fixed-position dialog.
+
+For framework-neutral consumers, `getCominsColumnFilterOptions`, `setCominsColumnFilterValues`, `normalizeCominsColumnFilterModel` and `getCominsFilteredRowIndexes` are exported from `comins-table/core`. Their inputs use neutral columns and source rows; root functions accept React columns. `CominsColumnFilterOptionsInput`, `CominsColumnFilterOptionsResult` and `CominsColumnFilterValuesAction` describe pure calculations and immutable proposals. Options return null for an unsupported target or an active condition rule; value selection actions preserve such models, while Clear removes the target rule. No React/DOM/render configuration enters Core.
+
+These APIs are not available in published 0.2.1. Existing filtering restrictions still apply: no Tree/Viewport/Infinite/Lazy/server filtering or ordinary row drag. Option-list virtualization is not provided; large numbers of distinct values can be expensive. The Playground includes 10,000-row measurement fixtures without truncating values or promising unlimited performance.

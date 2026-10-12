@@ -42,7 +42,7 @@ test("Column Filtering keeps the Header editor controlled and isolated", async (
   await page.goto("/examples/column-filtering");
 
   const layoutMetrics = await page
-    .locator(".feature-panel--column-filtering .feature-option-sample__inner > .example-table.comins-table")
+    .locator('.feature-panel--column-filtering :is([data-feature-option="column-filtering-controlled"],[data-feature-option="column-filtering-grouping"]) .feature-option-sample__inner > .example-table.comins-table')
     .evaluateAll((tables) => tables.map((table) => {
       const container = table.parentElement!;
       const containerRect = container.getBoundingClientRect();
@@ -203,4 +203,99 @@ test("Column Filtering keeps a combined 100000-row Group projection bounded @per
     element.scrollTop <= element.scrollHeight - element.clientHeight + 1)).toBe(true);
   expect(await slots.count()).toBeLessThan(60);
   expect(diagnostics).toEqual([]);
+});
+
+const valueCard = (page: Page) => page.locator('[data-feature-option="column-filtering-values"]');
+test("Value list filtering distinguishes explicit all, empty selection and search-scoped changes", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/examples/column-filtering");
+  const card = valueCard(page);
+  await card.getByRole("button", { name: "Filter status", exact: true }).click();
+  const popup = page.getByRole("dialog", { name: "Filter status", exact: true });
+  await expect(popup.getByRole("searchbox")).toBeFocused();
+  await popup.getByRole("checkbox", { name: "Blocked", exact: true }).uncheck();
+  await expect(card.getByTestId("summary-cell-status")).toHaveText("4");
+  await popup.getByRole("searchbox").fill("block");
+  await expect(popup.locator(".comins-column-filter__option")).toHaveCount(1);
+  await popup.getByRole("checkbox", { name: "Select all matching values" }).check();
+  await expect(card.getByTestId("value-filter-model")).toContainText('"operator":"in"');
+  await expect(card.getByTestId("value-filter-model")).toContainText('"Ready",null,"Blocked"');
+  await popup.getByRole("searchbox").fill("");
+  await popup.getByRole("checkbox", { name: "Select all matching values" }).uncheck();
+  await expect(card.getByTestId("value-filter-model")).toContainText('"values":[]');
+  await expect(card.getByTestId("summary-cell-status")).toHaveText("0");
+  await popup.getByRole("checkbox", { name: "Select all matching values" }).check();
+  await expect(card.getByTestId("value-filter-model")).toHaveText("[]");
+  await page.keyboard.press("Escape");
+  await expect(popup).toHaveCount(0);
+  await expect(card.getByRole("button", { name: "Filter status", exact: true })).toBeFocused();
+  expect(diagnostics).toEqual([]);
+});
+
+test("Value list facets retain zero-count options and selected values across data replacement", async ({ page }) => {
+  await page.goto("/examples/column-filtering"); const card = valueCard(page);
+  await card.getByRole("button", { name: "Filter region", exact: true }).click();
+  await page.getByRole("dialog", { name: "Filter region" }).getByRole("checkbox", { name: "US", exact: true }).uncheck();
+  await page.keyboard.press("Escape");
+  await card.getByRole("button", { name: "Filter status", exact: true }).click();
+  let popup = page.getByRole("dialog", { name: "Filter status", exact: true });
+  const blocked = popup.locator(".comins-column-filter__option").filter({ has: page.getByRole("checkbox", { name: "Blocked", exact: true }) });
+  await expect(blocked).toContainText("0");
+  await expect(blocked.getByRole("checkbox")).toBeEnabled();
+  await popup.getByRole("checkbox", { name: "Blocked", exact: true }).uncheck();
+  const saved = await card.getByTestId("value-filter-model").textContent();
+  await card.getByTestId("value-filter-data").click();
+  await card.getByRole("button", { name: "Filter status", exact: true }).click();
+  popup = page.getByRole("dialog", { name: "Filter status", exact: true });
+  await expect(popup.locator('[data-present="false"]')).toContainText("Ready");
+  await expect(card.getByTestId("value-filter-model")).toHaveText(saved!);
+  await card.getByTestId("value-filter-data").click();
+  await card.getByRole("button", { name: "Filter status", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Filter status", exact: true }).getByRole("checkbox", { name: "Ready", exact: true })).toBeChecked();
+  await expect(card.getByTestId("value-filter-model")).toHaveText(saved!);
+});
+
+test("Custom value filter controls support keyboard, styles, readonly and external focus", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/examples/column-filtering"); const card = valueCard(page);
+  await card.getByTestId("value-filter-variant").selectOption("custom");
+  const trigger = card.getByRole("button", { name: "Filter status", exact: true });
+  await trigger.focus(); await page.keyboard.press("Enter");
+  const popup = page.getByRole("dialog", { name: "Filter status", exact: true });
+  await expect(popup.getByTestId("value-filter-custom-panel").locator("ul li")).toHaveCount(3);
+  await expect(popup.locator(".value-filter-badge")).toHaveCount(3);
+  await expect(popup.locator(".value-filter-option").first()).toHaveClass(/comins-column-filter__option/);
+  const ready = popup.getByRole("checkbox", { name: "Ready", exact: true });
+  await ready.focus(); await page.keyboard.press("Space");
+  await expect(ready).toHaveAttribute("aria-checked", "false");
+  await expect(card.getByTestId("summary-cell-status")).toHaveText("3");
+  await page.keyboard.press("Escape"); await expect(trigger).toBeFocused();
+  await card.getByTestId("value-filter-readonly").check();
+  await trigger.click();
+  await expect(popup.getByRole("searchbox")).toBeEnabled();
+  await expect(popup.getByRole("checkbox", { name: "Ready", exact: true })).toHaveAttribute("aria-disabled", "true");
+  await card.getByTestId("value-filter-variant").focus();
+  await expect(popup).toHaveCount(0);
+  await expect(card.getByTestId("value-filter-variant")).toBeFocused();
+  expect(diagnostics).toEqual([]);
+});
+
+test("Value list high-cardinality measurements @perf", async ({ page }) => {
+  await page.goto("/examples/column-filtering"); const card = valueCard(page);
+  for (const scale of ["100", "10000"]) {
+    await card.getByTestId("value-filter-scale").selectOption(scale);
+    const start = Date.now();
+    await card.getByRole("button", { name: "Filter status", exact: true }).click();
+    const popup = page.getByRole("dialog", { name: "Filter status", exact: true });
+    await expect(popup.locator(".comins-column-filter__option")).toHaveCount(Number(scale));
+    const opened = Date.now();
+    await popup.getByRole("searchbox").fill("Value 00099");
+    await expect(popup.locator(".comins-column-filter__option")).toHaveCount(1);
+    const searched = Date.now();
+    await popup.getByRole("checkbox", { name: "Value 00099", exact: true }).uncheck();
+    await expect(card.getByTestId("value-filter-model")).toContainText('"operator":"in"');
+    console.log(JSON.stringify({ rows: 10000, distinct: Number(scale), openMs: opened - start, searchMs: searched - opened, checkMs: Date.now() - searched }));
+    await popup.getByRole("button", { name: "Clear filter" }).click();
+    await page.keyboard.press("Escape");
+  }
 });

@@ -41,9 +41,11 @@ export type CoreCellDataConfig<TData, TValue = unknown> = {
   parseClipboard?: (params: CominsCellComponentPayload<TData, TValue> & { text: string }) => TValue;
   validateFill?: (params: Omit<CominsCellComponentPayload<TData, TValue>, "value"> & { value: unknown }) => boolean | void;
 };
+export type CominsColumnFilterValue = boolean | null | number | string;
 export type CominsColumnFilterKind = "boolean" | "date" | "number" | "text";
 export type CominsColumnFilterConfig<TData, TValue = unknown> = {
   caseSensitive?: boolean;
+  getOptionLabel?: (value: CominsColumnFilterValue) => string;
   getValue?: (params: CominsCellFormatParams<TData, TValue>) => unknown;
   kind: CominsColumnFilterKind;
 };

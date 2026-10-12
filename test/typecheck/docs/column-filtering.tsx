@@ -28,3 +28,11 @@ export function ColumnFilteringDocumentationExample() {
     />
   );
 }
+
+export const valueColumns: Array<CominsTableColumn<Row>> = [{ field: "name", label: "Name", filter: {
+  kind: "text", mode: "values", getOptionLabel: value => value === null ? "Empty" : String(value),
+  option: { render: ({ option }) => <strong>{option.label}</strong> },
+  panel: { render: p => <section><input {...p.getSearchInputProps()} /><ul>{p.visibleOptions.map(o => <li key={o.id} {...p.getOptionContainerProps(o)}>
+    <input {...p.getOptionProps(o)} />{p.renderOption(o)}<small>{o.count}</small>
+  </li>)}</ul><button {...p.getClearProps()}>Clear</button></section> },
+} }];

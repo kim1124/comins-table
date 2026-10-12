@@ -1,5 +1,11 @@
 # Comins Table
 
+## Unreleased — 0.2.2 value list filtering
+
+- Add framework-neutral value-list filtering, search-scoped selection, other-column facet counts and JSON-compatible controlled models.
+- Add React filter trigger/option/panel render and class/style customization with native/custom control bindings.
+- Preserve condition filtering, explicit empty selections and selected values missing from refreshed data; provide bilingual guides and Playground examples.
+
 ## Unreleased
 
 ### Added

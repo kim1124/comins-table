@@ -208,13 +208,19 @@ function publicFixture(t, suffix = "") {
       export function importCominsRowsFromCsv({mapRow}) {
         return [mapRow({cells: ["001", "42"], headers: ["id", "score"], rowIndex: 0})];
       }
+      // Fixed value-list consumer scenario, not a replacement for production behavior tests.
+      export function getCominsColumnFilterOptions({rows}) { return {options: rows.map(row => ({id: String(row.data.score)}))}; }
+      export function setCominsColumnFilterValues({action, model, columnId}) {
+        return action.type === "clear" ? [] : [{columnId, operator: "in", values: []}];
+      }
+      export function getCominsFilteredRowIndexes({rows, model}) { return model.length ? [] : rows.map(row => row.dataIndex); }
       ${suffix}
     `,
     "package/core.d.ts": `
       type Sort = { columnId: string; direction: "asc" | "desc" };
       type Address = { rowId: string; columnId: string };
       type Payload<T> = { row: {data: T}; value: unknown };
-      type Column<T> = { field: string; label: string; sort: boolean; cell: {
+      type Column<T> = { field: string; label: string; filter?: {kind: "number"}; sort?: boolean; cell?: {
         disabled: (payload: Payload<T>) => boolean;
         copyable: boolean; pasteable: (payload: Payload<T>) => boolean;
         parseClipboard: (payload: Payload<T> & {text: string}) => unknown;
@@ -236,6 +242,12 @@ function publicFixture(t, suffix = "") {
       export type CominsCsvImportRow = { cells: readonly string[]; headers: readonly string[] | null; rowIndex: number };
       export type CominsCsvImportOptions<T> = { text: string; mapRow: (row: CominsCsvImportRow) => T; hasHeader?: boolean; maxCharacters?: number; maxCells?: number };
       export declare function importCominsRowsFromCsv<T>(options: CominsCsvImportOptions<T>): T[];
+      export type CominsColumnFilterModel = readonly {columnId: string; operator: "in"; values: readonly (boolean | null | number | string)[]}[];
+      type FilterInput<T> = {columns: Column<T>[]; columnId: string; rows: {data: T; dataIndex: number; id: string}[]; model: CominsColumnFilterModel};
+      export declare function getCominsColumnFilterOptions<T>(input: FilterInput<T>): {options: {id: string}[]} | null;
+      export declare function setCominsColumnFilterValues<T>(input: FilterInput<T> & {action: {type: "setOption"; id: string; checked: boolean}}): CominsColumnFilterModel;
+      export declare function getCominsFilteredRowIndexes<T>(input: FilterInput<T>): number[];
+
     `,
     "package/src/core.ts": "export const pure = 1;",
   });

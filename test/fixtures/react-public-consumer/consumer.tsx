@@ -85,3 +85,13 @@ const treeExample = <CominsTable tree columns={columns} data={[{ item: rows[0]! 
 // @ts-expect-error Tree slots are not a flat-table prop.
 const invalidFlatSlots = <CominsTable columns={columns} data={rows} treeSlots={treeSlots} />;
 void [treeExample, invalidFlatSlots];
+
+const valuesColumn: CominsTableColumn<Row> = { field: "score", label: "Score", filter: {
+  kind: "number", mode: "values",
+  trigger: { render: p => <button {...p.getTriggerProps()}>Values</button> },
+  option: { props: { className: "value-badge" }, render: p => <b>{p.option.label}</b> },
+  panel: { render: p => <section><input {...p.getSearchInputProps()} />{p.visibleOptions.map(o => <div key={o.id} {...p.getOptionContainerProps(o)}>
+    <div {...p.getOptionProps(o, { element: "custom" })}>{p.renderOption(o)}</div>
+  </div>)}<button {...p.getClearProps()}>Clear</button></section> },
+} };
+void valuesColumn;

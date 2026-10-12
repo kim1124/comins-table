@@ -2935,3 +2935,14 @@ body {
 .readme-demo__tree-label small {
   color: #64748b;
 }
+
+.value-filter-toolbar { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+.value-filter-toolbar label { display:flex; align-items:center; gap:4px; }
+.value-filter-table { height:260px; min-width:0; }
+.value-filter-table > .comins-table { height:100%; }
+.value-filter-list { list-style:none; padding:0; margin:8px 0; max-height:260px; overflow:auto; }
+.value-filter-list li { display:flex; align-items:center; gap:8px; }
+.value-filter-badge { border-radius:12px; padding:2px 8px; background:var(--comins-table-component-accent-soft); }
+.value-filter-check { cursor:pointer; padding:4px; }
+.value-filter-check:focus-visible, .value-filter-trigger:focus-visible { outline:2px solid var(--comins-table-component-focus); }
+.value-filter-trigger { cursor:pointer; font-size:12px; }

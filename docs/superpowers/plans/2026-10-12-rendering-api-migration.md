@@ -98,12 +98,14 @@
 
 ## D. 값 목록 필터 계획으로 넘길 연결 계약
 
+상태·커스텀 UI 세부 설계: [값 목록 필터 계약](../specs/2026-10-12-value-list-filter-design.md). 체크 즉시 적용, 전체 옵션 유지/다른 열 조건 기반 건수, 검색 결과에 한정한 전체 선택을 사용자 답변으로 확정했다. 아래 구현·검증 항목은 [값 목록 필터 구현 계획](./2026-10-12-value-list-filter.md)에서 수행한다.
+
 구현 위치는 `src/filtering.ts`, `src/column-filter.tsx`, `src/react/model.ts`, `src/core/model.ts`, `src/core/rows/filtering.ts`다. React 렌더 타입은 filtering.ts, 상태/판정은 Core, DOM 이벤트/ref/포커스는 column-filter.tsx에 둔다.
 
 이번 대응표로 확정된 경로는 `filter.trigger.render`, `filter.option.render`, `filter.panel.render`다. 상태 타입이 미정인 채 `any` payload나 동작 없는 설정을 먼저 공개하지 않는다. 별도 필터 설계에서는 아래 항목을 함께 완료한다.
 
-- [ ] 선택 값의 식별/직렬화, 빈 값, 옵션 수집 범위, 검색 중 전체 선택, 적용 시점, 옵션 카운트 기준을 기존 controlled model과 연결하여 결정한다. 이 결정은 A~C 구현을 막지 않는다.
-- [ ] 트리거·검색 입력·체크박스·옵션의 이벤트/ref/ARIA 바인딩과 panel의 option 렌더 도우미 타입을 정한다. panel.render=undefined는 기본 패널, null은 패널 콘텐츠 없음, 커스텀 패널은 option.render를 자동 중복 삽입하지 않는 규칙을 따른다.
+- [x] 선택 값의 식별/직렬화, 빈 값, 옵션 수집 범위, 검색 중 전체 선택, 적용 시점, 옵션 카운트 기준을 기존 controlled model과 연결하여 결정한다. 구현 및 동작 검증은 아직 수행하지 않았다.
+- [x] 트리거·검색 입력·체크박스·옵션의 이벤트/ref/ARIA 바인딩과 panel의 option 렌더 도우미 계약을 정한다. panel.render 반환 undefined는 기본 패널, null은 패널 콘텐츠 없음, 커스텀 패널은 option.render를 자동 중복 삽입하지 않는 규칙을 따른다. 공개 TypeScript 선언의 compile 검증은 구현 단계에 수행한다.
 - [ ] projectReactColumn의 filter spread를 Core 데이터 속성만 명시하는 투영으로 변경한다. `caseSensitive`, `getValue`, `kind` 및 신규 데이터 필드만 전달하고 trigger/option/panel은 제외한다. 실제 실행 객체에서 UI callback 참조가 없는지 `test/react-core-bridge.test.ts`로 검증한다. 타입 검사만으로 유출 방지를 주장하지 않는다.
 - [ ] `test/filtering.test.ts`, `test/column-filter-control.test.tsx`, `test/typecheck/column-filtering-api.tsx`, `test/playwright/specs/column-filtering.spec.ts`에 같은 값 목록 내 OR/열 간 AND, 커스텀 badge, 패널 태그 교체, 키보드와 class/style 조합 검증을 배정한다.
 

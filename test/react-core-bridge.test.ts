@@ -18,6 +18,17 @@ const create = () => legacy.createCominsTableState({ rows, getRowId: row => row.
 });
 
 describe("React state bridge", () => {
+  it("projects only filter data fields and preserves the original getValue column", () => {
+    const render = () => label;
+    const getOptionLabel = (value: legacy.CominsColumnFilterValue) => String(value);
+    const column: legacy.CominsTableRuntimeColumn<{ score: number }> = { id: "score", field: "score", label,
+      filter: { kind: "number", mode: "values", getOptionLabel, trigger: { render }, option: { render }, panel: { render },
+        getValue: params => { expect(params.column).toBe(column); return params.value; } } };
+    const projected = bridgeApi().projectReactColumn(column);
+    expect(Object.keys(projected.filter!).sort()).toEqual(["caseSensitive", "getOptionLabel", "getValue", "kind"]);
+    expect(projected.filter!.getOptionLabel).toBe(getOptionLabel);
+    expect(projected.filter!.getValue!({ column: projected, row: { score: 3 }, rowId: "a", value: 3 })).toBe(3);
+  });
   it("preserves React metadata and guard payloads through the public subpaths", () => {
     const state = create();
     let seenLabel: unknown;

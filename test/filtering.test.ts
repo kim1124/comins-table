@@ -36,6 +36,22 @@ function filter(model: unknown, runtimeColumns = columns) {
 }
 
 describe("column filtering", () => {
+  it("distinguishes empty value selection from unrestricted data and combines selections with AND", () => {
+    expect(filter([{ columnId: "active", operator: "in", values: [] }])).toEqual([]);
+    expect(filter([{ columnId: "active", operator: "in", values: [false] }])).toEqual([1]);
+    expect(filter([{ columnId: "active", operator: "in", values: [true, false] }])).toEqual([0, 1, 3]);
+    expect(filter([{ columnId: "active", operator: "in", values: [null] }])).toEqual([2]);
+    expect(filter([
+      { columnId: "active", operator: "in", values: [true, false] },
+      { columnId: "amount", operator: "greaterThan", value: 15 },
+    ])).toEqual([1]);
+    expect(filter([{ columnId: "amount", operator: "in", values: [10, "20"] }])).toEqual([0, 1, 2, 3]);
+  });
+  it("uses existing text case and UTC day semantics for value selections", () => {
+    expect(filter([{ columnId: "label", operator: "in", values: ["ALPHA", "BETA"] }])).toEqual([0, 1]);
+    expect(filter([{ columnId: "label", operator: "in", values: ["  "] }])).toEqual([2]);
+    expect(filter([{ columnId: "createdAt", operator: "in", values: ["2026-08-27"] }])).toEqual([1]);
+  });
   it("returns every source index when the controlled model has no valid rule", () => {
     expect(filter(undefined)).toEqual([0, 1, 2, 3]);
     expect(filter({})).toEqual([0, 1, 2, 3]);

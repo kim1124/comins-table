@@ -54,3 +54,7 @@ export function RenderingExample() {
 hover·셀 포커스·Escape·툴팁 표면으로의 포인터 이동을 지원합니다. 스크롤·크기 변경·셀 제거/재사용·unmount 시 툴팁과 aria-describedby를 정리합니다. role=tooltip을 사용하며 정보 표시용입니다. 포커스가 필요한 버튼/폼은 별도 애플리케이션 팝오버로 구성하십시오. 네이티브 title과 커스텀 툴팁은 중복 표시하지 않습니다.
 
 값 목록 필터의 예정된 `filter.trigger.render`, `filter.option.render`, `filter.panel.render`는 별도 필터 구현이 필요하며 이번 개발 변경에서 사용할 수 없습니다. Excel/CSV와 공식 Vue 지원도 별도 범위·완료 검증을 따릅니다.
+
+## 신규 값 목록 필터
+
+[값 목록 가이드](21-column-filtering.md): filter.mode:values, operator:in과 trigger/option/panel.render는 0.2.2 신규 기능이다. 기존 조건 필터와 속성을 유지한다.

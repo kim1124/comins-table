@@ -2570,6 +2570,7 @@ function CominsTableInner<TData, TGroup>(
     () => new Map(normalizedColumnFilters.map((rule) => [rule.column.id, rule] as const)),
     [normalizedColumnFilters],
   );
+  const filterSourceRows = useMemo(() => state.rows.map((data, dataIndex) => ({ data, dataIndex, id: state.rowIds[dataIndex]! })), [state.rows, state.rowIds]);
   const filteredDataIndexes = useMemo(
     () => filteringRequested
       ? getCominsFilteredRowIndexes({
@@ -5743,6 +5744,9 @@ function CominsTableInner<TData, TGroup>(
           <span className="comins-table__header-slot" data-comins-header-slot="right">
             {columnFilterable && !isColumnPlaceholder ? (
               <CominsColumnFilterControl
+                column={column}
+                valueSource={{ columns: state.columns, rows: filterSourceRows, model: columnFiltering?.model ?? [], columnId: column.id }}
+                onChangeModel={columnFiltering?.onChangeModel}
                 getPortalContainer={() => tableRootRef.current}
                 columnId={column.id}
                 columnLabel={columnPlaceholderLabel}
@@ -7198,3 +7202,8 @@ export const CominsTable = forwardRef(CominsTableAdapter) as <TData, TGroup = un
 ) => React.ReactElement | null;
 
 export const cominsTablePackage = "comins-table";
+
+export { getCominsColumnFilterOptions, setCominsColumnFilterValues } from "./filtering";
+export type { CominsColumnFilterValue, CominsColumnConditionFilterOperator, CominsColumnConditionFilterRule, CominsColumnValueFilterRule, CominsColumnFilterOption, CominsColumnFilterOptionsResult, CominsColumnFilterValuesAction, CominsColumnFilterOptionsInput } from "./filtering";
+
+export type { CominsValueFilterTriggerRenderParams, CominsValueFilterOptionRenderParams, CominsValueFilterPanelRenderParams, CominsValueFilterActions, CominsValueFilterPart, CominsFilterButtonGetter, CominsFilterCheckboxGetter, CominsFilterNativeOptions, CominsFilterCustomOptions, CominsFilterBinding } from "./filtering";

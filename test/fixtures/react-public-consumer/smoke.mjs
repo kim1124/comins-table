@@ -1,12 +1,22 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { createElement, act, version } from "react";
-import { createRoot } from "react-dom/client";
-import * as root from "comins-table";
-import * as core from "comins-table/core";
-import * as clipboard from "comins-table/clipboard";
-import * as selection from "comins-table/selection";
 import { JSDOM } from "jsdom";
+
+const dom = new JSDOM('<!doctype html><div id="app"></div>', { pretendToBeVisual: true });
+for (const key of ["window", "document", "navigator", "HTMLElement", "Element", "Node", "MutationObserver", "getComputedStyle", "requestAnimationFrame", "cancelAnimationFrame"]) {
+  Object.defineProperty(globalThis, key, { configurable: true, value: typeof dom.window[key] === "function" && /^(getComputedStyle|requestAnimationFrame|cancelAnimationFrame)$/.test(key) ? dom.window[key].bind(dom.window) : dom.window[key] });
+}
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+const browserErrors = [];
+dom.window.addEventListener("error", event => browserErrors.push(event.error ?? event.message));
+// React detects input-event support at import time; initialize the browser first.
+const { createElement, act, version } = await import("react");
+const { createRoot } = await import("react-dom/client");
+const root = await import("comins-table");
+const core = await import("comins-table/core");
+const clipboard = await import("comins-table/clipboard");
+const selection = await import("comins-table/selection");
+
 
 for (const api of [root, core]) {
   const row = { id: "001", score: 42 };
@@ -41,11 +51,6 @@ assert.equal(core.setCominsTableTheme, undefined);
 assert.equal(core.CominsTable, undefined);
 assert.ok(readFileSync(new URL(import.meta.resolve("comins-table/styles.css")), "utf8").includes("--comins-table-"));
 
-const dom = new JSDOM('<!doctype html><div id="app"></div>', { pretendToBeVisual: true });
-for (const key of ["window", "document", "navigator", "HTMLElement", "Element", "Node", "MutationObserver", "getComputedStyle", "requestAnimationFrame", "cancelAnimationFrame"]) {
-  Object.defineProperty(globalThis, key, { configurable: true, value: typeof dom.window[key] === "function" && /^(getComputedStyle|requestAnimationFrame|cancelAnimationFrame)$/.test(key) ? dom.window[key].bind(dom.window) : dom.window[key] });
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const container = document.getElementById("app");
 const mounted = createRoot(container);
 try {
@@ -73,6 +78,21 @@ try {
   await act(async () => cell.dispatchEvent(new dom.window.KeyboardEvent("keydown", { bubbles: true, key: "Escape" })));
   assert.equal(document.querySelector('[role="tooltip"]'), null);
   assert.equal(root.resolveCominsSummaryValues, undefined);
+  let filterModel = [];
+  const filterData = [{ id: "a", score: 10 }, { id: "b", score: 20 }];
+  const filterColumns = [{ field: "score", label: "Score", filter: { kind: "number", mode: "values", option: { render: p => createElement("b", null, p.option.label) } } }];
+  const renderValues = () => mounted.render(createElement(root.CominsTable, { data: filterData, columns: filterColumns, getRowId: row => row.id,
+    columnFiltering: { model: filterModel, openColumnId: "score", onChangeOpenColumnId: () => {}, onChangeModel: next => { filterModel = next; renderValues(); } } }));
+  await act(async () => renderValues());
+  const option = container.querySelector('input[type="checkbox"][aria-label="10"]');
+  assert.ok(option, "Packed value-list checkbox must be present");
+  await act(async () => option.click());
+  assert.deepEqual(filterModel, [{ columnId: "score", operator: "in", values: [20] }]);
+  assert.equal(container.querySelector('input[aria-label="10"]').checked, false);
+  assert.equal(container.querySelector('[data-testid="row-a"]'), null);
+  assert.ok(container.querySelector('[data-testid="row-b"]'));
+  assert.deepEqual(browserErrors, [], "Packed React interactions must not emit uncaught DOM errors");
+
 } finally {
   await act(async () => mounted.unmount());
   assert.equal(container.childElementCount, 0);

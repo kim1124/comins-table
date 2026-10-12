@@ -1,3 +1,4 @@
+import { ValueListFilteringSample } from "./ValueListFilteringSample";
 import { useMemo, useState } from "react";
 
 import {
@@ -194,6 +195,8 @@ export function ColumnFilteringFeature() {
           theme={{ density: "compact" }}
         />
       </FeatureSampleSection>
+
+      <ValueListFilteringSample />
 
       {performanceFixture ? (
         <FeatureSampleSection

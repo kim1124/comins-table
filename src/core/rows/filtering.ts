@@ -1,3 +1,5 @@
+import { getDateDayValue, isEmptyFilterValue, normalizeFilterOptionValue } from "./filter-value";
+import type { CominsColumnFilterValue } from "../model";
 import type {
   CominsCellFormatParams,
   CominsTableRuntimeColumn,
@@ -7,7 +9,7 @@ import type { CominsColumnFilterConfig as CoreFilterConfig, CominsColumnFilterKi
 
 export type { CominsColumnFilterKind } from "../model";
 
-export type CominsColumnFilterOperator =
+export type CominsColumnConditionFilterOperator =
   | "between"
   | "contains"
   | "endsWith"
@@ -22,16 +24,19 @@ export type CominsColumnFilterOperator =
   | "notEquals"
   | "startsWith";
 
+export type CominsColumnFilterOperator = CominsColumnConditionFilterOperator | "in";
 export type CominsColumnFilterConfig<TData, TValue = unknown> = Omit<CoreFilterConfig<TData, TValue>, "getValue"> & {
   getValue?: (params: CominsCellFormatParams<TData, TValue>) => unknown;
 };
 
-export type CominsColumnFilterRule = {
-  columnId: string;
-  operator: CominsColumnFilterOperator;
-  value?: boolean | null | number | string;
-  valueTo?: null | number | string;
+export type CominsColumnConditionFilterRule = {
+  columnId: string; operator: CominsColumnConditionFilterOperator;
+  value?: CominsColumnFilterValue; valueTo?: null | number | string; values?: never;
 };
+export type CominsColumnValueFilterRule = {
+  columnId: string; operator: "in"; values: readonly CominsColumnFilterValue[]; value?: never; valueTo?: never;
+};
+export type CominsColumnFilterRule = CominsColumnConditionFilterRule | CominsColumnValueFilterRule;
 
 export type CominsColumnFilterModel = readonly CominsColumnFilterRule[];
 
@@ -51,21 +56,18 @@ export type CominsColumnFilteringSourceRow<TData> = {
 type CominsNormalizedFilterValue = boolean | number | string;
 
 export type CominsNormalizedColumnFilterRule<TData> = {
-  column: CominsTableRuntimeColumn<TData>;
-  config: CominsColumnFilterConfig<TData>;
-  operator: CominsColumnFilterOperator;
-  value?: CominsNormalizedFilterValue;
-  valueTo?: number;
-};
+  column: CominsTableRuntimeColumn<TData>; config: CominsColumnFilterConfig<TData>;
+} & ({ operator: CominsColumnConditionFilterOperator; value?: CominsNormalizedFilterValue; valueTo?: number; values?: never; keys?: never }
+  | { operator: "in"; values: readonly CominsColumnFilterValue[]; keys: ReadonlySet<string>; value?: never; valueTo?: never });
 
 const operatorsByKind = {
-  boolean: new Set<CominsColumnFilterOperator>([
+  boolean: new Set<CominsColumnConditionFilterOperator>([
     "equals",
     "isEmpty",
     "isNotEmpty",
     "notEquals",
   ]),
-  date: new Set<CominsColumnFilterOperator>([
+  date: new Set<CominsColumnConditionFilterOperator>([
     "between",
     "equals",
     "greaterThan",
@@ -76,7 +78,7 @@ const operatorsByKind = {
     "lessThanOrEqual",
     "notEquals",
   ]),
-  number: new Set<CominsColumnFilterOperator>([
+  number: new Set<CominsColumnConditionFilterOperator>([
     "between",
     "equals",
     "greaterThan",
@@ -87,7 +89,7 @@ const operatorsByKind = {
     "lessThanOrEqual",
     "notEquals",
   ]),
-  text: new Set<CominsColumnFilterOperator>([
+  text: new Set<CominsColumnConditionFilterOperator>([
     "contains",
     "endsWith",
     "equals",
@@ -97,7 +99,7 @@ const operatorsByKind = {
     "notEquals",
     "startsWith",
   ]),
-} satisfies Record<CominsColumnFilterKind, Set<CominsColumnFilterOperator>>;
+} satisfies Record<CominsColumnFilterKind, Set<CominsColumnConditionFilterOperator>>;
 
 export function getCominsColumnFilterOperators(kind: CominsColumnFilterKind) {
   return [...operatorsByKind[kind]];
@@ -111,34 +113,6 @@ function getNestedFieldValue(value: unknown, field: string): unknown {
 
     return (current as Record<string, unknown>)[key];
   }, value);
-}
-
-function isEmptyFilterValue(value: unknown) {
-  return value === null || value === undefined || value === "";
-}
-
-function getDateDayValue(value: unknown): number | null {
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/u.test(value)) {
-    const [year, month, day] = value.split("-").map(Number);
-    const normalized = Date.UTC(year!, month! - 1, day!);
-    const date = new Date(normalized);
-
-    return date.getUTCFullYear() === year && date.getUTCMonth() === month! - 1 && date.getUTCDate() === day
-      ? normalized
-      : null;
-  }
-
-  const date = value instanceof Date
-    ? value
-    : typeof value === "number" || typeof value === "string"
-      ? new Date(value)
-      : null;
-
-  if (!date || !Number.isFinite(date.getTime())) {
-    return null;
-  }
-
-  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
 }
 
 function normalizeRuleValue(
@@ -169,8 +143,8 @@ function isColumnFilterKind(value: unknown): value is CominsColumnFilterKind {
 }
 
 function isColumnFilterOperator(value: unknown): value is CominsColumnFilterOperator {
-  return typeof value === "string" && Object.values(operatorsByKind).some((operators) =>
-    operators.has(value as CominsColumnFilterOperator));
+  return value === "in" || typeof value === "string" && Object.values(operatorsByKind).some((operators) =>
+    operators.has(value as CominsColumnConditionFilterOperator));
 }
 
 export function normalizeCominsColumnFilterModel<TData>({
@@ -202,9 +176,26 @@ export function normalizeCominsColumnFilterModel<TData>({
       !config ||
       !isColumnFilterKind(config.kind) ||
       !isColumnFilterOperator(rule.operator) ||
-      !operatorsByKind[config.kind].has(rule.operator) ||
+      (rule.operator !== "in" && !operatorsByKind[config.kind].has(rule.operator)) ||
       seenColumnIds.has(column.id)
     ) {
+      continue;
+    }
+
+    if (rule.operator === "in") {
+      if (!Array.isArray(rule.values)) continue;
+      const options = [];
+      let valid = true;
+      for (const raw of rule.values) {
+        if (raw !== null && typeof raw !== "string" && typeof raw !== "boolean" && typeof raw !== "number") { valid = false; break; }
+        const option = normalizeFilterOptionValue(config, raw);
+        if (!option) { valid = false; break; }
+        options.push(option);
+      }
+      if (!valid) continue;
+      const unique = new Map(options.map(option => [option.key, option.value]));
+      seenColumnIds.add(column.id);
+      normalized.push({ column, config, operator: "in", values: [...unique.values()], keys: new Set(unique.keys()) });
       continue;
     }
 
@@ -286,6 +277,11 @@ function matchesRule<TData>(
         value: defaultValue,
       })
     : defaultValue;
+
+  if (rule.operator === "in") {
+    const option = normalizeFilterOptionValue(rule.config, value);
+    return option !== null && rule.keys.has(option.key);
+  }
 
   if (rule.operator === "isEmpty") {
     return isEmptyFilterValue(value);

@@ -1872,3 +1872,12 @@
   position: fixed;
   z-index: 90;
 }
+
+.comins-column-filter__values { display: grid; gap: 10px; min-width: 220px; }
+.comins-column-filter__search { color: var(--comins-table-component-foreground); background: var(--comins-table-component-surface); border: 1px solid var(--comins-table-component-border); border-radius: 4px; font: inherit; padding: 6px; width: 100%; box-sizing: border-box; }
+.comins-column-filter__options { display: grid; gap: 4px; max-height: 260px; overflow: auto; }
+.comins-column-filter__option { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 4px; overflow-wrap: anywhere; }
+.comins-column-filter__option[data-selected="true"] { background: var(--comins-table-component-accent-soft); }
+.comins-column-filter__count { color: var(--comins-table-component-muted); margin-left: auto; }
+.comins-column-filter__select-all, .comins-column-filter__actions { display: flex; align-items: center; gap: 6px; }
+.comins-column-filter__no-results { color: var(--comins-table-component-muted); padding: 8px; }

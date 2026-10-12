@@ -386,6 +386,12 @@ export const featureRegistry: FeatureDefinitionSource[] = [
     id: "column-filtering",
     label: defineLocalizedText("Column Filtering", "Column Filtering"),
     options: [
+      { name: "columns.filter.mode", example: "mode: 'values'", description: defineLocalizedText("값 목록을 즉시 선택하며 같은 열은 OR, 다른 열은 AND입니다.", "Select values immediately: OR within a column, AND across columns.") },
+      { name: "columns.filter.getOptionLabel", example: "getOptionLabel: value => String(value)", description: defineLocalizedText("검색·접근성용 문자열 라벨입니다. 값의 식별은 바꾸지 않습니다.", "Plain labels for search and accessibility; value identity stays unchanged.") },
+      { name: "columns.filter.trigger.render", example: "render: p => <button {...p.getTriggerProps()}>Filter</button>", description: defineLocalizedText("실제 trigger 요소에 동작·ref·접근성 바인딩을 연결합니다.", "Connect behavior, refs and accessibility bindings to the real opener.") },
+      { name: "columns.filter.option.render", example: "render: p => <Badge>{p.option.label}</Badge>", description: defineLocalizedText("체크 컨트롤을 유지하며 배지·라벨·아이콘을 교체합니다.", "Replace badges, labels and icons while retaining selection controls.") },
+      { name: "columns.filter.panel.render", example: "render: p => <CustomPanel params={p} />", description: defineLocalizedText("검색·체크박스의 내부 태그 구조를 구성하고 제공된 도우미를 연결합니다.", "Compose inner search/checkbox markup and connect the provided helpers.") },
+
       { description: defineLocalizedText("Column 값의 Filter type과 optional custom value resolver를 정의합니다.", "Defines the Column value kind and an optional custom value resolver."), example: "filter: { kind: 'text' }", name: "columns.filter" },
       { description: defineLocalizedText("Application이 소유하는 Column별 조건 배열입니다.", "Application-owned array of per-Column rules."), example: "model", name: "columnFiltering.model" },
       { apiKind: "event", description: defineLocalizedText("Editor 변경 결과인 다음 Filter model을 전달합니다.", "Receives the next Filter model produced by the editor."), example: "onChangeModel={setModel}", name: "columnFiltering.onChangeModel" },
