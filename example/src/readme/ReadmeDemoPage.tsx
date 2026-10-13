@@ -201,7 +201,7 @@ function TreeGridOverviewDemo() {
   const columns = useMemo<Array<CominsTableColumn<PreviewRow>>>(() => [
     {
       cell: {
-        renderer: ({ row, value }) => (
+        render: ({ row, value }) => (
           <span className="readme-demo__tree-label">
             <strong>{String(value)}</strong>
             <small>{row.data.team}</small>
@@ -304,7 +304,7 @@ function RowGroupingDemo() {
         aggregations: { amount: "sum", status: "count" },
         expandedGroupIds,
         getGroupId,
-        getGroupLabel,
+        label: { render: getGroupLabel },
         getGroupRowProps: ({ group, isEmpty }) => ({
           className: "readme-demo__group-row",
           style: {
@@ -321,13 +321,13 @@ function RowGroupingDemo() {
         groups,
         onChangeExpandedGroupIds: setExpandedGroupIds,
         onChangeGroups: (nextGroups) => setGroups(nextGroups),
-        renderGroupContent: ({ aggregateValues, group, groupIndex, rowCount }) => (
+        content: { render: ({ aggregateValues, group, groupIndex, rowCount }) => (
           <span className="readme-demo__group-content">
             <strong>{`${groupIndex + 1}. ${group.label}`}</strong>
             <span>{`${rowCount} rows`}</span>
             <span>{`Total ${String(aggregateValues.amount ?? 0)}`}</span>
           </span>
-        ),
+        ) },
         setRowGroupId: ({ row, toGroupId }) => ({ ...row, groupId: String(toGroupId) }),
       }}
       rowProps={{ draggable: true }}
@@ -368,7 +368,7 @@ function ColumnFilteringDemo() {
         aggregations: { amount: "sum" },
         expandedGroupIds,
         getGroupId,
-        getGroupLabel,
+        label: { render: getGroupLabel },
         getRowGroupId: (row) => row.groupId,
         groups: previewGroups,
         onChangeExpandedGroupIds: setExpandedGroupIds,
@@ -424,7 +424,7 @@ function CrossTableDragDemo() {
   const grouping = (groups: PreviewGroup[]) => ({
     expandedGroupIds: groups.map((group) => group.id),
     getGroupId,
-    getGroupLabel,
+    label: { render: getGroupLabel },
     getRowGroupId: (row: PreviewRow) => row.groupId,
     groupDraggable: true,
     groups,
@@ -438,12 +438,12 @@ function CrossTableDragDemo() {
     coordinator,
     rejectionFeedback: {
       duration: 3000,
-      renderTooltip: () => (
+      tooltip: { render: () => (
         <>
           <strong>Duplicate ID</strong>
           <span>The target already owns this Row.</span>
         </>
-      ),
+      ) },
     },
     scope: "readme-transfer",
     tableId,

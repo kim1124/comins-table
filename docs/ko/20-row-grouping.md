@@ -2,6 +2,8 @@
 
 <!-- comins-restriction: grouping-single-depth -->
 
+0.2.2부터 렌더링의 표준 경로는 `.render`입니다. 기존 속성은 0.x에서 유지하며 1.0.0 제거 대상으로 안내합니다. [전환 규칙](27-migration-0.2.2.md)을 참고하십시오.
+
 [문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/20-row-grouping.md) · [Playground](http://127.0.0.1:4002/examples/row-grouping)
 
 ![Application-owned Row Grouping의 펼침, 접기와 Group 순서 변경](../assets/comins-table-row-grouping.gif)
@@ -36,7 +38,7 @@ const [expandedGroupIds, setExpandedGroupIds] = useState<CominsRowId[]>([]);
     aggregations: { amount: "sum", id: "count" },
     expandedGroupIds,
     getGroupId: (group) => group.id,
-    getGroupLabel: (group) => group.label,
+    label: { render: (group) => group.label },
     getRowGroupId: (row) => row.groupId,
     groupDraggable: true,
     groups,
@@ -92,7 +94,7 @@ ID를 생략하면 현재 Group 전체가 대상입니다. 빈 ID 배열은 no-o
 
 각 Group Row는 current visible Column 수와 동일한 `colSpan`을 가진 native `<th scope="rowgroup">` 하나로 구성합니다. 일반 Row와 구분되는 theme-aware 배경색과 기본 fixed `rowHeight`를 사용합니다.
 
-Table은 outer Row/Cell, ARIA, disclosure, Group Drag handle, drop feedback, focus와 virtualization height를 소유합니다. `getGroupRowProps`는 outer Group Row에 typed `className`과 `style`을 추가하고, `renderGroupContent`는 내부의 기본 label/count/aggregate content만 교체합니다.
+Table은 outer Row/Cell, ARIA, disclosure, Group Drag handle, drop feedback, focus와 virtualization height를 소유합니다. `getGroupRowProps`는 outer Group Row에 typed `className`과 `style`을 추가하고, `rowGrouping.content.render`는 내부의 기본 label/count/aggregate content만 교체합니다.
 
 <!-- comins-doc-example: fragment -->
 ```tsx
@@ -105,7 +107,7 @@ rowGrouping={{
       "--comins-table-group-row-color": "#111827",
     } as React.CSSProperties,
   }),
-  renderGroupContent: ({
+  content: { render: ({
     aggregateValues,
     expanded,
     group,
@@ -121,7 +123,7 @@ rowGrouping={{
       isEmpty={isEmpty}
       rowCount={rowCount}
     />
-  ),
+  ) },
 }}
 ```
 
@@ -158,6 +160,6 @@ Visible leaf callback은 기존 계약을 유지합니다.
 
 Column Pinning은 일반 leaf Cell과 Header에 계속 적용되며 하나의 spanning Group Cell 자체는 pinning하지 않습니다. Visual Fill Handle UI는 표시된 business leaf Cell에 적용하며 Group 헤딩은 편집 대상에서 제외합니다. 기존 leaf-only selection과 Clipboard 동작은 유지합니다.
 
-Row Grouping은 client-side flat-table 기능이며 pagination, infinite/lazy loading, Viewport Datasource, Tree Grid와 결합할 수 없습니다. 업무 Row는 `getRowHeight`를 통한 고정·자동 높이와 가변 높이 가상화를 지원하며 Group 제목은 fixed `rowHeight`를 유지합니다. 기존 `renderRowDetail`을 통한 grouped leaf Row Detail도 지원합니다. [Row 자동 높이](24-auto-row-height.md)를 참고합니다. 다중 Depth Group tree, Group selection, variable-height Group Row, server grouping, Pivot, custom reducer와 aggregate sorting은 이번 범위가 아닙니다.
+Row Grouping은 client-side flat-table 기능이며 pagination, infinite/lazy loading, Viewport Datasource, Tree Grid와 결합할 수 없습니다. 업무 Row는 `getRowHeight`를 통한 고정·자동 높이와 가변 높이 가상화를 지원하며 Group 제목은 fixed `rowHeight`를 유지합니다. 기존 `rowDetail.render`을 통한 grouped leaf Row Detail도 지원합니다. [Row 자동 높이](24-auto-row-height.md)를 참고합니다. 다중 Depth Group tree, Group selection, variable-height Group Row, server grouping, Pivot, custom reducer와 aggregate sorting은 이번 범위가 아닙니다.
 
 Controlled [Column Filtering](https://github.com/kim1124/comins-table/blob/main/docs/ko/21-column-filtering.md)은 Group membership보다 먼저 실행할 수 있습니다. 모든 explicit Group은 application-owned 위치를 유지하고 count, aggregate와 member 정렬은 filtered leaf Row를 사용합니다. 이 결합에서 Row Drag는 비활성화하지만 Group Drag는 explicit Group model을 계속 재배치할 수 있습니다.

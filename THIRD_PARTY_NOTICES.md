@@ -119,3 +119,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## XLSX external runtime dependencies
+
+The independent `comins-table/xlsx` entry imports SheetJS CE `xlsx` 0.20.3 (Apache-2.0, official supplier artifact), `@zip.js/zip.js` 2.23.0 (BSD-3-Clause) `@federicocarboni/saxe` 0.8.0 (Apache-2.0) and `write-excel-file` 4.1.1 (MIT), with `fflate` 0.8.3 (MIT) transitively. Comins preserves these as external imports and does not copy their source into its library chunks. Their installed packages contain the applicable license texts. Downstream applications that bundle them must preserve the corresponding license/notice obligations. The ZIP native JS entry includes a JavaScript fallback and does not request a runtime WASM asset.

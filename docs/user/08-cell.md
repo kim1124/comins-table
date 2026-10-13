@@ -2,6 +2,8 @@
 
 [Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/08-cell.md) · [Cell](http://127.0.0.1:4002/examples/cell) · [Components](http://127.0.0.1:4002/examples/component)
 
+Starting with 0.2.2, `.render` is the standard UI customization entry point. Legacy properties remain supported throughout 0.x, with removal targeted for 1.0.0. See the [migration rules](27-migration-0.2.2.md).
+
 Cells support formatting, custom rendering, event callbacks, props, and component slots.
 
 <!-- comins-doc-example: fragment -->
@@ -13,7 +15,7 @@ const columns: Array<CominsTableColumn<PersonRow>> = [
     cell: {
       format: ({ value }) => String(value).toUpperCase(),
       props: ({ row }) => ({ className: row.selected ? "selected" : "normal" }),
-      renderer: ({ value }) => <strong>{String(value)}</strong>,
+      render: ({ value }) => <strong>{String(value)}</strong>,
     },
   },
 ];

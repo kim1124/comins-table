@@ -27,6 +27,8 @@ const columns: CominsTableColumn<Row>[] = [{
     props: ({ row }) => ({ pasteable: row.data.score >= 0 }),
     parseClipboard: ({ text }) => Number(text),
     renderer: ({ row }) => <output>{row.data.score}</output>,
+    render: ({ row }) => <output>{row.data.score}</output>,
+    tooltip: { render: ({ row }) => <b>{row.data.score}</b> },
   },
 }];
 const state = createCominsTableState({ rows, columns, getRowId: row => row.id });
@@ -83,3 +85,13 @@ const treeExample = <CominsTable tree columns={columns} data={[{ item: rows[0]! 
 // @ts-expect-error Tree slots are not a flat-table prop.
 const invalidFlatSlots = <CominsTable columns={columns} data={rows} treeSlots={treeSlots} />;
 void [treeExample, invalidFlatSlots];
+
+const valuesColumn: CominsTableColumn<Row> = { field: "score", label: "Score", filter: {
+  kind: "number", mode: "values",
+  trigger: { render: p => <button {...p.getTriggerProps()}>Values</button> },
+  option: { props: { className: "value-badge" }, render: p => <b>{p.option.label}</b> },
+  panel: { render: p => <section><input {...p.getSearchInputProps()} />{p.visibleOptions.map(o => <div key={o.id} {...p.getOptionContainerProps(o)}>
+    <div {...p.getOptionProps(o, { element: "custom" })}>{p.renderOption(o)}</div>
+  </div>)}<button {...p.getClearProps()}>Clear</button></section> },
+} };
+void valuesColumn;

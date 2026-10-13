@@ -29,3 +29,11 @@ assert.throws(() => pasteCominsText(state, address, "50\nbad"), /invalid score/)
 assert.deepEqual(rows, original);
 assert.equal("theme" in state, false);
 assert.deepEqual(importCominsRowsFromCsv({ text: 'id,score\r\n"001",42', mapRow: ({ cells }) => ({ id: cells[0], score: Number(cells[1]) }) }), [{ id: "001", score: 42 }]);
+
+const filtering = await import("comins-table/core");
+const filteringColumns = createCominsTableState({ rows, getRowId: row => row.id, columns: [{ field: "score", label: "Score", filter: { kind: "number" } }] }).columns;
+const filterInput = { columns: filteringColumns, columnId: "score", rows: rows.map((data, dataIndex) => ({ data, dataIndex, id: data.id })), model: [] };
+assert.equal(filtering.getCominsColumnFilterOptions(filterInput).options.length, 2);
+const none = filtering.setCominsColumnFilterValues({ ...filterInput, action: { type: "setVisible", checked: false } });
+assert.deepEqual(filtering.getCominsFilteredRowIndexes({ ...filterInput, model: JSON.parse(JSON.stringify(none)) }), []);
+assert.deepEqual(filtering.setCominsColumnFilterValues({ ...filterInput, model: none, action: { type: "clear" } }), []);

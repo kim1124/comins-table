@@ -13,10 +13,27 @@ const baseline = readJson(baselinePath);
 const migrationCoreTarget = baseline.entrypoints["comins-table/core"].filter((name: string) => baseline.coreDisposition[name].kind !== "react-only");
 const csvImportExports = ["CominsCsvImportOptions", "CominsCsvImportRow", "importCominsRowsFromCsv"];
 const structuredExportSymbols = ["CominsExportMetadata", "CominsExportTreeOptions", "CominsExportGroupedOptions", "createCominsTreeExportOptions", "createCominsGroupedExportOptions"];
-const coreTarget = [...migrationCoreTarget, ...csvImportExports, ...structuredExportSymbols].sort();
+// Approved value-list contracts are additive; the historical migration baseline stays immutable.
+const valueCoreSymbols = [
+  "CominsColumnConditionFilterOperator", "CominsColumnConditionFilterRule", "CominsColumnFilterConfig", "CominsColumnFilterKind",
+  "CominsColumnFilterModel", "CominsColumnFilterOperator", "CominsColumnFilterOption", "CominsColumnFilterOptionsInput",
+  "CominsColumnFilterOptionsResult", "CominsColumnFilterRule", "CominsColumnFilterValue", "CominsColumnFilterValuesAction",
+  "CominsColumnFilteringConfig", "CominsColumnFilteringSourceRow", "CominsColumnValueFilterRule", "CominsNormalizedColumnFilterRule",
+  "getCominsColumnFilterOperators", "getCominsColumnFilterOptions", "getCominsFilteredRowIndexes", "normalizeCominsColumnFilterModel", "setCominsColumnFilterValues",
+];
+const valueRootSymbols = [
+  "CominsColumnConditionFilterOperator", "CominsColumnConditionFilterRule", "CominsColumnFilterOption", "CominsColumnFilterOptionsInput",
+  "CominsColumnFilterOptionsResult", "CominsColumnFilterValue", "CominsColumnFilterValuesAction", "CominsColumnValueFilterRule",
+  "CominsFilterBinding", "CominsFilterButtonGetter", "CominsFilterCheckboxGetter", "CominsFilterCustomOptions", "CominsFilterNativeOptions",
+  "CominsValueFilterActions", "CominsValueFilterOptionRenderParams", "CominsValueFilterPanelRenderParams", "CominsValueFilterPart",
+  "CominsValueFilterTriggerRenderParams", "getCominsColumnFilterOptions", "setCominsColumnFilterValues",
+];
+const xlsxTarget = ["CominsXlsxCellStyle", "CominsXlsxCellValue", "CominsXlsxError", "CominsXlsxErrorCode", "CominsXlsxExportOptions", "CominsXlsxExportStyles", "CominsXlsxImportLimits", "CominsXlsxImportOptions", "CominsXlsxImportRow", "CominsXlsxInspectOptions", "CominsXlsxSheetInfo", "CominsXlsxWorkbookInfo", "exportCominsRowsToXlsx", "importCominsRowsFromXlsx", "inspectCominsXlsx"];
+const coreTarget = [...migrationCoreTarget, ...csvImportExports, ...structuredExportSymbols, ...valueCoreSymbols].sort();
 const target = { ...baseline.entrypoints,
-  "comins-table": [...baseline.entrypoints["comins-table"], "CominsTreeSlotParams", "CominsTreeSlots", ...csvImportExports, ...structuredExportSymbols].sort(),
+  "comins-table": [...baseline.entrypoints["comins-table"], "CominsTreeSlotParams", "CominsTreeSlots", "CominsSummaryRenderPayload", ...csvImportExports, ...structuredExportSymbols, ...valueRootSymbols].sort(),
   "comins-table/core": coreTarget,
+  "comins-table/xlsx": xlsxTarget,
 };
 function compareCore(names: string[]) {
   return { missing: coreTarget.filter((name: string) => !names.includes(name)), extra: names.filter(name => !coreTarget.includes(name)) };
@@ -88,7 +105,7 @@ describe("public Core migration baseline", () => {
 
   it("preserves every public entrypoint", () => {
     expect(Object.keys(readJson("package.json").exports).sort()).toEqual([
-      ".", "./clipboard", "./core", "./selection", "./styles.css",
+      ".", "./clipboard", "./core", "./selection", "./styles.css", "./xlsx",
     ]);
   });
 
@@ -106,6 +123,11 @@ describe("public Core migration baseline", () => {
     }
   });
 
+  it("rejects a missing XLSX API and accidental XLSX symbols at Core", () => {
+    expect(actual["comins-table/xlsx"]).toEqual(xlsxTarget);
+    expect(xlsxTarget.filter(name => !actual["comins-table/xlsx"].filter((n: string) => n !== "inspectCominsXlsx").includes(name))).toEqual(["inspectCominsXlsx"]);
+    expect(compareCore([...coreTarget, "importCominsRowsFromXlsx"])).toEqual({ missing: [], extra: ["importCominsRowsFromXlsx"] });
+  });
   it("classifies every core symbol exactly once", () => {
     const baseline = readJson(baselinePath);
     expect(validateDisposition(baseline.coreDisposition, baseline.entrypoints["comins-table/core"])).toEqual([]);
@@ -116,6 +138,8 @@ describe("public Core migration baseline", () => {
     expect(compareCore(actual["comins-table/core"])).toEqual({ missing: [], extra: [] });
     expect(compareCore(coreTarget.filter((name: string) => name !== "pasteCominsText"))).toEqual({ missing: ["pasteCominsText"], extra: [] });
     expect(compareCore([...coreTarget, "CominsTableTheme"])).toEqual({ missing: [], extra: ["CominsTableTheme"] });
+    expect(compareCore(coreTarget.filter(name => name !== "getCominsColumnFilterOptions"))).toEqual({ missing: ["getCominsColumnFilterOptions"], extra: [] });
+    expect(compareCore([...coreTarget, "CominsValueFilterPanelRenderParams"])).toEqual({ missing: [], extra: ["CominsValueFilterPanelRenderParams"] });
   });
 
   it("keeps react-only core exports available at root", () => {

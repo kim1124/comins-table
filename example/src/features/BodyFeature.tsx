@@ -52,7 +52,7 @@ export function BodyFeature() {
       const createCell = (columnNumber: number): CominsTableColumn<PersonRow>["cell"] =>
         useHeavyRenderer
           ? {
-              renderer: ({ row }) => (
+              render: ({ row }) => (
                 <span className="body-virtualization-table__heavy-cell" data-testid="virtual-heavy-cell">
                   <strong>{`Data ${Number(row.id) + 1}`}</strong>
                   <span>{`Column ${columnNumber}`}</span>
@@ -61,6 +61,7 @@ export function BodyFeature() {
             }
           : {
               format: ({ row }) => [2, 8].includes(columnNumber) ? String(row.id) : [5, 9].includes(columnNumber) ? String(Number(row.id) % 2 === 0) : `Data ${Number(row.id) + 1}`,
+              tooltip: columnNumber === 1 ? { render: ({ row }) => <strong>{`Data ${Number(row.id) + 1}`}</strong> } : undefined,
             };
 
       return [
@@ -201,7 +202,7 @@ export function BodyFeature() {
       },
       {
         cell: {
-          renderer: ({ row }) => {
+          render: ({ row }) => {
             const value = componentOverrides[Number(row.id)]?.role ?? (Number(row.id) % 2 === 0 ? "Owner" : "Viewer");
 
             return (
@@ -332,8 +333,7 @@ export function BodyFeature() {
           multiSort
           onChangeExpandedRowIds={detailEnabled ? setExpandedRowIds : undefined}
           pagination={{ pageIndex: 0, pageSize: rows.length }}
-          renderRowDetail={
-            detailEnabled
+          rowDetail={{ render: detailEnabled
               ? ({ row }) => (
                   <div
                     data-testid={`row-detail-perf-${automaticDetail ? "auto" : "fixed"}`}
@@ -376,8 +376,7 @@ export function BodyFeature() {
                     ))}
                   </div>
                 )
-              : undefined
-          }
+              : undefined }}
           theme={{ density: "compact" }}
           virtualized
         />

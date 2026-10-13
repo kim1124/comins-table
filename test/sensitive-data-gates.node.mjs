@@ -51,11 +51,11 @@ function constantFailure(result) {
   assert.equal(result.stderr, failure);
 }
 
-test('references the canonical Contract v1.8 without copying common policy', () => {
+test('references the canonical Contract v1.10 without copying common policy', () => {
   const agents = read('AGENTS.md');
   const security = read('SECURITY.md');
 
-  assert.match(agents, /managed-start contract=v1\.8/);
+  assert.match(agents, /managed-start contract=v1\.10/);
   assert.match(agents, /comins-governance\/blob\/main\/COMINS_CONTRACT\.md/);
   assert.match(agents, /Governance is the only\s+common-policy owner/i);
   assert.match(agents, /module owns their CI implementation/i);
@@ -110,7 +110,7 @@ test('pins shared Gitleaks, hooks, scripts, and workflows', () => {
 
   for (const workflow of [verify, publish]) {
     assert.match(workflow, /actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1/);
-    assert.match(workflow, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020/);
+    assert.match(workflow, /actions\/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1/);
     assert.match(workflow, /persist-credentials: false/);
   }
   assert.match(verify, /fetch-depth: 0/);
@@ -122,7 +122,7 @@ test('pins shared Gitleaks, hooks, scripts, and workflows', () => {
   assert.match(verify, /npm run verify\n/);
   assert.match(verify, /npm run verify:e2e/);
   assert.doesNotMatch(verify, /npm run verify:full/);
-  assert.match(verify, /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/);
+  assert.match(verify, /actions\/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9/);
   assert.match(verify, /needs: \[changes, security, fast, gif_metadata, browser\]/);
   assert.match(verify, /required-verification: failed/);
   assert.match(publish, /verify-package-artifact\.mjs/);

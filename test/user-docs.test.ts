@@ -31,6 +31,7 @@ const userDocs = [
   "21-column-filtering.md",
   "22-column-pinning.md",
   "23-cross-table-drag.md",
+  "27-migration-0.2.2.md",
 ];
 
 const implementedTerms = [
@@ -314,13 +315,13 @@ describe("comins-table user documentation contract", () => {
       "getGroupRowProps",
       "getRowGroupId",
       "onChangeGroups",
-      "renderGroupContent",
+      "content",
       "groupDraggable",
       "aggregations",
       "expandedGroupIds",
       "onChangeExpandedGroupIds",
       "virtualized",
-      "renderRowDetail",
+      "rowDetail",
     ]) {
       expect(englishDocs).toContain(term);
       expect(koreanDocs).toContain(term);
@@ -468,7 +469,7 @@ describe("comins-table user documentation contract", () => {
     expect(tree).toContain("expand(nodeIds?)");
     expect(tree).toContain("fold(nodeIds?)");
     expect(tree).toContain("cell.components");
-    expect(tree).toContain("cell.renderer");
+    expect(tree).toContain("cell.render");
     expect(tree).toContain("10000");
   });
 

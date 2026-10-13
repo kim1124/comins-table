@@ -2,6 +2,8 @@
 
 [Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/06-header.md) · [Header](http://127.0.0.1:4002/examples/header) · [Header Groups](http://127.0.0.1:4002/examples/column-groups)
 
+Starting with 0.2.2, `.render` is the standard UI customization entry point. Legacy properties remain supported throughout 0.x, with removal targeted for 1.0.0. See the [migration rules](27-migration-0.2.2.md).
+
 Columns can enable sorting, width constraints, resizing, and custom header content.
 
 <!-- comins-doc-example: fragment -->

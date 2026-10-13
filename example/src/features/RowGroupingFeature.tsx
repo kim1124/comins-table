@@ -180,7 +180,7 @@ export function RowGroupingFeature() {
             aggregations: singleGroupingAggregations,
             expandedGroupIds: singleExpandedGroupIds,
             getGroupId: getExampleGroupId,
-            getGroupLabel: getExampleGroupLabel,
+            label: { render: getExampleGroupLabel },
             getRowGroupId: (row) => row.region,
             groupDraggable: movementAllowed,
             groups: regionGroups,
@@ -217,17 +217,17 @@ export function RowGroupingFeature() {
           getRowId={getRowGroupingExampleRowId}
           multiSort
           onChangeExpandedRowIds={setExpandedRowIds}
-          renderRowDetail={({ row }) => (
+          rowDetail={{ render: ({ row }) => (
             <div data-testid={`row-grouping-detail-${row.id}`} style={{ display: "grid", gap: 6, padding: 12 }}>
               <strong>{row.data.name}</strong>
               <span>{`${row.data.region} / ${row.data.team} / ${row.data.status}`}</span>
             </div>
-          )}
+          ) }}
           rowGrouping={{
             aggregations: customGroupingAggregations,
             expandedGroupIds: customExpandedGroupIds,
             getGroupId: getExampleGroupId,
-            getGroupLabel: getExampleGroupLabel,
+            label: { render: getExampleGroupLabel },
             getGroupRowProps: ({ group, isEmpty }) => ({
               className: "row-grouping-custom-group-row",
               style: {
@@ -242,7 +242,7 @@ export function RowGroupingFeature() {
             getRowGroupId: (row) => row.team,
             groups: teamGroups,
             onChangeExpandedGroupIds: setCustomExpandedGroupIds,
-            renderGroupContent: ({ aggregateValues, group, groupIndex, rowCount }) => (
+            content: { render: ({ aggregateValues, group, groupIndex, rowCount }) => (
               <span data-testid={`custom-group-content-${group.id}`}>
                 <strong>{`${groupIndex + 1}. ${group.label}`}</strong>
                 {` · ${rowCount} Rows · Avg ${String(aggregateValues.amount ?? "-")}`}
@@ -255,7 +255,7 @@ export function RowGroupingFeature() {
                   {text(defineLocalizedText("이름 변경", "Rename"))}
                 </button>
               </span>
-            ),
+            ) },
           }}
           theme={{ density: "compact" }}
         />
@@ -286,7 +286,7 @@ export function RowGroupingFeature() {
             aggregations: virtualGroupingAggregations,
             expandedGroupIds: virtualExpandedGroupIds,
             getGroupId: getExampleGroupId,
-            getGroupLabel: getExampleGroupLabel,
+            label: { render: getExampleGroupLabel },
             getRowGroupId: () => "all",
             groups: virtualGroups,
             onChangeExpandedGroupIds: setVirtualExpandedGroupIds,

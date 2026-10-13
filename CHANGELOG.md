@@ -1,6 +1,32 @@
 # Comins Table
 
-## Unreleased
+## 0.2.2 - 2026-10-13
+
+- Playground: display complete remote-loading responses and CSV/XLSX datasets, start file examples with 1000 rows, and reset article scrolling on page navigation.
+
+- Add framework-neutral Excel Export styles: a default Comins theme, plain mode and header/body/column overrides for fonts, colors, borders, alignment, widths and number formats.
+- Replace the XML parser and Export engine while preserving typed Import, literal text and byte-only package boundaries.
+
+- Add `comins-table/xlsx` byte APIs for typed ordinary-row import/export, cached formula results and formatted dates.
+- Validate actual inflated ZIP bytes/CRC, visible sheet selection and atomic mapping; add Worker-based Playground with cancellation and full virtualized datasets.
+
+### Value list filtering
+
+- Add framework-neutral value-list filtering, search-scoped selection, other-column facet counts and JSON-compatible controlled models.
+- Add React filter trigger/option/panel render and class/style customization with native/custom control bindings.
+- Preserve condition filtering, explicit empty selections and selected values missing from refreshed data; provide bilingual guides and Playground examples.
+
+### Rendering customization
+
+### Added
+
+- Standard `render` paths for cell/header content, row details, group labels/content, Tree slots, transfer rejection tooltips, loading and empty content. Legacy APIs retain their 0.x behavior; removal targets 1.0.0.
+- Summary `render` after aggregation and formatting, with original `value` and `formattedValue` payloads.
+- Informational custom cell tooltips via `cell.tooltip.render`, including hover/focus, Escape and virtualization cleanup. Existing native string tooltips remain compatible.
+
+### Changed
+
+- Playground examples use standard rendering paths. English and Korean 0.2.2 migration guides document precedence, return values and content boundaries.
 
 ### Fixed
 

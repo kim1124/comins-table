@@ -2,6 +2,8 @@
 
 <!-- comins-restriction: grouping-single-depth -->
 
+Starting with 0.2.2, `.render` is the standard UI customization entry point. Legacy properties remain supported throughout 0.x, with removal targeted for 1.0.0. See the [migration rules](27-migration-0.2.2.md).
+
 [Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/20-row-grouping.md) · [Playground](http://127.0.0.1:4002/examples/row-grouping)
 
 ![Application-owned Row Grouping expands, collapses, and reorders full-width Group Rows](../assets/comins-table-row-grouping.gif)
@@ -36,7 +38,7 @@ const [expandedGroupIds, setExpandedGroupIds] = useState<CominsRowId[]>([]);
     aggregations: { amount: "sum", id: "count" },
     expandedGroupIds,
     getGroupId: (group) => group.id,
-    getGroupLabel: (group) => group.label,
+    label: { render: (group) => group.label },
     getRowGroupId: (row) => row.groupId,
     groupDraggable: true,
     groups,
@@ -92,7 +94,7 @@ Omitting IDs targets all current Groups. An empty ID array is a no-op and unknow
 
 Each Group Row contains one native `<th scope="rowgroup">` whose `colSpan` equals the current visible Column count. It has a distinct theme-aware background and the fixed `rowHeight` baseline.
 
-The Table owns the outer Row and Cell, ARIA, disclosure, Group Drag handle, drop feedback, focus, and virtualization height. `getGroupRowProps` adds a typed `className` and `style` to the outer Group Row, while `renderGroupContent` replaces only the inner default label/count/aggregate content.
+The Table owns the outer Row and Cell, ARIA, disclosure, Group Drag handle, drop feedback, focus, and virtualization height. `getGroupRowProps` adds a typed `className` and `style` to the outer Group Row, while `rowGrouping.content.render` replaces only the inner default label/count/aggregate content.
 
 <!-- comins-doc-example: fragment -->
 ```tsx
@@ -105,7 +107,7 @@ rowGrouping={{
       "--comins-table-group-row-color": "#111827",
     } as React.CSSProperties,
   }),
-  renderGroupContent: ({
+  content: { render: ({
     aggregateValues,
     expanded,
     group,
@@ -121,7 +123,7 @@ rowGrouping={{
       isEmpty={isEmpty}
       rowCount={rowCount}
     />
-  ),
+  ) },
 }}
 ```
 
@@ -158,6 +160,6 @@ Collapsed Groups keep selected Row IDs and expanded Detail IDs dormant. Cell ran
 
 Column Pinning continues to apply to ordinary leaf Cells and Headers; the single spanning Group Cell itself is not pinned. Visual Fill Handle UI applies only to visible business leaf Cells; Group headings remain outside editing. Existing leaf-only selection and Clipboard behavior is unchanged.
 
-Row Grouping remains a client-side flat-table feature and cannot be combined with pagination, infinite/lazy loading, Viewport Datasource, or Tree Grid. Business Rows support fixed or automatic heights through `getRowHeight` and variable-height virtualization; Group headings keep the fixed `rowHeight`. Grouped leaf Row Detail remains supported through `renderRowDetail`. See [Automatic Row Height](24-auto-row-height.md). Multi-depth Group trees, Group selection, variable-height Group Rows, server grouping, Pivot, custom reducers, and aggregate sorting are outside this release.
+Row Grouping remains a client-side flat-table feature and cannot be combined with pagination, infinite/lazy loading, Viewport Datasource, or Tree Grid. Business Rows support fixed or automatic heights through `getRowHeight` and variable-height virtualization; Group headings keep the fixed `rowHeight`. Grouped leaf Row Detail remains supported through `rowDetail.render`. See [Automatic Row Height](24-auto-row-height.md). Multi-depth Group trees, Group selection, variable-height Group Rows, server grouping, Pivot, custom reducers, and aggregate sorting are outside this release.
 
 Controlled [Column Filtering](https://github.com/kim1124/comins-table/blob/main/docs/user/21-column-filtering.md) may run before Group membership. Every explicit Group remains in its application-owned position, while counts, aggregates, and member sorting use filtered leaf Rows. Row Drag is disabled for this combination, but Group Drag may continue to reorder the explicit Group model.

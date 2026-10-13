@@ -129,3 +129,9 @@ export type {
   CominsVirtualRowsOptions,
 } from "./core/model";
 export type { CominsRowGroupMoveOptions } from "./core/state/table";
+
+export { normalizeCominsColumnFilterModel, getCominsFilteredRowIndexes, getCominsColumnFilterOperators } from "./core/rows/filtering";
+export type { CominsColumnConditionFilterOperator, CominsColumnFilterOperator, CominsColumnConditionFilterRule, CominsColumnValueFilterRule, CominsColumnFilterRule, CominsColumnFilterModel, CominsColumnFilteringConfig, CominsColumnFilteringSourceRow, CominsNormalizedColumnFilterRule } from "./core/rows/filtering";
+export type { CominsColumnFilterValue, CominsColumnFilterKind, CominsColumnFilterConfig } from "./core/model";
+export { getCominsColumnFilterOptions, setCominsColumnFilterValues } from "./core/rows/values-filter";
+export type { CominsColumnFilterOption, CominsColumnFilterOptionsResult, CominsColumnFilterValuesAction, CominsColumnFilterOptionsInput } from "./core/rows/values-filter";

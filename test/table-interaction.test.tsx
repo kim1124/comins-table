@@ -13,6 +13,7 @@ import {
   type CominsTableProps,
   type CominsTableRef,
   type CominsTableTransferResult,
+  type CominsTableTransferRejection,
 } from "../src";
 import { CominsHeightIndex } from "../src/virtual-layout";
 
@@ -975,10 +976,13 @@ describe("row grouping interaction contract", () => {
     expect(document.activeElement).toBe(targetViewport.querySelector("[data-testid='row-a']"));
   });
 
-  it("reports a duplicate Cross-Table Row and renders non-blocking target feedback", () => {
+  it.each(["legacy", "render", "undefined", "null"] as const)("reports duplicate Cross-Table Rows with %s target feedback", (mode) => {
     const onAfterDragRow = vi.fn();
     const onTransfer = vi.fn();
     const onTransferRejected = vi.fn();
+    const legacyTooltip = vi.fn((rejection: CominsTableTransferRejection<PersonRow>) => (
+      <><strong>Duplicate ID</strong><span>{`custom:${String(rejection.conflict.kind === "row" ? rejection.conflict.rowId : rejection.conflict.groupId)}`}</span></>
+    ));
     const coordinator = createCominsTableTransferCoordinator<PersonRow>({
       onTransfer,
       onTransferRejected,
@@ -1004,12 +1008,8 @@ describe("row grouping interaction contract", () => {
             coordinator,
             rejectionFeedback: {
               duration: 10000,
-              renderTooltip: (rejection) => (
-                <>
-                  <strong>Duplicate ID</strong>
-                  <span>{`custom:${String(rejection.conflict.kind === "row" ? rejection.conflict.rowId : rejection.conflict.groupId)}`}</span>
-                </>
-              ),
+              renderTooltip: legacyTooltip,
+              tooltip: mode === "legacy" ? undefined : { render: mode === "render" ? () => <b>Standard tooltip</b> : () => mode === "null" ? null : undefined },
             },
             scope: "people",
             tableId: "target",
@@ -1062,8 +1062,12 @@ describe("row grouping interaction contract", () => {
       result: "rejected",
       target: expect.objectContaining({ rowId: "a", tableId: "target", valid: true }),
     }));
-    expect(view.querySelector("[data-testid='transfer-rejection-tooltip']")?.textContent)
-      .toContain("Duplicate IDcustom:a");
+    const feedbackText = view.querySelector("[data-testid='transfer-rejection-tooltip'] .comins-tooltip-surface__content")?.textContent;
+    if (mode === "legacy") expect(feedbackText).toContain("Duplicate IDcustom:a");
+    else {
+      expect(legacyTooltip).not.toHaveBeenCalled();
+      expect(feedbackText).toBe(mode === "render" ? "Standard tooltip" : mode === "null" ? "" : 'Duplicate IDThe ID "a" already exists.');
+    }
     expect(targetTable.dataset.cominsTransferRejected).toBe("true");
   });
 

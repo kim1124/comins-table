@@ -34,3 +34,15 @@ const importedRows: Row[] = importCominsRowsFromCsv(importOptions);
 // @ts-expect-error Generic import results must retain the mapper return type.
 const incorrectRows: { score: string }[] = importCominsRowsFromCsv(importOptions);
 void [importedRows, incorrectRows];
+
+import { getCominsColumnFilterOptions, setCominsColumnFilterValues, getCominsFilteredRowIndexes, type CominsColumnFilterModel } from "comins-table/core";
+const filterColumns = createCominsTableState({ rows, getRowId: row => row.id, columns: [{ field: "score", label: "Score", filter: { kind: "number" } }] }).columns;
+const filterInput = { columns: filterColumns, columnId: "score", rows: rows.map((data, dataIndex) => ({ data, dataIndex, id: data.id })), model: [] as CominsColumnFilterModel };
+const valueOptions = getCominsColumnFilterOptions(filterInput);
+if (valueOptions) {
+  const next: CominsColumnFilterModel = setCominsColumnFilterValues({ ...filterInput, action: { type: "setOption", id: valueOptions.options[0]!.id, checked: false } });
+  const indexes: number[] = getCominsFilteredRowIndexes({ ...filterInput, model: next });
+  void indexes;
+}
+// @ts-expect-error UI configuration must not enter the neutral Core.
+createCominsTableState({ rows, columns: [{ field: "score", label: "Score", filter: { kind: "number", mode: "values" } }] });

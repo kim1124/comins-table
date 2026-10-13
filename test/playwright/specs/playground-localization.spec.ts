@@ -201,7 +201,7 @@ test("localizes virtual and remote-loading examples without resetting loaded or 
         limit,
         skip,
         total,
-        users: Array.from({ length: Math.min(limit, total - skip) }, (_value, index) => {
+        users: Array.from({ length: Math.min(limit === 0 ? total : limit, total - skip) }, (_value, index) => {
           const id = skip + index + 1;
           return {
             age: 20 + id,

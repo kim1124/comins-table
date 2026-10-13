@@ -1,3 +1,7 @@
+import { createFilterButtonGetter, useValueFilter, ValueFilterPanel, renderFilterTrigger, getFilterTriggerVisual } from "./react/value-filter";
+import type { CominsTableRuntimeColumn } from "./react-types";
+import type { CominsColumnFilterOptionsInput } from "./filtering";
+import type { CominsValueFilterTriggerRenderParams } from "./react/value-filter-types";
 import {
   useEffect,
   useId,
@@ -11,13 +15,13 @@ import { createPortal } from "react-dom";
 import {
   getCominsColumnFilterOperators,
   type CominsColumnFilterKind,
-  type CominsColumnFilterOperator,
+  type CominsColumnConditionFilterOperator,
   type CominsColumnFilterRule,
   type CominsNormalizedColumnFilterRule,
 } from "./filtering";
 import { CominsTableIconButton } from "./table-icons";
 
-const operatorLabels: Record<CominsColumnFilterOperator, string> = {
+const operatorLabels: Record<CominsColumnConditionFilterOperator, string> = {
   between: "Between",
   contains: "Contains",
   endsWith: "Ends with",
@@ -33,7 +37,7 @@ const operatorLabels: Record<CominsColumnFilterOperator, string> = {
   startsWith: "Starts with",
 };
 
-function getDefaultOperator(kind: CominsColumnFilterKind): CominsColumnFilterOperator {
+function getDefaultOperator(kind: CominsColumnFilterKind): CominsColumnConditionFilterOperator {
   return kind === "text" ? "contains" : "equals";
 }
 
@@ -79,6 +83,7 @@ function isValidDateInput(value: string) {
 }
 
 export function CominsColumnFilterControl<TData>({
+  column, valueSource, onChangeModel,
   columnId,
   columnLabel,
   kind,
@@ -88,6 +93,9 @@ export function CominsColumnFilterControl<TData>({
   open,
   rule,
 }: {
+  column: CominsTableRuntimeColumn<TData>;
+  valueSource: CominsColumnFilterOptionsInput<TData>;
+  onChangeModel?: (model: CominsColumnFilterRule[]) => void;
   columnId: string;
   columnLabel: string;
   kind: CominsColumnFilterKind;
@@ -97,12 +105,12 @@ export function CominsColumnFilterControl<TData>({
   open: boolean;
   rule?: CominsNormalizedColumnFilterRule<TData>;
 }) {
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const buttonRef = useRef<HTMLElement | null>(null);
   const onOpenChangeRef = useRef(onOpenChange);
   const popoverRef = useRef<HTMLSpanElement | null>(null);
   const popoverId = useId();
-  const [operator, setOperator] = useState<CominsColumnFilterOperator>(
-    rule?.operator ?? getDefaultOperator(kind),
+  const [operator, setOperator] = useState<CominsColumnConditionFilterOperator>(
+    (rule?.operator !== "in" ? rule?.operator : undefined) ?? getDefaultOperator(kind),
   );
   const [value, setValue] = useState(() => getRuleInputValue(rule, kind));
   const [valueTo, setValueTo] = useState(() => getRuleInputValueTo(rule, kind));
@@ -117,6 +125,37 @@ export function CominsColumnFilterControl<TData>({
   const active = rule !== undefined;
   const readOnly = typeof onChangeRule !== "function";
   const requiresValue = operator !== "isEmpty" && operator !== "isNotEmpty";
+
+  const valuesMode = rule?.operator === "in" || (!rule && column.filter?.mode === "values");
+  const close = () => { onOpenChange?.(null); if (buttonRef.current?.isConnected) buttonRef.current.focus(); };
+  const values = useValueFilter({ column, source: valueSource, open, enabled: valuesMode, onChangeModel, close, id: popoverId });
+  const portalContainer = getPortalContainer?.() ?? null;
+  const triggerParams: CominsValueFilterTriggerRenderParams<TData> = {
+    column, columnLabel, open, active, readOnly, canOpen: !!onOpenChange,
+    selection: valuesMode ? values.params ?? undefined : undefined,
+    getTriggerProps: createFilterButtonGetter({ label: `Filter ${columnLabel}`, disabled: !onOpenChange, click: () => onOpenChange?.(open ? null : columnId), open, controls: open ? popoverId : undefined, install: node => { buttonRef.current = node; } }),
+  };
+  triggerParams.getTriggerProps = createFilterButtonGetter({ label: `Filter ${columnLabel}`, disabled: !onOpenChange, click: () => onOpenChange?.(open ? null : columnId), open, controls: open ? popoverId : undefined, install: node => { buttonRef.current = node; }, ...getFilterTriggerVisual(triggerParams) });
+  useLayoutEffect(() => {
+    if (!open || !valuesMode) return;
+    const panel = popoverRef.current;
+    if (!panel) return;
+    const controls = panel.querySelectorAll<HTMLElement>('input,button,select,textarea,a[href],[tabindex],[contenteditable]');
+    const candidates = [values.searchRef.current, ...controls];
+    for (const candidate of candidates) {
+      if (!candidate || !candidate.isConnected || !panel.contains(candidate) || candidate.matches(':disabled')
+        || candidate.closest('[hidden],[inert],[aria-disabled="true"]') || (candidate.tabIndex < 0 && !candidate.isContentEditable)) continue;
+      let visible = true;
+      for (let element: HTMLElement | null = candidate; element; element = element.parentElement) {
+        const style = element.ownerDocument.defaultView?.getComputedStyle(element);
+        if (style?.display === "none" || style?.visibility === "hidden") { visible = false; break; }
+      }
+      if (!visible) continue;
+      candidate.focus({ preventScroll: true });
+      if (candidate.ownerDocument.activeElement === candidate || candidate.matches(':focus')) return;
+    }
+    panel.focus({ preventScroll: true });
+  }, [open, valuesMode, portalContainer]);
 
   useLayoutEffect(() => {
     onOpenChangeRef.current = onOpenChange;
@@ -134,7 +173,7 @@ export function CominsColumnFilterControl<TData>({
       return;
     }
     pendingRuleKeyRef.current = null;
-    setOperator(rule?.operator ?? getDefaultOperator(kind));
+    setOperator((rule?.operator !== "in" ? rule?.operator : undefined) ?? getDefaultOperator(kind));
     setValue(getRuleInputValue(rule, kind));
     setValueTo(getRuleInputValueTo(rule, kind));
   }, [kind, open, appliedRuleKey]);
@@ -144,6 +183,11 @@ export function CominsColumnFilterControl<TData>({
       return undefined;
     }
 
+    const doc = (buttonRef.current ?? popoverRef.current)?.ownerDocument;
+    const win = doc?.defaultView;
+    if (!doc || !win) return;
+    let alive = true;
+    const inside = (target: EventTarget | null) => target instanceof win.Node && (buttonRef.current?.contains(target) || popoverRef.current?.contains(target));
     const updatePosition = () => {
       const button = buttonRef.current;
       const popover = popoverRef.current;
@@ -157,10 +201,10 @@ export function CominsColumnFilterControl<TData>({
       const height = popover?.offsetHeight || 220;
       const left = Math.min(
         Math.max(8, bounds.left),
-        Math.max(8, window.innerWidth - width - 8),
+        Math.max(8, win.innerWidth - width - 8),
       );
       const below = bounds.bottom + 6;
-      const top = below + height <= window.innerHeight - 8
+      const top = below + height <= win.innerHeight - 8
         ? below
         : Math.max(8, bounds.top - height - 6);
 
@@ -170,8 +214,7 @@ export function CominsColumnFilterControl<TData>({
       const target = event.target;
 
       if (
-        target instanceof Node &&
-        (buttonRef.current?.contains(target) || popoverRef.current?.contains(target))
+        inside(target)
       ) {
         return;
       }
@@ -188,24 +231,37 @@ export function CominsColumnFilterControl<TData>({
       buttonRef.current?.focus();
     };
 
+    let focusTimer: number | undefined;
+    const handleFocusOut = (event: FocusEvent) => {
+      if (!inside(event.target) || inside(event.relatedTarget)) return;
+      if (focusTimer !== undefined) win.clearTimeout(focusTimer);
+      if (event.relatedTarget) { onOpenChangeRef.current?.(null); return; }
+      // Native pointer focus can leave activeElement at body between blur and focusin.
+      focusTimer = win.setTimeout(() => {
+        if (alive && !inside(doc.activeElement)) onOpenChangeRef.current?.(null);
+      }, 0);
+    };
+    doc.addEventListener("focusout", handleFocusOut);
     // Layout shifts can move the anchor without a scroll or resize event.
     let positionFrame: number;
     const trackPosition = () => {
       updatePosition();
-      positionFrame = window.requestAnimationFrame(trackPosition);
+      positionFrame = win.requestAnimationFrame(trackPosition);
     };
     trackPosition();
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-    window.addEventListener("pointerdown", handlePointerDown, true);
-    window.addEventListener("keydown", handleKeyDown);
+    win.addEventListener("resize", updatePosition);
+    win.addEventListener("scroll", updatePosition, true);
+    doc.addEventListener("pointerdown", handlePointerDown, true);
+    win.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.cancelAnimationFrame(positionFrame);
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-      window.removeEventListener("pointerdown", handlePointerDown, true);
-      window.removeEventListener("keydown", handleKeyDown);
+      alive = false; doc.removeEventListener("focusout", handleFocusOut);
+      if (focusTimer !== undefined) win.clearTimeout(focusTimer);
+      win.cancelAnimationFrame(positionFrame);
+      win.removeEventListener("resize", updatePosition);
+      win.removeEventListener("scroll", updatePosition, true);
+      doc.removeEventListener("pointerdown", handlePointerDown, true);
+      win.removeEventListener("keydown", handleKeyDown);
     };
   }, [open]);
 
@@ -215,11 +271,10 @@ export function CominsColumnFilterControl<TData>({
     onChangeRule?.(nextRule);
   };
   const renderPopover = (content: ReactNode) => {
-    const container = getPortalContainer?.();
-    return container ? createPortal(content, container) : content;
+    return portalContainer ? createPortal(content, portalContainer) : content;
   };
   const commitRule = (
-    nextOperator: CominsColumnFilterOperator,
+    nextOperator: CominsColumnConditionFilterOperator,
     nextValue: string,
     nextValueTo: string,
   ) => {
@@ -292,18 +347,9 @@ export function CominsColumnFilterControl<TData>({
       }}
       onPointerDown={(event) => event.stopPropagation()}
     >
-      <CominsTableIconButton
-        aria-controls={open ? popoverId : undefined}
-        aria-expanded={open}
-        aria-label={`Filter ${columnLabel}`}
-        className="comins-column-filter__trigger"
-        data-active={active ? "true" : undefined}
-        data-testid={`column-filter-trigger-${columnId}`}
-        disabled={!onOpenChange}
-        icon="filter"
-        onClick={() => onOpenChange?.(open ? null : columnId)}
-        ref={buttonRef}
-      />
+      {renderFilterTrigger(triggerParams, <CominsTableIconButton
+        {...triggerParams.getTriggerProps()} aria-label={`Filter ${columnLabel}`} data-active={active ? "true" : undefined}
+        data-testid={`column-filter-trigger-${columnId}`} icon="filter" />)}
       {open ? renderPopover(
         <span
           aria-label={`Filter ${columnLabel}`}
@@ -312,16 +358,18 @@ export function CominsColumnFilterControl<TData>({
           id={popoverId}
           ref={popoverRef}
           role="dialog"
+          tabIndex={-1}
           style={position}
         >
           <strong className="comins-column-filter__title">{columnLabel}</strong>
+          {valuesMode && values.params ? <ValueFilterPanel params={values.params} /> : <>
           <label className="comins-column-filter__field">
             <span>Operator</span>
             <select
               data-testid={`column-filter-operator-${columnId}`}
               disabled={readOnly}
               onChange={(event) => {
-                const nextOperator = event.currentTarget.value as CominsColumnFilterOperator;
+                const nextOperator = event.currentTarget.value as CominsColumnConditionFilterOperator;
                 setOperator(nextOperator);
                 commitRule(nextOperator, value, valueTo);
               }}
@@ -396,6 +444,7 @@ export function CominsColumnFilterControl<TData>({
           >
             Clear
           </button>
+          </>}
         </span>
       ) : null}
     </span>

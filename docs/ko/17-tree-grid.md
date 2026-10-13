@@ -2,6 +2,8 @@
 
 ![하위 노드와 함께 부모를 변경하는 Tree Row 이동](../assets/comins-table-tree-row-drag.gif)
 
+0.2.2부터 렌더링의 표준 경로는 `.render`입니다. 기존 속성은 0.x에서 유지하며 1.0.0 제거 대상으로 안내합니다. [전환 규칙](27-migration-0.2.2.md)을 참고하십시오.
+
 <!-- comins-restriction: tree-no-pagination -->
 
 [문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/17-tree-grid.md) · [Playground](http://127.0.0.1:4002/examples/tree-grid)
@@ -69,7 +71,7 @@ tableRef.current?.fold(); // 전체 branch 접기
 
 ## Style, Component, Renderer
 
-Tree Grid는 현재 Row 및 Cell 계약을 그대로 사용한다. hierarchy 기반 Row 스타일은 `rowProps.className`과 `rowProps.style`로 설정한다. `checkbox`, `select`, `toggle` 같은 기존 컬럼 `cell.components` 타입은 node의 `item`을 읽고 갱신한다. `cell.renderer`는 모든 Tree Node에 커스텀 React Component를 반환할 수 있으므로 별도 Component Row API를 추가하지 않는다.
+Tree Grid는 현재 Row 및 Cell 계약을 그대로 사용한다. hierarchy 기반 Row 스타일은 `rowProps.className`과 `rowProps.style`로 설정한다. `checkbox`, `select`, `toggle` 같은 기존 컬럼 `cell.components` 타입은 node의 `item`을 읽고 갱신한다. `cell.render`는 모든 Tree Node에 커스텀 React Component를 반환할 수 있으므로 별도 Component Row API를 추가하지 않는다.
 
 Playground는 정확히 `10000`개 node로 구성된 고정 row-height virtualized Tree를 제공한다. Virtualization은 현재 window만 렌더링하며 hierarchy flatten과 ref 펼침은 controlled Tree 전체를 대상으로 동작한다.
 
@@ -126,9 +128,9 @@ Tree Grid의 `treeSlots`로 첫 번째 열의 `leading`, `content`, `trailing` �
   getRowId={(item) => item.id}
   onChangeData={setNodes}
   treeSlots={{
-    leading: ({ hasChildren }) => <span aria-hidden="true">{hasChildren ? "▸" : "·"}</span>,
-    content: ({ defaultContent }) => <strong>{defaultContent}</strong>,
-    trailing: ({ item }) => <button type="button" onClick={() => showDetails(item)}>상세</button>,
+    leading: { render: ({ hasChildren }) => <span aria-hidden="true">{hasChildren ? "▸" : "·"}</span> },
+    content: { render: ({ defaultContent }) => <strong>{defaultContent}</strong> },
+    trailing: { render: ({ item }) => <button type="button" onClick={() => showDetails(item)}>상세</button> },
   }}
 />
 ```

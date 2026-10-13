@@ -15,6 +15,8 @@ describe("comins-table public API boundary", () => {
     };
     const entry = await import("../src");
     const core = await import("../src/core");
+    expect("resolveCominsSummaryValues" in entry).toBe(false);
+    expect("resolveCominsSummaryValues" in core).toBe(false);
     const clipboard = await import("../src/clipboard");
     const selection = await import("../src/selection");
 

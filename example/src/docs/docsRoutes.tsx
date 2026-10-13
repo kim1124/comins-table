@@ -287,6 +287,7 @@ const englishDocsPages: DocsPage[] = [
   }),
   featurePage({
     body: paragraphs([
+      "0.2.2 value lists apply immediately with OR within a column, AND across columns, other-column counts and search-scoped select-all. Customize badges, inner tags and styles with render and props.",
       "Each Column opts into text, number, UTC calendar-day date, or boolean filtering. The application owns the complete model and the currently open Header popover.",
       "Rules across Columns use AND. Invalid rules are ignored, and the first valid rule for each Column wins. Text matching is case-insensitive by default; empty means null, undefined, or an empty string.",
       "Filtering runs before sorting, pagination, virtualization, Summary aggregation, and Row Grouping membership. Explicit Groups retain their application-owned positions and stay visible when filtered empty.",
@@ -583,6 +584,7 @@ const koreanDocsCopy: Record<string, KoreanDocsCopy> = {
   },
   "/examples/column-filtering": {
     body: [
+      "0.2.2 값 목록은 같은 열 OR·다른 열 AND, 즉시 적용, 다른 열 조건 기반 건수, 검색 결과 전체 선택을 지원합니다. render와 props로 배지·내부 태그·스타일을 구성합니다.",
       "각 Column은 text, number, UTC calendar-day date 또는 boolean Filter를 선택적으로 정의합니다. Application이 전체 model과 현재 열린 Header popover를 소유합니다.",
       "Column 간 조건은 AND로 결합하고 invalid rule은 무시하며 Column별 첫 valid rule을 사용합니다. Text 비교는 기본적으로 대소문자를 구분하지 않고 empty는 null, undefined 또는 빈 문자열입니다.",
       "Filtering은 정렬, pagination, virtualization, Summary 집계와 Row Grouping membership보다 먼저 실행됩니다. Explicit Group은 application-owned 위치를 유지하고 Filter 결과가 비어도 계속 표시됩니다.",

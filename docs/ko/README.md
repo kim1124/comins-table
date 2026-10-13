@@ -1,5 +1,7 @@
 # 한글 기능 가이드
 
+예정된 0.2.2: [render API 전환](27-migration-0.2.2.md), 기존 속성은 0.x에서 호환됩니다. 개발 예제는 0.2.2가 필요할 수 있습니다.
+
 이 가이드는 0.2.1 기준이며, CSV Import, 구조 Export, Tree 슬롯, 선택적으로 활성화하는 TSV 붙여넣기와 Fill Handle을 포함합니다. [Export](14-export.md) · [Tree Grid](17-tree-grid.md) · [Clipboard와 Fill](09-clipboard.md).
 
 [0.2.0 Core 마이그레이션](26-migration-0.2.0.md)은 0.2.1에서도 유지되는 중립 Core 계약으로의 전환을 설명합니다. 기존 React UI 계약은 호환성을 유지합니다.

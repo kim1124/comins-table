@@ -17,11 +17,17 @@ export type CominsSummaryFormatPayload<TData> = {
   values: readonly unknown[];
 };
 
+export type CominsSummaryRenderPayload<TData> = CominsSummaryFormatPayload<TData> & {
+  formattedValue: React.ReactNode;
+};
+
 export type CominsSummaryColumnConfig<TData> = {
   aggregate: CominsSummaryBuiltin | CominsSummaryAggregator<TData>;
   className?: string;
   colSpan?: number;
   format?: (payload: CominsSummaryFormatPayload<TData>) => React.ReactNode;
+  /** Render after aggregate/format; undefined keeps formattedValue, null hides content. */
+  render?: (payload: CominsSummaryRenderPayload<TData>) => React.ReactNode;
   style?: React.CSSProperties;
 };
 
@@ -49,12 +55,13 @@ function getNestedFieldValue(row: unknown, field: string): unknown {
 
 import { getBuiltinSummaryValue } from "./core/rows/summary";
 
-export function getCominsSummaryValues<TData>(
+export function resolveCominsSummaryValues<TData>(
   rows: readonly TData[],
   columns: readonly CominsTableRuntimeColumn<TData>[],
   summary: CominsTableSummaryConfig<TData>,
-): Record<string, React.ReactNode> {
-  return Object.entries(summary.columns).reduce<Record<string, React.ReactNode>>((valuesByColumnId, [columnId, configuredColumn]) => {
+): { values: Record<string, React.ReactNode>; renderedColumnIds: ReadonlySet<string> } {
+  const renderedColumnIds = new Set<string>();
+  const result = Object.entries(summary.columns).reduce<Record<string, React.ReactNode>>((valuesByColumnId, [columnId, configuredColumn]) => {
     const column = columns.find((candidate) => candidate.id === columnId);
 
     if (!column || !configuredColumn) {
@@ -70,8 +77,24 @@ export function getCominsSummaryValues<TData>(
     const values = rows.map((row) => getNestedFieldValue(row, column.field));
     const value =
       typeof aggregate === "function" ? aggregate({ column, rows, values }) : getBuiltinSummaryValue(aggregate, values);
-    valuesByColumnId[columnId] = config?.format ? config.format({ column, rows, value, values }) : value;
+    const formattedValue = config?.format ? config.format({ column, rows, value, values }) : value;
+    if (config?.render) {
+      renderedColumnIds.add(columnId);
+      const rendered = config.render({ column, rows, value, values, formattedValue });
+      valuesByColumnId[columnId] = rendered === undefined ? formattedValue : rendered;
+    } else {
+      valuesByColumnId[columnId] = formattedValue;
+    }
 
     return valuesByColumnId;
   }, {});
+  return { values: result, renderedColumnIds };
+}
+
+export function getCominsSummaryValues<TData>(
+  rows: readonly TData[],
+  columns: readonly CominsTableRuntimeColumn<TData>[],
+  summary: CominsTableSummaryConfig<TData>,
+): Record<string, React.ReactNode> {
+  return resolveCominsSummaryValues(rows, columns, summary).values;
 }

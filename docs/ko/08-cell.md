@@ -2,7 +2,9 @@
 
 [문서 홈](../README.md) · [한글 가이드](README.md) · [English](../user/08-cell.md) · [Cell](http://127.0.0.1:4002/examples/cell) · [Component](http://127.0.0.1:4002/examples/component)
 
-Cell 값은 `field`로 읽고, `cell.format`, `cell.components`, `cell.renderer`로 ReactNode를 렌더링할 수 있다. Nested path도 지원한다.
+0.2.2부터 렌더링의 표준 경로는 `.render`입니다. 기존 속성은 0.x에서 유지하며 1.0.0 제거 대상으로 안내합니다. [전환 규칙](27-migration-0.2.2.md)을 참고하십시오.
+
+Cell 값은 `field`로 읽고, `cell.format`, `cell.components`, `cell.render`로 ReactNode를 렌더링할 수 있다. Nested path도 지원한다.
 
 <!-- comins-doc-example: fragment -->
 ```tsx
@@ -40,7 +42,7 @@ Cell 값은 `field`로 읽고, `cell.format`, `cell.components`, `cell.renderer`
 
 Cell range를 확장해도 해당 Row selection은 해제하지 않는다. 선택된 Row의 Cell은 Row selection 배경을 유지하면서 range Cell에 inset outline을 추가해 두 상태를 동시에 표현한다. Application이 지정한 custom Row 배경의 기존 우선순위도 유지한다.
 
-`cell.renderer`는 사용자 커스텀 컴포넌트를 직접 렌더링한다.
+`cell.render`는 사용자 커스텀 컴포넌트를 직접 렌더링한다.
 
 <!-- comins-doc-example: fragment -->
 ```tsx
@@ -48,7 +50,7 @@ Cell range를 확장해도 해당 Row selection은 해제하지 않는다. 선�
   field: "name",
   label: "Name",
   cell: {
-    renderer: ({ row, column, value }) => (
+    render: ({ row, column, value }) => (
       <MyCell row={row} column={column} value={value} />
     ),
   },

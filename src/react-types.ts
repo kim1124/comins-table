@@ -269,13 +269,22 @@ export type CominsTableCellConfig<TData, TValue = unknown> = {
   props?:
     | CominsColumnProps<TData, TValue>
     | ((params: CominsCellComponentPayload<TData, TValue>) => CominsColumnProps<TData, TValue>);
+  /** Return undefined for built-in content, or null to hide content. */
+  render?: (params: CominsCellComponentPayload<TData, TValue>) => React.ReactNode;
+  /** @deprecated Use cell.render. Retained throughout 0.x; removal target: 1.0.0. */
   renderer?: (params: CominsCellComponentPayload<TData, TValue>) => React.ReactNode;
-  tooltip?: string | ((params: CominsCellComponentPayload<TData, TValue>) => React.ReactNode);
+  tooltip?: string | ((params: CominsCellComponentPayload<TData, TValue>) => React.ReactNode) | {
+    /** Informational content shown on hover/focus. Interactive popovers are not supported. */
+    render?: (params: CominsCellComponentPayload<TData, TValue>) => React.ReactNode;
+  };
 };
 
 export type CominsTableHeaderConfig<TData, TValue = unknown> = {
   components?: Array<CominsHeaderComponent<TData, TValue>>;
   props?: React.ThHTMLAttributes<HTMLTableCellElement>;
+  /** Return undefined for built-in content, or null to hide content. */
+  render?: (params: CominsHeaderComponentPayload<TData, TValue>) => React.ReactNode;
+  /** @deprecated Use header.render. Retained throughout 0.x; removal target: 1.0.0. */
   renderer?: (params: CominsHeaderComponentPayload<TData, TValue>) => React.ReactNode;
 };
 

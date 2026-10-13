@@ -30,7 +30,7 @@ test("CSV file import replaces rows atomically and downloads round-trip data", a
   const saved = await download.path();
   expect(await readFile(saved!, "utf8")).toBe('id,name,score\n001,"한글, 이름",42\n002,"Quote ""two""",0');
   await sample.getByRole("button", { name: "예제 초기화" }).click();
-  await expect(sample.locator("tbody tr[data-comins-row-data-index]")).toHaveCount(3);
+  await expect(sample.getByRole("status")).toContainText("1000");
   await input.setInputFiles(saved!);
   await expect(sample.getByTestId("csv-file-output")).toContainText('001,"한글, 이름",42');
 });
@@ -81,6 +81,7 @@ test("CSV file import makes rows beyond the twentieth accessible", async ({ page
   const csv = ['id,name,score', ...Array.from({ length: 21 }, (_, index) => `${index + 1},Row ${index + 1},42`)].join('\n');
   await sample.getByLabel("CSV 파일 가져오기").setInputFiles({ name: "many.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
   await expect(sample.getByRole("status")).toContainText("21");
+  await sample.getByTestId("csv-file-preview").evaluate(el => { el.scrollTop = el.scrollHeight; el.dispatchEvent(new Event("scroll", { bubbles: true })); });
   await expect(sample.locator('tbody tr[data-comins-row-data-index="20"]')).toContainText("Row 21");
 });
 
@@ -144,3 +145,26 @@ test("structured export localizes controls and keeps previews within the card on
   const layout = await sample.evaluate(element => ({ client: element.clientWidth, scroll: element.scrollWidth }));
   expect(layout.scroll).toBeLessThanOrEqual(layout.client + 1);
 });
+
+for (const locale of ["ko", "en"] as const) {
+  test(`file controls stay readable and within the card on narrow screens (${locale})`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto("/examples/export");
+    if (locale === "en") await page.getByTestId("playground-locale-toggle").getByRole("button", { name: "EN", exact: true }).click();
+    for (const format of ["csv", "xlsx"] as const) {
+      const sample = page.locator(`[data-feature-option="${format}-files"]`);
+      const download = sample.getByRole("button", { name: locale === "ko" ? `${format.toUpperCase()} 다운로드` : `Download ${format.toUpperCase()}`, exact: true });
+      // A glyph is decorative; the accessible label still identifies the file.
+      await expect(download.locator('svg[aria-hidden="true"]')).toHaveCount(1);
+      const bounds = await sample.locator('button, select, input[type="file"]').evaluateAll(elements => elements.map(el => {
+        const card = el.closest('[data-feature-option]')!.getBoundingClientRect();
+        const rect = el.getBoundingClientRect();
+        const label = el.querySelector('span') ?? el;
+        const range = document.createRange(); range.selectNodeContents(label);
+        return { left: rect.left >= card.left, right: rect.right <= card.right + 1, labelHeight: range.getBoundingClientRect().height };
+      }));
+      expect(bounds.every(item => item.left && item.right)).toBe(true);
+      expect(bounds.filter(item => item.labelHeight > 0).every(item => item.labelHeight <= 24)).toBe(true);
+    }
+  });
+}

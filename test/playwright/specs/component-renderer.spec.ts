@@ -25,7 +25,7 @@ test("playground renders Header and Cell component renderer examples", async ({ 
   await expect(page.getByTestId("header-renderer-example")).toHaveCount(0);
 
   await page.goto("/examples/cell");
-  await expect(page.getByTestId("feature-option-description").first()).toContainText("cell.renderer");
+  await expect(page.getByTestId("feature-option-description").first()).toContainText("cell.render");
   await expect(page.getByTestId("cell-renderer-a")).toContainText("renderer:");
   await expect(page.locator(".comins-table__component")).toHaveCount(0);
 

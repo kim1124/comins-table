@@ -66,6 +66,14 @@ try {
       }
     }
     assert.equal(examples.length, 4, "Compile both React and Core examples in both languages");
+    for (const language of ["user", "ko"]) {
+      const guide = readFileSync(resolve(repository, `docs/${language}/27-migration-0.2.2.md`), "utf8");
+      const blocks = [...guide.matchAll(/```tsx?\n([\s\S]*?)\n```/g)];
+      assert.equal(blocks.length, 1, "Compile the complete render migration example in each language");
+      const name = `render-migration-${language}.tsx`;
+      writeFileSync(resolve(consumer, name), blocks[0][1]);
+      examples.push(name);
+    }
     writeFileSync(resolve(consumer, "tsconfig.json"), JSON.stringify({
       compilerOptions: { target: "ES2022", module: "ESNext", moduleResolution: "Bundler", jsx: "react-jsx",
         strict: true, noUncheckedIndexedAccess: true, skipLibCheck: false, types: ["react", "react-dom"],

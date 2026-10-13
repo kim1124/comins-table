@@ -43,6 +43,7 @@ export function CellFeature() {
     {
       cell: {
         format: ({ value }) => <strong>{String(value)}</strong>,
+        tooltip: { render: ({ row, value }) => <span><strong>{String(value)}</strong> · {row.data.name}</span> },
         props: {
           className: ({ value }) => (value === "Owner" ? "cell-role-owner" : "cell-role-muted"),
           style: {
@@ -58,7 +59,7 @@ export function CellFeature() {
     },
     {
       cell: {
-        renderer: ({ row }) => (
+        render: ({ row }) => (
           <span data-testid={`cell-renderer-${String(row.id)}`}>
             <Button size="default" variant="secondary">{`renderer:${row.data.name}`}</Button>
           </span>
@@ -99,8 +100,8 @@ export function CellFeature() {
     <section className="feature-panel">
       <FeatureSampleSection
         description={text(defineLocalizedText(
-          "Td Cell 포맷, 스타일, cell.renderer, onClickCell, onContextMenuCell, 복사/붙여넣기 차단 guard를 확인합니다.",
-          "Inspect Td Cell formatting, styling, cell.renderer, click/context-menu events, and copy/paste guards.",
+          "Td Cell 포맷, 스타일, cell.render, onClickCell, onContextMenuCell, 복사/붙여넣기 차단 guard를 확인합니다.",
+          "Inspect Td Cell formatting, styling, cell.render, click/context-menu events, and copy/paste guards.",
         ))}
         id="cell"
         title={text(defineLocalizedText("Td Cell 예제", "Td Cell example"))}

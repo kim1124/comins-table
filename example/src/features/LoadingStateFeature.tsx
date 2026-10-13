@@ -15,7 +15,6 @@ import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-loc
 type LoadingMode = "empty" | "initial" | "ready" | "refetch";
 type RemoteMode = "empty" | "idle" | "load";
 
-const PRIMARY_PAGE_SIZE = 30;
 const REMOTE_EMPTY_OFFSET = 10_000;
 
 export function LoadingStateFeature() {
@@ -48,7 +47,7 @@ export function LoadingStateFeature() {
     }
 
     try {
-      const response = await fetch(buildDummyUsersUrl(offset, PRIMARY_PAGE_SIZE), {
+      const response = await fetch(buildDummyUsersUrl(offset, 0), {
         signal: controller.signal,
       });
       const result = (await response.json()) as DummyUsersResponse;
@@ -93,7 +92,7 @@ export function LoadingStateFeature() {
     setRemoteLoading(true);
 
     try {
-      const response = await fetch(buildDummyUsersUrl(offset, request.limit), {
+      const response = await fetch(buildDummyUsersUrl(offset, 0), {
         signal: request.signal,
       });
       const result = (await response.json()) as DummyUsersResponse;
@@ -129,8 +128,8 @@ export function LoadingStateFeature() {
     <section className="feature-panel">
       <FeatureSampleSection
         description={text(defineLocalizedText(
-          "Infinite Scroll 예제와 같은 원격 API에서 Row를 가져옵니다. 초기 로딩은 skeleton, 재조회는 기존 Row 위 overlay, 빈 응답은 emptyComponent로 표시합니다.",
-          "Rows come from the same remote API as the Infinite Scroll example. Initial loading uses skeletons, refetch keeps rows under an overlay, and an empty response uses emptyComponent.",
+          "원격 API의 전체 Row를 제한 없이 가져옵니다. 초기 로딩은 skeleton, 재조회는 기존 Row 위 overlay, 빈 응답은 emptyComponent로 표시합니다.",
+          "Fetch and display every row from the remote API. Initial loading uses skeletons, refetch keeps rows under an overlay, and an empty response uses emptyComponent.",
         ))}
         id="loading"
         title={text(defineLocalizedText("Loading / Empty 상태", "Loading / Empty State"))}
@@ -151,7 +150,7 @@ export function LoadingStateFeature() {
           <span className="table-toolbar__state" data-testid="loading-state">
             {locale === "ko"
               ? { empty: "빈 데이터", initial: "초기 로딩", ready: "준비", refetch: "재조회" }[mode]
-              : mode}
+              : mode}{" · "}{rows.length}{locale === "ko" ? "개 행" : " rows"}
           </span>
         </div>
         <CominsTable
@@ -159,11 +158,11 @@ export function LoadingStateFeature() {
           columns={columns}
           data={rows}
           data-testid="loading-state-viewport"
-          emptyComponent={<span>{text(defineLocalizedText("표시할 데이터가 없습니다.", "No rows to display."))}</span>}
+          emptyContent={{ render: () => (<span>{text(defineLocalizedText("표시할 데이터가 없습니다.", "No rows to display."))}</span>) }}
           getRowId={(row) => row.id}
           loading={isLoading}
-          loadingComponent={<span>{text(defineLocalizedText("데이터를 갱신하는 중입니다.", "Refreshing rows."))}</span>}
-          pagination={{ pageIndex: 0, pageSize: PRIMARY_PAGE_SIZE }}
+          loadingContent={{ render: () => (<span>{text(defineLocalizedText("데이터를 갱신하는 중입니다.", "Refreshing rows."))}</span>) }}
+          pagination={{ pageIndex: 0, pageSize: Math.max(1, rows.length) }}
           persistHeaderWhenEmpty
           skeletonRowCount={5}
           theme={{ density: "compact" }}
@@ -171,8 +170,8 @@ export function LoadingStateFeature() {
       </FeatureSampleSection>
       <FeatureSampleSection
         description={text(defineLocalizedText(
-          "같은 원격 API를 Lazy Load와 연결합니다. 초기 요청은 skeleton, 범위를 벗어난 실제 빈 응답은 emptyComponent로 표시됩니다.",
-          "The same remote API is connected through Lazy Load. Initial requests use skeleton rows and a real out-of-range empty response uses emptyComponent.",
+          "같은 원격 API의 전체 응답을 Lazy Load 초기 요청으로 가져옵니다. 초기 요청은 skeleton, 범위를 벗어난 실제 빈 응답은 emptyComponent로 표시됩니다.",
+          "Lazy Load initially fetches the complete response from the same remote API. Initial requests use skeleton rows and a real out-of-range empty response uses emptyComponent.",
         ))}
         id="loading-lazy"
         title={text(defineLocalizedText("Lazy Load 연동", "Lazy Load integration"))}
@@ -187,7 +186,7 @@ export function LoadingStateFeature() {
           <span className="table-toolbar__state" data-testid="loading-lazy-state">
             {locale === "ko"
               ? { empty: "빈 결과", idle: "대기", load: "데이터" }[remoteMode]
-              : remoteMode}
+              : remoteMode}{" · "}{remoteTableRows.length}{locale === "ko" ? "개 행" : " rows"}
           </span>
         </div>
         {remoteMode === "idle" ? (
@@ -204,13 +203,14 @@ export function LoadingStateFeature() {
             columns={columns}
             data={remoteTableRows}
             data-testid="loading-lazy-viewport"
-            emptyComponent={<span>{text(defineLocalizedText("표시할 데이터가 없습니다.", "No rows to display."))}</span>}
+            emptyContent={{ render: () => (<span>{text(defineLocalizedText("표시할 데이터가 없습니다.", "No rows to display."))}</span>) }}
             getRowId={(row) => row.id}
             lazyLoad
             lazyLoadBatchSize={5}
             loading={remoteLoading}
             onLazyLoad={loadRemoteRows}
-            pagination={{ pageIndex: 0, pageSize: 5 }}
+            pagination={{ pageIndex: 0, pageSize: Math.max(1, remoteTableRows.length) }}
+            hasMoreRows={false}
             persistHeaderWhenEmpty
             skeletonRowCount={5}
             theme={{ density: "compact" }}

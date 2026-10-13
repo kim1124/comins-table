@@ -211,7 +211,10 @@
       ],
       "tests": [
         "test/component-renderer-api.test.tsx",
-        "test/playwright/specs/cell-row-examples.spec.ts"
+        "test/playwright/specs/cell-row-examples.spec.ts",
+        "test/cell-tooltip.test.tsx",
+        "test/playwright/specs/cell-tooltip.spec.ts",
+        "test/render-api-compat.test.tsx"
       ]
     },
     {
@@ -380,7 +383,10 @@
       "category": "header-layout",
       "apiSymbols": [
         "CominsColumnFilteringConfig",
-        "CominsColumnFilterModel"
+        "CominsColumnFilterModel",
+        "getCominsColumnFilterOptions",
+        "setCominsColumnFilterValues",
+        "CominsColumnFilterOption"
       ],
       "guides": {
         "en": [
@@ -395,7 +401,10 @@
       ],
       "tests": [
         "test/filtering.test.ts",
-        "test/playwright/specs/column-filtering.spec.ts"
+        "test/playwright/specs/column-filtering.spec.ts",
+        "test/value-list-filter.test.ts",
+        "test/column-filter-control.test.tsx",
+        "test/react-core-bridge.test.ts"
       ]
     },
     {
@@ -404,7 +413,8 @@
       "category": "structured-rows",
       "apiSymbols": [
         "CominsTableSummaryConfig",
-        "getCominsSummaryValues"
+        "getCominsSummaryValues",
+        "CominsSummaryRenderPayload"
       ],
       "guides": {
         "en": [
@@ -508,7 +518,12 @@
         "test/export-core.test.ts",
         "test/playwright/specs/export-helper.spec.ts",
         "test/csv-import-core.test.ts",
-        "test/structured-export-core.test.ts"
+        "test/structured-export-core.test.ts",
+        "test/xlsx-codec.test.ts",
+        "test/xlsx-style.test.ts",
+        "test/xlsx-zip.test.ts",
+        "test/xlsx-package.test.ts",
+        "test/playwright/specs/xlsx-file.spec.ts"
       ]
     },
     {
@@ -929,6 +944,14 @@
     "structured-export": {
       "guide": "docs/user/14-export.md",
       "fixture": "test/typecheck/docs/structured-export.ts"
+    },
+    "render-api": {
+      "guide": "docs/user/27-migration-0.2.2.md",
+      "fixture": "test/typecheck/docs/render-api.tsx"
+    },
+    "xlsx-files": {
+      "guide": "docs/user/14-export.md",
+      "fixture": "test/typecheck/docs/xlsx-files.ts"
     }
   },
   "publicApi": {
@@ -943,7 +966,12 @@
         "CominsColumnFilterKind",
         "CominsColumnFilterModel",
         "CominsColumnFilterOperator",
+        "CominsColumnFilterOption",
+        "CominsColumnFilterOptionsInput",
+        "CominsColumnFilterOptionsResult",
         "CominsColumnFilterRule",
+        "CominsColumnFilterValue",
+        "CominsColumnFilterValuesAction",
         "CominsColumnFilteringConfig",
         "CominsColumnPinned",
         "CominsCopyTarget",
@@ -979,6 +1007,10 @@
         "CominsTreeRowDragPayload",
         "CominsTreeSlotParams",
         "CominsTreeSlots",
+        "CominsValueFilterActions",
+        "CominsValueFilterOptionRenderParams",
+        "CominsValueFilterPanelRenderParams",
+        "CominsValueFilterTriggerRenderParams",
         "CominsViewportData",
         "CominsViewportDatasource",
         "CominsViewportOptions",
@@ -1000,6 +1032,7 @@
         "exportCominsRowsToCsv",
         "exportCominsRowsToJson",
         "fillCominsCellRange",
+        "getCominsColumnFilterOptions",
         "getCominsSelectedCellRange",
         "importCominsRowsFromCsv",
         "isCominsCellSelected",
@@ -1019,6 +1052,7 @@
         "selectRow",
         "selectRows",
         "serializeCominsColumnLayout",
+        "setCominsColumnFilterValues",
         "setCominsPagination",
         "setCominsSortModel",
         "setCominsSortState",
@@ -1039,10 +1073,13 @@
         "CominsCellRange",
         "CominsCheckboxComponentConfig",
         "CominsClipboardGuard",
+        "CominsColumnConditionFilterOperator",
+        "CominsColumnConditionFilterRule",
         "CominsColumnGroupRuntimeState",
         "CominsColumnLayout",
         "CominsColumnProps",
         "CominsColumnRuntimeState",
+        "CominsColumnValueFilterRule",
         "CominsColumnValueResolver",
         "CominsComponentAlign",
         "CominsComponentColumnPayload",
@@ -1060,6 +1097,11 @@
         "CominsExportRowsOptions",
         "CominsExportValueSource",
         "CominsFillCellRangeOptions",
+        "CominsFilterBinding",
+        "CominsFilterButtonGetter",
+        "CominsFilterCheckboxGetter",
+        "CominsFilterCustomOptions",
+        "CominsFilterNativeOptions",
         "CominsGroupBetweenTablesInput",
         "CominsHeaderCell",
         "CominsHeaderColumnCell",
@@ -1096,6 +1138,7 @@
         "CominsSummaryColumn",
         "CominsSummaryColumnConfig",
         "CominsSummaryFormatPayload",
+        "CominsSummaryRenderPayload",
         "CominsTableCellConfig",
         "CominsTableColumnGroup",
         "CominsTableComponentOption",
@@ -1135,6 +1178,7 @@
         "CominsTreeDropPosition",
         "CominsTreeExpansionOptions",
         "CominsTreeTableProps",
+        "CominsValueFilterPart",
         "CominsViewportBlock",
         "CominsViewportDataEvent",
         "CominsViewportDataOptions",
@@ -1202,17 +1246,25 @@
           "CominsCellSelectionOptions",
           "CominsCheckboxComponentConfig",
           "CominsClipboardGuard",
+          "CominsColumnConditionFilterOperator",
+          "CominsColumnConditionFilterRule",
           "CominsColumnFilterConfig",
           "CominsColumnFilterKind",
           "CominsColumnFilterModel",
           "CominsColumnFilterOperator",
+          "CominsColumnFilterOption",
+          "CominsColumnFilterOptionsInput",
+          "CominsColumnFilterOptionsResult",
           "CominsColumnFilterRule",
+          "CominsColumnFilterValue",
+          "CominsColumnFilterValuesAction",
           "CominsColumnFilteringConfig",
           "CominsColumnGroupRuntimeState",
           "CominsColumnLayout",
           "CominsColumnPinned",
           "CominsColumnProps",
           "CominsColumnRuntimeState",
+          "CominsColumnValueFilterRule",
           "CominsColumnValueResolver",
           "CominsComponentAlign",
           "CominsComponentColumnPayload",
@@ -1237,6 +1289,11 @@
           "CominsExportTreeOptions",
           "CominsExportValueSource",
           "CominsFillCellRangeOptions",
+          "CominsFilterBinding",
+          "CominsFilterButtonGetter",
+          "CominsFilterCheckboxGetter",
+          "CominsFilterCustomOptions",
+          "CominsFilterNativeOptions",
           "CominsGroupBetweenTablesInput",
           "CominsHeaderCell",
           "CominsHeaderColumnCell",
@@ -1289,6 +1346,7 @@
           "CominsSummaryColumn",
           "CominsSummaryColumnConfig",
           "CominsSummaryFormatPayload",
+          "CominsSummaryRenderPayload",
           "CominsTable",
           "CominsTableCellConfig",
           "CominsTableColumn",
@@ -1338,6 +1396,11 @@
           "CominsTreeSlotParams",
           "CominsTreeSlots",
           "CominsTreeTableProps",
+          "CominsValueFilterActions",
+          "CominsValueFilterOptionRenderParams",
+          "CominsValueFilterPanelRenderParams",
+          "CominsValueFilterPart",
+          "CominsValueFilterTriggerRenderParams",
           "CominsViewportBlock",
           "CominsViewportData",
           "CominsViewportDataEvent",
@@ -1380,6 +1443,7 @@
           "getCominsCellClassName",
           "getCominsCellStyle",
           "getCominsCellValue",
+          "getCominsColumnFilterOptions",
           "getCominsHeaderRows",
           "getCominsPageRows",
           "getCominsSelectedCellRange",
@@ -1412,6 +1476,7 @@
           "selectRow",
           "selectRows",
           "serializeCominsColumnLayout",
+          "setCominsColumnFilterValues",
           "setCominsColumnGroupHidden",
           "setCominsColumnGroupWidth",
           "setCominsColumnHidden",
@@ -1440,10 +1505,25 @@
           "CominsCellRange",
           "CominsCellSelectionOptions",
           "CominsClipboardGuard",
+          "CominsColumnConditionFilterOperator",
+          "CominsColumnConditionFilterRule",
+          "CominsColumnFilterConfig",
+          "CominsColumnFilterKind",
+          "CominsColumnFilterModel",
+          "CominsColumnFilterOperator",
+          "CominsColumnFilterOption",
+          "CominsColumnFilterOptionsInput",
+          "CominsColumnFilterOptionsResult",
+          "CominsColumnFilterRule",
+          "CominsColumnFilterValue",
+          "CominsColumnFilterValuesAction",
+          "CominsColumnFilteringConfig",
+          "CominsColumnFilteringSourceRow",
           "CominsColumnGroupRuntimeState",
           "CominsColumnLayout",
           "CominsColumnPinned",
           "CominsColumnRuntimeState",
+          "CominsColumnValueFilterRule",
           "CominsColumnValueResolver",
           "CominsComponentAlign",
           "CominsComponentColumnPayload",
@@ -1470,6 +1550,7 @@
           "CominsHeaderColumnCell",
           "CominsHeaderComponentPayload",
           "CominsHeaderGroupCell",
+          "CominsNormalizedColumnFilterRule",
           "CominsPaginationState",
           "CominsPasteRowOptions",
           "CominsRowGroupMoveOptions",
@@ -1505,6 +1586,9 @@
           "exportCominsRowsToJson",
           "fillCominsCellRange",
           "getCominsCellValue",
+          "getCominsColumnFilterOperators",
+          "getCominsColumnFilterOptions",
+          "getCominsFilteredRowIndexes",
           "getCominsHeaderRows",
           "getCominsPageRows",
           "getCominsSelectedCellRange",
@@ -1520,6 +1604,7 @@
           "moveCominsColumnGroup",
           "moveCominsRow",
           "moveCominsRowToGroup",
+          "normalizeCominsColumnFilterModel",
           "parseCominsClipboardText",
           "pasteCominsCell",
           "pasteCominsCellRange",
@@ -1532,6 +1617,7 @@
           "selectRow",
           "selectRows",
           "serializeCominsColumnLayout",
+          "setCominsColumnFilterValues",
           "setCominsColumnGroupHidden",
           "setCominsColumnGroupWidth",
           "setCominsColumnHidden",
@@ -1558,10 +1644,10 @@
           "copyCominsCellRange",
           "copyCominsRow",
           "fillCominsCellRange",
+          "parseCominsClipboardText",
           "pasteCominsCell",
           "pasteCominsCellRange",
           "pasteCominsRow",
-          "parseCominsClipboardText",
           "pasteCominsText"
         ]
       },
@@ -1582,6 +1668,26 @@
           "selectCell",
           "selectCellRange",
           "selectRow"
+        ]
+      },
+      "comins-table/xlsx": {
+        "source": "src/xlsx.ts",
+        "exports": [
+          "CominsXlsxCellStyle",
+          "CominsXlsxCellValue",
+          "CominsXlsxError",
+          "CominsXlsxErrorCode",
+          "CominsXlsxExportOptions",
+          "CominsXlsxExportStyles",
+          "CominsXlsxImportLimits",
+          "CominsXlsxImportOptions",
+          "CominsXlsxImportRow",
+          "CominsXlsxInspectOptions",
+          "CominsXlsxSheetInfo",
+          "CominsXlsxWorkbookInfo",
+          "exportCominsRowsToXlsx",
+          "importCominsRowsFromXlsx",
+          "inspectCominsXlsx"
         ]
       }
     }
