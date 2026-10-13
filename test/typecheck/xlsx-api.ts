@@ -6,3 +6,7 @@ const metadata: CominsXlsxExportOptions<number> = { rows: [], columns: [], metad
 // @ts-expect-error Import accepts bytes, not a file URL.
 const invalid: CominsXlsxImportOptions<number> = { bytes: "file.xlsx", mapRow: () => 1 };
 void [exportOptions, importOptions, metadata, invalid];
+
+// @ts-expect-error Arbitrary engine features are not public styles.
+const unsupportedStyle: CominsXlsxExportOptions<number> = { rows: [], columns: [], styles: { features: [] } };
+void unsupportedStyle;

@@ -24,10 +24,15 @@ for (const tableId of ["data-table-viewport", "data-table-viewport-component-lar
     await viewport.scrollIntoViewIfNeeded();
     await viewport.hover(); await page.mouse.wheel(0, 1800);
     await expect.poll(() => viewport.evaluate(el => el.scrollTop)).toBeGreaterThan(1000);
-    const rows = await visibleRows(viewport), source = rows[0]!, target = rows[rows.length - 1]!;
+    const rows = await visibleRows(viewport), source = rows[0]!, target = rows[Math.floor(rows.length / 2)]!;
+    const scrollTop = await viewport.evaluate(el => el.scrollTop);
+    // Keep this identity check away from the edge auto-scroll zone. Edge dragging
+    // intentionally changes the row beneath the pointer and is covered separately.
     const name = viewport.getByTestId(source.id).locator('td').first();
     const value = await name.innerText();
     await startDrag(page, source, target.x + 90, target.targetY);
+    await viewport.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    expect(await viewport.evaluate(el => el.scrollTop)).toBe(scrollTop);
     await page.mouse.up();
     await expect(viewport.getByTestId(source.id)).toHaveAttribute("data-comins-row-data-index", String(target.index));
     await expect(name).toHaveText(value);

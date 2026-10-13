@@ -28,7 +28,7 @@ const valueRootSymbols = [
   "CominsValueFilterActions", "CominsValueFilterOptionRenderParams", "CominsValueFilterPanelRenderParams", "CominsValueFilterPart",
   "CominsValueFilterTriggerRenderParams", "getCominsColumnFilterOptions", "setCominsColumnFilterValues",
 ];
-const xlsxTarget = ["CominsXlsxCellValue", "CominsXlsxError", "CominsXlsxErrorCode", "CominsXlsxExportOptions", "CominsXlsxImportLimits", "CominsXlsxImportOptions", "CominsXlsxImportRow", "CominsXlsxInspectOptions", "CominsXlsxSheetInfo", "CominsXlsxWorkbookInfo", "exportCominsRowsToXlsx", "importCominsRowsFromXlsx", "inspectCominsXlsx"];
+const xlsxTarget = ["CominsXlsxCellStyle", "CominsXlsxCellValue", "CominsXlsxError", "CominsXlsxErrorCode", "CominsXlsxExportOptions", "CominsXlsxExportStyles", "CominsXlsxImportLimits", "CominsXlsxImportOptions", "CominsXlsxImportRow", "CominsXlsxInspectOptions", "CominsXlsxSheetInfo", "CominsXlsxWorkbookInfo", "exportCominsRowsToXlsx", "importCominsRowsFromXlsx", "inspectCominsXlsx"];
 const coreTarget = [...migrationCoreTarget, ...csvImportExports, ...structuredExportSymbols, ...valueCoreSymbols].sort();
 const target = { ...baseline.entrypoints,
   "comins-table": [...baseline.entrypoints["comins-table"], "CominsTreeSlotParams", "CominsTreeSlots", "CominsSummaryRenderPayload", ...csvImportExports, ...structuredExportSymbols, ...valueRootSymbols].sort(),

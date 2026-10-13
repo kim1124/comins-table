@@ -189,3 +189,15 @@ Task 1 → 2 → 3 → 4 → 5 → 6 → 7. 별도 공개 Worker API를 늘리�
 - 추가 요청: CSV·Excel에 1000행 선택을 추가하고 기존 XLSX 10000행 경로 및 신규 CSV 10000행 경로를 제공한다. 표/CSV 텍스트 미리보기는 100행, 전체 데이터는 파일/Import에 보존한다. 추가 Playwright RED 2건을 확인한 뒤 15건 focused GREEN. 추가 성능 3건, 최종 전체 verify 737건 및 전체 E2E 253건이 통과했다. 독립 대용량 리뷰에서 추가 결함 없음. Astra는 기본 native roundtrip·대용량 크기/preview·키보드를 직접 확인했고 추가 Import 등은 도구/사용자 foreground 제한으로 미실행이다. 로컬 commit 및 실행/미실행의 상세 근거는 최종 리포트와 완료 보고를 따른다.
 
 Task 7 로컬 구현·자동 검증·독립 리뷰는 완료했다. Astra 미실행 영역을 통과로 간주하지 않고 리포트에 보존했다. 승인된 전체 변경을 하나의 로컬 checkpoint로 전달하며 원격 반영/발행은 수행하지 않는다.
+
+## Approved implementation revision: Export styles and parser replacement
+
+The subsequent maintainer-approved implementation replaces the XML adapter with `@federicocarboni/saxe` 0.8.0 and Export encoding with `write-excel-file` 4.1.1. ZIP validation remains `@zip.js/zip.js`; SheetJS CE 0.20.3 remains the Import/date-format engine. This revision supersedes the earlier parser/Export-engine selection. Dependencies stay external to Comins library chunks and load only through `/xlsx`.
+
+The owned `CominsXlsxExportStyles` API offers a default Comins theme, a plain preset, global header/body styles and per-column overrides by column ID. It exposes no vendor feature hooks or arbitrary XML. A private writer transform preserves literal text including empty strings, prototype-named strings and OOXML escape sequences; numeric/boolean/null and UTC Date semantics remain unchanged. Import limits, namespace validation, cached formula values, callback ownership and unsupported Tree/Group reconstruction remain the existing contract.
+
+Validation covers type/encoding preservation, invalid styles, namespace/DTD/depth limits, bilingual docs, custom-style Worker download/re-import, 1000/10000-row workloads and the same packed artifact in Node, Vue byte consumers and a production module Worker. License evidence and third-party research are retained only under ignored `.local/benchmarks/`; required distribution notices remain in THIRD_PARTY_NOTICES.md.
+
+## Playground display revision — 2026-10-13
+
+The maintainer subsequently requested removing the 100-row display cutoff. This supersedes that Playground-only provision: CSV/XLSX samples start with 1000 rows, accept 1000/10000-row presets, pass all rows to the table and use virtual scrolling to reach the final row. CSV text output contains all rows. Import byte/cell budgets and library byte APIs remain the previously approved contract.

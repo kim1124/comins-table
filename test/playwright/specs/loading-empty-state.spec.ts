@@ -44,7 +44,7 @@ test("loading example maps remote initial, refetch, empty, and ready responses w
           total: 100,
           users: skip >= 10_000
             ? []
-            : Array.from({ length: limit }, (_value, index) => {
+            : Array.from({ length: limit === 0 ? 100 : limit }, (_value, index) => {
                 const id = skip + index + 1;
 
                 return {
@@ -82,7 +82,7 @@ test("loading example maps remote initial, refetch, empty, and ready responses w
     await page.getByRole("button", { exact: true, name: "재조회 로딩" }).click();
     await expect.poll(() => requests.length).toBe(2);
     await expect(page.getByTestId("row-dummy-1")).toBeVisible();
-    await expect(page.getByTestId("loading-state-viewport").locator("tbody tr[data-comins-row-data-index]")).toHaveCount(30);
+    await expect(page.getByTestId("loading-state-viewport").locator("tbody tr[data-comins-row-data-index]")).toHaveCount(100);
     await expect(page.getByTestId("data-table-loading-overlay")).toBeVisible();
     await expect(page.getByTestId("data-table-loading-spinner")).toBeVisible();
     await expect(page.getByTestId("data-table-loading-spinner")).toHaveCSS(
@@ -106,7 +106,7 @@ test("loading example maps remote initial, refetch, empty, and ready responses w
     requests[3]!.release();
     await requests[3]!.settled;
     await expect(page.getByTestId("row-dummy-1")).toBeVisible();
-    await expect(page.getByTestId("loading-state-viewport").locator("tbody tr[data-comins-row-data-index]")).toHaveCount(30);
+    await expect(page.getByTestId("loading-state-viewport").locator("tbody tr[data-comins-row-data-index]")).toHaveCount(100);
     await expect(page.getByTestId("data-table-empty-state")).toHaveCount(0);
     await expect(page.getByTestId("data-table-loading-overlay")).toHaveCount(0);
     expect(requests.map((request) => request.skip)).toEqual([0, 0, 10_000, 0]);
@@ -118,17 +118,20 @@ test("loading example maps remote initial, refetch, empty, and ready responses w
 test("lazy load integration maps remote data and ignores a stale empty response", async ({ page }) => {
   const lazyRequestOffsets: number[] = [];
   const lazyRequests: DeferredRequest[] = [];
+  let initialRequestSeen = false;
 
   await page.route(dummyJsonUrl, async (route) => {
     const url = new URL(route.request().url());
     const limit = Number(url.searchParams.get("limit") ?? 30);
     const skip = Number(url.searchParams.get("skip") ?? 0);
 
-    if (limit === 5) {
+    const isLazy = initialRequestSeen;
+    initialRequestSeen = true;
+    if (isLazy) {
       lazyRequestOffsets.push(skip);
     }
 
-    const request = limit === 5 ? deferRequest(skip) : undefined;
+    const request = isLazy ? deferRequest(skip) : undefined;
     if (request) {
       lazyRequests.push(request);
       await request.released;
@@ -143,7 +146,7 @@ test("lazy load integration maps remote data and ignores a stale empty response"
           total: 100,
           users: skip >= 10_000
             ? []
-            : Array.from({ length: limit }, (_value, index) => {
+            : Array.from({ length: limit === 0 ? 100 : limit }, (_value, index) => {
                 const id = skip + index + 1;
 
                 return {

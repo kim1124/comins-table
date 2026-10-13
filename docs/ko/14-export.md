@@ -117,6 +117,8 @@ type Row = { id: string; score: number; active: boolean };
 async function roundTrip() {
   const bytes = await exportCominsRowsToXlsx<Row>({
     rows: [{ id: "001", score: 0, active: false }],
+    styles: { header: { backgroundColor: "#1D4ED8", textColor: "#FFFFFF" },
+      columns: { score: { width: 16, body: { format: "#,##0.00", align: "right" } } } },
     columns: [
       { id: "id", value: row => row.id },
       { id: "score", value: row => row.score },
@@ -153,10 +155,20 @@ A1부터 마지막 실제 값·수식까지 직사각형으로 가져오고 중�
 
 `CominsXlsxError`에는 `CominsXlsxErrorCode`와 선택적 `sheetName`, `cellAddress`, `rowNumber`, `sheetNames`만 제공합니다. 메시지에 원본 셀 값·엔진 진단을 복사하지 않습니다. 오류 코드는 INVALID_OPTIONS, UNSUPPORTED_FILE, INVALID_WORKBOOK, LIMIT_EXCEEDED, SHEET_SELECTION_REQUIRED, SHEET_NOT_FOUND, MERGED_CELLS, MISSING_FORMULA_RESULT, CELL_ERROR, UNSUPPORTED_VALUE입니다. 파일·셀 전체 검증 후에만 `mapRow`를 호출합니다. 사용자 getter·mapper 예외는 그대로 전파하고 부분 결과 배열을 반환하지 않습니다. 콜백 부작용을 롤백하지 못하므로 순수 매핑을 사용하고 성공 후에만 애플리케이션 데이터를 교체해야 합니다.
 
-[Export Playground](/examples/export)의 독립 Excel 카드에서 수식 캐시·날짜 예제 다운로드, 시트 선택, 취소·재시도, 최대 100행 미리보기를 제공합니다. inspect·Import·Export는 전용 module Worker에서 처리하며 main의 콜백을 전송하지 않습니다. id/name/score/active/date 타입과 고유 ID를 애플리케이션에서 검증한 뒤 교체하며 빈 Import는 기존 예제 데이터를 보존합니다. 취소·파일 교체·unmount에서 Worker를 종료하고 늦은 결과·다운로드를 무시합니다. Worker 시작 실패 시 main 전체 파싱으로 자동 우회하지 않습니다. 파일 크기는 할당 전에 검사하고 다운로드 object URL을 해제합니다. Promise 반환 자체는 백그라운드 실행을 의미하지 않으므로 byte API를 직접 사용하는 앱은 자신의 Worker 전략을 선택해야 합니다.
+[Export Playground](/examples/export)의 독립 Excel 카드에서 수식 캐시·날짜 예제 다운로드, 시트 선택, 취소·재시도, 가져온 전체 행의 테이블를 제공합니다. inspect·Import·Export는 전용 module Worker에서 처리하며 main의 콜백을 전송하지 않습니다. id/name/score/active/date 타입과 고유 ID를 애플리케이션에서 검증한 뒤 교체하며 빈 Import는 기존 예제 데이터를 보존합니다. 취소·파일 교체·unmount에서 Worker를 종료하고 늦은 결과·다운로드를 무시합니다. Worker 시작 실패 시 main 전체 파싱으로 자동 우회하지 않습니다. 파일 크기는 할당 전에 검사하고 다운로드 object URL을 해제합니다. Promise 반환 자체는 백그라운드 실행을 의미하지 않으므로 byte API를 직접 사용하는 앱은 자신의 Worker 전략을 선택해야 합니다.
 
 Transitional·Strict OOXML namespace를 모두 지원합니다. 마지막 날짜 `9999-12-31`의 일반 달력 시간과 기본 밀리초 Date 서식은 지원하지만 시간 fraction이 있는 elapsed·숫자 조건 custom 서식은 합계를 변경하지 않고 UNSUPPORTED_VALUE로 실패합니다. 엔진이 지원하지 않는 날짜 서식 문법도 이 자체 오류로 변환합니다.
 
 선택하지 않은 XML은 노드 트리를 보관하지 않고 검증합니다. Workbook·스타일·선택 시트 메타데이터는 XML 문서별 `max(1_000_000, 8 * maxCells)` 노드로 제한하고 다음 객체 생성 전에 검사합니다. 신뢰할 수 있는 복잡한 메타데이터에서만 `maxCells`를 명시적으로 올릴 수 있습니다. 이 구조 제한은 선택 시트의 직사각형 셀 수와 별개이며 inspect에도 적용합니다. 서로 겹치는 수식 범위는 잘못된 파일로 거절하고 중복 순회하지 않습니다.
 
-0.2.2 후보의 CSV·Excel 파일 예제에는 **1000행 예제**, **10000행 예제** 버튼을 제공합니다. 크기를 선택해 전체 파일을 다운로드한 후 초기화하고 해당 파일을 가져오면 전체 행 수를 확인할 수 있습니다. 표는 최대 100행이며 CSV 텍스트 미리보기도 데이터 100행으로 제한합니다. 이 제한으로 Import 데이터나 다운로드 파일이 잘리지는 않습니다. CSV 변환은 동기 Core 헬퍼를 사용하고 XLSX 변환은 전용 Worker에서 수행합니다.
+0.2.2 후보의 CSV·Excel 파일 예제에는 **1000행 예제**, **10000행 예제** 버튼을 제공합니다. 크기를 선택해 전체 파일을 다운로드한 후 초기화하고 해당 파일을 가져오면 전체 행 수를 확인할 수 있습니다. 기본 1000행으로 시작하며 표에 1000·10000행 전체를 전달합니다. 가상 스크롤로 마지막 행까지 접근하며 DOM 노드는 화면 주변 행만 생성합니다. CSV 텍스트 출력에도 전체 행을 포함합니다. CSV 변환은 동기 Core 헬퍼를 사용하고 XLSX 변환은 전용 Worker에서 수행합니다.
+
+### Excel Export 스타일
+
+`styles?: CominsXlsxExportStyles`는 프레임워크 독립 설정입니다. 표의 CSS·DOM·React/Vue 컴포넌트나 가져온 파일의 스타일을 자동 복사하지 않습니다. 기본 `theme: "comins"`는 Arial 11 pt, 어두운 글자, 얇은 연회색 테두리, 세로 중앙 정렬과 굵은 연회색 헤더를 사용합니다. `theme: "plain"`은 이 프리셋을 생략합니다. 적용 순서는 프리셋 → 전역 `header`/`body` → `columns[columnId].header`/`body`입니다. 열 설정은 `columnOrder` 적용 후에도 열 ID를 따라가며, 내보내지 않는 열·알 수 없는 ID로 새 열을 만들지 않습니다. 너비·높이를 생략하면 Excel 기본값을 사용합니다.
+
+`CominsXlsxCellStyle`은 `fontFamily`, `fontSize`, `fontWeight: "bold"`, `fontStyle: "italic"`, `textColor`, `backgroundColor`, `borderColor`, `borderStyle: "thin" | "medium" | "thick"`, `align: "left" | "center" | "right"`, `alignVertical: "top" | "center" | "bottom"`, `wrap`, Excel 숫자·날짜 `format`을 지원합니다. 색상은 `#RRGGBB`입니다. 글자 크기와 전역 `headerHeight`/`rowHeight`는 양수 point이며 최대 409, `columns[id].width`는 양수 Excel 문자 너비이며 최대 255입니다. 글꼴 이름·서식은 XML 제어 문자 없는 1–255자입니다. 잘못된 값·미지원 속성은 INVALID_OPTIONS로 실패합니다. Comins가 제한한 API이며 임의 엔진 옵션·수식·병합·raw XML·HTML·이미지·링크·셀별 콜백을 노출하지 않습니다.
+
+숫자 `format`은 저장 타입을 문자열로 바꾸지 않고 Excel 표시만 변경합니다. boolean 값에는 숫자 서식을 적용하지 않으며 빈 셀은 0으로 변환하지 않고 지정 스타일을 유지합니다. 숫자 셀에 날짜 서식을 적용하면 Import의 날짜 분류·표시에도 영향을 줍니다. CSS pixel 너비를 Excel 단위로 자동 변환하지 않습니다. Playground의 **Excel 스타일**에서 Comins·기본 서식·파란 헤더 사용자 지정 예제를 선택할 수 있으며, 사용자 지정 점수 서식도 다시 가져올 때 숫자 타입을 유지합니다.
+
+브라우저 Export는 `Blob`, `TextEncoder`와 큰 파일 압축을 위한 Worker 지원이 필요합니다. CSP를 적용한 앱은 `worker-src`에 앱의 module Worker 출처와 압축 Worker용 `blob:`을 허용해야 하며 관련 없는 정책을 완화하지 않습니다. 외부 Worker URL이나 파일 업로드는 사용하지 않습니다. ES2022 TypeScript 소비자는 DOM 타입 없이 사용할 수 있지만 런타임 기능 요구사항은 별개입니다.

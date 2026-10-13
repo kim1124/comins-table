@@ -520,6 +520,7 @@
         "test/csv-import-core.test.ts",
         "test/structured-export-core.test.ts",
         "test/xlsx-codec.test.ts",
+        "test/xlsx-style.test.ts",
         "test/xlsx-zip.test.ts",
         "test/xlsx-package.test.ts",
         "test/playwright/specs/xlsx-file.spec.ts"
@@ -1672,10 +1673,12 @@
       "comins-table/xlsx": {
         "source": "src/xlsx.ts",
         "exports": [
+          "CominsXlsxCellStyle",
           "CominsXlsxCellValue",
           "CominsXlsxError",
           "CominsXlsxErrorCode",
           "CominsXlsxExportOptions",
+          "CominsXlsxExportStyles",
           "CominsXlsxImportLimits",
           "CominsXlsxImportOptions",
           "CominsXlsxImportRow",

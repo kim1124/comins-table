@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 
 import { exportCominsRowsToCsv, exportCominsRowsToJson, CominsTable, type CominsExportColumn } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
+import { ExportFormatIcon } from "../components/ExportFormatIcon";
 import { Button } from "../components/ui/button";
 import { createBaseColumns } from "../fixtures/columns";
 import { createExampleRows, type PersonRow } from "../fixtures/people";
@@ -31,7 +32,7 @@ export function ExportFeature() {
 
   return (
     <section className="feature-panel">
-      <FeatureSampleSection
+      <FeatureSampleSection className="export-example"
         description={text(defineLocalizedText(
           "exportCominsRowsToCsv와 exportCominsRowsToJson은 현재 data 배열과 Column value getter를 받아 dependency-free 문자열을 생성합니다.",
           "exportCominsRowsToCsv and exportCominsRowsToJson generate dependency-free strings from the current data array and Column value getters.",
@@ -41,10 +42,10 @@ export function ExportFeature() {
       >
         <div className="table-toolbar">
           <Button aria-pressed={mode === "csv"} onClick={() => setMode("csv")} variant="outline">
-            CSV
+            <ExportFormatIcon format="csv" /><span>CSV</span>
           </Button>
           <Button aria-pressed={mode === "json"} onClick={() => setMode("json")} variant="outline">
-            JSON
+            <ExportFormatIcon format="json" /><span>JSON</span>
           </Button>
           <span className="table-toolbar__state" data-testid="export-mode">
             {mode.toUpperCase()}

@@ -1,8 +1,8 @@
-import type { CominsXlsxCellValue, CominsXlsxErrorCode, CominsXlsxImportRow, CominsXlsxWorkbookInfo } from "../../../src/xlsx";
+import type { CominsXlsxExportStyles, CominsXlsxCellValue, CominsXlsxErrorCode, CominsXlsxImportRow, CominsXlsxWorkbookInfo } from "../../../src/xlsx";
 export type XlsxFileRequest = { jobId: number } & (
   | { kind: "inspect"; bytes: Uint8Array }
   | { kind: "import"; bytes: Uint8Array; sheetName?: string }
-  | { kind: "export"; headers: string[]; rows: CominsXlsxCellValue[][] }
+  | { kind: "export"; headers: string[]; rows: CominsXlsxCellValue[][]; styles?: CominsXlsxExportStyles }
 );
 export type XlsxFileResult =
   | { kind: "inspect"; value: CominsXlsxWorkbookInfo }

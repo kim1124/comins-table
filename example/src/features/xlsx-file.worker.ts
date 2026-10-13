@@ -8,7 +8,7 @@ self.onmessage = async (event: MessageEvent<XlsxFileRequest>) => {
     let result: XlsxFileResult;
     if (request.kind === "inspect") result = { kind: "inspect", value: await inspectCominsXlsx({ bytes: request.bytes }) };
     else if (request.kind === "import") result = { kind: "import", value: await importCominsRowsFromXlsx({ bytes: request.bytes, sheetName: request.sheetName, mapRow: row => row }) };
-    else result = { kind: "export", value: await exportCominsRowsToXlsx({ rows: request.rows, columns: request.headers.map((id, index) => ({ id, value: (row: CominsXlsxCellValue[]) => row[index] })) }) };
+    else result = { kind: "export", value: await exportCominsRowsToXlsx({ rows: request.rows, styles: request.styles, columns: request.headers.map((id, index) => ({ id, value: (row: CominsXlsxCellValue[]) => row[index] })) }) };
     const response: XlsxFileResponse = { jobId: request.jobId, status: "ok", result };
     self.postMessage(response);
   } catch (error) {

@@ -49,7 +49,7 @@ describe("public XLSX codec", () => {
     const container = await readBoundedXlsxContainer(bytes, { maxBytes: 10e6, maxUncompressedBytes: 50e6, maxCells: 100000 });
     const xml = parseXlsxXml(container.files.get("xl/worksheets/sheet1.xml")!);
     const dataCells = children(children(child(xml,"sheetData")!,"row")[1]!,"c");
-    expect(dataCells.slice(0,4).every(c => c.attrs.t === "str" && !child(c,"f"))).toBe(true);
+    expect(dataCells.slice(0,4).every(c => ["str", "s", "inlineStr"].includes(c.attrs.t!) && !child(c,"f"))).toBe(true);
     expect(await importCominsRowsFromXlsx({ bytes, mapRow: r => r.cells })).toEqual([["=1+1", "+2", "-3", "@name", 25, false, null, "2026-10-12 01:02:03.004"]]);
     expect(date.getTime()).toBe(before);
   });

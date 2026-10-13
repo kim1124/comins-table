@@ -5,7 +5,7 @@ import { CominsXlsxError, rethrowXlsxDataError } from "./xlsx/errors";
 import { readBoundedXlsxContainer } from "./xlsx/zip";
 import { inspectCominsXlsxContainer, readCominsXlsxSheetMetadata } from "./xlsx/workbook";
 export { CominsXlsxError } from "./xlsx/errors";
-export type { CominsXlsxCellValue, CominsXlsxErrorCode, CominsXlsxExportOptions, CominsXlsxImportLimits, CominsXlsxImportOptions, CominsXlsxImportRow, CominsXlsxInspectOptions, CominsXlsxSheetInfo, CominsXlsxWorkbookInfo } from "./core/editing/xlsx-model";
+export type { CominsXlsxCellStyle, CominsXlsxExportStyles, CominsXlsxCellValue, CominsXlsxErrorCode, CominsXlsxExportOptions, CominsXlsxImportLimits, CominsXlsxImportOptions, CominsXlsxImportRow, CominsXlsxInspectOptions, CominsXlsxSheetInfo, CominsXlsxWorkbookInfo } from "./core/editing/xlsx-model";
 function limits(input: CominsXlsxImportLimits | undefined): Required<CominsXlsxImportLimits> {
   const result = { ...DEFAULT_XLSX_LIMITS, ...input };
   try { for (const value of Object.values(result)) validateXlsxLimit(value); } catch (error) { rethrowXlsxDataError(error); }
@@ -28,6 +28,6 @@ export async function exportCominsRowsToXlsx<TData>(options: CominsXlsxExportOpt
   if (typeof name !== "string" || !name || name.length > 31 || /[\\/\[\]:*?\x00-\x1f]/.test(name) || name.startsWith("'") || name.endsWith("'")) throw new CominsXlsxError("INVALID_OPTIONS");
   let prepared;
   try { prepared = prepareCominsXlsxExport(options); } catch (error) { rethrowXlsxDataError(error); }
-  const { encodeCominsXlsxRows } = await import("./xlsx/engine");
-  return encodeCominsXlsxRows(prepared, name);
+  const { encodeCominsXlsxRows } = await import("./xlsx/export");
+  return encodeCominsXlsxRows(prepared, name, options);
 }

@@ -20,3 +20,13 @@ it("validates unselected XML without a retained node tree", async () => {
   expect((await inspectCominsXlsx({ bytes: await archive([...workbookFiles(), ['unused.xml', bytes]]) })).sheets[0]?.name).toBe("Sheet1");
   expect(() => validateXlsxXml(new TextEncoder().encode('<!DOCTYPE r><r/>'))).toThrow(expect.objectContaining({ code: "INVALID_WORKBOOK" }));
 });
+
+it.each(['<!DOCTYPE r><r/>', '<r>&unknown;</r>', '<r>\u0000</r>', '<r xmlns:a="urn:x" xmlns:b="urn:x" a:id="1" b:id="2"/>', '<r/><r/>', '<p:r/>', '<r><!-- a--b --></r>'])("rejects invalid XML before retaining data: %s", xml => {
+  expect(() => parseXlsxXml(new TextEncoder().encode(xml))).toThrow(expect.objectContaining({ code: "INVALID_WORKBOOK" }));
+});
+it("enforces depth and resolves scoped namespaces without losing Unicode", () => {
+  expect(() => validateXlsxXml(new TextEncoder().encode('<r>'.repeat(256)+'</r>'.repeat(256)))).not.toThrow();
+  expect(() => validateXlsxXml(new TextEncoder().encode('<r>'.repeat(257)+'</r>'.repeat(257)))).toThrow();
+  const root = parseXlsxXml(new TextEncoder().encode('<r xmlns:p="urn:a"><p:v>한글 😀</p:v><r xmlns:p="urn:b"><p:v/></r><p:v/></r>'));
+  expect(root.children[0]?.text).toBe("한글 😀");
+});

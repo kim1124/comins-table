@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { CominsTable, type CominsRowId, type CominsTableColumn, type CominsTreeNode } from "../../../src";
 import { createCominsGroupedExportOptions, createCominsTreeExportOptions, exportCominsRowsToCsv, exportCominsRowsToJson, type CominsExportColumn } from "../../../src/core";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
+import { ExportFormatIcon } from "../components/ExportFormatIcon";
 import { Button } from "../components/ui/button";
 import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
@@ -39,7 +40,7 @@ export function StructuredExportSample() {
   const csv = useMemo(() => exportCominsRowsToCsv(options), [options]);
   const output = useMemo(() => format === "csv" ? csv : exportCominsRowsToJson(options), [csv, format, options]);
 
-  return <FeatureSampleSection id="structured-export"
+  return <FeatureSampleSection id="structured-export" className="export-example"
     title={text(defineLocalizedText("Tree·Group 내보내기", "Tree and Group export"))}
     description={text(defineLocalizedText(
       "Tree는 접힌 자식까지 전체 노드를 내보냅니다. Group은 지정된 그룹 순서를 따르며 빈 그룹·제목·집계 행은 CSV에 추가하지 않습니다. 업무 열 뒤의 __ 관리 열을 확인하십시오.",
@@ -48,11 +49,11 @@ export function StructuredExportSample() {
     <div className="table-toolbar">
       <Button variant="outline" aria-pressed={structure === "tree"} onClick={() => setStructure("tree")}>Tree</Button>
       <Button variant="outline" aria-pressed={structure === "group"} onClick={() => setStructure("group")}>Group</Button>
-      <Button variant="outline" aria-pressed={format === "csv"} onClick={() => setFormat("csv")}>CSV</Button>
-      <Button variant="outline" aria-pressed={format === "json"} onClick={() => setFormat("json")}>JSON</Button>
+      <Button variant="outline" aria-pressed={format === "csv"} onClick={() => setFormat("csv")}><ExportFormatIcon format="csv" /><span>CSV</span></Button>
+      <Button variant="outline" aria-pressed={format === "json"} onClick={() => setFormat("json")}><ExportFormatIcon format="json" /><span>JSON</span></Button>
       <a className="ui-button ui-button--outline ui-button--default"
         download={`comins-${structure}.csv`} href={`data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`}>
-        {text(defineLocalizedText("CSV 다운로드", "Download CSV"))}
+        <ExportFormatIcon format="csv" /><span>{text(defineLocalizedText("CSV 다운로드", "Download CSV"))}</span>
       </a>
     </div>
     {structure === "tree"

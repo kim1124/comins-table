@@ -17,7 +17,7 @@ export default defineConfig({
       name: "KmsfDataTable",
     },
     rollupOptions: {
-      external: ["xlsx", "saxes", "@zip.js/zip.js/index-native.js", "@radix-ui/react-icons", "react", "react-dom", "react/jsx-runtime"],
+      external: ["xlsx", "@federicocarboni/saxe", "write-excel-file/universal", "write-excel-file/utility", "@zip.js/zip.js/index-native.js", "@radix-ui/react-icons", "react", "react-dom", "react/jsx-runtime"],
     },
     sourcemap: true,
   },

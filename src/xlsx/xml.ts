@@ -1,4 +1,4 @@
-import { SaxesParser } from "saxes";
+import { SaxNamespaceParser } from "@federicocarboni/saxe";
 import { CominsXlsxError } from "./errors";
 const strictMain = "http://purl.oclc.org/ooxml/spreadsheetml/main";
 const strictRel = "http://purl.oclc.org/ooxml/officeDocument/relationships";
@@ -18,25 +18,28 @@ function readXlsxXml(bytes: Uint8Array, retain: boolean, maxNodes: number): XmlN
     const encoding = bytes[0] === 0xff && bytes[1] === 0xfe ? "utf-16le" : bytes[0] === 0xfe && bytes[1] === 0xff ? "utf-16be" : "utf-8";
     text = new TextDecoder(encoding, { fatal: true }).decode(bytes);
   } catch { throw new CominsXlsxError("INVALID_WORKBOOK"); }
-  const parser = new SaxesParser({ xmlns: true });
-  const stack: XmlNode[] = []; let root: XmlNode | undefined; let depth = 0; let nodes = 0; let sawRoot = false;
-  parser.on("doctype", () => { throw new CominsXlsxError("INVALID_WORKBOOK"); });
-  parser.on("error", () => { throw new CominsXlsxError("INVALID_WORKBOOK"); });
-  parser.on("opentag", tag => {
-    if (depth >= 256) throw new CominsXlsxError("INVALID_WORKBOOK");
-    depth++; sawRoot = true;
-    if (!retain) return;
-    // Bound object amplification before creating the next metadata node.
-    if (++nodes > maxNodes) throw new CominsXlsxError("LIMIT_EXCEEDED");
-    const node: XmlNode = { local: tag.local, uri: canonicalXlsxNamespace(tag.uri), attrs: Object.create(null) as Record<string,string>, children: [], text: "" };
-    for (const attr of Object.values(tag.attributes)) node.attrs[attr.uri ? `{${canonicalXlsxNamespace(attr.uri)}}${attr.local}` : attr.local] = attr.value;
-    if (stack.length) stack[stack.length-1]!.children.push(node); else root = node;
-    stack.push(node);
+  const stack: XmlNode[] = []; let root: XmlNode | undefined; let nodes = 0; let sawRoot = false;
+  const parser = new SaxNamespaceParser({
+    startTag(tag, attributes) {
+      sawRoot = true;
+      if (!retain) return;
+      // Bound retained metadata before creating the next node.
+      if (++nodes > maxNodes) throw new CominsXlsxError("LIMIT_EXCEEDED");
+      const node: XmlNode = { local: tag.localName, uri: canonicalXlsxNamespace(tag.namespace ?? ""), attrs: Object.create(null) as Record<string,string>, children: [], text: "" };
+      for (const [attr, value] of attributes) node.attrs[attr.namespace ? `{${canonicalXlsxNamespace(attr.namespace)}}${attr.localName}` : attr.localName] = value;
+      if (stack.length) stack[stack.length-1]!.children.push(node); else root = node;
+      stack.push(node);
+    },
+    text(value) { const node = stack[stack.length-1]; if (retain && node) node.text += value; },
+    endTag() { if (retain) stack.pop(); },
+  }, {
+    dtd: "prohibit", incrementalText: true, maxElementDepth: 256,
+    // The bounded ZIP reader owns the input budget. Avoid new vendor defaults
+    // rejecting names/text that the existing Comins byte limit permits.
+    maxAttributesLength: Math.max(text.length, 1), maxTextLength: Math.max(text.length, 1),
+    maxNameLength: Math.max(text.length, 1), maxNamespacePrefixes: Math.max(text.length, 1),
   });
-  const append = (value: string) => { if (retain) { const node = stack[stack.length-1]; if (node) node.text += value; } };
-  parser.on("text", append); parser.on("cdata", append);
-  parser.on("closetag", () => { depth--; if (retain) stack.pop(); });
-  try { parser.write(text).close(); } catch (error) { if (error instanceof CominsXlsxError) throw error; throw new CominsXlsxError("INVALID_WORKBOOK"); }
+  try { parser.parse(text); } catch (error) { if (error instanceof CominsXlsxError) throw error; throw new CominsXlsxError("INVALID_WORKBOOK"); }
   if (!sawRoot) throw new CominsXlsxError("INVALID_WORKBOOK");
   return root;
 }

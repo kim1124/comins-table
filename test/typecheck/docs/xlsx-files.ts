@@ -3,6 +3,8 @@ type Row = { id: string; score: number; active: boolean };
 async function roundTrip() {
   const bytes = await exportCominsRowsToXlsx<Row>({
     rows: [{ id: "001", score: 0, active: false }],
+    styles: { header: { backgroundColor: "#1D4ED8", textColor: "#FFFFFF" },
+      columns: { score: { width: 16, body: { format: "#,##0.00", align: "right" } } } },
     columns: [
       { id: "id", value: row => row.id },
       { id: "score", value: row => row.score },

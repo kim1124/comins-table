@@ -31,15 +31,17 @@ try {
   const installed = resolve(directory,'node_modules/comins-table');
   negative(resolve(installed,'dist/xlsx.d.ts'),tsc,['-p','tsconfig.json'],/comins-table\/xlsx/);
   negative(resolve(installed,'dist/xlsx.js'),process.execPath,['runtime.mjs'],/xlsx\.js|ERR_MODULE_NOT_FOUND/);
+  negative(resolve(directory,'node_modules/write-excel-file'),process.execPath,['runtime.mjs'],/write-excel-file|ERR_MODULE_NOT_FOUND/);
+  negative(resolve(directory,'node_modules/@federicocarboni/saxe'),process.execPath,['runtime.mjs'],/saxe|ERR_MODULE_NOT_FOUND/);
   negative(resolve(directory,'node_modules/xlsx'),process.execPath,['runtime.mjs'],/xlsx|ERR_MODULE_NOT_FOUND/);
   run(tsc,['-p','tsconfig.json']); run(process.execPath,['runtime.mjs']);
   writeFileSync(resolve(directory,'boundary-entry.ts'),"import * as Core from 'comins-table/core'; import * as Table from 'comins-table'; console.log(Core,Table);");
-  writeFileSync(resolve(directory,'vite.boundary.config.mjs'),`export default { build: { outDir:'boundary-dist', lib:{entry:'boundary-entry.ts',formats:['es']} }, plugins:[{name:'xlsx-boundary',generateBundle(){for(const id of this.getModuleIds()) if(['xlsx','saxes','xmlchars','@zip.js'].some(name=>id.includes('/node_modules/'+name+'/'))) throw new Error('XLSX_ENGINE_BOUNDARY');}}] };`);
+  writeFileSync(resolve(directory,'vite.boundary.config.mjs'),`export default { build: { outDir:'boundary-dist', lib:{entry:'boundary-entry.ts',formats:['es']} }, plugins:[{name:'xlsx-boundary',generateBundle(){for(const id of this.getModuleIds()) if(['xlsx','@federicocarboni/saxe','write-excel-file','fflate','@zip.js'].some(name=>id.includes('/node_modules/'+name+'/'))) throw new Error('XLSX_ENGINE_BOUNDARY');}}] };`);
   run(vite,['build','--config','vite.boundary.config.mjs']);
   const coreFile=resolve(installed,'dist/core.js'); const originalCore=readFileSync(coreFile,'utf8');
   try { writeFileSync(coreFile,"import 'xlsx';\n"+originalCore); const r=command(vite,['build','--config','vite.boundary.config.mjs']); assert.ok(r.status>0); assert.match(r.stdout+r.stderr,/XLSX_ENGINE_BOUNDARY/); console.log('Negative control: engine leak into Core rejected'); } finally { writeFileSync(coreFile,originalCore); }
   run(vite,['build','--config','vite.boundary.config.mjs']);
-  writeFileSync(resolve(directory,'index.html'),'<div id="app"></div><output id="worker-result"></output><script type="module" src="/browser.ts"></script>');
+  writeFileSync(resolve(directory,'index.html'),`<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'"><div id="app"></div><output id="worker-result"></output><script type="module" src="/browser.ts"></script>`);
   writeFileSync(resolve(directory,'vite.config.mjs'),'export default { build: { sourcemap:true } };');
   run(vite,['build']);
   server=spawn(vite,['preview','--host','127.0.0.1','--port','4043','--strictPort'],{cwd:directory,env,stdio:['ignore','pipe','pipe']});

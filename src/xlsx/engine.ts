@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import type { CominsXlsxCellValue, CominsXlsxImportRow, PreparedXlsxSheet, PreparedXlsxValue, XlsxCellDescriptor } from "../core/editing/xlsx-model";
+import type { CominsXlsxCellValue, CominsXlsxImportRow, XlsxCellDescriptor } from "../core/editing/xlsx-model";
 import { normalizeCominsXlsxCell } from "../core/editing/xlsx-data";
 import { CominsXlsxError, rethrowXlsxDataError } from "./errors";
 import { cellAddress, type XlsxCellMetadata, type XlsxSheetMetadata } from "./workbook";
@@ -82,22 +82,4 @@ export async function decodeCominsXlsxRows(container: VerifiedXlsxContainer, met
   } catch (error) { rethrowXlsxDataError(error); }
   const headers = hasHeader && values.length ? values.shift()!.map(v => v === null ? "" : String(v)) : null;
   return values.map((cells, rowIndex) => ({ cells, headers, rowIndex, sheetRowNumber: rowIndex + (hasHeader ? 2 : 1) }));
-}
-function exportCell(value: PreparedXlsxValue): XLSX.CellObject | undefined {
-  if (value === null) return undefined;
-  if (typeof value === "string") return { t: "s", v: value };
-  if (typeof value === "number") return { t: "n", v: value };
-  if (typeof value === "boolean") return { t: "b", v: value };
-  const [year, month, day, hours, minutes, seconds, ms] = value.utc;
-  const timestamp = Date.UTC(year, month-1, day, hours, minutes, seconds, ms);
-  let serial = (timestamp - Date.UTC(1899, 11, 30)) / DAY;
-  if (timestamp < Date.UTC(1900, 2, 1)) serial--;
-  return { t: "n", v: serial, z: "yyyy-mm-dd hh:mm:ss.000" };
-}
-export function encodeCominsXlsxRows(prepared: PreparedXlsxSheet, name: string): Uint8Array {
-  const sheet: XLSX.WorkSheet = { "!ref": `A1:${cellAddress(prepared.rows.length+1, prepared.headers.length)}` };
-  [prepared.headers, ...prepared.rows].forEach((row, index) => row.forEach((value, col) => { const cell = exportCell(value); if (cell) sheet[cellAddress(index+1, col+1)] = cell; }));
-  const book = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book, sheet, name);
-  try { return new Uint8Array(XLSX.write(book, { type: "array", bookType: "xlsx", compression: true, bookSST: false })); }
-  catch { throw new CominsXlsxError("INVALID_WORKBOOK"); }
 }

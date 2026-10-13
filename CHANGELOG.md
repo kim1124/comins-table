@@ -2,6 +2,11 @@
 
 ## Unreleased — XLSX (0.2.2 candidate)
 
+- Playground: display complete remote-loading responses and CSV/XLSX datasets, start file examples with 1000 rows, and reset article scrolling on page navigation.
+
+- Add framework-neutral Excel Export styles: a default Comins theme, plain mode and header/body/column overrides for fonts, colors, borders, alignment, widths and number formats.
+- Replace the XML parser and Export engine while preserving typed Import, literal text and byte-only package boundaries.
+
 - Add `comins-table/xlsx` byte APIs for typed ordinary-row import/export, cached formula results and formatted dates.
 - Validate actual inflated ZIP bytes/CRC, visible sheet selection and atomic mapping; add Worker-based Playground with cancellation and bounded preview.
 

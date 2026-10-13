@@ -16,10 +16,35 @@ export type CominsXlsxImportOptions<TData> = {
   mapRow: (row: CominsXlsxImportRow) => TData;
 };
 export type CominsXlsxInspectOptions = Pick<CominsXlsxImportOptions<unknown>, "bytes" | "limits">;
+/** Framework-neutral XLSX styles; no CSS, HTML, formula or vendor objects. */
+export type CominsXlsxCellStyle = {
+  fontFamily?: string;
+  fontSize?: number;
+  fontWeight?: "bold";
+  fontStyle?: "italic";
+  textColor?: string;
+  backgroundColor?: string;
+  borderColor?: string;
+  borderStyle?: "thin" | "medium" | "thick";
+  align?: "left" | "center" | "right";
+  alignVertical?: "top" | "center" | "bottom";
+  wrap?: boolean;
+  format?: string;
+};
+export type CominsXlsxExportStyles = {
+  theme?: "comins" | "plain";
+  header?: CominsXlsxCellStyle;
+  body?: CominsXlsxCellStyle;
+  headerHeight?: number;
+  rowHeight?: number;
+  /** Keys are column ids, independent of exported column order. Width is in characters. */
+  columns?: Readonly<Record<string, { width?: number; header?: CominsXlsxCellStyle; body?: CominsXlsxCellStyle }>>;
+};
 export type CominsXlsxExportOptions<TData> = Omit<CominsExportRowsOptions<TData>, "metadata"> & {
   metadata?: never;
   sheetName?: string;
   maxCells?: number;
+  styles?: CominsXlsxExportStyles;
 };
 export type CominsXlsxSheetInfo = { name: string; visibility: "visible" | "hidden" | "veryHidden" };
 export type CominsXlsxWorkbookInfo = { sheets: readonly CominsXlsxSheetInfo[] };

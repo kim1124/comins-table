@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { BlobReader, TextWriter, ZipReader } from "@zip.js/zip.js";
 import { expect, test } from "@playwright/test";
 // @ts-expect-error Owned OOXML fixture writer.
 import { fixture } from "../../fixtures/xlsx/build-fixtures.mjs";
@@ -80,13 +82,34 @@ test("client route unmount terminates pending Worker without a late download", a
   await page.waitForFunction(()=>(window as any).xlsxWorkers.delivered > 0);
   expect(await page.evaluate(()=>(window as any).xlsxWorkers.active)).toBe(0); expect(downloads).toEqual([]);
 });
-test("XLSX workload keeps preview bounded @perf", async ({ page }) => {
+test("XLSX workload reaches all rows with bounded DOM @perf", async ({ page }) => {
   await page.goto("/examples/export"); const sample = page.locator(sampleSelector);
   await sample.getByRole("button", { name: "10000행 예제" }).click();
-  await expect(sample.getByRole("status")).toContainText("10000"); await expect(sample.getByTestId("xlsx-file-preview").locator("tbody tr[data-comins-row-data-index]")).toHaveCount(100);
+  await expect(sample.getByRole("status")).toContainText("10000"); const viewport = sample.getByTestId("xlsx-file-preview");
+  await viewport.evaluate(el => { el.scrollTop = el.scrollHeight; el.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  await expect(viewport.getByTestId("row-10000")).toBeVisible();
+  expect(await viewport.locator("tbody tr[data-comins-row-data-index]").count()).toBeLessThan(80);
   const started = Date.now(); const downloadEvent = page.waitForEvent("download"); await sample.getByRole("button", { name: "XLSX 다운로드", exact: true }).click(); const path = await (await downloadEvent).path(); const exported = Date.now() - started;
   const importing = Date.now(); await sample.getByLabel("XLSX 파일 가져오기").setInputFiles(path!); await expect(sample.getByRole("status")).toContainText("가져오기 완료");
   await expect(sample.getByTestId("xlsx-file-model")).toHaveAttribute("data-total-rows", "10000");
-  await expect(sample.getByTestId("xlsx-file-preview").locator("tbody tr[data-comins-row-data-index]")).toHaveCount(100);
-  console.log(JSON.stringify({ rows: 10000, preview: 100, exportMs: exported, importMs: Date.now()-importing }));
+  await viewport.evaluate(el => { el.scrollTop = el.scrollHeight; el.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  await expect(viewport.getByTestId("row-10000")).toBeVisible();
+  expect(await viewport.locator("tbody tr[data-comins-row-data-index]").count()).toBeLessThan(80);
+  console.log(JSON.stringify({ rows: 10000, displayedRows: 10000, exportMs: exported, importMs: Date.now()-importing }));
+});
+
+test("custom Excel styles reach the downloaded workbook without changing values", async ({ page }) => {
+  await page.goto("/examples/export"); const sample = page.locator(sampleSelector);
+  const initial = await sample.getByTestId("xlsx-file-model").textContent();
+  await sample.getByLabel("Excel 스타일").selectOption("custom");
+  const event = page.waitForEvent("download"); await sample.getByRole("button", { name: "XLSX 다운로드", exact: true }).click();
+  const path = await (await event).path();
+  const reader = new ZipReader(new BlobReader(new Blob([await readFile(path!) as Uint8Array<ArrayBuffer>])));
+  try {
+    const entries = await reader.getEntries(); const style = entries.find(e => e.filename === "xl/styles.xml")!;
+    expect(await style.getData!(new TextWriter())).toContain("1D4ED8");
+  } finally { await reader.close(); }
+  await sample.getByLabel("XLSX 파일 가져오기").setInputFiles(path!);
+  await expect(sample.getByRole("status")).toContainText("가져오기 완료");
+  await expect(sample.getByTestId("xlsx-file-model")).toHaveText(initial!);
 });
