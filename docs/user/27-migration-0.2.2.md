@@ -2,7 +2,7 @@
 
 [Documentation](../README.md) · [English guides](README.md) · [한국어](../ko/27-migration-0.2.2.md) · [Cell Playground](http://127.0.0.1:4002/examples/cell) · [Changelog](../../CHANGELOG.md)
 
-This guide describes the upcoming 0.2.2 development changes. The published 0.2.1 package does not support the new paths yet. UI customization uses `render` for both elements and components. These are adapter options; `/core` remains framework-neutral.
+This guide describes the 0.2.2 changes. Earlier 0.2.1 installations do not support the new paths. UI customization uses `render` for both elements and components. These are adapter options; `/core` remains framework-neutral.
 
 | Legacy property | Standard property |
 | --- | --- |
@@ -53,7 +53,7 @@ Render callbacks are ordinary functions. Return `<StatusBadge />` so React runs 
 
 Custom tooltips support hover, cell focus, Escape and pointer movement onto the tooltip. Scroll, resize, cell removal/reuse and unmount clear the tooltip and aria-describedby relationship. They use role=tooltip and are informational; focusable buttons/forms belong in a separate application popover. Native title and custom tooltips are not displayed together.
 
-The planned value-list filter paths `filter.trigger.render`, `filter.option.render`, and `filter.panel.render` require separate filter implementation and are not available in this development change. Excel/CSV and official Vue support have separate scope and completion checks.
+Value-list filter customization and XLSX files are described below. Official Vue Table UI support remains planned for 0.3.0.
 
 ## New value list filters
 
@@ -61,4 +61,4 @@ The planned value-list filter paths `filter.trigger.render`, `filter.option.rend
 
 ## XLSX files
 
-The unpublished 0.2.2 candidate adds `comins-table/xlsx` for typed ordinary-row import/export. Engines install with the package; existing root/Core APIs remain independent. See [file APIs](14-export.md#xlsx-022-candidate) for cached formula, date, sheet, budget and Worker contracts.
+0.2.2 adds `comins-table/xlsx` for typed ordinary-row import/export. Engines install with the package; existing root/Core APIs remain independent. See [file APIs](14-export.md#xlsx-022-candidate) for cached formula, date, sheet, budget and Worker contracts.

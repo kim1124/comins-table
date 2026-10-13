@@ -2,7 +2,7 @@
 
 <a href="https://comins-website.vercel.app/ko/"><img src="https://raw.githubusercontent.com/kim1124/comins-table/main/example/public/comins-symbol.svg" width="64" height="64" alt="Comins brand website" /></a>
 
-A React data table backed by a framework-neutral TypeScript core. Build data-heavy screens with application-owned data, virtualized rows, Tree Grid, grouping, and customizable cells.
+A React data table backed by the framework-neutral TypeScript `comins-table/core`. Build data-heavy screens with application-owned data, virtualized rows, Tree Grid, grouping, and customizable cells.
 
 [![npm version](https://img.shields.io/npm/v/comins-table)](https://www.npmjs.com/package/comins-table)
 [![TypeScript declarations](https://img.shields.io/npm/types/comins-table)](https://www.npmjs.com/package/comins-table)
@@ -14,7 +14,7 @@ A React data table backed by a framework-neutral TypeScript core. Build data-hea
 · [Comins Brand](https://comins-website.vercel.app/ko/)
 · [Changelog](https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md)
 
-Upcoming 0.2.2: standard `render` customization with 0.x compatibility. [한국어 전환 안내](https://github.com/kim1124/comins-table/blob/main/docs/ko/27-migration-0.2.2.md) · [English migration](https://github.com/kim1124/comins-table/blob/main/docs/user/27-migration-0.2.2.md).
+0.2.2: standard `render` customization with 0.x compatibility, value list filters, and styled Excel import/export. [한국어 전환 안내](https://github.com/kim1124/comins-table/blob/main/docs/ko/27-migration-0.2.2.md) · [English migration](https://github.com/kim1124/comins-table/blob/main/docs/user/27-migration-0.2.2.md).
 
 ![Comins Table: clipboard and Fill Handle, Tree drag, automatic row heights, and Viewport loading](https://raw.githubusercontent.com/kim1124/comins-table/main/docs/assets/comins-table-overview.gif)
 
@@ -93,7 +93,7 @@ Open [the Playground](http://127.0.0.1:4002/docs/getting-started). The [Playgrou
 
 ## Version and support
 
-**0.2.1** adds framework-neutral CSV import, Tree/Group export metadata, and React Tree node slots. The framework-neutral `comins-table/core` contract introduced in 0.2.0 remains compatible; React helpers and rendering types stay at `comins-table`, while `/clipboard` and `/selection` retain their React-state contracts. See the migration guides above and the [changelog](https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md) for version history.
+**0.2.2** adds standard `render` customization, customizable value list filters, and framework-neutral Excel import/export with export styles. Existing 0.x rendering aliases remain compatible until 1.0.0. See the migration guides above and the [changelog](https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md) for version history.
 
 The Table UI is client-only React; SSR and a Vue adapter are not currently supported. Chrome and Edge are the supported browser targets, with automated browser checks using Playwright Chromium. Firefox and Safari are outside the current support contract. Feature combinations and limits are documented in the corresponding guides.
 

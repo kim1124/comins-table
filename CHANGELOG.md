@@ -1,6 +1,6 @@
 # Comins Table
 
-## Unreleased — XLSX (0.2.2 candidate)
+## 0.2.2 - 2026-10-13
 
 - Playground: display complete remote-loading responses and CSV/XLSX datasets, start file examples with 1000 rows, and reset article scrolling on page navigation.
 
@@ -8,15 +8,15 @@
 - Replace the XML parser and Export engine while preserving typed Import, literal text and byte-only package boundaries.
 
 - Add `comins-table/xlsx` byte APIs for typed ordinary-row import/export, cached formula results and formatted dates.
-- Validate actual inflated ZIP bytes/CRC, visible sheet selection and atomic mapping; add Worker-based Playground with cancellation and bounded preview.
+- Validate actual inflated ZIP bytes/CRC, visible sheet selection and atomic mapping; add Worker-based Playground with cancellation and full virtualized datasets.
 
-## Unreleased — 0.2.2 value list filtering
+### Value list filtering
 
 - Add framework-neutral value-list filtering, search-scoped selection, other-column facet counts and JSON-compatible controlled models.
 - Add React filter trigger/option/panel render and class/style customization with native/custom control bindings.
 - Preserve condition filtering, explicit empty selections and selected values missing from refreshed data; provide bilingual guides and Playground examples.
 
-## Unreleased
+### Rendering customization
 
 ### Added
 

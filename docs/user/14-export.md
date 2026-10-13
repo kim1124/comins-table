@@ -108,7 +108,7 @@ Both functions return `CominsExportRowsOptions<TData>` for the same CSV and JSON
 
 ## XLSX (0.2.2 candidate)
 
-`comins-table/xlsx` provides `inspectCominsXlsx`, `importCominsRowsFromXlsx` and `exportCominsRowsToXlsx`. The engines are included in installation but imported only through this entry. These APIs are implemented for the unpublished 0.2.2 candidate and are not part of the published 0.2.1 API. Import preserves string, number, boolean and null values including cached formula results. Dates use file formats; default date format 14 becomes `yyyy-mm-dd`. No formula recalculation or Tree/Group hierarchy support is provided.
+`comins-table/xlsx` provides `inspectCominsXlsx`, `importCominsRowsFromXlsx` and `exportCominsRowsToXlsx`. The engines are included in installation but imported only through this entry. These APIs are available from 0.2.2 and are not part of the 0.2.1 API. Import preserves string, number, boolean and null values including cached formula results. Dates use file formats; default date format 14 becomes `yyyy-mm-dd`. No formula recalculation or Tree/Group hierarchy support is provided.
 
 <!-- comins-doc-example: compile=xlsx-files -->
 ```ts
@@ -161,7 +161,7 @@ Both Transitional and Strict OOXML namespaces are supported. At the final day `9
 
 Unselected XML uses validation without retaining node trees. Retained workbook/style/selected-sheet metadata is limited to `max(1_000_000, 8 * maxCells)` nodes per XML document before allocating another node; increase `maxCells` explicitly only for trusted complex metadata. This structural guard is separate from the selected rectangular cell quota and also protects inspect. Overlapping formula ranges are invalid and fail before repeated traversal.
 
-The 0.2.2 candidate CSV and Excel file samples include **1000-row** and **10000-row** buttons. Select a size, download the complete file, reset, and import that file to verify the full row count. Samples start with 1000 rows. Tables receive all 1000 or 10000 rows and use virtual scrolling to reach the last row without creating every row DOM node at once. CSV text output also includes every row. CSV uses synchronous Core conversion; XLSX conversion runs in a dedicated Worker.
+The 0.2.2 CSV and Excel file samples include **1000-row** and **10000-row** buttons. Select a size, download the complete file, reset, and import that file to verify the full row count. Samples start with 1000 rows. Tables receive all 1000 or 10000 rows and use virtual scrolling to reach the last row without creating every row DOM node at once. CSV text output also includes every row. CSV uses synchronous Core conversion; XLSX conversion runs in a dedicated Worker.
 
 ### Excel Export styles
 

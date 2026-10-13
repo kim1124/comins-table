@@ -108,7 +108,7 @@ const groupedCsv = exportCominsRowsToCsv(createCominsGroupedExportOptions({
 
 ## XLSX (0.2.2 candidate)
 
-`comins-table/xlsx`는 `inspectCominsXlsx`, `importCominsRowsFromXlsx`, `exportCominsRowsToXlsx`를 제공합니다. 엔진은 기본 설치에 포함되지만 이 진입점에서만 로딩합니다. 미발행 0.2.2 후보에 구현된 API이며 발행된 0.2.1 API에는 포함되지 않습니다. 일반 값과 수식 캐시의 문자열·숫자·boolean·null 타입을 유지하며 날짜는 파일 서식을 사용하고 기본 날짜 서식 14는 `yyyy-mm-dd`로 고정합니다. 수식 재계산과 Tree/Group 계층 복원은 지원하지 않습니다.
+`comins-table/xlsx`는 `inspectCominsXlsx`, `importCominsRowsFromXlsx`, `exportCominsRowsToXlsx`를 제공합니다. 엔진은 기본 설치에 포함되지만 이 진입점에서만 로딩합니다. 0.2.2부터 지원하는 API이며 0.2.1 API에는 포함되지 않습니다. 일반 값과 수식 캐시의 문자열·숫자·boolean·null 타입을 유지하며 날짜는 파일 서식을 사용하고 기본 날짜 서식 14는 `yyyy-mm-dd`로 고정합니다. 수식 재계산과 Tree/Group 계층 복원은 지원하지 않습니다.
 
 <!-- comins-doc-example: compile=xlsx-files -->
 ```ts
@@ -161,7 +161,7 @@ Transitional·Strict OOXML namespace를 모두 지원합니다. 마지막 날짜
 
 선택하지 않은 XML은 노드 트리를 보관하지 않고 검증합니다. Workbook·스타일·선택 시트 메타데이터는 XML 문서별 `max(1_000_000, 8 * maxCells)` 노드로 제한하고 다음 객체 생성 전에 검사합니다. 신뢰할 수 있는 복잡한 메타데이터에서만 `maxCells`를 명시적으로 올릴 수 있습니다. 이 구조 제한은 선택 시트의 직사각형 셀 수와 별개이며 inspect에도 적용합니다. 서로 겹치는 수식 범위는 잘못된 파일로 거절하고 중복 순회하지 않습니다.
 
-0.2.2 후보의 CSV·Excel 파일 예제에는 **1000행 예제**, **10000행 예제** 버튼을 제공합니다. 크기를 선택해 전체 파일을 다운로드한 후 초기화하고 해당 파일을 가져오면 전체 행 수를 확인할 수 있습니다. 기본 1000행으로 시작하며 표에 1000·10000행 전체를 전달합니다. 가상 스크롤로 마지막 행까지 접근하며 DOM 노드는 화면 주변 행만 생성합니다. CSV 텍스트 출력에도 전체 행을 포함합니다. CSV 변환은 동기 Core 헬퍼를 사용하고 XLSX 변환은 전용 Worker에서 수행합니다.
+0.2.2의 CSV·Excel 파일 예제에는 **1000행 예제**, **10000행 예제** 버튼을 제공합니다. 크기를 선택해 전체 파일을 다운로드한 후 초기화하고 해당 파일을 가져오면 전체 행 수를 확인할 수 있습니다. 기본 1000행으로 시작하며 표에 1000·10000행 전체를 전달합니다. 가상 스크롤로 마지막 행까지 접근하며 DOM 노드는 화면 주변 행만 생성합니다. CSV 텍스트 출력에도 전체 행을 포함합니다. CSV 변환은 동기 Core 헬퍼를 사용하고 XLSX 변환은 전용 Worker에서 수행합니다.
 
 ### Excel Export 스타일
 

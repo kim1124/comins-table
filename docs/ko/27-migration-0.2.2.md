@@ -2,7 +2,7 @@
 
 [문서 홈](../README.md) · [한국어 가이드](README.md) · [English](../user/27-migration-0.2.2.md) · [Cell Playground](http://127.0.0.1:4002/examples/cell) · [변경 기록](../../CHANGELOG.md)
 
-이 문서는 예정된 0.2.2 개발 변경을 설명합니다. 배포된 0.2.1은 아직 새 경로를 지원하지 않습니다. 요소와 컴포넌트 모두 UI 커스터마이징 진입점으로 `render`를 사용합니다. 이 설정은 어댑터에 속하며 `/core`는 프레임워크 중립 경계를 유지합니다.
+이 문서는 0.2.2 변경을 설명합니다. 이전 0.2.1 설치에는 새 경로가 포함되지 않습니다. 요소와 컴포넌트 모두 UI 커스터마이징 진입점으로 `render`를 사용합니다. 이 설정은 어댑터에 속하며 `/core`는 프레임워크 중립 경계를 유지합니다.
 
 | 기존 속성 | 표준 속성 |
 | --- | --- |
@@ -53,7 +53,7 @@ export function RenderingExample() {
 
 hover·셀 포커스·Escape·툴팁 표면으로의 포인터 이동을 지원합니다. 스크롤·크기 변경·셀 제거/재사용·unmount 시 툴팁과 aria-describedby를 정리합니다. role=tooltip을 사용하며 정보 표시용입니다. 포커스가 필요한 버튼/폼은 별도 애플리케이션 팝오버로 구성하십시오. 네이티브 title과 커스텀 툴팁은 중복 표시하지 않습니다.
 
-값 목록 필터의 예정된 `filter.trigger.render`, `filter.option.render`, `filter.panel.render`는 별도 필터 구현이 필요하며 이번 개발 변경에서 사용할 수 없습니다. Excel/CSV와 공식 Vue 지원도 별도 범위·완료 검증을 따릅니다.
+값 목록 필터 커스터마이징과 XLSX 파일은 아래에서 설명합니다. 공식 Vue Table UI 지원은 0.3.0 예정입니다.
 
 ## 신규 값 목록 필터
 
@@ -61,4 +61,4 @@ hover·셀 포커스·Escape·툴팁 표면으로의 포인터 이동을 지원�
 
 ## XLSX files
 
-미발행 0.2.2 후보는 일반 행 타입을 유지하는 `comins-table/xlsx`를 추가합니다. 엔진은 기본 설치에 포함되고 기존 root/Core API는 독립성을 유지합니다. 수식 캐시·날짜·시트·한도·Worker 계약은 [파일 API](14-export.md#xlsx-022-candidate)를 참고하십시오.
+0.2.2는 일반 행 타입을 유지하는 `comins-table/xlsx`를 추가합니다. 엔진은 기본 설치에 포함되고 기존 root/Core API는 독립성을 유지합니다. 수식 캐시·날짜·시트·한도·Worker 계약은 [파일 API](14-export.md#xlsx-022-candidate)를 참고하십시오.
