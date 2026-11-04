@@ -39,6 +39,59 @@ describe("Browser request executor", () => {
 });
 
 describe("consumer getRows execution", () => {
+  it("finishes cancellation without waiting for a consumer that ignores AbortSignal", async () => {
+    const controller = new AbortController();
+    const remove = vi.spyOn(controller.signal, "removeEventListener");
+    const events: string[] = [];
+    const completed = vi.fn();
+    let finish!: (rows: readonly number[]) => void;
+    const pending = browser().runViewportRequest({
+      request: { ...descriptor(), signal: controller.signal },
+      getRows: () => new Promise<readonly number[]>(resolve => { finish = resolve; }),
+      dispatch: event => { events.push(event.type); },
+    }).then(completed);
+    controller.abort();
+    await flush();
+    try {
+      expect(completed).toHaveBeenCalledTimes(1);
+      expect(remove).toHaveBeenCalledTimes(1);
+      expect(events).toEqual(["request", "cancel"]);
+    } finally {
+      finish([1, 2]);
+      await pending;
+    }
+    expect(events).toEqual(["request", "cancel"]);
+  });
+
+  it("does not start consumer work when request dispatch synchronously aborts", async () => {
+    const controller = new AbortController();
+    const getRows = vi.fn(() => [1, 2]);
+    const events: string[] = [];
+    await browser().runViewportRequest({
+      request: { ...descriptor(), signal: controller.signal },
+      getRows,
+      dispatch: event => { events.push(event.type); if (event.type === "request") controller.abort(); },
+    });
+    expect(getRows).not.toHaveBeenCalled();
+    expect(events).toEqual(["request", "cancel"]);
+  });
+
+  it("consumes a late source rejection without dispatching error after cancellation", async () => {
+    const controller = new AbortController();
+    const events: string[] = [];
+    let rejectSource!: (error: Error) => void;
+    const pending = browser().runViewportRequest({
+      request: { ...descriptor(), signal: controller.signal },
+      getRows: () => new Promise<readonly number[]>((_resolve, reject) => { rejectSource = reject; }),
+      dispatch: event => { events.push(event.type); },
+    });
+    controller.abort();
+    await pending;
+    rejectSource(new Error("late source failure"));
+    await flush();
+    expect(events).toEqual(["request", "cancel"]);
+  });
+
   it("dispatches sync success and removes its abort listener", async () => {
     const controller = new AbortController();
     const remove = vi.spyOn(controller.signal, "removeEventListener");

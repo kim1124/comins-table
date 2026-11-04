@@ -100,13 +100,14 @@ export function reduceCominsViewportData<T>(data: CominsViewportData<T>, event: 
     return trim({ ...data, changes: [], retainRange: request.retainRange, requests: [...data.requests.filter(entry => entry.startIndex !== request.startIndex), { startIndex: request.startIndex, endIndex: request.endIndex, requestId: request.requestId, status: "loading", version: data.version }] });
   }
   if (!previous || previous.requestId !== request.requestId) return data;
+  // 종료된 요청의 보호가 사라진 snapshot에는 캐시 한도를 다시 적용한다.
   const requests = data.requests.filter(entry => entry !== previous);
-  if (event.type === "cancel") return { ...data, changes: [], requests };
+  if (event.type === "cancel") return trim({ ...data, changes: [], requests });
   if (event.type === "error" || !Array.isArray(event.rows) || event.rows.length !== request.endIndex - request.startIndex || Array.from(event.rows).some(row => row === undefined || row === null)) {
     return trim({ ...data, changes: [], requests: [...requests, { ...previous, status: "error" }] });
   }
   const currentBlock = data.blocks.find(block => block.startIndex === request.startIndex);
-  if (currentBlock && currentBlock.version > previous.version) return { ...data, changes: [], requests };
+  if (currentBlock && currentBlock.version > previous.version) return trim({ ...data, changes: [], requests });
   const clock = data.clock + 1;
   return trim({ ...data, changes: [], clock, requests, blocks: [...data.blocks.filter(block => block.startIndex !== request.startIndex), { startIndex: request.startIndex, rows: [...event.rows], touched: clock, version: data.version }] });
 }

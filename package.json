@@ -1,6 +1,6 @@
 {
   "name": "comins-table",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "keywords": [
     "react",
     "typescript",
@@ -39,7 +39,7 @@
     "test:core-boundary-checker": "node --test test/core-boundary-checker.node.mjs test/core-package-gate.node.mjs",
     "test:core-consumer": "node scripts/check-core-boundary.mjs",
     "test:e2e": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep-invert @perf",
-    "test:perf": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep @perf",
+    "test:perf": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep @perf --trace=off",
     "test:run": "vitest run",
     "test:licenses": "node --test test/license-gates.node.mjs",
     "test:security": "node --test test/sensitive-data-gates.node.mjs test/package-artifact-gate.node.mjs test/npm-maintainer-gate.node.mjs",
@@ -97,6 +97,8 @@
     "@vitejs/plugin-react": "^6.1.2",
     "jsdom": "^30.1.1",
     "prism-react-renderer": "^2.4.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "react-router": "^8.4.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",

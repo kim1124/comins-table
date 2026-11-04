@@ -45,6 +45,7 @@ function collectBrowserDiagnostics(page: Page) {
 }
 
 async function readDevtoolsAuditSnapshot(page: Page, step: string): Promise<DevtoolsAuditSnapshot> {
+  await page.locator("body").evaluateAll((elements) => elements.length);
   const session = await page.context().newCDPSession(page);
 
   await session.send("HeapProfiler.enable");
@@ -558,4 +559,40 @@ test("full audit keeps feature lifecycle counters within 10 percent @perf", asyn
   };
 
   await runMemoryScenario(page, testInfo, "feature-lifecycle", exercise, 90_000, exercise);
+});
+
+test("full audit keeps selector tool initialization outside measurements @perf", async ({ page, browser }, testInfo) => {
+  await page.goto("/");
+  // Wait for Start without bootstrapping Playwright's main-world selector helper.
+  await page.evaluate(async () => {
+    for (let frame = 0; frame < 600; frame += 1) {
+      if (document.querySelector('[data-testid="feature-content"]')?.getAttribute("data-feature") === "basic"
+        && document.querySelectorAll(".comins-table__body-table tbody tr[data-comins-row-data-index]").length === 30) {
+        return;
+      }
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    }
+    throw new Error("Start table did not become ready");
+  });
+  const beforeIdentity = await page.evaluate(() => ({ url: location.href, timeOrigin: performance.timeOrigin }));
+  const before = await readDevtoolsAuditSnapshot(page, "selector-tool:before");
+
+  const bodyCount = await page.locator("body").evaluateAll((elements) => elements.length);
+
+  const after = await readDevtoolsAuditSnapshot(page, "selector-tool:after");
+  const afterIdentity = await page.evaluate(() => ({ url: location.href, timeOrigin: performance.timeOrigin }));
+  const heapGrowthPercent = 100 * (after.jsHeapUsedSize - before.jsHeapUsedSize) / before.jsHeapUsedSize;
+  const evidence = { before, after, beforeIdentity, afterIdentity, bodyCount, heapGrowthPercent, browserVersion: browser.version(), thresholdPercent: 2 };
+  const artifactPath = testInfo.outputPath("selector-tool-initialization.json");
+  await mkdir(path.dirname(artifactPath), { recursive: true });
+  await writeFile(artifactPath, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");
+  const context = JSON.stringify(evidence, null, 2);
+
+  expect(bodyCount, context).toBe(1);
+  expect(afterIdentity, context).toEqual(beforeIdentity);
+  for (const key of ["nodes", "jsEventListeners", "liveElementCount", "documents", "renderedRows", "observedDetailTargets"] as const) {
+    expect.soft(after[key], context).toBe(before[key]);
+  }
+  expect(before.jsHeapUsedSize, context).toBeGreaterThan(0);
+  expect.soft(heapGrowthPercent, context).toBeLessThan(2);
 });

@@ -1,10 +1,10 @@
 # English Feature Guides
 
-Upcoming 0.2.2: [render API migration](27-migration-0.2.2.md), with legacy compatibility throughout 0.x. Development examples may require 0.2.2.
+0.2.3 is a maintenance update for lifecycle cleanup, Viewport cancellation, scrolling, and rendering costs. The [0.2.2 render API migration](27-migration-0.2.2.md) and legacy compatibility throughout 0.x remain unchanged.
 
-These guides target 0.2.1, including CSV import, structured export, Tree slots, opt-in TSV paste, and Fill Handle. [Export](14-export.md) · [Tree Grid](17-tree-grid.md) · [Clipboard and Fill](09-clipboard.md).
+These guides target 0.2.3, including CSV import, structured export, Tree slots, opt-in TSV paste, and Fill Handle. [Export](14-export.md) · [Tree Grid](17-tree-grid.md) · [Clipboard and Fill](09-clipboard.md).
 
-The [0.2.0 Core migration](26-migration-0.2.0.md) explains the neutral Core contract that remains in effect for 0.2.1. React UI contracts remain compatible.
+The [0.2.0 Core migration](26-migration-0.2.0.md) explains the neutral Core contract that remains in effect for 0.2.x. React UI contracts remain compatible.
 
 [Documentation home](../README.md) · [한글 가이드](../ko/README.md) · [Playground](http://127.0.0.1:4002/docs/getting-started)
 

@@ -125,9 +125,55 @@ export function normalizeColumnOrder<TData>(
   layout?: Partial<CominsColumnLayout>,
   columnGroups: ReadonlyArray<CominsTableRuntimeColumnGroup> = [],
 ) {
-  const knownIds = new Set(columns.map((column) => column.id));
+  if (layout?.order?.length) {
+    return normalizeRequestedColumnOrder(columns, layout, columnGroups);
+  }
+
+  const declaredOrder = columns.map((column) => column.id);
+
+  if (columnGroups.length === 0) {
+    return declaredOrder;
+  }
+
+  const groupIdByColumnId = getColumnGroupIdMap(columnGroups);
+  const groupById = new Map(columnGroups.map((group) => [group.id, group]));
+  const emittedGroups = new Set<string>();
+  const groupedOrder: string[] = [];
+
+  for (const columnId of declaredOrder) {
+    const groupId = groupIdByColumnId.get(columnId);
+    const group = groupId ? groupById.get(groupId) : undefined;
+
+    if (!groupId || !group) {
+      groupedOrder.push(columnId);
+      continue;
+    }
+
+    if (emittedGroups.has(groupId)) {
+      continue;
+    }
+
+    for (const childId of declaredOrder) {
+      if (group.children.includes(childId)) {
+        groupedOrder.push(childId);
+      }
+    }
+
+    emittedGroups.add(groupId);
+  }
+
+  return groupedOrder;
+}
+
+function normalizeRequestedColumnOrder<TData>(
+  columns: ReadonlyArray<CominsTableRuntimeColumn<TData>>,
+  layout?: Partial<CominsColumnLayout>,
+  columnGroups: ReadonlyArray<CominsTableRuntimeColumnGroup> = [],
+) {
+  const declaredOrder = columns.map((column) => column.id);
+  const knownIds = new Set(declaredOrder);
   const ordered = (layout?.order ?? []).filter((id) => knownIds.has(id));
-  const missing = columns.map((column) => column.id).filter((id) => !ordered.includes(id));
+  const missing = declaredOrder.filter((id) => !ordered.includes(id));
   const flatOrder = [...ordered, ...missing];
   const columnById = new Map(columns.map((column) => [column.id, column]));
   const groupIdByColumnId = getColumnGroupIdMap(columnGroups);
@@ -199,7 +245,7 @@ export function normalizeColumnOrder<TData>(
 
     return entities;
   };
-  const declaredEntities = createEntities(columns.map((column) => column.id));
+  const declaredEntities = createEntities(declaredOrder);
   const proposedEntities = createEntities(flatOrder);
   const declaredEntityByKey = new Map(declaredEntities.map((entity) => [entity.key, entity]));
   const declaredSegmentByKey = new Map<string, number>();
@@ -702,7 +748,6 @@ export function getCominsHeaderRows<TData>(state: CominsTableState<TData>): Arra
     ];
   }
 
-  const visibleColumnIds = new Set(visibleColumns.map((column) => column.id));
   const groupIdByColumnId = getColumnGroupIdMap(state.columnGroups);
   const groupById = new Map(state.columnGroups.map((group) => [group.id, group]));
   const emittedGroups = new Set<string>();

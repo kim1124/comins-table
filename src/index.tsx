@@ -939,6 +939,7 @@ type CominsCommittedDetailObserverSnapshot<TData> = Readonly<{
   contentWidth: number;
   projection: CominsMixedVirtualProjection<TData> | null;
   viewportHeight: number;
+  viewportRetainRange: { startIndex: number; endIndex: number } | null;
 }>;
 
 type CominsVirtualProjection = {
@@ -1300,16 +1301,17 @@ function getRenderableCellStyle<TData>(
   return typeof style === "function" ? style(payload) : style;
 }
 
+const deferredDefaultCellValue = Symbol("deferredDefaultCellValue");
+
 function formatRenderableCellValue<TData>(
   column: CominsTableRuntimeColumn<TData>,
-  rawValue: unknown,
   payload: CominsCellComponentPayload<TData>,
 ) {
   if (column.cell?.format) {
     return column.cell.format(payload);
   }
 
-  return rawValue == null ? "" : String(rawValue);
+  return deferredDefaultCellValue;
 }
 
 function createHeaderComponentPayload<TData>(
@@ -1368,6 +1370,10 @@ function renderCominsComponentSlots<TData>(
   direction: "left" | "right",
   interaction?: CominsBuiltInComponentInteraction,
 ) {
+  if (components === undefined || components === null) {
+    return [];
+  }
+
   return getRenderableCominsComponents(components, payload)
     .map((component, index) => ({ component, index }))
     .filter(({ component }) => (component.direction ?? "left") === direction)
@@ -1382,6 +1388,14 @@ function renderCominsComponentSlots<TData>(
         {renderCominsBuiltInComponent(component as never, payload as never, interaction)}
       </span>
     ));
+}
+
+// 종료된 disclosure ref가 slot과 렌더 컨텍스트를 함께 보유하지 않게 한다.
+function createDisclosureElementRef(elementsRef: TableLifecycleRef<Map<CominsRowId, HTMLButtonElement>>, rowId: CominsRowId) {
+  return (element: HTMLButtonElement | null) => {
+    if (element) elementsRef.current.set(rowId, element);
+    else elementsRef.current.delete(rowId);
+  };
 }
 
 function blockCominsColumnPlaceholderInteraction(event: React.SyntheticEvent<HTMLElement>) {
@@ -1605,6 +1619,160 @@ function setCominsTreeExpansion<TData>(
   return applyChanges(data);
 }
 
+type TableLifecycleRef<T> = { current: T };
+
+type TablePointerGestureCleanup = (unmounting?: boolean) => void;
+
+type ViewportMeasurementResources = {
+  containerRef: TableLifecycleRef<HTMLElement | null>;
+  setContainerHeight: React.Dispatch<React.SetStateAction<number>>;
+  setContainerWidth: React.Dispatch<React.SetStateAction<number>>;
+  setHorizontalScrollContentWidth: React.Dispatch<React.SetStateAction<number>>;
+  setHorizontalViewportOuterWidth: React.Dispatch<React.SetStateAction<number>>;
+  setHorizontalViewportWidth: React.Dispatch<React.SetStateAction<number>>;
+};
+
+type TableUnmountResources = {
+  activePointerGestureCleanupRef: TableLifecycleRef<TablePointerGestureCleanup | null>;
+  detailFocusRestorer: ReturnType<typeof createCominsDetailFocusRestorer>;
+  externalDropMarkerRef: TableLifecycleRef<HTMLElement | null>;
+  transferRejectionTimerRef: TableLifecycleRef<number | null>;
+  transferRejectionTargetRef: TableLifecycleRef<HTMLElement | null>;
+  pendingTransferFocusFrameRef: TableLifecycleRef<number | null>;
+  scrollFrameRef: TableLifecycleRef<number | null>;
+  scrollCommitTimeoutRef: TableLifecycleRef<number | null>;
+};
+
+type DetailObserverResources<TData> = {
+  detailObserverRef: TableLifecycleRef<ReturnType<typeof createMeasurementObserver> | null>;
+  detailElementsRef: TableLifecycleRef<Map<Element, CominsObservedDetail>>;
+  fallbackMeasuredDetailElementsRef: TableLifecycleRef<Set<Element>>;
+  committedDetailObserverSnapshotRef: TableLifecycleRef<CominsCommittedDetailObserverSnapshot<TData> | null>;
+};
+
+type ColumnInteractionResources = {
+  columnPointerInteractionRef: TableLifecycleRef<CominsColumnPointerInteraction | null>;
+  suppressedSortClickRef: TableLifecycleRef<CominsSuppressedSortClick | null>;
+  columnMoveAnimationCleanupRef: TableLifecycleRef<(() => void) | null>;
+  setMovingColumnId: React.Dispatch<React.SetStateAction<string | null>>;
+  setMovingGroupId: React.Dispatch<React.SetStateAction<string | null>>;
+  setColumnMovePointer: React.Dispatch<React.SetStateAction<{ x: number; y: number } | null>>;
+  setColumnMoveTarget: React.Dispatch<React.SetStateAction<CominsColumnMoveTarget | null>>;
+  resetPendingRef: TableLifecycleRef<boolean>;
+};
+
+// Create both effect closures outside render to avoid retaining its initial data context.
+function createViewportMeasurementEffect(resources: ViewportMeasurementResources): React.EffectCallback {
+  return () => {
+    const element = resources.containerRef.current;
+
+    if (!element) {
+      return undefined;
+    }
+
+    return observeCominsViewport(element, measurement => {
+      resources.setContainerHeight(measurement.height);
+      resources.setContainerWidth(measurement.width);
+      resources.setHorizontalScrollContentWidth(measurement.scrollWidth);
+      resources.setHorizontalViewportOuterWidth(measurement.outerWidth);
+      resources.setHorizontalViewportWidth(measurement.viewportWidth);
+    });
+  };
+}
+
+function createTableUnmountEffect(resources: TableUnmountResources): React.EffectCallback {
+  return () => () => {
+    const cleanup = resources.activePointerGestureCleanupRef.current;
+
+    resources.activePointerGestureCleanupRef.current = null;
+    cleanup?.(true);
+    resources.detailFocusRestorer.dispose();
+
+    const marker = resources.externalDropMarkerRef.current;
+
+    if (marker) {
+      marker.removeAttribute("data-comins-cross-row-drop-position");
+      marker.removeAttribute("data-comins-group-drop-position");
+      marker.removeAttribute("data-comins-group-drop-valid");
+      marker.removeAttribute("data-comins-row-drop-valid");
+      resources.externalDropMarkerRef.current = null;
+    }
+
+    if (resources.transferRejectionTimerRef.current !== null) {
+      window.clearTimeout(resources.transferRejectionTimerRef.current);
+      resources.transferRejectionTimerRef.current = null;
+    }
+
+    resources.transferRejectionTargetRef.current?.removeAttribute("data-comins-transfer-rejected");
+    resources.transferRejectionTargetRef.current = null;
+
+    if (resources.pendingTransferFocusFrameRef.current !== null) {
+      window.cancelAnimationFrame(resources.pendingTransferFocusFrameRef.current);
+    }
+
+    if (resources.scrollFrameRef.current !== null) {
+      window.cancelAnimationFrame(resources.scrollFrameRef.current);
+    }
+
+    if (resources.scrollCommitTimeoutRef.current !== null) {
+      window.clearTimeout(resources.scrollCommitTimeoutRef.current);
+    }
+  };
+}
+
+function createDetailObserverCleanupEffect<TData>(resources: DetailObserverResources<TData>): React.EffectCallback {
+  return () => () => {
+    resources.detailObserverRef.current?.dispose();
+    resources.detailObserverRef.current = null;
+    resources.detailElementsRef.current.clear();
+    resources.fallbackMeasuredDetailElementsRef.current.clear();
+    resources.committedDetailObserverSnapshotRef.current = null;
+  };
+}
+
+function createColumnInteractionCleanupEffect(resources: ColumnInteractionResources): React.EffectCallback {
+  return () => {
+    // Activity 등 상태를 보존한 effect 재연결은 DOM이 복구된 뒤, 그리기 전에 초기화한다.
+    if (resources.resetPendingRef.current) {
+      resources.resetPendingRef.current = false;
+      resources.setMovingColumnId(null);
+      resources.setMovingGroupId(null);
+      resources.setColumnMovePointer(null);
+      resources.setColumnMoveTarget(null);
+    }
+
+    return () => {
+      // 실제 언마운트에서는 state를 갱신하지 않고 재연결을 위한 표시만 남긴다.
+      resources.resetPendingRef.current = true;
+      const interaction = resources.columnPointerInteractionRef.current;
+
+      if (interaction) {
+        interaction.cleanup();
+
+        if (interaction.timer !== null) {
+          window.clearTimeout(interaction.timer);
+        }
+      }
+
+      resources.columnPointerInteractionRef.current = null;
+
+      const suppressed = resources.suppressedSortClickRef.current;
+
+      if (suppressed) {
+        suppressed.cleanup();
+
+        if (suppressed.timer !== null) {
+          window.clearTimeout(suppressed.timer);
+        }
+
+        resources.suppressedSortClickRef.current = null;
+      }
+
+      resources.columnMoveAnimationCleanupRef.current?.();
+    };
+  };
+}
+
 function CominsTableInner<TData, TGroup>(
   {
     "buffer-size": bufferSize,
@@ -1686,6 +1854,7 @@ function CominsTableInner<TData, TGroup>(
   const footerRef = useRef<HTMLDivElement | null>(null);
   const headerRef = useRef<HTMLDivElement | null>(null);
   const horizontalScrollbarRef = useRef<HTMLDivElement | null>(null);
+  const synchronizedScrollLeftRef = useRef(0);
   const tableRootRef = useRef<HTMLDivElement | null>(null);
   const cellTooltip = useCominsCellTooltip();
   let activeCellTooltipContent: React.ReactNode;
@@ -1697,7 +1866,7 @@ function CominsTableInner<TData, TGroup>(
   );
   const rowMeasurementsRef = useRef(new Map<CominsRowId, CominsRowMeasurement<TData>>());
   const committedViewportIndexRef = useRef<{ key: object; index: CominsViewportHeightIndex } | null>(null);
-  const viewportMeasurementAnchorRef = useRef<{ index: number; offset: number } | null>(null);
+  const viewportMeasurementAnchorRef = useRef<{ index: number; offset: number; previousPhysicalScrollTop: number } | null>(null);
   const detailElementsRef = useRef(
     new Map<Element, CominsObservedDetail>(),
   );
@@ -1707,8 +1876,9 @@ function CominsTableInner<TData, TGroup>(
     CominsCommittedDetailObserverSnapshot<TData> | null
   >(null);
   const rowDetailToggleElementsRef = useRef(new Map<CominsRowId, HTMLButtonElement>());
-  const activePointerGestureCleanupRef = useRef<(() => void) | null>(null);
+  const activePointerGestureCleanupRef = useRef<TablePointerGestureCleanup | null>(null);
   const columnPointerInteractionRef = useRef<CominsColumnPointerInteraction | null>(null);
+  const columnInteractionResetPendingRef = useRef(false);
   const columnMoveAnimationCleanupRef = useRef<(() => void) | null>(null);
   const columnMoveAnimationSnapshotRef = useRef<Map<HTMLElement, number> | null>(null);
   const headerRendererBodyRef = useRef(new Map<string, { body: React.ReactNode; renderer: unknown; kind: "render" | "legacy" }>());
@@ -1856,7 +2026,7 @@ function CominsTableInner<TData, TGroup>(
     activePointerGestureCleanupRef.current = null;
     cleanup?.();
   };
-  const registerActivePointerGesture = (cleanup: () => void) => {
+  const registerActivePointerGesture = (cleanup: TablePointerGestureCleanup) => {
     clearActivePointerGesture();
     activePointerGestureCleanupRef.current = cleanup;
   };
@@ -2116,51 +2286,30 @@ function CominsTableInner<TData, TGroup>(
   }, [columnGroups, columns, effectiveData, effectivePagination, getRowId, showHeader]);
 
   useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
-
-  useEffect(() => {
     if (lastLoadMoreRowCountRef.current !== null && lastLoadMoreRowCountRef.current !== state.rows.length) {
       lastLoadMoreRowCountRef.current = null;
     }
   }, [state.rows.length]);
 
-  useEffect(() => {
-    return () => {
-      clearActivePointerGesture();
-      detailFocusRestorer.dispose();
-      clearExternalDropMarker();
-      clearTransferRejectionFeedback(false);
+  useEffect(createTableUnmountEffect({
+    activePointerGestureCleanupRef,
+    detailFocusRestorer,
+    externalDropMarkerRef,
+    transferRejectionTimerRef,
+    transferRejectionTargetRef,
+    pendingTransferFocusFrameRef,
+    scrollFrameRef,
+    scrollCommitTimeoutRef,
+  }), []);
 
-      if (pendingTransferFocusFrameRef.current !== null) {
-        window.cancelAnimationFrame(pendingTransferFocusFrameRef.current);
-      }
-
-      if (scrollFrameRef.current !== null) {
-        window.cancelAnimationFrame(scrollFrameRef.current);
-      }
-
-      if (scrollCommitTimeoutRef.current !== null) {
-        window.clearTimeout(scrollCommitTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const element = containerRef.current;
-
-    if (!element) {
-      return undefined;
-    }
-
-    return observeCominsViewport(element, measurement => {
-      setContainerHeight(measurement.height);
-      setContainerWidth(measurement.width);
-      setHorizontalScrollContentWidth(measurement.scrollWidth);
-      setHorizontalViewportOuterWidth(measurement.outerWidth);
-      setHorizontalViewportWidth(measurement.viewportWidth);
-    });
-  }, []);
+  useLayoutEffect(createViewportMeasurementEffect({
+    containerRef,
+    setContainerHeight,
+    setContainerWidth,
+    setHorizontalScrollContentWidth,
+    setHorizontalViewportOuterWidth,
+    setHorizontalViewportWidth,
+  }), []);
 
   useEffect(() => {
     reconcileCominsDetailMeasurements(
@@ -2254,7 +2403,7 @@ function CominsTableInner<TData, TGroup>(
     if (viewportContext && viewportIndex && viewport && !viewportMeasurementAnchorRef.current) {
       const logical = logicalAnchorTransactionRef.current && Math.abs(viewport.scrollTop - logicalAnchorTransactionRef.current.actualPhysical) <= .5 ? logicalAnchorTransactionRef.current.targetLogical : viewport.scrollTop * getCominsScrollScale(viewportIndex.getTotalHeight(), viewportHeight).scrollScale;
       const index = viewportIndex.findIndexAtOffset(logical);
-      viewportMeasurementAnchorRef.current = { index, offset: logical - viewportIndex.getPrefixHeight(index) };
+      viewportMeasurementAnchorRef.current = { index, offset: logical - viewportIndex.getPrefixHeight(index), previousPhysicalScrollTop: viewport.scrollTop };
     }
     const pendingAnchor =
       currentPendingDetailAnchor?.status === "pending"
@@ -2299,6 +2448,11 @@ function CominsTableInner<TData, TGroup>(
           update.width,
           update.kind,
         ) || updatedActiveIndex;
+    }
+
+    // 측정 콜백도 새 블록을 추가하므로 최신 commit의 보존 구간으로 캐시 한도를 다시 적용한다.
+    if (viewportIndex && snapshot.viewportRetainRange) {
+      viewportIndex.retain(snapshot.viewportRetainRange);
     }
 
     if (
@@ -2349,15 +2503,12 @@ function CominsTableInner<TData, TGroup>(
     return observer;
   };
 
-  useLayoutEffect(() => {
-    return () => {
-      detailObserverRef.current?.dispose();
-      detailObserverRef.current = null;
-      detailElementsRef.current.clear();
-      fallbackMeasuredDetailElementsRef.current.clear();
-      committedDetailObserverSnapshotRef.current = null;
-    };
-  }, []);
+  useLayoutEffect(createDetailObserverCleanupEffect({
+    detailObserverRef,
+    detailElementsRef,
+    fallbackMeasuredDetailElementsRef,
+    committedDetailObserverSnapshotRef,
+  }), []);
 
   const disconnectDetailObserverIfIdle = () => {
     if (detailElementsRef.current.size === 0) {
@@ -3090,7 +3241,7 @@ function CominsTableInner<TData, TGroup>(
     const physical = containerRef.current?.scrollTop ?? scrollTop;
     const logical = logicalAnchorTransaction && Math.abs(physical - logicalAnchorTransaction.actualPhysical) <= .5 ? logicalAnchorTransaction.targetLogical : physical * getCominsScrollScale(previousViewportIndex.getTotalHeight(), viewportHeight).scrollScale;
     const index = previousViewportIndex.findIndexAtOffset(logical);
-    viewportAnchor = { index, offset: logical - previousViewportIndex.getPrefixHeight(index) };
+    viewportAnchor = { index, offset: logical - previousViewportIndex.getPrefixHeight(index), previousPhysicalScrollTop: physical };
   }
   const viewportAnchorLogical = viewportAnchor && viewportHeightIndex ? viewportHeightIndex.getPrefixHeight(viewportAnchor.index) + Math.min(viewportAnchor.offset, viewportHeightIndex.getHeight(viewportAnchor.index)) : undefined;
   useLayoutEffect(() => {
@@ -3099,6 +3250,25 @@ function CominsTableInner<TData, TGroup>(
     viewportMeasurementAnchorRef.current = null;
     const element = containerRef.current;
     if (element && viewportAnchorLogical !== undefined) {
+      // 측정 앵커 이후의 새 스크롤은 이벤트 전달 전이라도 이전 높이 보정보다 우선한다.
+      // 콘텐츠 축소로 발생한 브라우저의 하단 clamp는 정상 앵커 보정을 유지한다.
+      const currentPhysical = element.scrollTop;
+      const previousPhysical = Math.min(
+        Math.max(0, element.scrollHeight - element.clientHeight),
+        Math.max(0, viewportAnchor!.previousPhysicalScrollTop),
+      );
+      if (Math.abs(currentPhysical - previousPhysical) > 0.5) {
+        const latestTransaction = logicalAnchorTransactionRef.current;
+        const nextTransaction = latestTransaction &&
+          Math.abs(latestTransaction.actualPhysical - currentPhysical) <= 0.5
+          ? latestTransaction
+          : null;
+        logicalAnchorTransactionRef.current = nextTransaction;
+        setLogicalAnchorTransaction(nextTransaction);
+        pendingScrollTopRef.current = currentPhysical;
+        setScrollTop(currentPhysical);
+        return;
+      }
       const targetLogical = Math.min(Math.max(0, viewportAnchorLogical), Math.max(0, viewportHeightIndex.getTotalHeight() - viewportHeight));
       const requestedPhysical = getCominsPhysicalScrollTop(targetLogical, viewportHeightIndex.getTotalHeight(), viewportHeight);
       setCominsScrollTop(element, requestedPhysical);
@@ -3108,7 +3278,7 @@ function CominsTableInner<TData, TGroup>(
       pendingScrollTopRef.current = element.scrollTop;
       setScrollTop(element.scrollTop);
     }
-  }, [viewportHeightIndex, viewportAnchorLogical, viewportHeight, detailLayoutVersion]);
+  }, [viewportHeightIndex, viewportAnchorLogical, viewportAnchor?.previousPhysicalScrollTop, viewportHeight, detailLayoutVersion]);
   const detailObserverSnapshotCandidate = useMemo<
     CominsCommittedDetailObserverSnapshot<TData>
   >(
@@ -3118,10 +3288,11 @@ function CominsTableInner<TData, TGroup>(
       rowSlots: new Map(getRowHeight ? fullProjectionSlots.flatMap(slot => slot.kind === "data" && slot.autoHeight ? [[slot.rowId, slot] as const] : []) : []),
       contentWidth: detailContentWidth,
       projection: mixedProjection,
+      viewportRetainRange: viewportContext?.data.retainRange ?? null,
       viewportHeight:
         containerHeight || Math.max(1, rowHeight) * 12,
     }),
-    [containerHeight, detailContentWidth, mixedProjection, rowHeight, rowLayoutKey, rowContentRevision, fullProjectionSlots, getRowHeight],
+    [containerHeight, detailContentWidth, mixedProjection, rowHeight, rowLayoutKey, rowContentRevision, fullProjectionSlots, getRowHeight, viewportContext?.data.retainRange],
   );
 
   useLayoutEffect(() => {
@@ -3368,6 +3539,29 @@ function CominsTableInner<TData, TGroup>(
       return;
     }
 
+    // 측정 이후 새 스크롤이 들어오면 scroll 이벤트 전달 전이라도 이전 앵커를 폐기한다.
+    // 콘텐츠 축소로 브라우저가 범위 안으로 clamp한 위치는 새 스크롤로 취급하지 않는다.
+    const currentPhysicalScrollTop = viewport.scrollTop;
+    const clampedPreviousPhysicalScrollTop = Math.min(
+      Math.max(0, viewport.scrollHeight - viewport.clientHeight),
+      Math.max(0, pendingAnchorTransaction.previousPhysicalScrollTop),
+    );
+    if (Math.abs(currentPhysicalScrollTop - clampedPreviousPhysicalScrollTop) > 0.5) {
+      if (pendingDetailAnchorRef.current?.revision === pendingDetailAnchor?.revision) {
+        pendingDetailAnchorRef.current = null;
+      }
+      const latestLogicalTransaction = logicalAnchorTransactionRef.current;
+      const nextLogicalTransaction = latestLogicalTransaction &&
+        Math.abs(latestLogicalTransaction.actualPhysical - currentPhysicalScrollTop) <= 0.5
+        ? latestLogicalTransaction
+        : null;
+      logicalAnchorTransactionRef.current = nextLogicalTransaction;
+      pendingScrollTopRef.current = currentPhysicalScrollTop;
+      setLogicalAnchorTransaction(nextLogicalTransaction);
+      setScrollTop(currentPhysicalScrollTop);
+      return;
+    }
+
     const nextKeys = getCominsVirtualProjectionKeys(currentVirtualProjection);
     const target = resolveCominsAnchorTarget({
       anchor: pendingAnchorTransaction.anchor,
@@ -3524,6 +3718,17 @@ function CominsTableInner<TData, TGroup>(
     ) + stateRowCount * rowHeight;
   const emptyFillerHeight = virtualized ? 0 : Math.max(0, containerHeight - renderedRowsHeight);
   const renderedHeaderVisible = state.showHeader && (persistHeaderWhenEmpty || !isEmpty || resolvedLoading);
+  useLayoutEffect(() => {
+    const scrollLeft = containerRef.current?.scrollLeft ?? 0;
+
+    // 새 Header·Summary만 현재 body 위치에 맞추고 활성 스크롤 영역은 건드리지 않는다.
+    for (const element of [headerRef.current, footerRef.current]) {
+      if (element && Math.abs(element.scrollLeft - scrollLeft) > 0.5) {
+        setCominsScrollLeft(element, scrollLeft);
+      }
+    }
+  }, [renderedHeaderVisible, summary, synchronizedHorizontalContentWidth, synchronizedHorizontalViewportWidth]);
+
 
   const isCopyPasteKey = (event: React.KeyboardEvent, key: "c" | "v") =>
     (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === key;
@@ -3895,14 +4100,16 @@ function CominsTableInner<TData, TGroup>(
     setColumnMoveTarget(null);
   };
 
-  useEffect(
-    () => () => {
-      clearColumnPointerInteraction();
-      clearSuppressedSortClick();
-      columnMoveAnimationCleanupRef.current?.();
-    },
-    [],
-  );
+  useLayoutEffect(createColumnInteractionCleanupEffect({
+    columnPointerInteractionRef,
+    suppressedSortClickRef,
+    columnMoveAnimationCleanupRef,
+    resetPendingRef: columnInteractionResetPendingRef,
+    setMovingColumnId,
+    setMovingGroupId,
+    setColumnMovePointer,
+    setColumnMoveTarget,
+  }), []);
 
   const captureColumnMoveAnimationSnapshot = () => {
     columnMoveAnimationCleanupRef.current?.();
@@ -4585,7 +4792,7 @@ function CominsTableInner<TData, TGroup>(
     let finished = false;
     let lastPointerEvent = event.nativeEvent;
     let lastTarget: CominsRowDragTarget | null = null;
-    let registeredCleanup: (() => void) | null = null;
+    let registeredCleanup: TablePointerGestureCleanup | null = null;
     const notifyTarget = (pointerEvent: PointerEvent, target: CominsRowDragTarget) => {
       if (areCominsRowDragTargetsEqual(lastTarget, target)) {
         return;
@@ -4982,10 +5189,16 @@ function CominsTableInner<TData, TGroup>(
     const cancel = (
       pointerEvent: PointerEvent | null,
       reason: Extract<CominsRowDragReason, "blur" | "escape" | "pointer-cancel">,
+      resetRenderState = true,
     ) => {
       cleanup();
       clearExternalDropMarker();
-      setActiveRowMoveState(null);
+      if (resetRenderState) {
+        setActiveRowMoveState(null);
+      } else {
+        // unmount 정리에서는 렌더링을 예약하지 않고 드래그 참조만 비운다.
+        rowMoveStateRef.current = null;
+      }
       finish(pointerEvent, "cancelled", reason);
     };
     const handlePointerCancel = (cancelEvent: PointerEvent) => {
@@ -5001,7 +5214,7 @@ function CominsTableInner<TData, TGroup>(
       }
     };
 
-    registeredCleanup = () => cancel(null, "pointer-cancel");
+    registeredCleanup = (unmounting = false) => cancel(null, "pointer-cancel", !unmounting);
     updateTarget(event.clientX, event.clientY, event.nativeEvent);
     registerActivePointerGesture(registeredCleanup);
     window.addEventListener("pointermove", handlePointerMove);
@@ -5928,6 +6141,8 @@ function CominsTableInner<TData, TGroup>(
       Math.max(0, requestedScrollLeft),
     );
 
+    synchronizedScrollLeftRef.current = nextScrollLeft;
+
     for (const element of scrollContainers) {
       if (Math.abs(element.scrollLeft - nextScrollLeft) > 0.5) {
         setCominsScrollLeft(element, nextScrollLeft);
@@ -5981,7 +6196,9 @@ function CominsTableInner<TData, TGroup>(
       });
     }
 
-    syncHorizontalScrollLeft(bodyViewport.scrollLeft);
+    if (Math.abs(bodyViewport.scrollLeft - synchronizedScrollLeftRef.current) > 0.5) {
+      syncHorizontalScrollLeft(bodyViewport.scrollLeft);
+    }
   };
   const handleBodyWheel = (event: React.WheelEvent<HTMLDivElement>) => {
     if (!hasHorizontalOverflow || !horizontalScrollbarRef.current) {
@@ -6313,13 +6530,7 @@ function CominsTableInner<TData, TGroup>(
                           event.stopPropagation();
                           toggleRowGroup(slot.groupId);
                         }}
-                        ref={(element) => {
-                          if (element) {
-                            groupDisclosureElementsRef.current.set(slot.groupId, element);
-                          } else {
-                            groupDisclosureElementsRef.current.delete(slot.groupId);
-                          }
-                        }}
+                        ref={createDisclosureElementRef(groupDisclosureElementsRef, slot.groupId)}
                       />
                       <span className="comins-row-group-content">
                         {!useDefaultGroupContent ? customContent : (
@@ -6463,7 +6674,8 @@ function CominsTableInner<TData, TGroup>(
                     getSelectionRowOrder(),
                   );
                   const isCellSelected = cellSelection && isCominsCellSelected(state, address);
-                  const cellPayload = createCellComponentPayload(
+                  // 기본 셀은 콜백용 payload를 사용하지 않으므로 설정이 있을 때만 생성한다.
+                  const cellPayload = column.cell ? createCellComponentPayload(
                     entry,
                     rowRuntimeProps.disabled,
                     isRowSelected,
@@ -6471,9 +6683,9 @@ function CominsTableInner<TData, TGroup>(
                     column,
                     columnIndex,
                     rawValue,
-                  );
-                  const cellProps = resolveRenderableCellProps(column, cellPayload);
-                  const cellDisabled = rowRuntimeProps.disabled || isRenderableCellDisabled(cellProps, cellPayload);
+                  ) : undefined;
+                  const cellProps = cellPayload ? resolveRenderableCellProps(column, cellPayload) : undefined;
+                  const cellDisabled = rowRuntimeProps.disabled || (cellPayload !== undefined && isRenderableCellDisabled(cellProps, cellPayload));
                   const componentInteraction: CominsBuiltInComponentInteraction = {
                     requestRowSelection: ({ event, mode }) => {
                       if (cellDisabled) {
@@ -6490,10 +6702,10 @@ function CominsTableInner<TData, TGroup>(
                       return true;
                     },
                   };
-                  const cellClassName = toClassName(getRenderableCellClassName(cellProps, cellPayload));
-                  const cellStyle = getRenderableCellStyle(cellProps, cellPayload);
+                  const cellClassName = cellPayload ? toClassName(getRenderableCellClassName(cellProps, cellPayload)) : undefined;
+                  const cellStyle = cellPayload ? getRenderableCellStyle(cellProps, cellPayload) : undefined;
                   const hasCellComponents = Boolean(column.cell?.components?.length);
-                  const formattedCellValue = formatRenderableCellValue(column, rawValue, cellPayload);
+                  const configuredCellValue = cellPayload ? formatRenderableCellValue(column, cellPayload) : deferredDefaultCellValue;
                   const cellComponents = column.cell?.components?.map((component) => {
                     if (component.type !== "input") {
                       return component;
@@ -6517,12 +6729,17 @@ function CominsTableInner<TData, TGroup>(
                       },
                     } satisfies CominsCellComponent<TData>;
                   });
-                  const visibleCellComponents = getRenderableCominsComponents(cellComponents, cellPayload);
+                  const visibleCellComponents = cellPayload ? getRenderableCominsComponents(cellComponents, cellPayload) : [];
                   const cellRender = column.cell?.render ?? column.cell?.renderer;
-                  const customCellContent = cellRender?.(cellPayload);
+                  const customCellContent = cellRender?.(cellPayload!);
                   const useDefaultCellContent = !cellRender || (Boolean(column.cell?.render) && customCellContent === undefined);
+                  const formattedCellValue = configuredCellValue === deferredDefaultCellValue
+                    ? useDefaultCellContent && visibleCellComponents.length === 0
+                      ? rawValue == null ? "" : String(rawValue)
+                      : undefined
+                    : configuredCellValue;
                   const cellContent = !useDefaultCellContent ? customCellContent : hasCellComponents ? (
-                    renderCominsContentWithComponents(formattedCellValue, cellComponents, cellPayload, {
+                    renderCominsContentWithComponents(formattedCellValue, cellComponents, cellPayload!, {
                       interaction: componentInteraction,
                       showContent: false,
                     })
@@ -6530,12 +6747,12 @@ function CominsTableInner<TData, TGroup>(
                     <span className="comins-table__cell-value">{formattedCellValue}</span>
                   );
                   const tooltip =
-                    typeof column.cell?.tooltip === "function" ? column.cell.tooltip(cellPayload) : column.cell?.tooltip;
+                    typeof column.cell?.tooltip === "function" ? column.cell.tooltip(cellPayload!) : column.cell?.tooltip;
                   const tooltipConfig = column.cell?.tooltip;
                   const customTooltip = typeof tooltipConfig === "object" && tooltipConfig !== null ? tooltipConfig : undefined;
                   const tooltipKey = JSON.stringify([typeof entry.rowId, entry.rowId, column.id]);
                   if (cellTooltip.active?.ready && cellTooltip.active.key === tooltipKey && customTooltip?.render) {
-                    activeCellTooltipContent = customTooltip.render(cellPayload);
+                    activeCellTooltipContent = customTooltip.render(cellPayload!);
                   }
                   const treeEntry =
                     column.id === treeContext?.treeColumnId
@@ -6748,13 +6965,7 @@ function CominsTableInner<TData, TGroup>(
                                   expanded={rowDetailExpanded}
                                   id={rowDetailToggleId}
                                   label={`${rowDetailExpanded ? "Collapse" : "Expand"} ${String(entry.rowId)} details`}
-                                  onElement={(element) => {
-                                    if (element) {
-                                      rowDetailToggleElementsRef.current.set(entry.rowId, element);
-                                    } else {
-                                      rowDetailToggleElementsRef.current.delete(entry.rowId);
-                                    }
-                                  }}
+                                  onElement={createDisclosureElementRef(rowDetailToggleElementsRef, entry.rowId)}
                                   onToggle={() => toggleRowDetail(entry.rowId, rowDetailExpandable)}
                                   testId={`row-detail-toggle-${String(entry.rowId)}`}
                                 />
@@ -6930,7 +7141,11 @@ function CominsTableInner<TData, TGroup>(
           aria-label="Table horizontal scroll"
           className="comins-table__horizontal-scrollbar"
           data-testid="table-horizontal-scrollbar"
-          onScroll={(event) => syncHorizontalScrollLeft(event.currentTarget.scrollLeft)}
+          onScroll={(event) => {
+            if (Math.abs(event.currentTarget.scrollLeft - synchronizedScrollLeftRef.current) > 0.5) {
+              syncHorizontalScrollLeft(event.currentTarget.scrollLeft);
+            }
+          }}
           ref={horizontalScrollbarRef}
           role="region"
           style={{ width: synchronizedHorizontalScrollbarWidth }}
@@ -6943,7 +7158,7 @@ function CominsTableInner<TData, TGroup>(
           />
         </div>
       ) : null}
-      <CominsCellTooltip controller={cellTooltip} content={activeCellTooltipContent} />
+      {cellTooltip.active ? <CominsCellTooltip controller={cellTooltip} content={activeCellTooltipContent} /> : null}
       {movingHeaderLabel && columnMovePointer ? (
         <div
           aria-hidden="true"

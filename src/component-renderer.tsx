@@ -94,6 +94,8 @@ function CominsInputComponent<TData, TValue>({
     onBlur,
     onChange: _propsOnChange,
     onClick,
+    onCompositionEnd,
+    onCompositionStart,
     onKeyDown,
     onMouseDown,
     onPointerDown,
@@ -103,6 +105,7 @@ function CominsInputComponent<TData, TValue>({
   const propValue = toComponentInputValue(value ?? defaultValue);
   const [draftValue, setDraftValue] = useState(propValue);
   const lastCommittedValueRef = useRef(propValue);
+  const composingRef = useRef(false);
 
   useEffect(() => {
     setDraftValue(propValue);
@@ -136,11 +139,21 @@ function CominsInputComponent<TData, TValue>({
         onClick?.(event);
         stopComponentEvent(event);
       }}
+      onCompositionStart={(event) => {
+        composingRef.current = true;
+        onCompositionStart?.(event);
+      }}
+      onCompositionEnd={(event) => {
+        composingRef.current = false;
+        onCompositionEnd?.(event);
+      }}
       onKeyDown={(event) => {
         onKeyDown?.(event);
         stopComponentEvent(event);
 
         if (event.key === "Enter") {
+          // 조합 확정용 Enter는 draft 커밋이나 포커스 이동으로 처리하지 않는다.
+          if (composingRef.current || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
           event.preventDefault();
           commitValue(event);
           event.currentTarget.blur();
@@ -272,6 +285,65 @@ function CominsToggleComponent<TData, TValue>({
   );
 }
 
+type HeaderMenuOpenRequest = (nextOpen: boolean, event?: Event | React.SyntheticEvent) => void;
+type HeaderMenuElementRef = React.RefObject<HTMLElement | null>;
+
+// 등록 리스너와 cleanup이 이전 render의 component/payload context를 붙잡지 않도록 별도 scope에서 만든다.
+function installHeaderMenuDismissListeners(
+  doc: Document,
+  triggerRef: HeaderMenuElementRef,
+  menuRef: HeaderMenuElementRef,
+  requestOpenRef: React.RefObject<HeaderMenuOpenRequest>,
+) {
+  const handlePointerDown = (event: PointerEvent) => {
+    if (isNodeInside(triggerRef.current, event.target) || isNodeInside(menuRef.current, event.target)) {
+      return;
+    }
+    requestOpenRef.current(false, event);
+  };
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      requestOpenRef.current(false, event);
+      triggerRef.current?.focus();
+    }
+  };
+  doc.addEventListener("pointerdown", handlePointerDown);
+  doc.addEventListener("keydown", handleKeyDown);
+  return () => {
+    doc.removeEventListener("pointerdown", handlePointerDown);
+    doc.removeEventListener("keydown", handleKeyDown);
+  };
+}
+
+function installHeaderMenuPositionListeners(
+  win: Window,
+  triggerRef: HeaderMenuElementRef,
+  menuRef: HeaderMenuElementRef,
+  setMenuPosition: React.Dispatch<React.SetStateAction<React.CSSProperties>>,
+) {
+  const updateMenuPosition = () => {
+    const trigger = triggerRef.current;
+    if (!trigger) {
+      return;
+    }
+    const rect = trigger.getBoundingClientRect();
+    const menuWidth = Math.max(menuRef.current?.offsetWidth ?? 136, 136);
+    setMenuPosition({
+      left: Math.max(8, Math.min(rect.left, win.innerWidth - menuWidth - 8)),
+      position: "fixed",
+      top: Math.min(rect.bottom + 4, win.innerHeight - 8),
+      zIndex: 9999,
+    });
+  };
+  updateMenuPosition();
+  win.addEventListener("resize", updateMenuPosition);
+  win.addEventListener("scroll", updateMenuPosition, true);
+  return () => {
+    win.removeEventListener("resize", updateMenuPosition);
+    win.removeEventListener("scroll", updateMenuPosition, true);
+  };
+}
+
 function CominsHeaderMenuComponent<TData, TValue>({
   component,
   payload,
@@ -291,24 +363,6 @@ function CominsHeaderMenuComponent<TData, TValue>({
   const props = resolveComponentProps<React.ButtonHTMLAttributes<HTMLButtonElement>>(component.props, payload);
   const items = useMemo(() => resolveComponentMenuItems(component.items, payload), [component.items, payload]);
 
-  const updateMenuPosition = () => {
-    const trigger = triggerRef.current;
-
-    if (!trigger || typeof window === "undefined") {
-      return;
-    }
-
-    const rect = trigger.getBoundingClientRect();
-    const menuWidth = Math.max(menuRef.current?.offsetWidth ?? 136, 136);
-
-    setMenuPosition({
-      left: Math.max(8, Math.min(rect.left, window.innerWidth - menuWidth - 8)),
-      position: "fixed",
-      top: Math.min(rect.bottom + 4, window.innerHeight - 8),
-      zIndex: 9999,
-    });
-  };
-
   const requestOpen = (nextOpen: boolean, event?: Event | React.SyntheticEvent) => {
     if (nextOpen === open) {
       return;
@@ -324,52 +378,24 @@ function CominsHeaderMenuComponent<TData, TValue>({
     component.onOpenChange?.({ ...payload, event, open: nextOpen } as never);
   };
 
+  const requestOpenRef = useRef<HeaderMenuOpenRequest>(requestOpen);
+  useLayoutEffect(() => {
+    // 완료되지 않은 render의 설정이 native event에 노출되지 않도록 commit된 콜백만 갱신한다.
+    requestOpenRef.current = requestOpen;
+  });
+
   useEffect(() => {
     if (!open) {
       return undefined;
     }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (isNodeInside(triggerRef.current, event.target) || isNodeInside(menuRef.current, event.target)) {
-        return;
-      }
-
-      requestOpen(false, event);
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        requestOpen(false, event);
-        triggerRef.current?.focus();
-      }
-    };
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
+    return installHeaderMenuDismissListeners(document, triggerRef, menuRef, requestOpenRef);
   }, [open]);
 
   useLayoutEffect(() => {
-    if (!open) {
+    if (!open || typeof window === "undefined") {
       return undefined;
     }
-
-    updateMenuPosition();
-
-    if (typeof window === "undefined") {
-      return undefined;
-    }
-
-    window.addEventListener("resize", updateMenuPosition);
-    window.addEventListener("scroll", updateMenuPosition, true);
-
-    return () => {
-      window.removeEventListener("resize", updateMenuPosition);
-      window.removeEventListener("scroll", updateMenuPosition, true);
-    };
+    return installHeaderMenuPositionListeners(window, triggerRef, menuRef, setMenuPosition);
   }, [open]);
 
   const menu = open ? (

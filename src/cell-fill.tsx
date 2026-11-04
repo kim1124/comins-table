@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type EffectCallback, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
 import type { CominsCellAddress, CominsCellRange, CominsRowId, CominsTableState } from "./react/core-compat";
 import { getCominsDragAutoScrollVelocity, getCoreCellBounds as bounds, getCoreCellRange as rangeOf, resolveCoreFillTarget } from "./core/selection/navigation";
 import { applyCominsDragScroll, captureCominsPointer, focusCominsPointerTarget, registerCominsPointerListeners, startCominsPointerFrames } from "./browser/pointer";
+
+function createCellFillCancelEffect(cancelRef: RefObject<(() => void) | null>): EffectCallback {
+  return () => () => cancelRef.current?.();
+}
 
 /** Private gesture controller. All writes go through the owning Table's batch callback. */
 export function useCominsCellFill<TData>(options: {
@@ -29,7 +33,7 @@ export function useCominsCellFill<TData>(options: {
   const source = options.enabled ? selection.range ?? ((selection.cells?.length ?? 0) > 1 || !selection.cell ? null : { anchor: selection.cell, focus: selection.cell }) : null;
   const box = source ? bounds(source, options.rowIds, options.columnIds) : null;
   const closeMenu = (focus = true) => { setMenu(null); if (focus) focusCominsPointerTarget(triggerRef.current); };
-  useEffect(() => () => cancelRef.current?.(), []);
+  useEffect(createCellFillCancelEffect(cancelRef), []);
   useEffect(() => {
     if (!menu) return;
     menuRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
@@ -42,6 +46,10 @@ export function useCominsCellFill<TData>(options: {
   }, [menu]);
   useEffect(() => { cancelRef.current?.(); setMenu(null); }, [options.enabled, options.state.rows, options.state.columnOrder, options.state.selection, options.rowIds]);
 
+  const previewBox = options.enabled && preview ? bounds(preview, options.rowIds, options.columnIds) : null;
+  const rowPositions = useMemo(() => options.enabled ? new Map(options.rowIds.map((id, index) => [id, index])) : null, [options.enabled, options.rowIds]);
+  const columnPositions = useMemo(() => options.enabled ? new Map(options.columnIds.map((id, index) => [id, index])) : null, [options.enabled, options.columnIds]);
+
   const fillSelection = (direction: "down" | "right") => {
     // Imperative callers may retain a method from an earlier render.
     const current = latest.current, selection = current.state.selection;
@@ -52,6 +60,11 @@ export function useCominsCellFill<TData>(options: {
     if (direction === "down" ? box.top === box.bottom : box.left === box.right) return false;
     return current.onFill(rangeOf(from, current.rowIds, current.columnIds), source);
   };
+  // Hook 순서는 유지하되 비활성 기능의 제스처·컨트롤은 생성하지 않는다.
+  if (!options.enabled) {
+    return { fillSelection, preview, isPreview: () => false, handleAddress: null, handle: null, menu: null };
+  }
+
   const begin = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (!source || !box || event.button !== 0 || !options.canUseRange(source)) return;
     event.preventDefault(); event.stopPropagation(); focusCominsPointerTarget(event.currentTarget);
@@ -110,16 +123,13 @@ export function useCominsCellFill<TData>(options: {
     const removeListeners = registerCominsPointerListeners({ move, up, cancel, blur: cancel, key, keyCapture: true });
     const stopFrames = startCominsPointerFrames(tick);
   };
-  const previewBox = preview ? bounds(preview, options.rowIds, options.columnIds) : null;
-  const rowPositions = useMemo(() => options.enabled ? new Map(options.rowIds.map((id, index) => [id, index])) : new Map<CominsRowId, number>(), [options.enabled, options.rowIds]);
-  const columnPositions = useMemo(() => new Map(options.columnIds.map((id, index) => [id, index])), [options.columnIds]);
   const handleAddress = box && source && options.canUseRange(source) ? rangeOf(box, options.rowIds, options.columnIds).focus : null;
   return {
     fillSelection,
     preview,
     isPreview: (address: CominsCellAddress) => {
       if (!previewBox) return false;
-      const row = rowPositions.get(address.rowId) ?? -1, column = columnPositions.get(address.columnId) ?? -1;
+      const row = rowPositions?.get(address.rowId) ?? -1, column = columnPositions?.get(address.columnId) ?? -1;
       return row >= previewBox.top && row <= previewBox.bottom && column >= previewBox.left && column <= previewBox.right;
     },
     handleAddress,

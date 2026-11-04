@@ -53,3 +53,33 @@ describe("React notification routes", () => {
     expect(events).toEqual([]);
   });
 });
+
+it.each([false, true])("does not inspect state for unobserved props notifications (data/layout callbacks: %s)", withOtherCallbacks => {
+  const current = createReactState(input);
+  const next = createReactState({ ...input, rows: [...input.rows] });
+  let stateReads = 0;
+  const tracked = new Proxy(current, {
+    get(target, property, receiver) {
+      stateReads++;
+      return Reflect.get(target, property, receiver);
+    },
+  });
+  const events: string[] = [];
+  const callbacks = withOtherCallbacks ? {
+    onChangeData: () => { events.push("data"); },
+    onChangeColumnLayout: () => { events.push("layout"); },
+  } : {};
+  react().notifyReactInputChanges(tracked, next, callbacks);
+  expect(events).toEqual([]);
+  expect(stateReads).toBe(0);
+});
+
+it.each(["onChangeSelection", "onChangeSort", "onChangeSortModel"] as const)("still delivers changed input to the sole %s observer", callback => {
+  const current = createReactState(input);
+  const next = createReactState({ ...input, sortModel: [{ columnId: "score", direction: "desc" }] });
+  const received: unknown[] = [];
+  react().notifyReactInputChanges(current, next, { [callback]: (value: unknown) => { received.push(value); } });
+  const expected = callback === "onChangeSelection" ? next.selection : callback === "onChangeSort" ? next.sort : next.sortModel;
+  expect(received).toHaveLength(1);
+  expect(received[0]).toBe(expected);
+});

@@ -126,15 +126,32 @@ test("Column Pinning keeps sticky surfaces aligned and demotes responsively", as
   await page.mouse.wheel(-10_000, 0);
   await expect.poll(() => horizontalScrollbar.evaluate((element) => element.scrollLeft)).toBe(0);
   await viewport.hover();
-  await page.mouse.wheel(240, 0);
-  await expect.poll(async () => root.evaluate((element) => {
-    const body = element.querySelector<HTMLElement>("[data-testid='column-pinning-viewport']");
-    const header = element.querySelector<HTMLElement>(".comins-table__header");
-    const footer = element.querySelector<HTMLElement>(".comins-table__summary");
-    const scrollbar = element.querySelector<HTMLElement>("[data-testid='table-horizontal-scrollbar']");
+  const wheelProbe = await page.evaluateHandle(() => {
+    const samples: Array<{ deltaX: number; deltaY: number; deltaMode: number; trusted: boolean }> = [];
+    const observe = (event: WheelEvent) => samples.push({ deltaX: event.deltaX, deltaY: event.deltaY, deltaMode: event.deltaMode, trusted: event.isTrusted });
+    document.addEventListener("wheel", observe, { capture: true, passive: true });
+    return { samples, stop: () => document.removeEventListener("wheel", observe, true) };
+  });
+  try {
+    await page.mouse.wheel(240, 0);
+    await expect.poll(() => wheelProbe.evaluate(probe => probe.samples.length)).toBe(1);
+    const [input] = await wheelProbe.evaluate(probe => probe.samples);
+    expect(input).toMatchObject({ deltaY: 0, deltaMode: 0, trusted: true });
+    expect(input!.deltaX).toBeGreaterThan(0);
+    // 플랫폼이 변환한 실제 입력을 한 번 반영하는지 검사한다. 요청값은 DOM delta와 다를 수 있다.
+    await expect.poll(async () => root.evaluate((element) => {
+      const body = element.querySelector<HTMLElement>("[data-testid='column-pinning-viewport']");
+      const header = element.querySelector<HTMLElement>(".comins-table__header");
+      const footer = element.querySelector<HTMLElement>(".comins-table__summary");
+      const scrollbar = element.querySelector<HTMLElement>("[data-testid='table-horizontal-scrollbar']");
 
-    return [body?.scrollLeft, header?.scrollLeft, footer?.scrollLeft, scrollbar?.scrollLeft];
-  })).toEqual([240, 240, 240, 240]);
+      return [body?.scrollLeft, header?.scrollLeft, footer?.scrollLeft, scrollbar?.scrollLeft];
+    })).toEqual([input!.deltaX, input!.deltaX, input!.deltaX, input!.deltaX]);
+    expect(await wheelProbe.evaluate(probe => probe.samples.length)).toBe(1);
+  } finally {
+    await wheelProbe.evaluate(probe => probe.stop());
+    await wheelProbe.dispose();
+  }
 
   const summaryCells = root.locator(".comins-table__summary-cell");
   await expect(root.getByTestId("summary-cell-name")).toContainText("12");

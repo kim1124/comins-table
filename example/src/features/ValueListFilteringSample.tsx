@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { CominsTable, type CominsColumnFilterModel, type CominsTableColumn, type CominsValueFilterPanelRenderParams } from "../../../src";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
@@ -11,7 +11,7 @@ const sample: Row[] = [
 ];
 function CustomPanel({ params: p, custom }: { params: CominsValueFilterPanelRenderParams<Row>; custom: boolean }) {
   return <section data-testid="value-filter-custom-panel">
-    <input {...p.getSearchInputProps()} placeholder="Search" />
+    <input {...p.getSearchInputProps()} data-comins-column-filter-value-input="true" placeholder="Search" />
     <label><input {...p.getSelectAllProps()} />Select matching values</label>
     <ul className="value-filter-list">{p.visibleOptions.map(option => <li key={option.id} {...p.getOptionContainerProps(option)}>
       {custom ? <div {...p.getOptionProps(option, { element: "custom", props: { className: "value-filter-check" } })}>{option.selected ? "☑" : "☐"}</div>
@@ -21,6 +21,33 @@ function CustomPanel({ params: p, custom }: { params: CominsValueFilterPanelRend
     <button {...p.getClearProps()}>Clear</button> <button {...p.getCloseProps()}>Close</button>
   </section>;
 }
+type ValueFilterToolbarProps = {
+  variant: string;
+  scale: string;
+  removed: boolean;
+  readonly: boolean;
+  setVariant: Dispatch<SetStateAction<string>>;
+  setScale: Dispatch<SetStateAction<string>>;
+  setRemoved: Dispatch<SetStateAction<boolean>>;
+  setReadonly: Dispatch<SetStateAction<boolean>>;
+};
+const ValueFilterToolbar = memo(function ValueFilterToolbar({ variant, scale, removed, readonly,
+  setVariant, setScale, setRemoved, setReadonly }: ValueFilterToolbarProps) {
+  const { text } = usePlaygroundLocale();
+  return (
+    <div className="value-filter-toolbar">
+      <label>{text(defineLocalizedText("표시", "UI"))}<select data-testid="value-filter-variant" value={variant} onChange={e => setVariant(e.currentTarget.value)}>
+        <option value="builtin">Built-in + styles</option><option value="badge">Badge</option><option value="panel">ul/li panel</option><option value="custom">Custom controls</option>
+      </select></label>
+      <label>{text(defineLocalizedText("데이터", "Data"))}<select data-testid="value-filter-scale" value={scale} onChange={e => setScale(e.currentTarget.value)}>
+        <option value="sample">6 rows</option><option value="100">10,000 rows / 100 values</option><option value="10000">10,000 rows / 10,000 values</option>
+      </select></label>
+      <label><input data-testid="value-filter-readonly" type="checkbox" checked={readonly} onChange={e => setReadonly(e.currentTarget.checked)} />Readonly</label>
+      <button type="button" data-testid="value-filter-data" onClick={() => setRemoved(value => !value)}>{removed ? "Restore Ready" : "Remove Ready"}</button>
+    </div>
+  );
+});
+
 export function ValueListFilteringSample() {
   const { text } = usePlaygroundLocale();
   const [model, setModel] = useState<CominsColumnFilterModel>([]);
@@ -44,16 +71,8 @@ export function ValueListFilteringSample() {
   ], [variant, text]);
   return <FeatureSampleSection id="column-filtering-values" title={text(defineLocalizedText("값 목록 필터", "Value list filter"))}
     description={text(defineLocalizedText("즉시 적용, 다른 열 기반 건수, 검색 결과 전체 선택과 커스텀 UI를 확인합니다.", "Immediate filtering, faceted counts, search-scoped selection and custom UI."))}>
-    <div className="value-filter-toolbar">
-      <label>{text(defineLocalizedText("표시", "UI"))}<select data-testid="value-filter-variant" value={variant} onChange={e => setVariant(e.currentTarget.value)}>
-        <option value="builtin">Built-in + styles</option><option value="badge">Badge</option><option value="panel">ul/li panel</option><option value="custom">Custom controls</option>
-      </select></label>
-      <label>{text(defineLocalizedText("데이터", "Data"))}<select data-testid="value-filter-scale" value={scale} onChange={e => setScale(e.currentTarget.value)}>
-        <option value="sample">6 rows</option><option value="100">10,000 rows / 100 values</option><option value="10000">10,000 rows / 10,000 values</option>
-      </select></label>
-      <label><input data-testid="value-filter-readonly" type="checkbox" checked={readonly} onChange={e => setReadonly(e.currentTarget.checked)} />Readonly</label>
-      <button type="button" data-testid="value-filter-data" onClick={() => setRemoved(value => !value)}>{removed ? "Restore Ready" : "Remove Ready"}</button>
-    </div>
+    <ValueFilterToolbar variant={variant} scale={scale} removed={removed} readonly={readonly}
+      setVariant={setVariant} setScale={setScale} setRemoved={setRemoved} setReadonly={setReadonly} />
     <pre data-testid="value-filter-model" className="state-output">{JSON.stringify(model)}</pre>
     <div className="value-filter-table"><CominsTable className="example-table" data-testid="value-filter-table" data={data} columns={columns}
       getRowId={row => row.id} columnFiltering={{ model, openColumnId, onChangeModel: readonly ? undefined : setModel, onChangeOpenColumnId: setOpenColumnId }}

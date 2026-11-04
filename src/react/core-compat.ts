@@ -249,6 +249,7 @@ export function getCominsSelectedCellRange<TData>(
   range: CominsCellRange | null = state.selection.range,
   rowIds: readonly CominsRowId[] = state.rowIds,
 ) {
+  if (!range) return [];
   const bridge = projectReactState(state);
   const next = selection.getCominsSelectedCellRange(bridge.core, range, rowIds);
   return next;
@@ -259,6 +260,7 @@ export function isCominsCellInSelectedRange<TData>(
   cell: CominsCellAddress,
   rowIds: readonly CominsRowId[] = state.rowIds,
 ) {
+  if (!state.selection.range) return false;
   const bridge = projectReactState(state);
   const next = selection.isCominsCellInSelectedRange(bridge.core, cell, rowIds);
   return next;
@@ -341,6 +343,10 @@ export function getCominsSortedRowIndexes<TData>(
   state: CominsTableState<TData>,
   sourceIndexes: readonly number[] = state.rows.map((_row, index) => index),
 ) {
+  // 정렬이 없으면 컬럼·그룹 투영 없이 기존 순서의 새 배열만 반환한다.
+  if (state.sortModel.length === 0) {
+    return [...sourceIndexes];
+  }
   const bridge = projectReactState(state);
   const next = table.getCominsSortedRowIndexes(bridge.core, sourceIndexes);
   return next;

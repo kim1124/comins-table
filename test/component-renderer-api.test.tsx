@@ -217,6 +217,89 @@ describe("comins-table component renderer API", () => {
     expect(element.querySelector("[data-testid='cell-a-role']")?.textContent).toBe("role:owner");
   });
 
+  it.each([undefined, null])("preserves default header labels and sorting with %s components", (components) => {
+    const onChangeSortModel = vi.fn();
+    const columns: Array<CominsTableColumn<Row>> = [{
+      field: "name",
+      header: {
+        // @ts-expect-error JavaScript 소비자의 null 입력에 대한 기존 런타임 호환성도 검증한다.
+        components,
+      },
+      label: "Name",
+      sort: true,
+    }];
+    const element = render(<CominsTable columns={columns} data={[baseRows[1]!, baseRows[0]!]} getRowId={(row) => row.id} onChangeSortModel={onChangeSortModel} />);
+    const header = element.querySelector<HTMLElement>("[data-testid='header-name']");
+
+    expect(header?.textContent).toContain("Name");
+    expect(header?.querySelector(".comins-table__component-slot")).toBeNull();
+
+    act(() => header?.click());
+
+    expect(header?.getAttribute("aria-sort")).toBe("ascending");
+    expect(onChangeSortModel).toHaveBeenLastCalledWith([{ columnId: "name", direction: "asc" }]);
+    expect(Array.from(element.querySelectorAll("tbody [data-testid^='cell-']"), (cell) => cell.textContent)).toEqual(["Alpha", "Beta"]);
+  });
+
+  it("preserves empty consumer header array constructor and species getters", () => {
+    const readConstructor = vi.fn();
+    const readSpecies = vi.fn();
+    class HeaderComponents extends Array<never> {
+      static get [Symbol.species]() {
+        readSpecies();
+        return Array;
+      }
+    }
+    const components = new HeaderComponents();
+    Object.defineProperty(components, "constructor", {
+      get() {
+        readConstructor();
+        return HeaderComponents;
+      },
+    });
+    const columns: Array<CominsTableColumn<Row>> = [{ field: "name", header: { components }, label: "Name" }];
+    const element = render(<CominsTable columns={columns} data={baseRows} getRowId={(row) => row.id} />);
+
+    expect(element.querySelector("[data-testid='header-name']")?.textContent).toContain("Name");
+    expect(element.querySelector(".comins-table__component-slot")).toBeNull();
+    // 빈 배열도 소비자 정의 ArraySpeciesCreate 경로를 생략해서는 안 된다.
+    expect(readConstructor).toHaveBeenCalled();
+    expect(readSpecies).toHaveBeenCalled();
+  });
+
+  it("preserves header slot indices across directions and public button payloads", () => {
+    const onClick = vi.fn();
+    const onChangeSortModel = vi.fn();
+    const columns: Array<CominsTableColumn<Row>> = [{
+      field: "name",
+      header: {
+        components: [
+          { direction: "right", props: { children: "Right" }, type: "button", onClick },
+          { direction: "left", props: { children: "Left" }, type: "button" },
+          { direction: "right", id: "named-action", props: { children: "Named" }, type: "button" },
+        ],
+      },
+      label: "Name",
+      sort: true,
+    }];
+    const element = render(<CominsTable columns={columns} data={baseRows} getRowId={(row) => row.id} onChangeSortModel={onChangeSortModel} />);
+    const header = element.querySelector("[data-testid='header-name']");
+    const slots = Array.from(header?.querySelectorAll<HTMLElement>(".comins-table__component-slot") ?? []);
+
+    expect(slots.map((slot) => slot.dataset.cominsComponentId)).toEqual(["button-1", "button-0", "named-action"]);
+    expect(slots.map((slot) => slot.dataset.cominsComponentDirection)).toEqual(["left", "right", "right"]);
+
+    act(() => slots[1]?.querySelector<HTMLButtonElement>("button")?.click());
+
+    expect(onClick).toHaveBeenCalledWith(expect.objectContaining({
+      column: expect.objectContaining({ field: "name", id: "name", index: 0, label: "Name" }),
+      layout: expect.objectContaining({ hidden: false }),
+      sort: { count: 0, direction: null, enabled: true, priority: null },
+    }));
+    expect(onClick.mock.calls[0]?.[0]).not.toHaveProperty("row");
+    expect(onChangeSortModel).not.toHaveBeenCalled();
+  });
+
   it("keeps header input and select components visible without row selection", () => {
     const columns: Array<CominsTableColumn<Row>> = [
       {

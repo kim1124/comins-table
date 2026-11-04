@@ -25,6 +25,10 @@ Use `onClickCell` for click payloads and `onContextMenuCell` for context menu wo
 
 Clipboard guards are configured through column `props.copyable`, `props.pasteable`, and disabled state callbacks.
 
+## Input commit timing
+
+A built-in `input` edits a local draft while typing. A changed value calls `onChange`/`onValueChange` once on Enter or blur. Enter used to confirm IME composition does not commit the draft or blur the input. After composition ends, the next ordinary Enter or blur commits the changed value once.
+
 ## Selection composition
 
 Extending a Cell range does not clear the owning Row selection. Row selection background remains visible on selected Rows while range Cells add their inset range outline, so both states are represented at the same time. Application-owned custom Row backgrounds keep their existing precedence.

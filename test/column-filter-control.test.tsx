@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, useState } from "react";
+import { act, StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import { CominsTable, type CominsColumnFilterModel, type CominsTableColumn } from "../src";
@@ -170,4 +170,78 @@ it("keeps local filter drafts but synchronizes external replacement, Clear and r
     act(() => root.unmount());
     host.remove();
   }
+});
+
+it.each([false, true])("marks only the built-in value search as navigation-owned: custom=$0", custom => {
+  const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
+  try {
+    act(() => root.render(<CominsTable data={[{ status: "Ready" }]} columns={[{ field: "status", label: "Status", filter: {
+      kind: "text", mode: "values", panel: custom ? { render: p => <input {...p.getSearchInputProps()} /> } : undefined,
+    } }]} columnFiltering={{ model: [], openColumnId: "status", onChangeOpenColumnId: () => {} }} />));
+    expect(host.querySelector("input[type=search]")?.getAttribute("data-comins-column-filter-value-input")).toBe(custom ? null : "true");
+  } finally { act(() => root.unmount()); host.remove(); }
+});
+
+it.each([false, true].flatMap(strict => (["callback-null", "callback-cleanup", "object"] as const).map(kind => ({ kind, strict }))))
+("preserves custom search ref lifetime through rerender and unmount: $kind/$strict", ({ kind, strict }) => {
+  const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
+  const events: string[] = [];
+  const objectRef = { current: null as HTMLInputElement | null };
+  const ref = kind === "object" ? objectRef : (node: HTMLInputElement | null) => {
+    events.push(node ? "attach" : "null");
+    if (node && kind === "callback-cleanup") return () => { events.push("cleanup"); };
+  };
+  const data = [{ status: "Ready" }];
+  const render = (label: string) => {
+    const table = <CominsTable data={data} columns={[{ field: "status", label, filter: {
+      kind: "text", mode: "values", panel: { render: p => <input {...p.getSearchInputProps({ ref })} /> },
+    } }]} columnFiltering={{ model: [], openColumnId: "status", onChangeOpenColumnId: () => {} }} />;
+    root.render(strict ? <StrictMode>{table}</StrictMode> : table);
+  };
+  const assertAttached = () => {
+    if (kind === "object") expect(objectRef.current).toBe(host.querySelector("input[type=search]"));
+    else expect(events.filter(x => x === "attach").length - events.filter(x => x === (kind === "callback-cleanup" ? "cleanup" : "null")).length).toBe(1);
+  };
+  try {
+    act(() => render("Status 1")); assertAttached();
+    act(() => render("Status 2")); assertAttached();
+    act(() => root.unmount());
+    if (kind === "object") expect(objectRef.current).toBeNull();
+    else {
+      expect(events.filter(x => x === "attach").length).toBe(events.filter(x => x === (kind === "callback-cleanup" ? "cleanup" : "null")).length);
+      if (kind === "callback-cleanup") expect(events).not.toContain("null");
+    }
+  } finally { if (host.firstChild) act(() => root.unmount()); host.remove(); }
+});
+
+
+it("restores native select-all indeterminate state and preserves user ref cleanup", () => {
+  const host = document.createElement("div"); document.body.append(host);
+  const root = createRoot(host);
+  const data = [{ id: 1, status: "Ready" }, { id: 2, status: "Blocked" }];
+  const cleaned = vi.fn();
+  const ref = vi.fn((node: HTMLInputElement | null) => node ? () => cleaned() : undefined);
+  let model: CominsColumnFilterModel = [{ columnId: "status", operator: "in", values: ["Ready"] }];
+  const columns: CominsTableColumn<(typeof data)[number]>[] = [{ id: "status", field: "status", label: "Status", filter: {
+    kind: "text", mode: "values", panel: { render: params => <input {...params.getSelectAllProps({ ref })} data-testid="native-select-all" /> },
+  } }];
+  const render = () => root.render(<CominsTable data={data} columns={columns} columnFiltering={{ model, openColumnId: "status", onChangeModel: () => {}, onChangeOpenColumnId: () => {} }} />);
+  const checkbox = () => host.querySelector<HTMLInputElement>('[data-testid="native-select-all"]')!;
+  try {
+    act(render);
+    expect(checkbox().indeterminate).toBe(true);
+    expect(checkbox().checked).toBe(false);
+    for (const [next, checked, mixed] of [
+      [[], true, false],
+      [[{ columnId: "status", operator: "in", values: ["Blocked"] }], false, true],
+      [[{ columnId: "status", operator: "in", values: [] }], false, false],
+    ] as const) {
+      model = next.map(rule => ({ ...rule, values: [...rule.values] }));
+      act(render);
+      expect(checkbox().checked).toBe(checked);
+      expect(checkbox().indeterminate).toBe(mixed);
+    }
+  } finally { act(() => root.unmount()); host.remove(); }
+  expect(ref.mock.calls.length).toBeGreaterThan(0);
+  expect(cleaned).toHaveBeenCalledTimes(ref.mock.calls.filter(([node]) => node !== null).length);
 });

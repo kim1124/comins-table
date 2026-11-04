@@ -1,6 +1,7 @@
 import { NavLink } from "react-router";
 
 import type { DocsPage } from "../../docs/types";
+import { prepareDocsSidebarNavigation } from "./prepareDocsSidebarNavigation";
 import { playgroundMessages } from "../../i18n/messages";
 import { usePlaygroundLocale } from "../../i18n/playground-locale";
 
@@ -19,7 +20,7 @@ export function DocsSidebar({ groups }: DocsSidebarProps) {
             <h2>{group.category}</h2>
             <div className="docs-sidebar__links">
               {group.pages.map((page) => (
-                <NavLink className="docs-sidebar__link" key={page.path} to={page.path}>
+                <NavLink className="docs-sidebar__link" key={page.path} onClick={prepareDocsSidebarNavigation} to={page.path}>
                   {page.label}
                 </NavLink>
               ))}

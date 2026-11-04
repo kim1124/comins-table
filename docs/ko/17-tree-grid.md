@@ -105,6 +105,8 @@ Column Filtering도 flat-data projection이므로 Tree Grid prop branch와 결�
 
 접힌 부모에 inside drop을 허용하되 자동으로 펼치지 않습니다. 정렬 중에는 수동 이동을 차단합니다. Handle은 pointer edge scroll과 Space 시작·방향키 목적지 선택·Enter 확정·Escape 취소를 지원합니다. 부모 변경이 허용되면 오른쪽/왼쪽 키로 하위 이동·부모 밖 이동을 선택합니다. 목적지와 결과를 안내하며 drop 표시가 Row 높이를 바꾸지 않습니다.
 
+키보드 이동이나 취소 후 복구 대상 핸들이 렌더되면 해당 핸들을 노출하고 포커스를 돌려줍니다. 포인터 이동은 drop 직전 Table viewport의 스크롤 위치를 보존합니다.
+
 Tree callback 타입은 `CominsBeforeTreeRowDragPayload`, `CominsTreeRowDragPayload`, `CominsAfterTreeRowDragPayload`이며 키보드 이벤트도 포함합니다. 시작 전 false 반환은 after callback 없이 취소하고, 시작된 gesture는 한 번 종료합니다. target metadata에 `tree.parentId`, `tree.beforeRowId`, `tree.position`을 전달합니다.
 
 `moveCominsTreeNode(nodes, rowId, destination, getRowId, { allowReparent })`는 immutable 이동 연산입니다. `CominsTreeMoveDestination`의 `parentId: null`은 루트, `beforeRowId: null`은 형제 배열 끝입니다. 변화가 없거나 유효하지 않은 이동은 원본 참조를 반환하고 중복 ID는 거부합니다. 위치가 바뀌어도 ID는 유지되어야 합니다.

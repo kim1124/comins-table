@@ -31,6 +31,30 @@ export function resolveCominsColumnPinning(
   blocks: readonly CominsColumnPinningBlock[],
   containerWidth: number,
 ): CominsResolvedColumnPinning {
+  // 고정 열이 없으면 순서만 투영하고 고정 영역의 분리·폭 계산은 생략한다.
+  for (const block of blocks) {
+    if (block.pinned !== undefined) {
+      return resolveConfiguredCominsColumnPinning(blocks, containerWidth);
+    }
+  }
+
+  const columns = new Map<string, CominsResolvedPinnedColumn>();
+  const orderedColumnIds: string[] = [];
+
+  for (const block of blocks) {
+    for (const columnId of block.columnIds) {
+      columns.set(columnId, {});
+      orderedColumnIds.push(columnId);
+    }
+  }
+
+  return { columns, orderedColumnIds };
+}
+
+function resolveConfiguredCominsColumnPinning(
+  blocks: readonly CominsColumnPinningBlock[],
+  containerWidth: number,
+): CominsResolvedColumnPinning {
   const left = blocks.filter((block) => block.pinned === "left");
   const center = blocks.filter((block) => block.pinned === undefined);
   const right = blocks.filter((block) => block.pinned === "right");

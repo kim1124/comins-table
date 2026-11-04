@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 
 import { CominsTable, type CominsColumnLayout, type CominsTableRef } from "../../../src";
 import { ActionButton, FeatureControls } from "../components/FeatureControls";
@@ -19,10 +19,9 @@ const columnGroupIdByColumnId = new Map(
 );
 
 export function ColumnGroupFeature() {
-  const { locale, text } = usePlaygroundLocale();
+  const { text } = usePlaygroundLocale();
   const groupTableRef = useRef<CominsTableRef<PersonRow>>(null);
   const [groupRows, setGroupRows] = useState(() => createExampleRows(30));
-  const [dynamicRows] = useState(() => createExampleRows(30));
   const richHeaderFixture = useMemo(
     () =>
       typeof window !== "undefined" &&
@@ -93,20 +92,6 @@ export function ColumnGroupFeature() {
     [localizedHeaderColumnGroups, richHeaderFixture],
   );
   const [groupLayout, setGroupLayout] = useState<CominsColumnLayout>(() => cloneGroupLayout());
-  const [dynamicColumnIds, setDynamicColumnIds] = useState(() => dynamicColumnOptions.map((option) => option.value));
-  const [dynamicVisibleGroupIds, setDynamicVisibleGroupIds] = useState(() =>
-    headerColumnGroups.map((group) => group.id),
-  );
-  const dynamicColumns = useMemo(
-    () =>
-      groupColumns.filter((column) => {
-        const columnId = String(column.id ?? column.field);
-        const groupId = columnGroupIdByColumnId.get(columnId);
-
-        return dynamicColumnIds.includes(columnId) && (!groupId || dynamicVisibleGroupIds.includes(groupId));
-      }),
-    [dynamicColumnIds, dynamicVisibleGroupIds, groupColumns],
-  );
   const profileGroupVisible = groupLayout.groups?.profile?.hidden !== true;
   const statusGroupVisible = groupLayout.groups?.status?.hidden !== true;
 
@@ -120,12 +105,6 @@ export function ColumnGroupFeature() {
     };
     setGroupLayout(nextLayout);
     groupTableRef.current?.setColumnLayout(nextLayout);
-  };
-
-  const setDynamicGroupVisible = (groupId: string, visible: boolean) => {
-    setDynamicVisibleGroupIds((current) =>
-      visible ? [...new Set([...current, groupId])] : current.filter((currentId) => currentId !== groupId),
-    );
   };
 
   const resetGroupLayout = () => {
@@ -190,53 +169,91 @@ export function ColumnGroupFeature() {
           </FeatureSampleSection>
         </section>
 
-        <section data-testid="column-group-dynamic-columns">
-          <FeatureSampleSection
-            description={text(defineLocalizedText(
-              "SelectBox에서 선택한 자식 column id만 columns prop에 전달해 columnGroups normalize 결과를 확인합니다.",
-              "Pass only child column IDs selected in the SelectBox to columns and inspect the normalized columnGroups result.",
-            ))}
-            id="column-group-dynamic-columns"
-            title={text(defineLocalizedText("Header 그룹 동적 표시", "Dynamic Header groups"))}
-          >
-            <FeatureControls
-              options={
-                <>
-                  <MultiSelect
-                    data-testid="column-group-column-select"
-                    label={text(defineLocalizedText("컬럼 선택", "Select columns"))}
-                    onChange={setDynamicColumnIds}
-                    options={dynamicColumnOptions}
-                    values={dynamicColumnIds}
-                  />
-                  {localizedHeaderColumnGroups.map((group) => (
-                    <Button
-                      aria-pressed={dynamicVisibleGroupIds.includes(group.id)}
-                      key={group.id}
-                      onClick={() => setDynamicGroupVisible(group.id, !dynamicVisibleGroupIds.includes(group.id))}
-                      variant="outline"
-                    >
-                      {locale === "ko" ? `${group.label} 표시` : `Show ${group.label}`}
-                    </Button>
-                  ))}
-                </>
-              }
-            />
-            <section className="header-dynamic-grid" data-testid="dynamic-group-table">
-              <CominsTable
-                className="example-table header-example-table"
-                columnGroups={localizedHeaderColumnGroups}
-                columns={dynamicColumns}
-                data={dynamicRows}
-                data-testid="dynamic-group-viewport"
-                getRowId={(row) => row.id}
-                pagination={{ pageIndex: 0, pageSize: 30 }}
-                theme={{ density: "compact" }}
-              />
-            </section>
-          </FeatureSampleSection>
-        </section>
+        <DynamicColumnGroupSample
+          groupColumns={groupColumns}
+          localizedHeaderColumnGroups={localizedHeaderColumnGroups}
+        />
       </div>
     </section>
   );
 }
+
+// 상단 헤더 동작이 독립적인 동적 컬럼 표와 선택 컨트롤을 다시 렌더링하지 않도록 한다.
+const DynamicColumnGroupSample = memo(function DynamicColumnGroupSample({
+  groupColumns,
+  localizedHeaderColumnGroups,
+}: {
+  groupColumns: ReturnType<typeof createHeaderGroupColumns>;
+  localizedHeaderColumnGroups: typeof headerColumnGroups;
+}) {
+  const { locale, text } = usePlaygroundLocale();
+  const [dynamicRows] = useState(() => createExampleRows(30));
+  const [dynamicColumnIds, setDynamicColumnIds] = useState(() => dynamicColumnOptions.map((option) => option.value));
+  const [dynamicVisibleGroupIds, setDynamicVisibleGroupIds] = useState(() =>
+    headerColumnGroups.map((group) => group.id),
+  );
+  const dynamicColumns = useMemo(
+    () =>
+      groupColumns.filter((column) => {
+        const columnId = String(column.id ?? column.field);
+        const groupId = columnGroupIdByColumnId.get(columnId);
+
+        return dynamicColumnIds.includes(columnId) && (!groupId || dynamicVisibleGroupIds.includes(groupId));
+      }),
+    [dynamicColumnIds, dynamicVisibleGroupIds, groupColumns],
+  );
+  const setDynamicGroupVisible = (groupId: string, visible: boolean) => {
+    setDynamicVisibleGroupIds((current) =>
+      visible ? [...new Set([...current, groupId])] : current.filter((currentId) => currentId !== groupId),
+    );
+  };
+
+  return (
+    <section data-testid="column-group-dynamic-columns">
+      <FeatureSampleSection
+        description={text(defineLocalizedText(
+          "SelectBox에서 선택한 자식 column id만 columns prop에 전달해 columnGroups normalize 결과를 확인합니다.",
+          "Pass only child column IDs selected in the SelectBox to columns and inspect the normalized columnGroups result.",
+        ))}
+        id="column-group-dynamic-columns"
+        title={text(defineLocalizedText("Header 그룹 동적 표시", "Dynamic Header groups"))}
+      >
+        <FeatureControls
+          options={
+            <>
+              <MultiSelect
+                data-testid="column-group-column-select"
+                label={text(defineLocalizedText("컬럼 선택", "Select columns"))}
+                onChange={setDynamicColumnIds}
+                options={dynamicColumnOptions}
+                values={dynamicColumnIds}
+              />
+              {localizedHeaderColumnGroups.map((group) => (
+                <Button
+                  aria-pressed={dynamicVisibleGroupIds.includes(group.id)}
+                  key={group.id}
+                  onClick={() => setDynamicGroupVisible(group.id, !dynamicVisibleGroupIds.includes(group.id))}
+                  variant="outline"
+                >
+                  {locale === "ko" ? `${group.label} 표시` : `Show ${group.label}`}
+                </Button>
+              ))}
+            </>
+          }
+        />
+        <section className="header-dynamic-grid" data-testid="dynamic-group-table">
+          <CominsTable
+            className="example-table header-example-table"
+            columnGroups={localizedHeaderColumnGroups}
+            columns={dynamicColumns}
+            data={dynamicRows}
+            data-testid="dynamic-group-viewport"
+            getRowId={(row) => row.id}
+            pagination={{ pageIndex: 0, pageSize: 30 }}
+            theme={{ density: "compact" }}
+          />
+        </section>
+      </FeatureSampleSection>
+    </section>
+  );
+});

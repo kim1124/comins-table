@@ -708,6 +708,7 @@
 
 .comins-table__th,
 .comins-table__td {
+  box-sizing: border-box;
   border: 0;
   height: var(--comins-table-cell-height);
   min-width: 0;
@@ -1389,9 +1390,11 @@
 }
 
 .comins-table-empty-filler td {
+  box-sizing: border-box;
   border-bottom: 0;
   border-right: 0;
   min-height: 1px;
+  padding: 0;
 }
 
 .comins-table__tr--viewport-end > .comins-table__td {
@@ -1881,3 +1884,13 @@
 .comins-column-filter__count { color: var(--comins-table-component-muted); margin-left: auto; }
 .comins-column-filter__select-all, .comins-column-filter__actions { display: flex; align-items: center; gap: 6px; }
 .comins-column-filter__no-results { color: var(--comins-table-component-muted); padding: 8px; }
+
+/* Avoid per-element paged-media UA queries on scrolling screens; retain print rules. */
+@media screen and (overflow-block: scroll) {
+  :where(
+    .comins-table__header-table > .comins-table__thead,
+    .comins-table__summary-table > tfoot
+  ) {
+    break-inside: auto;
+  }
+}

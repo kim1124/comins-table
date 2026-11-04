@@ -164,3 +164,17 @@ test("Row Grouping virtualizes a 100000-leaf expanded projection @perf", async (
   await expect(viewport.getByTestId("row-grouping-virtual-100000")).toBeVisible();
   expect(await renderedSlots.count()).toBeLessThan(50);
 });
+
+test("Row Grouping restores disclosure focus when a controlled collapse removes the active leaf", async ({ page }) => {
+  await page.goto("/examples/row-grouping");
+  const single = page.getByTestId("row-grouping-single-viewport");
+  const disclosure = single.getByTestId("group-toggle-east");
+  await disclosure.click();
+  const leaf = single.getByTestId("cell-group-a-name");
+  await leaf.click();
+  await expect(leaf).toBeFocused();
+  // 실제 controlled 갱신을 실행하되 외부 버튼으로 포커스를 먼저 옮기지 않는다.
+  await page.getByRole("button", { name: "Collapse all groups", exact: true }).evaluate(button => button.click());
+  await expect(single.locator("tr[data-comins-row-data-index]")).toHaveCount(0);
+  await expect(disclosure).toBeFocused();
+});

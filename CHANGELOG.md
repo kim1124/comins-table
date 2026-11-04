@@ -1,5 +1,60 @@
 # Comins Table
 
+## Unreleased
+
+## 0.2.3 - 2026-11-04
+
+### Fixed
+
+- Release cancelled Viewport request callbacks without waiting for a consumer Promise that ignores AbortSignal, while continuing to ignore late results.
+
+- Keep production Playground XLSX compression inside its existing Worker to avoid nested Worker teardown retention, while preserving workbook contents and the main-thread export path.
+
+- Preserve default grouped column order without running requested-order lock and segment reconciliation when no order is supplied, while keeping explicit reorder behavior unchanged.
+
+- Reuse the normalized column ID projection within each column-order calculation, avoiding two temporary arrays while preserving pinned, locked, and grouped ordering.
+
+- Reapply the Viewport height-cache budget after ResizeObserver measurement batches, retaining the current required blocks without waiting for another scroll or data request.
+
+- Avoid rebuilding the Playground value-filter toolbar when only filter model or popup state changes, while preserving locale updates and controlled inputs.
+
+- Limit row-detail disclosure refs to their DOM registry and row ID so a retired native event Fiber does not retain row data and application callbacks.
+
+- Limit grouped-row disclosure refs to their DOM registry and group ID so a retired event Fiber does not retain grouping callbacks and table rows.
+
+- Keep native value-filter checkbox ref installers limited to the indeterminate flag so the last event Fiber cannot retain retired table rows through filter callbacks.
+
+- Preserve newer horizontal scroll requests and native keyboard scrolling by ignoring synchronization echoes, and align newly mounted headers and summaries with the current body position.
+
+- Release focused search inputs in the Playground-owned custom value-filter panels before sidebar navigation, while preserving the library custom-panel getter contract.
+
+- Limit value-filter search ref callbacks to their ref object so a retired input does not retain its table through filter render closures.
+
+- Release focused built-in filter inputs and their popups before Playground sidebar route unmounts, while preserving custom input blur contracts and cancelled or modified navigation.
+
+- Prevent stale Viewport row-height anchors from overriding a newer scroll before its scroll event is delivered.
+
+- Preserve a newer scroll request when an earlier automatic-height anchor correction commits before its scroll event, while retaining normal browser bottom clamping.
+
+- Pin development and Playground React tooling to 19.3.0 to use upstream Performance Tracks cleanup and avoid large-props diagnostic failures; keep the published React peer support range unchanged.
+
+- Release focused built-in Virtual List search subtrees before Playground sidebar route changes, while preserving cancelled, modified, same-route, and application-owned input blur behavior.
+- Reapply the Viewport cache budget when cancelled requests or superseded responses stop protecting old blocks, while preserving visible blocks, active requests, and newer retained edits.
+- Use the latest committed Header Menu callbacks and payload for outside/Escape dismissal, and keep native listeners and cleanup closures from retaining replaced menu configuration while open.
+- Blur focused filter inputs before outside-pointer dismissal removes their popup, releasing React selection tracking without stealing the clicked destination focus.
+- Preserve reconciled React table inputs when controlled columns and imperative layout restoration update in one commit, avoiding stale state overwrites that can leave restored columns missing.
+- Keep Playground column-selector Portal listeners on a popover-owned body child and remove that host on close or unmount, avoiding persistent body delegation after use.
+- Keep scroll-anchor fallback linear when every row key changes, avoiding synchronous renderer stalls during large data replacement while preserving predecessor and duplicate-key selection.
+- Avoid coercing hidden raw cell values to strings when a custom renderer or visible built-in component supplies the content, while preserving explicit formatter callbacks and input/select fallback text.
+- Keep default cell heights aligned with the row model without a global CSS reset, preventing intrinsic viewport/filler resize feedback.
+- Avoid React state projection for empty selected-cell ranges.
+
+- Stop viewport observations before DOM removal, ignore retired resize deliveries, and avoid state dispatches from column interaction unmount cleanup while resetting interrupted interactions on effect reconnection.
+
+- Avoid Chromium paged-media query cache accumulation for table header/footer groups on scrolling screens while preserving print fragmentation.
+
+- Release replaced initial React table data retained by mount-lifetime measurement and cleanup closures, including disabled cell fill.
+
 ## 0.2.2 - 2026-10-13
 
 - Playground: display complete remote-loading responses and CSV/XLSX datasets, start file examples with 1000 rows, and reset article scrolling on page navigation.

@@ -3042,3 +3042,13 @@ body {
 .value-filter-check { cursor:pointer; padding:4px; }
 .value-filter-check:focus-visible, .value-filter-trigger:focus-visible { outline:2px solid var(--comins-table-component-focus); }
 .value-filter-trigger { cursor:pointer; font-size:12px; }
+
+/* Avoid per-element paged-media UA queries on scrolling screens; retain print rules. */
+@media screen and (overflow-block: scroll) {
+  :where(
+    .docs-api-table__viewport > table > thead,
+    .docs-api-table__viewport > table > tfoot
+  ) {
+    break-inside: auto;
+  }
+}

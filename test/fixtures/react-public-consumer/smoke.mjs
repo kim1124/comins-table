@@ -7,10 +7,24 @@ for (const key of ["window", "document", "navigator", "HTMLElement", "Element", 
   Object.defineProperty(globalThis, key, { configurable: true, value: typeof dom.window[key] === "function" && /^(getComputedStyle|requestAnimationFrame|cancelAnimationFrame)$/.test(key) ? dom.window[key].bind(dom.window) : dom.window[key] });
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+// JSDOM의 observer 부재를 명시적 제어 대조로 대체한다. native 동작은 별도 browser spec에서 검증한다.
+const resizeRecords = [];
+let resizeObserves = 0, resizeDisconnects = 0;
+class ControlledResizeObserver {
+  constructor(callback) {
+    this.callback = callback;
+    this.targets = new Set();
+    resizeRecords.push({ observer: new WeakRef(this), targets: this.targets });
+  }
+  observe(target) { resizeObserves++; this.targets.add(target); }
+  unobserve(target) { this.targets.delete(target); }
+  disconnect() { resizeDisconnects++; this.targets.clear(); }
+}
+globalThis.ResizeObserver = dom.window.ResizeObserver = ControlledResizeObserver;
 const browserErrors = [];
 dom.window.addEventListener("error", event => browserErrors.push(event.error ?? event.message));
 // React detects input-event support at import time; initialize the browser first.
-const { createElement, act, version } = await import("react");
+const { createElement, act, version, StrictMode, useEffect } = await import("react");
 const { createRoot } = await import("react-dom/client");
 const root = await import("comins-table");
 const core = await import("comins-table/core");
@@ -91,6 +105,37 @@ try {
   assert.equal(container.querySelector('input[aria-label="10"]').checked, false);
   assert.equal(container.querySelector('[data-testid="row-a"]'), null);
   assert.ok(container.querySelector('[data-testid="row-b"]'));
+
+  await act(async () => mounted.render(null));
+  assert.equal(resizeRecords.reduce((sum, item) => sum + item.targets.size, 0), 0, "Prior consumer observers must be disconnected");
+  const strictLifecycle = { setups: 0, cleanups: 0 };
+  const beforeStrict = { observes: resizeObserves, disconnects: resizeDisconnects };
+  function StrictProbe() {
+    useEffect(() => { strictLifecycle.setups++; return () => { strictLifecycle.cleanups++; }; }, []);
+    return createElement(root.CominsTable, {
+      data: edited.rows, columns: state.columns, getRowId: row => row.id,
+      expandedRowIds: ["a"], getRowDetailHeight: () => "auto",
+      rowDetail: { render: () => createElement("div", { "data-testid": "strict-packed-detail" }, "Automatic detail") },
+    });
+  }
+  await act(async () => mounted.render(createElement(StrictMode, null, createElement(StrictProbe))));
+  assert.deepEqual(strictLifecycle, { setups: 2, cleanups: 1 }, "StrictMode must replay setup-cleanup-setup");
+  assert.ok(resizeDisconnects > beforeStrict.disconnects, "StrictMode replay must disconnect an actual observer");
+  assert.ok(resizeObserves - beforeStrict.observes >= 4, "Viewport and detail observers must be restored after replay");
+  let delivered = 0;
+  await act(async () => {
+    for (const item of resizeRecords) {
+      const observer = item.observer.deref();
+      if (!observer || !item.targets.size) continue;
+      observer.callback([...item.targets].map(target => ({ target, contentRect: { height: 80, width: 300 }, borderBoxSize: [{ blockSize: 80, inlineSize: 300 }] })), observer);
+      delivered++;
+    }
+  });
+  assert.ok(delivered >= 2, "Restored viewport and automatic detail observer callbacks must execute");
+  assert.ok(container.querySelector('[data-testid="strict-packed-detail"]'));
+  await act(async () => mounted.render(null));
+  assert.deepEqual(strictLifecycle, { setups: 2, cleanups: 2 });
+  assert.equal(resizeRecords.reduce((sum, item) => sum + item.targets.size, 0), 0, "Final StrictMode cleanup must release every observer target");
   assert.deepEqual(browserErrors, [], "Packed React interactions must not emit uncaught DOM errors");
 
 } finally {
