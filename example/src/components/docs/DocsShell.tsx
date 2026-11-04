@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router";
+import { createRoutesFromElements, Navigate, Route, useLocation, useRoutes, type Location, type RouteObject } from "react-router";
 
 import { createDocsNavGroups, createDocsPages } from "../../docs/docsRoutes";
 import { usePlaygroundLocale } from "../../i18n/playground-locale";
@@ -8,6 +8,10 @@ import { DocsArticle } from "./DocsArticle";
 import { DocsSidebar } from "./DocsSidebar";
 import { DocsTopNav } from "./DocsTopNav";
 import { RouteLifecycleBoundary } from "./RouteLifecycleBoundary";
+
+function DocsRoutes({ routes, location }: { routes: RouteObject[]; location: Location }) {
+  return useRoutes(routes, location);
+}
 
 export function DocsShell() {
   const location = useLocation();
@@ -19,6 +23,29 @@ export function DocsShell() {
   const docsPages = useMemo(() => createDocsPages(locale), [locale]);
   const docsNavGroups = useMemo(() => createDocsNavGroups(createDocsPages("en")), []);
 
+  // 문서 목록이 같으면 JSX와 라우트 정의를 재사용하고 pathname key로 종료 경계를 유지한다.
+  const routeElements = useMemo(() => (
+    <>
+      <Route element={<Navigate replace to="/docs/getting-started" />} path="/" />
+      <Route element={<Navigate replace to="/docs/getting-started" />} path="/examples/basic" />
+      <Route element={<Navigate replace to="/performance/virtualization" />} path="/examples/body" />
+      <Route element={<Navigate replace to="/examples/column-groups" />} path="/examples/header-groups" />
+      {docsPages.map((page) => (
+        <Route
+          element={
+            <RouteLifecycleBoundary featureId={page.featureId} routePath={page.path}>
+              <DocsArticle page={page} />
+            </RouteLifecycleBoundary>
+          }
+          key={page.path}
+          path={page.path}
+        />
+      ))}
+      <Route element={<Navigate replace to="/docs/getting-started" />} path="*" />
+    </>
+  ), [docsPages]);
+  const routeObjects = useMemo(() => createRoutesFromElements(routeElements), [routeElements]);
+
   if (location.pathname === "/readme-demo") {
     return <ReadmeDemoPage />;
   }
@@ -29,24 +56,7 @@ export function DocsShell() {
       <div className="docs-shell__body">
         <DocsSidebar groups={docsNavGroups} />
         <main className="docs-shell__content" ref={contentRef}>
-          <Routes key={location.pathname} location={location}>
-            <Route element={<Navigate replace to="/docs/getting-started" />} path="/" />
-            <Route element={<Navigate replace to="/docs/getting-started" />} path="/examples/basic" />
-            <Route element={<Navigate replace to="/performance/virtualization" />} path="/examples/body" />
-            <Route element={<Navigate replace to="/examples/column-groups" />} path="/examples/header-groups" />
-            {docsPages.map((page) => (
-              <Route
-                element={
-                  <RouteLifecycleBoundary featureId={page.featureId} routePath={page.path}>
-                    <DocsArticle page={page} />
-                  </RouteLifecycleBoundary>
-                }
-                key={page.path}
-                path={page.path}
-              />
-            ))}
-            <Route element={<Navigate replace to="/docs/getting-started" />} path="*" />
-          </Routes>
+          <DocsRoutes key={location.pathname} location={location} routes={routeObjects} />
         </main>
       </div>
     </div>

@@ -15,6 +15,9 @@ test("tree keyboard reorders actual sibling ids through controlled data", async 
   await page.keyboard.press("Space");
   await expect(viewport.locator("..").getByRole("status")).toContainText("Moving a-1");
   await page.keyboard.press("Escape");
+  await expect(page.getByTestId("tree-drag-result")).toContainText('"result":"cancelled"');
+  await expect(source).toBeFocused();
+  await expect(source).toBeInViewport({ ratio: 1 });
 });
 
 test("tree pointer reparent moves the complete collapsed subtree", async ({ page }) => {
@@ -30,7 +33,10 @@ test("tree pointer reparent moves the complete collapsed subtree", async ({ page
   await page.mouse.down();
   await page.mouse.move(target!.x + target!.width / 2, target!.y + target!.height / 2, { steps: 6 });
   await expect(viewport.getByTestId("row-root-b")).toHaveAttribute("data-comins-tree-drop-valid", "true");
+  const scrollBeforeDrop = await viewport.evaluate(element => element.scrollTop);
   await page.mouse.up();
+  await expect.poll(() => viewport.evaluate(element => element.scrollTop)).toBe(scrollBeforeDrop);
+  await expect(viewport.getByTestId("row-drag-handle-root-b")).toBeFocused();
   await expect(page.getByTestId("tree-drag-result")).toContainText('"rowId":"a-2","result":"moved"');
   await expect(page.getByTestId("tree-drag-result")).toContainText('"parentId":"root-b"');
   await expect(viewport.getByTestId("row-hidden-child")).toHaveCount(0);
@@ -53,6 +59,10 @@ test("tree keyboard navigation survives source virtualization and restores moved
   await expect(page.getByTestId("tree-drag-result")).toContainText('"rowId":"child-0","result":"moved"');
   await expect(viewport.getByTestId("row-drag-handle-child-0")).toBeFocused();
   await expect(viewport.getByTestId("row-child-0")).toHaveAttribute("data-comins-row-data-index", "61");
+  await expect(viewport.getByTestId("row-drag-handle-child-0")).toBeInViewport({ ratio: 1 });
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(viewport.getByTestId("row-drag-handle-child-0")).toBeFocused();
+  await expect(viewport.getByTestId("row-drag-handle-child-0")).toBeInViewport({ ratio: 1 });
 });
 
 test("tree policy change cancels a gesture without changing data", async ({ page }) => {

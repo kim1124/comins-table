@@ -36,7 +36,7 @@ const viewport = useCominsViewport<Person>({
 
 ## 요청과 캐시
 
-구간은 `[startIndex, endIndex)`입니다. 마지막 짧은 block을 포함하여 정확히 요청한 수의 업무 Row 배열을 반환합니다. API가 `{ rows, total }` 형태라면 callback에서 `rows`를 추출하고 확인된 전체 건수를 `rowCount`로 전달합니다. 누락·null Row 또는 불완전 응답은 오류입니다. `AbortSignal`로 오래된 요청을 취소하고 이전 dataset revision·request token 응답은 무시합니다. 실패 구간에는 명시적인 재시도 조작을 제공합니다. 자동 무한 재시도나 내장 HTTP/WebSocket 클라이언트는 없습니다.
+구간은 `[startIndex, endIndex)`입니다. 마지막 짧은 block을 포함하여 정확히 요청한 수의 업무 Row 배열을 반환합니다. API가 `{ rows, total }` 형태라면 callback에서 `rows`를 추출하고 확인된 전체 건수를 `rowCount`로 전달합니다. 누락·null Row 또는 불완전 응답은 오류입니다. `AbortSignal`로 오래된 요청을 취소하고 이전 dataset revision·request token 응답은 무시합니다. 소비자 Promise가 미완료 상태여도 취소 시 라이브러리의 대기를 종료하여 완료 콜백 참조를 해제합니다. 실제 작업을 중단하려면 datasource에서도 signal을 처리해야 합니다. 실패 구간에는 명시적인 재시도 조작을 제공합니다. 자동 무한 재시도나 내장 HTTP/WebSocket 클라이언트는 없습니다.
 
 기본값은 `blockSize: 100`, `cacheSize: 12`, `maxConcurrentRequests: 2`, `heightCacheSize: 64` block입니다. 유효한 양의 정수가 아닌 옵션은 기본값으로 대체합니다. 현재 화면과 활성 요청을 보존하기 위해 작은 설정 한도보다 실효 캐시가 커질 수 있습니다. 높이는 별도 희소 캐시를 사용하며 퇴출된 높이는 재방문 시 추정값으로 돌아갑니다. 관련 Row 측정 전 전체 scroll 높이와 thumb 크기는 추정치입니다. 전체 dataset 길이의 배열은 생성하지 않습니다.
 

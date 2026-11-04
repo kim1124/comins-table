@@ -196,6 +196,13 @@ test("remeasures asynchronous automatic Detail growth and Column width changes w
   const owner = automatic.getByTestId("row-auto-1");
   const detail = automatic.getByTestId("row-detail-content-auto-1");
   const sizer = automatic.locator(".comins-table__body-virtual-sizer");
+  // 초기 추정 높이가 실제 상세 높이로 반영된 뒤 기준값을 읽는다.
+  await expect.poll(async () => {
+    const detailHeight = (await detail.boundingBox())?.height ?? 0;
+    const logicalHeight = await sizer.evaluate((element) => element.getBoundingClientRect().height);
+
+    return Math.abs(logicalHeight - (216 + detailHeight));
+  }).toBeLessThanOrEqual(1);
   const ownerTopBefore = (await owner.boundingBox())!.y;
   const detailHeightBefore = (await detail.boundingBox())!.height;
   const logicalHeightBefore = await sizer.evaluate((element) => element.getBoundingClientRect().height);
@@ -203,18 +210,19 @@ test("remeasures asynchronous automatic Detail growth and Column width changes w
   await automatic.getByTestId("auto-detail-grow-auto-1").click();
   await expect(automatic.getByTestId("auto-detail-grown-content")).toBeVisible();
   await expect.poll(async () => (await detail.boundingBox())?.height ?? 0).toBeGreaterThan(detailHeightBefore + 20);
-  const ownerTopAfterGrowth = (await owner.boundingBox())!.y;
-  expect(Math.abs(ownerTopAfterGrowth - ownerTopBefore)).toBeLessThanOrEqual(1);
-
-  const detailWidthBefore = (await detail.boundingBox())!.width;
-  const logicalHeightAfterGrowth = await sizer.evaluate((element) => element.getBoundingClientRect().height);
-  expect(logicalHeightAfterGrowth).toBeGreaterThan(logicalHeightBefore + 20);
+  // 내용 확장 직후에도 observer가 논리 높이를 반영할 때까지 기다린다.
   await expect.poll(async () => {
     const detailHeight = (await detail.boundingBox())?.height ?? 0;
     const logicalHeight = await sizer.evaluate((element) => element.getBoundingClientRect().height);
 
     return Math.abs(logicalHeight - (216 + detailHeight));
   }).toBeLessThanOrEqual(1);
+  const ownerTopAfterGrowth = (await owner.boundingBox())!.y;
+  expect(Math.abs(ownerTopAfterGrowth - ownerTopBefore)).toBeLessThanOrEqual(1);
+
+  const detailWidthBefore = (await detail.boundingBox())!.width;
+  const logicalHeightAfterGrowth = await sizer.evaluate((element) => element.getBoundingClientRect().height);
+  expect(logicalHeightAfterGrowth).toBeGreaterThan(logicalHeightBefore + 20);
 
   const scrollExtentSamples = await automatic.evaluate(async (element) => {
     const samples: Array<{ clientHeight: number; scrollHeight: number; scrollTop: number; sizerHeight: number }> = [];

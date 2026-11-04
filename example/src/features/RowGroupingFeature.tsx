@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type CSSProperties } from "react";
+import { memo, useMemo, useRef, useState, type CSSProperties, type Dispatch, type RefObject, type SetStateAction } from "react";
 
 import {
   CominsTable,
@@ -84,6 +84,60 @@ function getVirtualGroupingRowId(row: VirtualGroupingRow) {
   return row.id;
 }
 
+type RowGroupingToolbarProps = {
+  tableRef: RefObject<CominsTableRef<RowGroupingExampleRow> | null>;
+  movementAllowed: boolean;
+  setMovementAllowed: Dispatch<SetStateAction<boolean>>;
+  setRegionGroups: Dispatch<SetStateAction<ExampleGroup[]>>;
+};
+
+// 그룹 모델 변경만으로 동일한 툴바 JSX와 핸들러를 다시 만들지 않는다.
+const RowGroupingToolbar = memo(function RowGroupingToolbar({
+  tableRef, movementAllowed, setMovementAllowed, setRegionGroups,
+}: RowGroupingToolbarProps) {
+  const { text } = usePlaygroundLocale();
+  return (
+    <>
+        <FeatureControls
+          actions={(
+            <>
+              <Button onClick={() => tableRef.current?.expandGroups()} variant="outline">
+                {text(defineLocalizedText("모든 Group 펼치기", "Expand all groups"))}
+              </Button>
+              <Button onClick={() => tableRef.current?.foldGroups()} variant="outline">
+                {text(defineLocalizedText("모든 Group 접기", "Collapse all groups"))}
+              </Button>
+              <Button
+                onClick={() => setRegionGroups((current) => current.some((group) => group.id === "archived")
+                  ? current
+                  : [...current, { id: "archived", label: "Archived" }])}
+                variant="outline"
+              >
+                {text(defineLocalizedText("빈 Group 추가", "Add empty group"))}
+              </Button>
+              <Button
+                onClick={() => setRegionGroups((current) => current.map((group) =>
+                  group.id === "empty" ? { ...group, label: group.label === "Empty" ? "Renamed" : "Empty" } : group))}
+                variant="outline"
+              >
+                {text(defineLocalizedText("빈 Group 이름 변경", "Rename empty group"))}
+              </Button>
+              <Button
+                onClick={() => setRegionGroups((current) => current.filter((group) => group.id !== "archived"))}
+                variant="outline"
+              >
+                {text(defineLocalizedText("추가 Group 삭제", "Delete added group"))}
+              </Button>
+            </>
+          )}
+        />
+        <Button aria-pressed={movementAllowed} onClick={() => setMovementAllowed(value => !value)} variant="outline">
+          {text(defineLocalizedText("Row·Group 이동 허용", "Allow Row and Group movement"))}
+        </Button>
+    </>
+  );
+});
+
 export function RowGroupingFeature() {
   const { text } = usePlaygroundLocale();
   const tableRef = useRef<CominsTableRef<RowGroupingExampleRow>>(null);
@@ -125,42 +179,12 @@ export function RowGroupingFeature() {
         id="row-grouping-single"
         title={text(defineLocalizedText("Explicit Group 모델과 Drag", "Explicit Group model and Drag"))}
       >
-        <FeatureControls
-          actions={(
-            <>
-              <Button onClick={() => tableRef.current?.expandGroups()} variant="outline">
-                {text(defineLocalizedText("모든 Group 펼치기", "Expand all groups"))}
-              </Button>
-              <Button onClick={() => tableRef.current?.foldGroups()} variant="outline">
-                {text(defineLocalizedText("모든 Group 접기", "Collapse all groups"))}
-              </Button>
-              <Button
-                onClick={() => setRegionGroups((current) => current.some((group) => group.id === "archived")
-                  ? current
-                  : [...current, { id: "archived", label: "Archived" }])}
-                variant="outline"
-              >
-                {text(defineLocalizedText("빈 Group 추가", "Add empty group"))}
-              </Button>
-              <Button
-                onClick={() => setRegionGroups((current) => current.map((group) =>
-                  group.id === "empty" ? { ...group, label: group.label === "Empty" ? "Renamed" : "Empty" } : group))}
-                variant="outline"
-              >
-                {text(defineLocalizedText("빈 Group 이름 변경", "Rename empty group"))}
-              </Button>
-              <Button
-                onClick={() => setRegionGroups((current) => current.filter((group) => group.id !== "archived"))}
-                variant="outline"
-              >
-                {text(defineLocalizedText("추가 Group 삭제", "Delete added group"))}
-              </Button>
-            </>
-          )}
+        <RowGroupingToolbar
+          tableRef={tableRef}
+          movementAllowed={movementAllowed}
+          setMovementAllowed={setMovementAllowed}
+          setRegionGroups={setRegionGroups}
         />
-        <Button aria-pressed={movementAllowed} onClick={() => setMovementAllowed(value => !value)} variant="outline">
-          {text(defineLocalizedText("Row·Group 이동 허용", "Allow Row and Group movement"))}
-        </Button>
         <pre className="state-output" data-testid="row-grouping-single-state">
           {JSON.stringify(singleExpandedGroupIds, null, 2)}
         </pre>

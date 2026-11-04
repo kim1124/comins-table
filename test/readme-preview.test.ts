@@ -43,7 +43,7 @@ describe("README preview contract", () => {
     }
     expect(classifyVerificationScope(["src/index.tsx"]).gif).toBe(false);
     expect(changesJob).toContain("gif: ${{ steps.scope.outputs.gif }}");
-    expect(metadataJob).toContain("runs-on: macos-latest");
+    expect(metadataJob).toContain("runs-on: macos-26-intel");
     expect(metadataJob).toContain("needs: changes");
     expect(metadataJob).toContain("needs.changes.outputs.gif == 'true'");
     expect(metadataJob).toContain("npm run test:run -- test/readme-preview.test.ts");

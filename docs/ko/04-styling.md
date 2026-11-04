@@ -4,6 +4,8 @@
 
 Table 전체 스타일은 `className`, `style`, `theme`로 제어한다. Row 스타일은 `rowProps`, column/cell 스타일은 `columns[].cell.props`로 둔다.
 
+기본 CSS는 Header·Cell에 컴포넌트 범위의 `border-box`를 적용하므로 전역 CSS reset 없이도 설정 높이에 padding과 테두리가 포함된다. 빈 공간을 채우는 Cell은 padding을 제거해 viewport 높이 측정이 반복해서 증가하지 않도록 한다.
+
 <!-- comins-doc-example: fragment -->
 ```tsx
 <CominsTable

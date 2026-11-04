@@ -85,7 +85,7 @@ Cell range를 확장해도 해당 Row selection은 해제하지 않는다. 선�
 
 Cell components는 `button`, `input`, `checkbox`, `radio`, `select`, `toggle`, `progress`, `virtual-list`를 지원한다. `menu`는 Header 전용이므로 Cell에서 사용할 수 없다. Built-in component 이벤트는 Cell/Row click, keyboard, context menu 이벤트로 전파되지 않는다.
 
-`input`은 입력 중 외부 `data`를 갱신하지 않고 내부 draft만 변경한다. `Enter` 또는 `Blur` 시점에 값이 바뀐 경우 한 번만 `onChange`/`onValueChange`를 호출한다.
+`input`은 입력 중 외부 `data`를 갱신하지 않고 내부 draft만 변경한다. `Enter` 또는 `Blur` 시점에 값이 바뀐 경우 한 번만 `onChange`/`onValueChange`를 호출한다. IME 조합을 확정하는 `Enter`는 draft를 커밋하거나 input의 포커스를 해제하지 않는다. 조합이 끝난 후 일반 `Enter` 또는 `Blur` 시점에 변경된 값을 한 번 커밋한다.
 
 `virtual-list`는 하나의 Cell 안에서 여러 item을 표시한다. 기본값은 `itemHeight: 28`, `limit: 5`, 높이는 `itemHeight * 5`다. 초기 상태는 최대 5개 preview만 렌더링하고, 항목이 5개를 초과하면 `...`를 표시한다. `more: true`인 경우 `...`가 Row 선택 전에도 동작하는 버튼으로 렌더링되며, 클릭하면 해당 Row를 단독 선택한 뒤 전체 목록을 bounded virtual scroll로 확장한다. `searchable: true`인 경우 정확히 하나의 Row가 선택되었을 때만 검색 input을 표시하고 검색 결과도 virtualized range만 렌더링한다. item 선택 상태는 Cell 내부 일시 상태로 관리된다. virtual scroll로 Cell이 destroy/recreate되면 item 선택 상태는 초기화될 수 있다.
 

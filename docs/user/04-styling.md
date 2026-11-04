@@ -4,6 +4,8 @@
 
 Import `comins-table/styles.css` to use the default shell, table layout, themes, and built-in component skin.
 
+Headers and Cells use component-scoped `border-box` sizing, so their configured height includes padding and borders without a global CSS reset. Empty-space filler Cells have no padding to keep viewport measurements stable.
+
 <!-- comins-doc-example: fragment -->
 ```tsx
 import "comins-table/styles.css";

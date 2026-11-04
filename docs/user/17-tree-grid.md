@@ -120,6 +120,8 @@ Tree dragging is disabled when `treeRowDrag` is omitted. Set `treeRowDrag={{}}` 
 
 A collapsed parent accepts an inside drop without automatically expanding. Sorting disables manual Tree movement until cleared. The handle supports pointer edge scrolling and Space to begin, arrow keys to choose a destination, Enter to commit, and Escape to cancel. Right/left choose nesting/outdent when reparenting is enabled. Destination and result are announced, and drop markers do not change Row geometry.
 
+After a keyboard move or cancellation, an available matching drag handle is brought into view and receives focus. Pointer moves preserve the Table viewport scroll position at drop.
+
 Tree callbacks use `CominsBeforeTreeRowDragPayload`, `CominsTreeRowDragPayload` and `CominsAfterTreeRowDragPayload`; their events include keyboard gestures. Returning false before a gesture starts cancels it without an after callback. A started gesture ends once. Target metadata includes `tree.parentId`, `tree.beforeRowId` and `tree.position`.
 
 `moveCominsTreeNode(nodes, rowId, destination, getRowId, { allowReparent })` exposes the immutable operation. `CominsTreeMoveDestination` uses `parentId: null` for the root and `beforeRowId: null` for the sibling-list end. It returns the original reference for unchanged or invalid moves and rejects duplicate IDs. IDs must remain stable when positions change.

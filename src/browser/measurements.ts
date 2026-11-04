@@ -65,11 +65,14 @@ export function observeCominsViewport(element: HTMLElement, onMeasure: (value: {
   height: number; width: number; scrollWidth: number; outerWidth: number; viewportWidth: number;
 }) => void) {
   if (!hasCominsResizeObserver()) return () => {};
+  let active = true;
   const observer = new ResizeObserver(([entry]) => {
+    // 제거된 target 또는 해제 후 지연 도착한 관측으로 React 업데이트를 등록하지 않는다.
+    if (!active || !element.isConnected) return;
     if (entry) onMeasure({ height: entry.contentRect.height, width: entry.contentRect.width, scrollWidth: element.scrollWidth, outerWidth: element.offsetWidth, viewportWidth: element.clientWidth });
   });
   observer.observe(element);
-  return () => observer.disconnect();
+  return () => { active = false; observer.disconnect(); };
 }
 
 export function observeCominsFontChanges(onChange: () => void) {

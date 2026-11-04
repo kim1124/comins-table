@@ -13,6 +13,14 @@ function bindRef<E extends HTMLElement>(user: Ref<E> | undefined, install?: (nod
     else if (user) user.current = node;
   };
 }
+// ref 콜백이 필터 render context의 actions와 portalContainer를 함께 보유하지 않도록 분리한다.
+function createSearchRefInstaller(ref: { current: HTMLInputElement | null }) {
+  return (node: HTMLInputElement | null) => { ref.current = node; };
+}
+// React가 종료된 Fiber.ref를 잠시 유지해도 변경 콜백과 원본 행을 함께 잡지 않는다.
+function createIndeterminateInstaller(indeterminate: boolean) {
+  return (node: HTMLInputElement | null) => { if (node) node.indeterminate = indeterminate; };
+}
 function eventHandler<E extends SyntheticEvent>(user: ((event: E) => void) | undefined, internal: (event: E) => void) {
   return (event: E) => { user?.(event); if (!event.defaultPrevented) internal(event); };
 }
@@ -59,7 +67,7 @@ function createCheckboxGetter(input: { id: string; label: string; checked: boole
     const props = options.props;
     return { ...props, id: input.id, type: "checkbox" as const, "aria-label": input.label,
       checked: input.checked === true, disabled: input.disabled,
-      ref: bindRef(options.ref, node => { if (node) node.indeterminate = input.checked === "mixed"; }),
+      ref: bindRef(options.ref, createIndeterminateInstaller(input.checked === "mixed")),
       onChange: eventHandler(props?.onChange, event => { if (!input.disabled) input.change(event.currentTarget.checked); }) };
   }
   return getProps;
@@ -91,11 +99,11 @@ export function useValueFilter<TData>(input: {
   };
   const params: CominsValueFilterPanelRenderParams<TData> = { ...result, column, query, readOnly, actions,
     getSearchInputProps: (options = {}) => ({ ...options.props, type: "search", value: query, "aria-label": "Search filter values", className: ["comins-column-filter__search", options.props?.className].filter(Boolean).join(" "),
-      ref: bindRef(options.ref, node => { searchRef.current = node; }), onChange: eventHandler(options.props?.onChange, event => setQuery(event.currentTarget.value)) }),
+      ref: bindRef(options.ref, createSearchRefInstaller(searchRef)), onChange: eventHandler(options.props?.onChange, event => setQuery(event.currentTarget.value)) }),
     getOptionProps,
     getOptionContainerProps: (option, options) => ({ ...visual(visual({ className: "comins-column-filter__option" }, partProps(column.filter?.option, { column, option, query, readOnly })), options?.props), "data-selected": option.selected ? "true" : undefined, "data-present": option.present ? "true" : "false" }),
     getSelectAllProps: createCheckboxGetter({ id: `${id}-all`, label: "Select all matching values", checked: result.visibleSelection, disabled: readOnly || !result.visibleOptionCount, change: actions.setVisibleSelected }),
-    getClearProps: createFilterButtonGetter({ label: "Clear filter", disabled: readOnly || result.selectionMode === "all", click: actions.clear, className: "comins-column-filter__clear" }),
+    getClearProps: createFilterButtonGetter({ label: "Clear filter", disabled: readOnly || result.selectionMode === "all", click: () => { const search = searchRef.current; if (search?.isConnected) search.focus({ preventScroll: true }); actions.clear(); }, className: "comins-column-filter__clear" }),
     getCloseProps: createFilterButtonGetter({ label: "Close filter", disabled: false, click: close, className: "comins-column-filter__clear" }),
     renderOption: option => {
       const custom = column.filter?.option?.render?.({ column, option, query, readOnly });
@@ -109,7 +117,7 @@ export function ValueFilterPanel<TData>({ params }: { params: CominsValueFilterP
   const custom = params.column.filter?.panel?.render?.(params);
   return <div {...visual({ className: "comins-column-filter__values" }, partProps(params.column.filter?.panel, params))} data-readonly={params.readOnly ? "true" : undefined}>
     {custom !== undefined ? custom : <>
-      <input {...params.getSearchInputProps()} />
+      <input {...params.getSearchInputProps()} data-comins-column-filter-value-input="true" />
       <label className="comins-column-filter__select-all"><input {...params.getSelectAllProps()} />Select all matching values</label>
       <div className="comins-column-filter__options">
         {params.visibleOptions.map(option => <label key={option.id} {...params.getOptionContainerProps(option)}><input {...params.getOptionProps(option)} />{params.renderOption(option)}</label>)}

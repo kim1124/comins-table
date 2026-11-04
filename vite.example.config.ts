@@ -1,8 +1,10 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { createXlsxWorkerCompressionPlugin } from "./example/build/xlsx-worker-compression";
 
 export default defineConfig({
   plugins: [react()],
+  worker: { plugins: () => [createXlsxWorkerCompressionPlugin()] },
   root: "example",
   optimizeDeps: { include: ["xlsx", "@federicocarboni/saxe", "write-excel-file/universal", "write-excel-file/utility", "@zip.js/zip.js/index-native.js"] },
   server: {

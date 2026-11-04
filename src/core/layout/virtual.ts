@@ -356,27 +356,37 @@ export function resolveCominsAnchorTarget(input: {
   let nextIndex = input.nextKeys.indexOf(input.anchor.key);
 
   if (nextIndex === -1) {
+    const nextIndexByKey = new Map<string, number>();
+    for (let index = 0; index < input.nextKeys.length; index += 1) {
+      if (index in input.nextKeys) {
+        const key = input.nextKeys[index];
+        if (key !== undefined && !nextIndexByKey.has(key)) {
+          nextIndexByKey.set(key, index);
+        }
+      }
+    }
+
     for (
       let previousIndex = Math.min(input.anchor.previousIndex - 1, input.previousKeys.length - 1);
       previousIndex >= 0;
       previousIndex -= 1
     ) {
-      nextIndex = input.nextKeys.indexOf(input.previousKeys[previousIndex] ?? "");
+      nextIndex = nextIndexByKey.get(input.previousKeys[previousIndex] ?? "") ?? -1;
       if (nextIndex !== -1) {
         break;
       }
     }
-  }
 
-  if (nextIndex === -1) {
-    for (
-      let previousIndex = Math.max(0, input.anchor.previousIndex + 1);
-      previousIndex < input.previousKeys.length;
-      previousIndex += 1
-    ) {
-      nextIndex = input.nextKeys.indexOf(input.previousKeys[previousIndex] ?? "");
-      if (nextIndex !== -1) {
-        break;
+    if (nextIndex === -1) {
+      for (
+        let previousIndex = Math.max(0, input.anchor.previousIndex + 1);
+        previousIndex < input.previousKeys.length;
+        previousIndex += 1
+      ) {
+        nextIndex = nextIndexByKey.get(input.previousKeys[previousIndex] ?? "") ?? -1;
+        if (nextIndex !== -1) {
+          break;
+        }
       }
     }
   }

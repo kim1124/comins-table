@@ -42,6 +42,8 @@ export function notifyReactStateChanges<TData>(current: CominsTableState<TData>,
 
 /** Prop synchronization deliberately does not notify data or column layout. */
 export function notifyReactInputChanges<TData>(current: CominsTableState<TData>, next: CominsTableState<TData>, callbacks: ChangeCallbacks<TData>) {
+  // 입력 변경을 구독하지 않으면 선택·정렬 비교도 수행하지 않는다.
+  if (!callbacks.onChangeSelection && !callbacks.onChangeSort && !callbacks.onChangeSortModel) return;
   const changes = getCoreStateChanges(current, next);
   if (changes.selection) callbacks.onChangeSelection?.(next.selection);
   if (changes.sort) callbacks.onChangeSort?.(next.sort);

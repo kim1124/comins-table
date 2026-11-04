@@ -49,7 +49,7 @@ export function useCominsTreeDrag<T>(options: Options<T>) {
   const committed = useRef(options);
   const gesture = useRef<Gesture<T> | null>(null);
   const navigateRef = useRef<((id: CominsRowId) => void) | null>(null);
-  const pendingFocus = useRef<{ root: HTMLElement; id: CominsRowId } | null>(null);
+  const pendingFocus = useRef<{ root: HTMLElement; id: CominsRowId; keyboard: boolean } | null>(null);
   const pendingScrollTop = useRef<number | null>(null);
   const [preview, setPreview] = useState<Preview<T> | null>(null);
   const [announcement, setAnnouncement] = useState("");
@@ -81,7 +81,7 @@ export function useCominsTreeDrag<T>(options: Options<T>) {
     }
     const focusId = result === "moved" && current.target?.context.position === "inside"
       ? current.target.context.target.rowId : current.source.id;
-    pendingFocus.current = { root: current.root, id: focusId };
+    pendingFocus.current = { root: current.root, id: focusId, keyboard: current.keyboard };
     setAnnouncement(result === "moved" ? `Moved ${String(current.source.id)}` : `Move ${result}`);
     props.onAfterDragRow?.({ event, row: current.source, result, reason: commit && result !== "moved" ? "invalid-target" : reason, ...(current.target ? { target: targetPayload(current.target) } : {}) });
   };
@@ -90,7 +90,13 @@ export function useCominsTreeDrag<T>(options: Options<T>) {
     const focus = pendingFocus.current;
     if (!focus) return;
     const handle = Array.from(focus.root.querySelectorAll<HTMLElement>("[data-comins-tree-drag-handle]")).find(element => element.dataset.testid === `row-drag-handle-${String(focus.id)}`);
-    if (handle) { focusCominsPointerTarget(handle); pendingFocus.current = null; pendingScrollTop.current = null; }
+    if (handle) {
+      // Overscan DOM에 있어도 키보드 복구 대상은 화면 밖일 수 있다.
+      if (focus.keyboard) handle.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+      focusCominsPointerTarget(handle);
+      pendingFocus.current = null;
+      pendingScrollTop.current = null;
+    }
     else navigateRef.current?.(focus.id);
   };
 

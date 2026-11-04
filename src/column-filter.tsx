@@ -187,6 +187,7 @@ export function CominsColumnFilterControl<TData>({
     const win = doc?.defaultView;
     if (!doc || !win) return;
     let alive = true;
+    let focusTimer: number | undefined;
     const inside = (target: EventTarget | null) => target instanceof win.Node && (buttonRef.current?.contains(target) || popoverRef.current?.contains(target));
     const updatePosition = () => {
       const button = buttonRef.current;
@@ -219,6 +220,13 @@ export function CominsColumnFilterControl<TData>({
         return;
       }
 
+      // 제거 commit 전에 blur해야 React가 마지막 입력의 선택 추적 참조를 해제한다.
+      const focused = doc.activeElement;
+      if (focused instanceof win.HTMLElement && popoverRef.current?.contains(focused)) focused.blur();
+      if (focusTimer !== undefined) {
+        win.clearTimeout(focusTimer);
+        focusTimer = undefined;
+      }
       onOpenChangeRef.current?.(null);
     };
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -231,7 +239,6 @@ export function CominsColumnFilterControl<TData>({
       buttonRef.current?.focus();
     };
 
-    let focusTimer: number | undefined;
     const handleFocusOut = (event: FocusEvent) => {
       if (!inside(event.target) || inside(event.relatedTarget)) return;
       if (focusTimer !== undefined) win.clearTimeout(focusTimer);
@@ -402,6 +409,7 @@ export function CominsColumnFilterControl<TData>({
             <label className="comins-column-filter__field">
               <span>{operator === "between" ? "From" : "Value"}</span>
               <input
+                data-comins-column-filter-value-input="true"
                 data-testid={`column-filter-value-${columnId}`}
                 disabled={readOnly}
                 onChange={(event) => {
@@ -418,6 +426,7 @@ export function CominsColumnFilterControl<TData>({
             <label className="comins-column-filter__field">
               <span>To</span>
               <input
+                data-comins-column-filter-value-input="true"
                 data-testid={`column-filter-value-to-${columnId}`}
                 disabled={readOnly}
                 onChange={(event) => {

@@ -79,3 +79,23 @@ it("preserves synchronous event clipboard I/O and asynchronous permission failur
   vi.stubGlobal("navigator", { clipboard: { async writeText(value: string) { data.set("written", value); } } });
   await browser().writeCominsClipboardText("ok"); expect(data.get("written")).toBe("ok");
 });
+
+it("suppresses retired viewport deliveries while preserving connected zero-size measurements", () => {
+  const records = resizeHost(), delivered: number[] = [];
+  const element = document.createElement("div");
+  document.body.append(element);
+  const stop = browser().observeCominsViewport(element, value => delivered.push(value.height));
+  const record = records[0]!;
+  const deliver = (height: number) => record.callback([{ target: element, contentRect: { height, width: 80 } } as ResizeObserverEntry], {} as ResizeObserver);
+  deliver(40);
+  element.remove();
+  deliver(0);
+  expect(delivered).toEqual([40]);
+  document.body.append(element);
+  deliver(0);
+  expect(delivered).toEqual([40, 0]);
+  stop(); stop();
+  deliver(60);
+  expect(delivered).toEqual([40, 0]);
+  expect(record.targets.size).toBe(0);
+});

@@ -53,11 +53,19 @@ export async function runViewportRequest<T>(input: {
   const { request, dispatch } = input;
   if (request.signal.aborted) return;
   dispatch({ type: "request", request });
-  const cancel = () => dispatch({ type: "cancel", request });
+  const cancelled = Symbol("cancelled viewport request");
+  let stopWaiting!: () => void;
+  const cancellation = new Promise<typeof cancelled>((resolve) => { stopWaiting = () => resolve(cancelled); });
+  const cancel = () => {
+    // 소비자가 취소를 무시해도 종료된 테이블의 dispatch를 계속 보유하지 않는다.
+    stopWaiting();
+    dispatch({ type: "cancel", request });
+  };
   request.signal.addEventListener("abort", cancel, { once: true });
   try {
-    const rows = await input.getRows(request);
-    if (!request.signal.aborted) dispatch({ type: "success", request, rows });
+    if (request.signal.aborted) { cancel(); return; }
+    const rows = await Promise.race([input.getRows(request), cancellation]);
+    if (rows !== cancelled && !request.signal.aborted) dispatch({ type: "success", request, rows });
   } catch {
     if (!request.signal.aborted) dispatch({ type: "error", request });
   } finally {

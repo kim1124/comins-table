@@ -1,5 +1,5 @@
 import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
-import { useMemo, useRef, useState } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 
 import { searchDataTableDocs, type DataTableSearchItem } from "../../docs/search";
@@ -11,9 +11,7 @@ interface DocsTopNavProps {
   pages: DocsPage[];
 }
 
-export function DocsTopNav({ pages }: DocsTopNavProps) {
-  const navigate = useNavigate();
-  const location = useLocation();
+export const DocsTopNav = memo(function DocsTopNav({ pages }: DocsTopNavProps) {
   const { locale, setLocale, text } = usePlaygroundLocale();
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
@@ -21,12 +19,9 @@ export function DocsTopNav({ pages }: DocsTopNavProps) {
   const results = useMemo(() => searchDataTableDocs(query, pages), [pages, query]);
   const showResults = focused && query.trim().length > 0;
 
-  const navigateToResult = (item: DataTableSearchItem) => {
+  const closeSearchResults = () => {
     setQuery("");
     setFocused(false);
-    if (item.path !== location.pathname) {
-      navigate(item.path);
-    }
   };
 
   return (
@@ -76,28 +71,55 @@ export function DocsTopNav({ pages }: DocsTopNavProps) {
           />
         </label>
         {showResults ? (
-          <div className="global-search-popup" role="listbox">
-            {results.length > 0 ? (
-              results.map((item) => (
-                <button
-                  aria-selected="false"
-                  className="global-search-popup__item"
-                  key={item.id}
-                  onClick={() => navigateToResult(item)}
-                  role="option"
-                  type="button"
-                >
-                  <strong>{item.title}</strong>
-                  <span>{item.category}</span>
-                </button>
-              ))
-            ) : (
-              <p className="global-search-popup__empty">{text(playgroundMessages.noSearchResults)}</p>
-            )}
-          </div>
+          <DocsSearchResults
+            noResultsText={text(playgroundMessages.noSearchResults)}
+            onSelect={closeSearchResults}
+            results={results}
+          />
         ) : null}
         </div>
       </div>
     </header>
+  );
+});
+
+interface DocsSearchResultsProps {
+  noResultsText: string;
+  onSelect: () => void;
+  results: DataTableSearchItem[];
+}
+
+// 경로 변경 구독은 검색 결과가 표시되는 동안에만 필요하다.
+// 상단 본체는 언어·검색 입력·문서 목록이 바뀔 때 갱신한다.
+function DocsSearchResults({ noResultsText, onSelect, results }: DocsSearchResultsProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const navigateToResult = (item: DataTableSearchItem) => {
+    onSelect();
+    if (item.path !== location.pathname) {
+      navigate(item.path);
+    }
+  };
+
+  return (
+  <div className="global-search-popup" role="listbox">
+    {results.length > 0 ? (
+      results.map((item) => (
+        <button
+          aria-selected="false"
+          className="global-search-popup__item"
+          key={item.id}
+          onClick={() => navigateToResult(item)}
+          role="option"
+          type="button"
+        >
+          <strong>{item.title}</strong>
+          <span>{item.category}</span>
+        </button>
+      ))
+    ) : (
+      <p className="global-search-popup__empty">{noResultsText}</p>
+    )}
+  </div>
   );
 }
