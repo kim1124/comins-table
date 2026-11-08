@@ -64,7 +64,7 @@ const rows = queryCominsRows(edited); // [{ id: "a", score: 42 }]
 ## 이번 버전에 포함하지 않는 범위
 
 - React와 React DOM은 패키지 peer dependency(`>=18.0.0 <20.0.0`)로 유지합니다. `/core` 선언·런타임의 React 독립성은 단일 npm 패키지의 React 설치 peer 제거를 의미하지 않습니다.
-- React Table은 client-only입니다. DOM 없는 Core를 SSR 지원 보장으로 해석하지 않습니다.
+- 0.2.0의 React Table은 client-only였습니다. 0.2.4 SSR HTML·hydration 지원 범위는 [Quick Start](01-quick-start.md)를 따르며 DOM 없는 Core 자체를 SSR 지원 보장으로 해석하지 않습니다.
 - Vue 3 지원은 이후 버전의 범위이며 이 브랜치는 Vue 어댑터를 제공하지 않습니다.
 - 기존 모드 조합, clipboard 옵션별 순서, ID 타입과 callback 순서는 보존합니다. Core 분리로 일반 셀 Arrow/Home/End 이동이나 신규 모드 조합을 추가하지 않습니다.
 

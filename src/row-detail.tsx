@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef } from "react";
+import { useCominsLayoutEffect } from "./react/layout-effect";
+import { useRef } from "react";
 import type * as React from "react";
 import type { createCominsDetailFocusRestorer } from "./browser/scroll";
 
@@ -60,7 +61,7 @@ export function CominsRowDetailRow(props: {
   restoreFocusRef.current = props.restoreFocus;
   onContentElementRef.current = props.onContentElement;
 
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     const element = contentRef.current;
 
     onContentElementRef.current(element);
@@ -68,7 +69,7 @@ export function CominsRowDetailRow(props: {
     return () => onContentElementRef.current(null);
   }, [automatic]);
 
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     const element = contentRef.current;
 
     return () => {

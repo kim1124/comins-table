@@ -14,7 +14,7 @@ declare global {
 test.use({ viewport: { width: 1280, height: 720 }, locale: "en-US", timezoneId: "UTC" });
 
 for (const dismissal of ["outside-pointer", "outside-button", "escape"] as const) {
-  test(`numeric filter ${dismissal} releases its retired focused popup after GC @perf`, async ({ page, browserName }, testInfo) => {
+  test(`numeric filter ${dismissal} releases its retired focused popup after GC @perf @memory-lifetime`, async ({ page, browserName }, testInfo) => {
     expect(browserName).toBe("chromium");
     await initializePlaygroundLocale(page, "ko");
     const cdp = await page.context().newCDPSession(page);
@@ -87,7 +87,7 @@ for (const dismissal of ["outside-pointer", "outside-button", "escape"] as const
   });
 }
 
-test("focused text filter releases input and popup on programmatic sidebar route unmount @perf", async ({ page, browserName }, testInfo) => {
+test("focused text filter releases input and popup on programmatic sidebar route unmount @perf @memory-lifetime", async ({ page, browserName }, testInfo) => {
   expect(browserName).toBe("chromium");
   await initializePlaygroundLocale(page, "ko");
   const cdp = await page.context().newCDPSession(page);
@@ -137,7 +137,7 @@ test("focused text filter releases input and popup on programmatic sidebar route
 });
 
 for (const route of ["history", "sidebar"] as const) {
-  test(`built-in value search releases retired table on ${route} unmount @perf`, async ({ page, browserName }, testInfo) => {
+  test(`built-in value search releases retired table on ${route} unmount @perf @memory-lifetime`, async ({ page, browserName }, testInfo) => {
     expect(browserName).toBe("chromium");
     await initializePlaygroundLocale(page, "ko");
     const cdp = await page.context().newCDPSession(page);
@@ -187,7 +187,7 @@ for (const route of ["history", "sidebar"] as const) {
 }
 
 for (const variant of ["panel", "custom"] as const) {
-  test(`Playground ${variant} value search releases its focused input and popup on sidebar unmount @perf`, async ({ page, browserName }, testInfo) => {
+  test(`Playground ${variant} value search releases its focused input and popup on sidebar unmount @perf @memory-lifetime`, async ({ page, browserName }, testInfo) => {
     expect(browserName).toBe("chromium");
     await initializePlaygroundLocale(page, "ko");
     const cdp = await page.context().newCDPSession(page);

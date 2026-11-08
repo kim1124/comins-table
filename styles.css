@@ -242,6 +242,28 @@
   --comins-table-surface-muted: #fff3e0;
 }
 
+.comins-table-theme--excel {
+  --comins-table-accent: #217346;
+  --comins-table-accent-foreground: #ffffff;
+  --comins-table-accent-strong: #185c37;
+  --comins-table-accent-soft: #e2f0d9;
+  --comins-table-border: #d0d0d0;
+  --comins-table-cell-border: #d0d0d0;
+  --comins-table-drop-marker: #217346;
+  --comins-table-focus: rgba(33, 115, 70, 0.3);
+  --comins-table-group-row-background: #e7e6e6;
+  --comins-table-header-background: #f3f3f3;
+  --comins-table-header-color: #1f2937;
+  --comins-table-header-border: var(--comins-table-row-border);
+  --comins-table-header-split-border: var(--comins-table-cell-border);
+  --comins-table-range-background: #e2f0d9;
+  --comins-table-row-border: #d0d0d0;
+  --comins-table-row-even-background: #ffffff;
+  --comins-table-row-odd-background: #ffffff;
+  --comins-table-row-selected-background: #e2f0d9;
+  --comins-table-surface-muted: #f3f3f3;
+}
+
 .comins-table__header {
   flex: 0 0 auto;
   overflow-x: hidden;

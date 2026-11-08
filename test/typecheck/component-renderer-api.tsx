@@ -1,4 +1,4 @@
-import type { CominsTableColumn } from "../../src";
+import type { CominsTableColumn, CominsTableRef } from "../../src";
 
 type TypecheckRow = {
   id: string;
@@ -178,3 +178,6 @@ void invalidVirtualListPayloadColumns;
 void headerVirtualListColumns;
 void removedFormatColumns;
 void removedPropsColumns;
+
+const releaseFocusResult: (handle: CominsTableRef<TypecheckRow>) => boolean = handle => handle.releaseFocus();
+void releaseFocusResult;

@@ -1,4 +1,5 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCominsLayoutEffect } from "./react/layout-effect";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { runViewportRequest } from "./browser/viewport-requests";
 import { createCominsViewportData, reduceCominsViewportData, type CominsViewportData, type CominsViewportDataEvent, type CominsViewportPatch, type CominsViewportRequest, type CominsViewportRevision } from "./viewport-data";
 
@@ -26,8 +27,8 @@ export function useCominsViewport<T>(options: CominsViewportOptions<T>) {
   const latest = useRef(options);
   const activeInitial = useRef(initial);
   const mounted = useRef(false);
-  useLayoutEffect(() => { latest.current = options; activeInitial.current = initial; });
-  useLayoutEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  useCominsLayoutEffect(() => { latest.current = options; activeInitial.current = initial; });
+  useCominsLayoutEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const dispatch = useCallback((event: CominsViewportDataEvent<T>) => {
     if (!mounted.current || activeInitial.current !== initial) return;
     setState(previous => {

@@ -1,4 +1,5 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useCominsLayoutEffect } from "./layout-effect";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 type ActiveCell = { key: string; anchor: HTMLElement; ready: boolean };
@@ -16,6 +17,8 @@ export function useCominsCellTooltip() {
   const dismissed = useRef<string | null>(null);
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const focusTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Child autoFocus can run before the parent layout effect is installed.
+  const mounted = useRef(true);
   const id = useId();
 
   const clearLeave = () => { if (leaveTimer.current !== undefined) clearTimeout(leaveTimer.current); leaveTimer.current = undefined; };
@@ -23,13 +26,16 @@ export function useCominsCellTooltip() {
   const close = (dismiss = false) => {
     clearLeave(); clearFocus(); hovered.current = false; focused.current = false;
     dismissed.current = dismiss ? activeRef.current?.key ?? null : null;
-    activeRef.current = null; setActive(null);
+    activeRef.current = null;
+    if (mounted.current) setActive(null);
   };
   const settleFocus = () => {
+    if (!mounted.current) return;
     clearFocus();
     // Let browser focus scrolling settle before showing keyboard information.
     focusTimer.current = setTimeout(() => {
       focusTimer.current = undefined;
+      if (!mounted.current) return;
       const current = activeRef.current;
       if (!current || !focused.current || !current.anchor.isConnected || !current.anchor.contains(current.anchor.ownerDocument.activeElement)) {
         close(); return;
@@ -38,6 +44,7 @@ export function useCominsCellTooltip() {
     }, 50);
   };
   const enter = (key: string, anchor: HTMLElement, kind: "hover" | "focus") => {
+    if (!mounted.current) return;
     clearLeave();
     if (dismissed.current === key) return;
     if (activeRef.current?.key !== key || activeRef.current?.anchor !== anchor) {
@@ -56,16 +63,28 @@ export function useCominsCellTooltip() {
     }
   };
   const leave = (key: string, kind: "hover" | "focus") => {
+    if (!mounted.current) return;
     if (dismissed.current === key) dismissed.current = null;
     if (activeRef.current?.key !== key) return;
     if (kind === "hover") hovered.current = false; else { focused.current = false; clearFocus(); }
     clearLeave();
     if (!hovered.current && !focused.current) leaveTimer.current = setTimeout(() => {
-      activeRef.current = null; setActive(null); leaveTimer.current = undefined;
+      leaveTimer.current = undefined;
+      if (!mounted.current) return;
+      activeRef.current = null; setActive(null);
     }, 80);
   };
 
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      clearLeave(); clearFocus();
+      activeRef.current = null;
+      hovered.current = false; focused.current = false; dismissed.current = null;
+    };
+  }, []);
+  useCominsLayoutEffect(() => {
     if (active && (!active.anchor.isConnected || active.anchor.dataset.cominsTooltipKey !== active.key)) close();
   });
   useEffect(() => {
@@ -86,7 +105,6 @@ export function useCominsCellTooltip() {
       doc.defaultView?.removeEventListener("resize", onResize);
     };
   }, [active]);
-  useEffect(() => () => { clearLeave(); clearFocus(); }, []);
   return { active, id: `comins-cell-tooltip-${id}`, enter, leave };
 }
 
@@ -96,7 +114,7 @@ export function CominsCellTooltip({ controller, content }: { controller: ReturnT
   const active = controller.active;
   const visible = Boolean(active?.ready && hasCellTooltipContent(content));
 
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     if (!visible || !active || !surface.current) return;
     const win = active.anchor.ownerDocument.defaultView;
     if (!win) return;
@@ -122,7 +140,7 @@ export function CominsCellTooltip({ controller, content }: { controller: ReturnT
     observer?.observe(element); observer?.observe(active.anchor);
     return () => observer?.disconnect();
   }, [active, content, visible]);
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     if (!visible || !active) return;
     const anchor = active.anchor;
     const ids = new Set((anchor.getAttribute("aria-describedby") ?? "").split(/\s+/).filter(Boolean));

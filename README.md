@@ -97,7 +97,7 @@ Open [the Playground](http://127.0.0.1:4002/docs/getting-started). The [Playgrou
 
 **0.2.2** adds standard `render` customization, customizable value list filters, and framework-neutral Excel import/export with export styles. Existing 0.x rendering aliases remain compatible until 1.0.0. See the migration guides above and the [changelog](https://github.com/kim1124/comins-table/blob/main/CHANGELOG.md) for version history.
 
-The Table UI is client-only React; SSR and a Vue adapter are not currently supported. Chrome and Edge are the supported browser targets, with automated browser checks using Playwright Chromium. Firefox and Safari are outside the current support contract. Feature combinations and limits are documented in the corresponding guides.
+The React Table supports SSR initial HTML and hydration with React 18/19. Interactive behavior and DOM measurement run in the browser. Server and client must receive identical initial data and props; see [SSR setup](https://github.com/kim1124/comins-table/blob/main/docs/user/01-quick-start.md#server-rendering-and-hydration). Next.js App Router/RSC and a Vue adapter are outside this support contract. Chrome and Edge are the supported browser targets, with automated browser checks using Playwright Chromium. Firefox and Safari are outside the current support contract. Feature combinations and limits are documented in the corresponding guides.
 
 The Table runtime makes no package-owned network requests and loads no remote assets, telemetry, or error reporting.
 

@@ -148,3 +148,58 @@ it("Fill validation receives absolute Viewport indexes and preserves typed patch
   expect(checked).toEqual([[11, 11, 11, "destination", "source"]]);
   expect(changed.mock.calls[0]![0].changes).toEqual([{ index: 11, row: { id: 11, value: "source" } }]);
 });
+
+async function withClipboard(writeText: ((text: string) => Promise<void>) | undefined, run: () => Promise<void>) {
+  const descriptor = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  Object.defineProperty(navigator, "clipboard", { configurable: true, value: writeText ? { writeText } : undefined });
+  try { await run(); }
+  finally { if (descriptor) Object.defineProperty(navigator, "clipboard", descriptor); else Reflect.deleteProperty(navigator, "clipboard"); }
+}
+
+it("keeps copySelection pending and returns the originally prepared text after unmount", async () => {
+  let finish!: () => void;
+  const write = vi.fn(() => new Promise<void>(resolve => { finish = resolve; }));
+  await withClipboard(write, async () => {
+    const ref = createRef<CominsTableRef<typeof rows[number]>>();
+    mount(<CominsTable ref={ref} data={rows} columns={columns} getRowId={id} />);
+    expect(await ref.current!.copySelection()).toBeNull();
+    expect(write).not.toHaveBeenCalled();
+    act(() => ref.current!.setSelectedRow(0));
+    const result = ref.current!.copySelection("rows");
+    let settled = false;
+    void result.then(() => { settled = true; });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    expect(write).toHaveBeenCalledExactlyOnceWith("c");
+    act(() => ref.current!.setSelectedRow(1));
+    act(() => root.render(null));
+    finish();
+    await expect(result).resolves.toBe("c");
+  });
+});
+
+it.each(["missing", "throw", "reject"])("preserves copySelection Promise rejection for %s clipboard writes", async mode => {
+  const failure = new Error("Clipboard denied");
+  const write = mode === "missing" ? undefined : () => { if (mode === "throw") throw failure; return Promise.reject(failure); };
+  await withClipboard(write, async () => {
+    const ref = createRef<CominsTableRef<typeof rows[number]>>();
+    mount(<CominsTable ref={ref} data={rows} columns={columns} getRowId={id} />);
+    act(() => ref.current!.setSelectedRow(0));
+    let result!: Promise<string | null>;
+    expect(() => { result = ref.current!.copySelection("rows"); }).not.toThrow();
+    await expect(result).rejects.toThrow(mode === "missing" ? "Clipboard writing is unavailable." : failure.message);
+  });
+});
+
+it("rejects copy preparation errors through the Promise without writing", async () => {
+  const failure = new Error("Copy guard failed"), write = vi.fn(async () => {});
+  await withClipboard(write, async () => {
+    const ref = createRef<CominsTableRef<typeof rows[number]>>();
+    mount(<CominsTable ref={ref} data={rows} columns={[{ ...columns[0]!, cell: { props: { copyable: () => { throw failure; } } } }]} getRowId={id} />);
+    act(() => ref.current!.setSelectedRow(0));
+    let result!: Promise<string | null>;
+    expect(() => { result = ref.current!.copySelection("rows"); }).not.toThrow();
+    await expect(result).rejects.toBe(failure);
+    expect(write).not.toHaveBeenCalled();
+  });
+});

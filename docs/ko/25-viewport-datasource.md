@@ -56,6 +56,8 @@ const viewport = useCominsViewport<Person>({
 
 고급 controlled 연동에는 `CominsViewportTableProps<TData>`, `CominsViewportData<TData>`, `createCominsViewportData`, `reduceCominsViewportData`를 직접 사용할 수 있습니다. snapshot은 revision·건수·block·제한된 요청 상태를 포함하고 block은 절대 시작 인덱스와 Row를 보관합니다. reducer 이벤트는 `request`, `success`, `error`, `cancel`, `retain`, `patch`, `reset`입니다. 데이터와 요청 완료를 함께 반영하며 Promise 완료만으로 controlled success/error 갱신을 대신하지 않습니다. 함수형 상태 갱신으로 독립적인 block 응답을 보존합니다. hook과 callback 계약 타입은 `CominsViewportOptions`, `CominsViewportDatasource`, `CominsViewportRequest`, `CominsViewportPatch`입니다.
 
+`onViewportRequest`를 직접 전달할 때도 같은 취소 수명이 적용됩니다. 요청 취소나 Unmount 시 반환된 Promise가 미완료여도 Table의 완료 콜백을 해제하며, 늦은 완료나 거부로 취소된 요청을 재개하지 않습니다. Application은 자신의 비동기 작업 취소와 오래된 snapshot 갱신 차단을 계속 담당합니다.
+
 ## Playground 확인
 
 자동 높이·느린 응답·오류 응답을 토글로 전환합니다. 오류 응답을 켠 뒤 검색 결과를 변경하면 재시도 컨트롤이 나타나며, 오류 응답을 끄고 재시도하면 로딩을 복구합니다. Viewport에서는 Row Drag를 사용할 수 없고 핸들도 표시하지 않습니다. 서버에서 순서를 변경했다면 새 `queryKey`로 다시 조회합니다.

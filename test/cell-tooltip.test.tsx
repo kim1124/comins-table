@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, useState, type ReactElement, type ReactNode } from "react";
+import { act, StrictMode, useState, type ReactElement, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CominsTable, type CominsTableColumn } from "../src";
@@ -19,6 +19,25 @@ function table(tooltip: NonNullable<CominsTableColumn<Row>["cell"]>["tooltip"], 
   return <CominsTable columns={[{ field: "name", label: "Name", cell: { tooltip } }]} data={[{ id: "a", name }]} getRowId={row => row.id} />;
 }
 describe("custom cell tooltip", () => {
+  it("opens a tooltip for a child input's initial autoFocus", () => {
+    const view = mount(<CominsTable columns={[{ field: "name", label: "Name", cell: {
+      format: () => <input autoFocus defaultValue="Alpha" />,
+      tooltip: { render: () => "Initial focus tooltip" },
+    } }]} data={rows} getRowId={row => row.id} />);
+    expect(document.activeElement).toBe(view.querySelector('[data-testid="cell-a-name"] input'));
+    act(() => vi.advanceTimersByTime(50));
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe("Initial focus tooltip");
+  });
+  it("restores tooltip ownership after StrictMode effect replay", () => {
+    const view = mount(<StrictMode>{table({ render: () => "Strict tooltip" })}</StrictMode>);
+    const cell = view.querySelector<HTMLElement>('[data-testid="cell-a-name"]')!;
+    focus(cell);
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe("Strict tooltip");
+    expect(cell.getAttribute("aria-describedby")).toContain("comins-cell-tooltip-");
+    act(() => root!.unmount()); root = undefined;
+    expect(document.querySelector('[role="tooltip"]')).toBeNull();
+    expect(cell.hasAttribute("aria-describedby")).toBe(false);
+  });
   it("keeps simultaneous table tooltip IDs and cleanup independent", () => {
     const view = mount(<div>{table({ render: () => "First" })}{table({ render: () => "Second" })}</div>);
     const cells = view.querySelectorAll<HTMLElement>('[data-testid="cell-a-name"]');

@@ -64,7 +64,7 @@ The application decides where to store the result. Clipboard helpers calculate d
 ## What this release does not add
 
 - React and React DOM remain package peer dependencies (`>=18.0.0 <20.0.0`). React-free `/core` declarations and runtime do not mean the single npm package has no React installation peers.
-- The React Table remains client-only. DOM-free Core is not an SSR support guarantee.
+- In 0.2.0 the React Table was client-only. For 0.2.4 SSR HTML and hydration support, see [Quick Start](01-quick-start.md); DOM-free Core alone is not an SSR guarantee.
 - Vue 3 support is planned for a later version; this branch does not provide a Vue adapter.
 - Existing mode combinations, clipboard option ordering, ID types, and callback order are preserved. Core extraction does not add general cell Arrow/Home/End navigation or new mode combinations.
 

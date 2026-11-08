@@ -158,7 +158,7 @@ const englishDocsPages: DocsPage[] = [
     featureId: "theme",
     label: "Theme",
     path: "/examples/theme",
-    summary: "Review Basic, Dark, Skyblue, Mint, Gray, and Orange themes plus the CSS override contract.",
+    summary: "Review Basic, Dark, Skyblue, Mint, Gray, Orange, and Excel themes plus the CSS override contract.",
     title: "Theme",
   }),
   featurePage({
@@ -638,7 +638,7 @@ const koreanDocsCopy: Record<string, KoreanDocsCopy> = {
     ],
     category: "스타일",
     label: "테마",
-    summary: "Basic, Dark, Skyblue, Mint, Gray, Orange Theme와 CSS override를 확인합니다.",
+    summary: "Basic, Dark, Skyblue, Mint, Gray, Orange, Excel Theme와 CSS override를 확인합니다.",
     title: "테마",
   },
   "/examples/tree-grid": {

@@ -26,7 +26,7 @@ test("theme page switches shipped CSS themes without reloading or changing virtu
 
   const themeSelect = page.getByLabel("테마 선택");
   await expect(themeSelect).toBeVisible();
-  await expect(themeSelect.locator("option")).toHaveText(["Basic", "Dark", "Skyblue", "Mint", "Gray", "Orange"]);
+  await expect(themeSelect.locator("option")).toHaveText(["Basic", "Dark", "Skyblue", "Mint", "Gray", "Orange", "Excel"]);
 
   const mountId = await page.getByTestId("mount-id").textContent();
   const table = page.locator("[data-feature-option='theme'] .comins-table").first();
@@ -121,5 +121,49 @@ test("theme page switches shipped CSS themes without reloading or changing virtu
   await expect(rows).toHaveCount(16);
   await expect(page.getByTestId("mount-id")).toHaveText(mountId ?? "");
 
+  expect(diagnostics).toEqual([]);
+});
+
+
+test("Excel theme preserves virtual geometry and restores the default palette", async ({ page }) => {
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/examples/theme");
+  const table = page.locator(".theme-example-table");
+  const cells = table.locator(".comins-table__body-table tbody tr[data-comins-row-data-index] .comins-table__td");
+  const rows = table.locator("tr[data-comins-row-data-index]");
+  await expect(table).toBeVisible();
+  await expect(rows).toHaveCount(16);
+  await expect(rows.first()).toBeVisible();
+  const rowCount = await rows.count();
+  const before = await rows.first().boundingBox();
+  expect(before).not.toBeNull();
+  expect(before!.height).toBeGreaterThan(0);
+  const basicPalette = await cells.first().evaluate(element => ({
+    background: getComputedStyle(element).backgroundColor,
+    horizontalBorder: getComputedStyle(element).borderBottomColor,
+    verticalBorder: getComputedStyle(element).borderRightColor,
+  }));
+  const basicOddBackground = await rows.nth(1).locator(".comins-table__td").first()
+    .evaluate(element => getComputedStyle(element).backgroundColor);
+  await page.getByTestId("theme-select").selectOption("excel");
+  await expect(table).toHaveClass(/comins-table-theme--excel/);
+  await expect(table.locator(".comins-table__th").first()).toHaveCSS("background-color", "rgb(243, 243, 243)");
+  await expect(cells.first()).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(cells.first()).toHaveCSS("border-right-color", "rgb(208, 208, 208)");
+  await expect(cells.first()).toHaveCSS("border-bottom-color", "rgb(208, 208, 208)");
+  await expect(rows).toHaveCount(rowCount);
+  expect((await rows.first().boundingBox())?.height).toBe(before?.height);
+  await table.screenshot({ path: "reports/artifacts/excel-theme.png" });
+  await page.getByTestId("theme-select").selectOption("basic");
+  await expect(table).toHaveClass(/comins-table-theme--basic/);
+  await expect(table.locator(".comins-table__th").first()).toHaveCSS("background-color", "rgb(16, 185, 129)");
+  await expect(cells.first()).toHaveCSS("background-color", basicPalette.background);
+  await expect(rows.nth(1).locator(".comins-table__td").first()).toHaveCSS("background-color", basicOddBackground);
+  await expect(cells.first()).toHaveCSS("border-right-color", basicPalette.verticalBorder);
+  await expect(cells.first()).toHaveCSS("border-bottom-color", basicPalette.horizontalBorder);
+  await expect(rows).toHaveCount(rowCount);
+  const restored = await rows.first().boundingBox();
+  expect(restored).not.toBeNull();
+  expect(restored!.height).toBe(before!.height);
   expect(diagnostics).toEqual([]);
 });

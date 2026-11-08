@@ -6,7 +6,7 @@ declare global { interface Window { valueFilterRef: ValueFilterRefController } }
 
 test.use({ channel: "chromium", launchOptions: { chromiumSandbox: true } });
 
-for (const label of ["Ready", "Select all matching values"]) test(`native value checkbox ${label} releases table data on unmount before another React event @perf`, async ({ page, browserName }, testInfo) => {
+for (const label of ["Ready", "Select all matching values"]) test(`native value checkbox ${label} releases table data on unmount before another React event @perf @memory-lifetime`, async ({ page, browserName }, testInfo) => {
   expect(browserName).toBe("chromium");
   const site = await startProductionRetention();
   const cdp = await page.context().newCDPSession(page);

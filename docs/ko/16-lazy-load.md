@@ -63,6 +63,8 @@ Comins Table은 callback 반환값을 저장하지 않는다. Callback이 fetch 
 
 전달된 `AbortSignal`, refresh, unmount 시 application fetch를 취소한다. 늦게 도착한 응답이 더 최신 controlled Row를 덮어쓰지 않도록 application이 stale request를 차단한다. 오류, retry와 빈 결과 UI도 application이 소유한다.
 
+Unmount 시 Comins Table은 활성 요청의 signal을 취소하고, 소비자 Promise가 미완료 상태여도 내부 완료 callback을 해제한다. 늦은 완료나 거부로 취소된 요청을 재개하지 않는다. Application은 자신의 비동기 작업 취소와 오래된 controlled data 갱신 차단을 계속 담당한다.
+
 ## Playground 데이터
 
 Playground는 1,000개 고정 예제 Row를 100개씩 불러오며 250ms 지연, 취소, 재조회, 마지막 데이터 상태를 시뮬레이션합니다. 외부 데이터 서비스 없이 실행할 수 있습니다. 이는 예제 설정이며 패키지의 `lazyLoadBatchSize` 기본값은 30을 유지합니다. Lazy Load는 전달된 배열에 데이터를 누적합니다. 캐시 한도를 두고 임의 구간을 조회하려면 [Viewport Datasource](25-viewport-datasource.md)를 사용합니다.

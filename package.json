@@ -49,7 +49,12 @@
     "verify:local": "npm run verify && npm run verify:e2e",
     "verify:full": "npm run verify:local && npm run test:perf -- --workers=1",
     "verify:npm-maintainer": "node scripts/check-npm-maintainer.mjs",
-    "verify:package-artifact": "node scripts/verify-package-artifact.mjs"
+    "verify:package-artifact": "node scripts/verify-package-artifact.mjs",
+    "test:memory:counter": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep @memory-counter --trace=off",
+    "test:memory:lifetime": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep @memory-lifetime --trace=off",
+    "test:memory:integration": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep @memory-integration --trace=off",
+    "test:memory:instrumentation": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep @memory-instrumentation --trace=off",
+    "test:memory:legacy": "env -u NO_COLOR playwright test --config=playwright.config.ts --grep @memory-legacy --trace=off"
   },
   "exports": {
     ".": {
