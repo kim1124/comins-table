@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import { readMemoryPlaygroundMode, readProductionPlaygroundEvidence, type MemoryPlaygroundMode } from "./playground-build";
 
 const runtimePackages = ["react", "react-dom", "scheduler", "vite", "@playwright/test", "undici"] as const;
 type RuntimeEvidence = { version: string; manifestSHA256: string; mainSHA256: string | null; filesSHA256: string };
@@ -37,19 +38,22 @@ export function readMemoryRuntime(root = process.cwd()): Record<string, RuntimeE
 }
 
 /** 실제 개발 서버가 제공하는 React entry와 공통 optimized chunk를 함께 고정한다. */
-export function readBrowserBundleEvidence(root = process.cwd()) {
+export function readBrowserBundleEvidence(root = process.cwd(), mode: MemoryPlaygroundMode = readMemoryPlaygroundMode(process.env.PLAYWRIGHT_PLAYGROUND_MODE)) {
+  if (mode === "production") return readProductionPlaygroundEvidence(root);
   const folder = path.join(root, "node_modules/.vite/deps");
   const bytes = readFileSync(path.join(folder, "_metadata.json"));
   const metadata = JSON.parse(bytes.toString());
   const entries: Record<string, string> = {};
+  const entryFiles: Record<string, string> = {};
   for (const name of ["react", "react-dom", "react-dom/client"]) {
     const file = metadata.optimized?.[name]?.file;
     if (typeof file !== "string") throw new Error(`Missing optimized runtime: ${name}`);
     const resolved = path.resolve(folder, file);
     if (path.relative(folder, resolved).startsWith("..")) throw new Error(`Unexpected optimized runtime path: ${name}`);
     entries[name] = sha(readFileSync(resolved));
+    entryFiles[name] = path.basename(resolved);
   }
   const scripts = Object.fromEntries(readdirSync(folder).filter(file => file.endsWith(".js")).sort()
     .map(file => [file, sha(readFileSync(path.join(folder, file)))]));
-  return { metadataSHA256: sha(bytes), entries, scripts };
+  return { mode: "development" as const, metadataSHA256: sha(bytes), entries, entryFiles, scripts };
 }

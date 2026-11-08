@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { playgroundFeatureRouteManifest } from "../example/src/docs/featureRouteManifest";
 import type { FeatureId } from "../example/src/features/types";
+import { shouldReusePlaygroundServer } from "./playwright/helpers/playground-build";
 
 const specDirectory = join(process.cwd(), "test/playwright/specs");
 
@@ -99,8 +100,12 @@ describe("test reliability contract", () => {
     expect(config).toMatch(/timezoneId:\s*["']UTC["']/u);
     expect(config).toMatch(/viewport:\s*\{\s*height:\s*720,\s*width:\s*1280\s*\}/u);
     expect(config).toMatch(
-      /reuseExistingServer:\s*process\.env\.PLAYWRIGHT_REUSE_EXISTING_SERVER\s*===\s*["']1["']/u,
+      /reuseExistingServer:\s*shouldReusePlaygroundServer\(buildMode,\s*process\.env\.PLAYWRIGHT_REUSE_EXISTING_SERVER\)/u,
     );
+    expect(shouldReusePlaygroundServer("development", "1")).toBe(true);
+    expect(shouldReusePlaygroundServer("development", undefined)).toBe(false);
+    expect(shouldReusePlaygroundServer("development", "0")).toBe(false);
+    expect(shouldReusePlaygroundServer("production", "1")).toBe(false);
   });
 
   it("pins one Node runtime for local and hosted verification", () => {

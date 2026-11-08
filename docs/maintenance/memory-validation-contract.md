@@ -2,6 +2,16 @@
 
 2026-11-07 사용자 승인 재설계안 적용. 이 문서는 모듈의 실행·보고 계약이며 기존 2% 기준, 과거 FAIL, 기존 목표의 완료 조건을 변경하지 않는다.
 
+## 실제 Playground 개발·배포 빌드 분리
+
+2026-11-08 승인된 후속 검증은 실제 Playground에 개발/배포 실행을 각각 적용한다. 기본값은 development다. `PLAYWRIGHT_PLAYGROUND_MODE=production npm run test:memory:counter -- --workers=1`은 같은 workload·warmup10·독립3×300·2% 기준을 배포 빌드에 별도로 적용한다. 개발 모드의 과거 FAIL을 배포 결과로 소급 해제하지 않는다. production counter 선택은 production의 모든 legacy/L1 검사나 전체 출시 gate의 대체가 아니다.
+
+- 전용 `scripts/serve-memory-playground.mjs`가 두 모드를 제공한다. 배포 모드는 실제 build 후 HTML·JS·CSS·public 자산 전체 출력 inventory/digest를 입력·React 모듈 목록과 함께 고정하고, baseline 전부터 출력의 변경·추가·삭제를 차단한다. 실행 중 현재 출력과 동일한지도 다시 확인한다.
+- 개발 모드 수치 실행은 전용 서버의 현재 입력·origin·살아 있는 PID 증거를 확인한다. 실제 HTTP inventory에 Vite 개발 진입점과 React optimized entry가 있어야 하며, 해당 HTTP 바이트를 같은 서버에서 재조회해 비교한다. raw optimized disk entry와 Vite가 변환한 HTTP 바이트를 같은 것으로 가정하지 않는다.
+- 개발 서버 재사용은 기존과 같이 `PLAYWRIGHT_REUSE_EXISTING_SERVER=1`일 때만 허용한다. 수치 실행에서 재사용할 서버는 `node scripts/serve-memory-playground.mjs --mode development --port 4002`로 시작하고 소스가 고정되어 있어야 한다. 일반 E2E의 명시적 재사용 옵션은 유지한다. 배포 수치 실행은 기존 서버를 재사용하지 않는다.
+- 실제 스크립트 URL·해시는 Node runner에서 기준 측정 전에 수집한다. 본 측정에서는 새 URL 유입을 검사하되 같은 URL의 재응답 바이트·상태 전부를 연속 입증하는 것은 아니다. 새 브라우저 객체 이력·WeakRef·snapshot을 정식 수치 실행에 추가하지 않는다.
+- mode·입력·번들 증거 불일치는 실행 무효/미검증이다. 수치 FAIL과 분리하며 허위 PASS를 만들지 않는다.
+
 ## 독립된 세 층
 
 | 층 | 목적 | 명령 | 판정 범위 |
