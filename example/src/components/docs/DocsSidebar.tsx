@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { NavLink } from "react-router";
 
 import type { DocsPage } from "../../docs/types";
@@ -9,7 +10,7 @@ interface DocsSidebarProps {
   groups: Array<{ category: string; pages: DocsPage[] }>;
 }
 
-export function DocsSidebar({ groups }: DocsSidebarProps) {
+export const DocsSidebar = memo(function DocsSidebar({ groups }: DocsSidebarProps) {
   const { text } = usePlaygroundLocale();
 
   return (
@@ -30,4 +31,4 @@ export function DocsSidebar({ groups }: DocsSidebarProps) {
       </nav>
     </aside>
   );
-}
+});

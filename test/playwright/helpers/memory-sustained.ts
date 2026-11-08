@@ -11,6 +11,8 @@ import { initializeMemoryInstrumentation } from "./memory-instrumentation";
 import { initializePlaygroundLocale } from "./playground-locale";
 import { createUnmountWorkload, unmountScenarios, type UnmountScenario } from "./memory-unmount-workloads";
 import { readBrowserBundleEvidence, readMemoryRuntime } from "./memory-runtime";
+import { readMemoryPlaygroundMode, readPlaygroundBuildInputs, readDevelopmentPlaygroundEvidence } from "./playground-build";
+import { collectMemoryServedScripts, assertProductionServedScripts, assertDevelopmentServedScripts } from "./memory-served-scripts";
 
 export type MemoryScenario = "plain-scroll" | "virtual-scroll" | "route-unmount" | UnmountScenario;
 const basic = "/docs/getting-started", virtual = "/performance/virtualization", free = "/api/props";
@@ -19,7 +21,7 @@ const warmup = 10;
 const runId = process.env.MEMORY_AUDIT_RUN_ID ?? new Date().toISOString().replace(/[:.]/gu, "-");
 
 async function inputs() {
-  const files = ["package.json", "package-lock.json", "playwright.config.ts", "vite.example.config.ts"];
+  const files = ["package.json", "package-lock.json", "playwright.config.ts", "vite.example.config.ts", "scripts/serve-memory-playground.mjs"];
   async function walk(dir: string) {
     for (const entry of await readdir(dir, { withFileTypes: true })) {
       const file = path.join(dir, entry.name);
@@ -28,7 +30,7 @@ async function inputs() {
     }
   }
   for (const dir of ["src", "example/src", "test/playwright/helpers", "test/playwright/specs"]) await walk(dir);
-  const hashes: Record<string, string> = {};
+  const hashes: Record<string, string> = readPlaygroundBuildInputs();
   for (const file of files.sort()) hashes[file] = createHash("sha256").update(await readFile(file)).digest("hex");
   return hashes;
 }
@@ -110,6 +112,7 @@ async function readCounter(session: CDPSession, processSession: CDPSession, step
 }
 
 export async function runSustainedMemory(scenario: MemoryScenario, repeat: number, baseURL: string, testInfo: TestInfo, diagnostic = false) {
+  const buildMode = readMemoryPlaygroundMode(process.env.PLAYWRIGHT_PLAYGROUND_MODE);
   const runtime = readMemoryRuntime();
   const directory = path.resolve(process.env.MEMORY_AUDIT_ARTIFACT_DIR ?? "reports/artifacts/strict-memory", runId, `${scenario}-${repeat}-${diagnostic ? "heap" : "counter"}`);
   await mkdir(directory, { recursive: true });
@@ -117,6 +120,7 @@ export async function runSustainedMemory(scenario: MemoryScenario, repeat: numbe
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, locale: "en-US", timezoneId: "UTC", deviceScaleFactor: 1, reducedMotion: "no-preference" });
   const page = await context.newPage();
+  const servedScripts = collectMemoryServedScripts(page);
   await initializePlaygroundLocale(page, "en");
   await installMemoryResources(page, diagnostic ? "diagnostic" : "counter");
   const featureScenario = unmountScenarios.find(value => value === scenario);
@@ -130,6 +134,7 @@ export async function runSustainedMemory(scenario: MemoryScenario, repeat: numbe
   const measurements: MemoryPoint[] = [];
   const heapGroups: Record<string, MemoryPoint[]> = { mounted: [], free: [] };
   const result = { scenario, repeat, diagnostic, directory, browser: browser.version(), runtime, protocol: { instrumentation: "Playwright utility/main worlds initialized before cold-free; pre-tooling cold preserved separately", warmup, cycles: 300, checkpoints, viewport: { width: 1280, height: 720 }, gcPerPoint: 3, resourceTracker: diagnostic ? "weak observers and live timer IDs" : "not installed in counter process", resourceCoverage: diagnostic ? "observer/timer diagnostics" : "not collected", residentMemory: "all CDP-reported browser processes; RSS includes JS and native; not added to heap", nativeSnapshotCoverage: diagnostic ? "separate diagnostic process" : "not collected in counter run", continuousHeapProfilerSession: true, contract: "devtools-three-counters-two-percent", thresholdPercent: 2, featureMountsPerCycle: (scenario === "cross-table-drag-gesture-unmount" || scenario === "loading-pending-unmount") ? 3 : scenario === "selection-clipboard-gesture-unmount" ? 2 : 1, attributionScope: "actual Playground interactions; separate controlled-consumer ownership diagnostics are not implied", comparison: "fixed same-state baseline; previous-point deltas are diagnostic only" }, before, measurements, points, mounted, unmounted, heaps, heapGroups, heapFiles, errors, auxiliaryWarnings, completed: false, layer: diagnostic ? "diagnostic" : "counter", buildMode: "vite-development", coverage: "numeric counters only; product retention attribution is separate" };
+  result.buildMode = buildMode === "production" ? "vite-production" : "vite-development";
   let session: CDPSession | undefined;
   let processSession: CDPSession | undefined;
   async function persist() { await writeFile(path.join(directory, "result.json"), JSON.stringify(result, null, 2)); }
@@ -199,7 +204,15 @@ export async function runSustainedMemory(scenario: MemoryScenario, repeat: numbe
     for (let index = 0; index < warmup; index += 1) await cycle(index);
     await route(page, free, token);
     const browserBundles = readBrowserBundleEvidence();
-    Object.assign(result, { browserBundles });
+    const actualServedScripts = await servedScripts.freeze();
+    expect(browserBundles.mode).toBe(buildMode);
+    if (browserBundles.mode === "production") assertProductionServedScripts(actualServedScripts, browserBundles.scripts, baseURL);
+    else {
+      Object.assign(result, { developmentServer: readDevelopmentPlaygroundEvidence(process.cwd(), baseURL) });
+      await assertDevelopmentServedScripts(actualServedScripts, browserBundles.entryFiles, baseURL);
+    }
+    Object.assign(result, { browserBundles, actualServedScripts,
+      scriptEvidenceProtocol: "HTTP bytes collected in Node before baselines; fixed URL inventory during measured cycles; same-URL repeated body/status not reverified; no additional in-page history" });
     await point("free-baseline", unmounted, diagnostic);
     await enter();
     if (!workload) { await scroll(page, 0.5); await scroll(page, 0); }
@@ -218,7 +231,8 @@ export async function runSustainedMemory(scenario: MemoryScenario, repeat: numbe
     const after = await inputs();
     expect(after, "Memory measurement inputs changed during execution").toEqual(before);
     expect(readMemoryRuntime(), "Installed runtime changed during execution").toEqual(runtime);
-    expect(readBrowserBundleEvidence(), "Served optimized runtime changed during measurement").toEqual(browserBundles);
+    expect(readBrowserBundleEvidence(), "Local bundle files changed during measurement").toEqual(browserBundles);
+    await servedScripts.verify();
     const growth = findMemoryStateFailures(measurements);
     const nativeGrowth = diagnostic ? Object.values(heapGroups).flatMap(group => findHeapGrowth(group)) : undefined;
     Object.assign(result, { after, growth, numericStatus: diagnostic ? "DIAGNOSTIC_ONLY" : memoryAuditStatus(growth), nativeGrowth, coverage: diagnostic ? "separate heap diagnostic; not numeric acceptance evidence" : result.coverage });
@@ -242,6 +256,7 @@ export async function runSustainedMemory(scenario: MemoryScenario, repeat: numbe
     await persist();
     throw error;
   } finally {
+    servedScripts.dispose();
     await workload?.dispose();
     await session?.detach();
     await processSession?.detach();

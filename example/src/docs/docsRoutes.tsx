@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { getDataTableOptionGuide } from "./dataTableOptionGuide";
+import { getImplementedDataTableOptionGuide } from "./dataTableOptionGuide";
 import {
   apiSamples,
   bodySamples,
@@ -34,7 +34,7 @@ import type { DocsCodeSample, DocsPage } from "./types";
 import { findFeature } from "../features/featureRegistry";
 import type { FeatureId } from "../features/types";
 import type { PlaygroundLocale } from "../i18n/types";
-import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
+import { usePlaygroundLocale } from "../i18n/playground-locale";
 
 function paragraphs(lines: string[]) {
   return (
@@ -80,22 +80,8 @@ function featurePage({
 }
 
 function ImplementedApiReference() {
-  const { locale, text } = usePlaygroundLocale();
-  const guide = getDataTableOptionGuide(locale);
-  const implementedUsageItems = guide
-    .find((group) => group.title === "Roadmap" || group.title === "로드맵")
-    ?.items.filter((item) => item.name === "data + onChangeData" || item.name === "CSR");
-  const implementedGroups = [
-    ...guide.filter((group) => group.title !== "Roadmap" && group.title !== "로드맵"),
-    ...(implementedUsageItems?.length
-      ? [
-          {
-            items: implementedUsageItems,
-            title: text(defineLocalizedText("사용 계약", "Usage Contract")),
-          },
-        ]
-      : []),
-  ];
+  const { locale } = usePlaygroundLocale();
+  const implementedGroups = getImplementedDataTableOptionGuide(locale);
 
   return (
     <div className="docs-reference-list">

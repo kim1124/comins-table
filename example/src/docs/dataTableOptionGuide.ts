@@ -120,12 +120,49 @@ export const dataTableOptionGuide: DataTableOptionGuideSource = [
   },
 ];
 
-export function getDataTableOptionGuide(locale: PlaygroundLocale) {
-  return dataTableOptionGuide.map((group) => ({
-    items: group.items.map((item) => ({
+type LocalizedOptionGuide = ReadonlyArray<{
+  readonly items: ReadonlyArray<{ readonly description: string; readonly name: string }>;
+  readonly title: string;
+}>;
+
+// Only the two supported, requested locales may retain pure documentation data.
+// Do not retain React elements, DOM, or application callbacks here.
+type LocalizedGuideEntry = { guide: LocalizedOptionGuide; implemented?: LocalizedOptionGuide };
+let englishOptionGuide: LocalizedGuideEntry | undefined;
+let koreanOptionGuide: LocalizedGuideEntry | undefined;
+
+function getLocalizedGuideEntry(locale: PlaygroundLocale): LocalizedGuideEntry {
+  const cached = locale === "en" ? englishOptionGuide : locale === "ko" ? koreanOptionGuide : undefined;
+  if (cached) return cached;
+
+  const guide = Object.freeze(dataTableOptionGuide.map((group) => Object.freeze({
+    items: Object.freeze(group.items.map((item) => Object.freeze({
       description: resolveLocalizedText(item.description, locale),
       name: item.name,
-    })),
+    }))),
     title: resolveLocalizedText(group.title, locale),
-  }));
+  })));
+  const entry = { guide };
+  if (locale === "en") englishOptionGuide = entry;
+  else if (locale === "ko") koreanOptionGuide = entry;
+  return entry;
+}
+
+export function getDataTableOptionGuide(locale: PlaygroundLocale): LocalizedOptionGuide {
+  return getLocalizedGuideEntry(locale).guide;
+}
+
+export function getImplementedDataTableOptionGuide(locale: PlaygroundLocale): LocalizedOptionGuide {
+  const entry = getLocalizedGuideEntry(locale);
+  if (entry.implemented) return entry.implemented;
+  const isRoadmap = (group: LocalizedOptionGuide[number]) => group.title === "Roadmap" || group.title === "로드맵";
+  const usage = entry.guide.find(isRoadmap)?.items.filter(item => item.name === "data + onChangeData" || item.name === "CSR");
+  entry.implemented = Object.freeze([
+    ...entry.guide.filter(group => !isRoadmap(group)),
+    ...(usage?.length ? [Object.freeze({
+      title: locale === "en" ? "Usage Contract" : "사용 계약",
+      items: Object.freeze(usage),
+    })] : []),
+  ]);
+  return entry.implemented;
 }
