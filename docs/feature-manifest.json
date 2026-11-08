@@ -887,7 +887,7 @@
     ]
   },
   "restrictions": {
-    "client-only": [
+    "ssr-hydration": [
       "docs/user/01-quick-start.md",
       "docs/ko/01-quick-start.md"
     ],

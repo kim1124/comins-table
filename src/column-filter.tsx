@@ -1,3 +1,4 @@
+import { useCominsLayoutEffect } from "./react/layout-effect";
 import { createFilterButtonGetter, useValueFilter, ValueFilterPanel, renderFilterTrigger, getFilterTriggerVisual } from "./react/value-filter";
 import type { CominsTableRuntimeColumn } from "./react-types";
 import type { CominsColumnFilterOptionsInput } from "./filtering";
@@ -5,7 +6,6 @@ import type { CominsValueFilterTriggerRenderParams } from "./react/value-filter-
 import {
   useEffect,
   useId,
-  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -136,7 +136,7 @@ export function CominsColumnFilterControl<TData>({
     getTriggerProps: createFilterButtonGetter({ label: `Filter ${columnLabel}`, disabled: !onOpenChange, click: () => onOpenChange?.(open ? null : columnId), open, controls: open ? popoverId : undefined, install: node => { buttonRef.current = node; } }),
   };
   triggerParams.getTriggerProps = createFilterButtonGetter({ label: `Filter ${columnLabel}`, disabled: !onOpenChange, click: () => onOpenChange?.(open ? null : columnId), open, controls: open ? popoverId : undefined, install: node => { buttonRef.current = node; }, ...getFilterTriggerVisual(triggerParams) });
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     if (!open || !valuesMode) return;
     const panel = popoverRef.current;
     if (!panel) return;
@@ -157,7 +157,7 @@ export function CominsColumnFilterControl<TData>({
     panel.focus({ preventScroll: true });
   }, [open, valuesMode, portalContainer]);
 
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     onOpenChangeRef.current = onOpenChange;
   }, [onOpenChange]);
 
@@ -178,7 +178,7 @@ export function CominsColumnFilterControl<TData>({
     setValueTo(getRuleInputValueTo(rule, kind));
   }, [kind, open, appliedRuleKey]);
 
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     if (!open) {
       return undefined;
     }

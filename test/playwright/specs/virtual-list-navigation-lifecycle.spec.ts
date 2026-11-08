@@ -12,7 +12,7 @@ declare global {
   }
 }
 
-test("sidebar navigation releases the retired built-in virtual-list search subtree @perf", async ({ page }, testInfo) => {
+test("sidebar navigation releases the retired built-in virtual-list search subtree @perf @memory-lifetime", async ({ page }, testInfo) => {
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("HeapProfiler.enable");
   try {

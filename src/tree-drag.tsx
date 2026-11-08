@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useCominsLayoutEffect } from "./react/layout-effect";
+import { useRef, useState } from "react";
 import type React from "react";
 import type { CominsRowId } from "./core";
 import type { CominsEventRow, CominsRowDragReason, CominsRowDragResult, CominsRowDragTarget, CominsTableRowProps } from "./index";
@@ -100,13 +101,13 @@ export function useCominsTreeDrag<T>(options: Options<T>) {
     else navigateRef.current?.(focus.id);
   };
 
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     if (gesture.current && (committed.current.data !== options.data || committed.current.config?.allowReparent !== options.config?.allowReparent || committed.current.config?.canDrop !== options.config?.canDrop || Boolean(committed.current.config) !== Boolean(options.config) || committed.current.rowProps?.disabled !== options.rowProps?.disabled || committed.current.rowProps?.draggable !== options.rowProps?.draggable || committed.current.sorted !== options.sorted || committed.current.getRowId !== options.getRowId || Boolean(committed.current.onChangeData) !== Boolean(options.onChangeData))) {
       finish(false, null, "stale-target");
     }
     committed.current = options;
   });
-  useLayoutEffect(() => () => finish(false, null, "pointer-cancel"), []);
+  useCominsLayoutEffect(() => () => finish(false, null, "pointer-cancel"), []);
 
   const choose = (targetId: CominsRowId, position: CominsTreeDropPosition, event: PointerEvent | KeyboardEvent) => {
     const current = gesture.current;

@@ -40,6 +40,18 @@ For ordinary array-backed Tables, `setSelectedRow`, `setSelectedRows`, and `setM
 `getSelectedRows()` returns loaded selected business data in data order. `getSelectedCells()` returns `{ rowId, columnId, value }` for available selected Cells; ranges use projected display order. `getSelection()` copies the selection IDs and addresses, including Row IDs retained after Viewport cache eviction. Row objects and Cell values remain application-owned references.
 
 
+`releaseFocus(): boolean` explicitly calls native `blur()` on the active HTMLElement contained by this Table's DOM root. Call it before a consumer-driven route change or conditional removal, while the Table is still mounted. It returns whether focus left that element after blur callbacks, and returns `false` when focus is outside the Table or the root has unmounted. It does not navigate, unmount, or automatically run during cleanup. Native blur callbacks still run and may commit an editor value or redirect focus; the Table does not change the value itself. Content portaled outside the Table root is outside this method's scope.
+
+<!-- comins-doc-example: fragment -->
+```ts
+// In the consumer, after transition approval and before removing the Table:
+tableRef.current?.releaseFocus();
+navigate(nextPath);
+```
+
+The application must coordinate cancelled or reentrant transitions. The return value reports focus change, not permission to navigate or a memory measurement. This method preserves ordinary input, focus, and text-selection events until explicitly called.
+
+
 See [Selection](10-selection.md), [Clipboard](09-clipboard.md), and [Tree Grid](17-tree-grid.md) for selection, copy, Fill, and expansion controls.
 
 ## 0.2.0 migration
@@ -65,4 +77,4 @@ const edited = pasteCominsText(state, { rowId: "a", columnId: "age" }, "42");
 
 For existing React state, import helpers and types from `comins-table` instead of `/core`. This retains JSX labels, `cell.props` guards, renderer callbacks, and themes. React-only exports such as `CominsTableCellConfig`, `CominsTableTheme`, `formatCominsCellValue`, `getCominsCellClassName`, `getCominsCellStyle`, and `setCominsTableTheme` are available only from the root.
 
-`comins-table/clipboard` and `comins-table/selection` retain their React-state contracts. Use the corresponding `/core` helpers with neutral state; do not mix the two state contracts. The package still declares React peer dependencies, the React table remains client-only, and this separation does not declare SSR or Vue support.
+`comins-table/clipboard` and `comins-table/selection` retain their React-state contracts. Use the corresponding `/core` helpers with neutral state; do not mix the two state contracts. The package still declares React peer dependencies. Core separation alone does not establish framework support; React Table SSR HTML and hydration are described in [Quick Start](01-quick-start.md). Vue support is outside this contract.

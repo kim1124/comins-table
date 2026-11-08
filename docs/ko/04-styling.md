@@ -120,3 +120,13 @@ Table 전체 스타일은 `className`, `style`, `theme`로 제어한다. Row 스
 `rowProps.disabled`가 `true`인 row는 `--comins-table-row-disabled-background`, `--comins-table-row-disabled-color`로 기본 비활성 스타일을 받는다. Row/cell별 커스텀 class나 style을 추가할 수 있지만, 비활성 row가 조작 불가 상태임을 시각적으로 구분할 수 있어야 한다.
 
 Header Sort는 펼침/접힘과 같은 계열의 15px Chevron을 24px 아이콘 버튼에 사용합니다. Header/Row Group 원본은 중립색 점선 Placeholder, 유효 대상은 accent, 무효 대상은 danger 토큰을 사용합니다. 이동 미리보기는 두 테마 모두 surface와 foreground를 조합합니다. 모션 감소 설정에서는 Sort와 Group 펼침 전환을 끕니다. 상태와 토큰 기준은 패키지의 `DESIGN.md`를 참고합니다.
+
+
+## Excel theme
+
+<!-- comins-doc-example: fragment -->
+```tsx
+<CominsTable columns={columns} data={data} theme={{ className: "comins-table-theme--excel" }} />
+```
+
+선택형 Excel 테마는 흰 행, 중립 회색 Header·격자, 초록색 선택·포커스 토큰을 사용합니다. 기존 배치·상호작용 API를 유지하며 수식 엔진, 행·열 번호, XLSX 출력 스타일은 추가하지 않습니다. 가상화 시 기존 `rowHeight`와 CSS 높이 계약을 유지합니다. Playground Theme에서 **Excel**을 선택해 확인할 수 있습니다.

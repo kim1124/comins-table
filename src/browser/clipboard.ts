@@ -1,6 +1,7 @@
 export async function writeCominsClipboardText(text: string) {
   if (!navigator.clipboard?.writeText) throw new Error("Clipboard writing is unavailable.");
   await navigator.clipboard.writeText(text);
+  return text;
 }
 
 export function readCominsClipboardEvent(data: Pick<DataTransfer, "types" | "getData">) {

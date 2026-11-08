@@ -57,7 +57,7 @@ Cell을 클릭해 포커스를 둔 뒤 Ctrl/Cmd+C로 복사하고, 대상 Cell�
 
 `CominsTable`의 `clipboard`를 활성화하면 브라우저의 native copy 이벤트를 처리합니다. 기본값은 기존 내부 버퍼 흐름을 유지하는 `false`입니다. 활성화 시 키보드 복사와 `ref.current.copySelection()`은 여러 Cell → 선택 Row → 단일 Cell 순서를 동일하게 사용합니다. Row 5개와 Cell 3개를 선택하면 Cell 3개를 복사하며 Row 5개 선택은 유지됩니다. Row 5개와 Cell 1개라면 Row를 복사합니다.
 
-`copySelection(target?: CominsCopyTarget)`은 `"auto"`, `"cells"`, `"rows"`를 받습니다. 사용자 조작에 따른 버튼이나 Context Menu에서 호출하고 클립보드 접근 거부를 처리합니다. 이 Ref 메서드는 `clipboard` prop이 false여도 OS 클립보드에 기록하며, prop은 키보드 복사 활성화 여부를 제어합니다. 복사된 문자열을 `Promise<string | null>`로 반환합니다. 복사 가능한 선택이 없으면 `null`, 브라우저 클립보드 접근이 불가능하거나 거부되면 Promise rejection이 발생합니다. 키보드 복사는 native `copy` 이벤트를 사용하며 입력 요소의 텍스트 복사는 유지합니다.
+`copySelection(target?: CominsCopyTarget)`은 `"auto"`, `"cells"`, `"rows"`를 받습니다. 사용자 조작에 따른 버튼이나 Context Menu에서 호출하고 클립보드 접근 거부를 처리합니다. 이 Ref 메서드는 `clipboard` prop이 false여도 OS 클립보드에 기록하며, prop은 키보드 복사 활성화 여부를 제어합니다. 복사된 문자열을 `Promise<string | null>`로 반환합니다. 복사 가능한 선택이 없으면 `null`, 브라우저 클립보드 접근이 불가능하거나 거부되면 Promise rejection이 발생합니다. 키보드 복사는 native `copy` 이벤트를 사용하며 입력 요소의 텍스트 복사는 유지합니다. `copySelection()`의 완료 대기는 준비된 문자열만 보유하므로 Unmount 후에도 종료된 Table을 보유하지 않고 성공 또는 거부될 수 있습니다. Unmount는 브라우저의 클립보드 작업을 취소하지 않습니다.
 
 | 대상 | 복사 데이터 |
 | --- | --- |

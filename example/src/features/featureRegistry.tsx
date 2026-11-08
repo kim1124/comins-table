@@ -82,7 +82,7 @@ export const featureRegistry: FeatureDefinitionSource[] = [
       { description: defineLocalizedText("CSS variable 값을 덮어씁니다.", "CSS variable override."), example: "{ '--comins-table-header-split-border': '#278aa7' }", name: "theme.style" },
       { description: defineLocalizedText("가상화 계산에 사용하는 Row 높이입니다.", "Row height value used by virtualization calculations."), example: "rowHeight={32}", name: "rowHeight" },
     ],
-    summary: defineLocalizedText("Basic, Dark, Skyblue, Mint, Gray, Orange sample Theme과 rowHeight 계약 예제입니다.", "Basic, Dark, Skyblue, Mint, Gray, Orange sample themes and rowHeight contract example."),
+    summary: defineLocalizedText("Basic, Dark, Skyblue, Mint, Gray, Orange, Excel sample Theme과 rowHeight 계약 예제입니다.", "Basic, Dark, Skyblue, Mint, Gray, Orange, Excel sample themes and rowHeight contract example."),
   },
   {
     Component: LoadingStateFeature,

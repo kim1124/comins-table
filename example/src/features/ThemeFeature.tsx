@@ -14,6 +14,7 @@ const themeOptions = [
   { className: "comins-table-theme--mint", label: "Mint", value: "mint" },
   { className: "comins-table-theme--gray", label: "Gray", value: "gray" },
   { className: "comins-table-theme--orange", label: "Orange", value: "orange" },
+  { className: "comins-table-theme--excel", label: "Excel", value: "excel" },
 ];
 
 const rowHeight = 32;

@@ -284,7 +284,7 @@ describe("comins-table user documentation contract", () => {
     const optionGuide = readWorkspaceFile("example/src/docs/dataTableOptionGuide.ts");
     const advancedFeature = readWorkspaceFile("example/src/features/AdvancedFeature.tsx");
 
-    expect(readme).toContain("client-only");
+    expect(readme).toContain("SSR initial HTML and hydration with React 18/19");
     expect(readWorkspaceFile("docs/user/02-data-and-crud.md")).toContain("controlled CSR data flow");
     expect(readWorkspaceFile("docs/user/09-clipboard.md")).toContain("Automatic numeric/date series and clearing on shrink are not supported.");
     expect(readme).not.toContain("first public release");

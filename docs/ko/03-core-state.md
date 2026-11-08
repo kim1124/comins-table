@@ -47,6 +47,18 @@ Column layout persistence는 Column 순서와 지원되는 Column/Group runtime 
 
 `getSelectedRows()`는 로딩된 선택 데이터를 데이터 순서로 반환합니다. `getSelectedCells()`는 사용 가능한 선택 Cell의 `{ rowId, columnId, value }`를 반환하며 범위는 표시 순서를 따릅니다. `getSelection()`은 선택 ID와 주소를 복사하며 Viewport 캐시에서 제거된 Row의 유지된 ID도 포함합니다. Row 객체와 Cell 값은 애플리케이션 소유 참조를 유지합니다.
 
+`releaseFocus(): boolean`은 Table DOM root에 포함된 현재 활성 HTMLElement의 native `blur()`를 명시적으로 호출합니다. 소비자가 경로를 바꾸거나 조건부로 Table을 제거하기 **전에**, Table이 Mount된 상태에서 호출합니다. blur callback 이후 해당 요소에서 포커스가 떠났는지를 반환하며, 외부 요소가 활성 상태이거나 Table root가 Unmount됐다면 `false`입니다. 이동·Unmount를 실행하거나 cleanup에서 자동 호출되는 메서드는 아닙니다. 기존 native blur callback은 실행되어 편집 값을 저장하거나 포커스를 옮길 수 있으며 메서드 자체는 값을 변경하지 않습니다. Table root 바깥으로 Portal된 내용은 대상에 포함하지 않습니다.
+
+<!-- comins-doc-example: fragment -->
+```ts
+// 소비자에서 이동 승인을 확인한 뒤 Table을 제거하기 전에 호출합니다.
+tableRef.current?.releaseFocus();
+navigate(nextPath);
+```
+
+이동 취소·재진입은 애플리케이션이 조정합니다. 반환값은 포커스 변경 여부이며 이동 허용 또는 메모리 측정 결과가 아닙니다. 명시적으로 호출하기 전까지 기존 입력·포커스·텍스트 선택 이벤트를 변경하지 않습니다.
+
+
 선택, 복사, Fill과 펼침 제어는 [Selection](10-selection.md), [Clipboard](09-clipboard.md), [Tree Grid](17-tree-grid.md)를 참고합니다.
 
 ## 0.2.0 마이그레이션
@@ -72,4 +84,4 @@ const edited = pasteCominsText(state, { rowId: "a", columnId: "age" }, "42");
 
 기존 React state를 사용한다면 helper와 타입의 import를 `/core`에서 `comins-table` 루트로 변경합니다. JSX label, `cell.props` guard, renderer callback과 theme은 루트에서 기존 계약을 유지합니다. `CominsTableCellConfig`, `CominsTableTheme`, `formatCominsCellValue`, `getCominsCellClassName`, `getCominsCellStyle`, `setCominsTableTheme` 등 React 전용 export도 루트에서 제공합니다.
 
-`comins-table/clipboard`와 `comins-table/selection`은 기존 React state 계약을 유지합니다. 중립 state에는 `/core`의 대응 helper를 사용하며 두 state 계약을 혼용하지 않습니다. 패키지의 React peer dependency와 React 테이블의 client-only 경계는 유지됩니다. 이번 분리는 SSR 또는 Vue 지원 선언이 아닙니다.
+`comins-table/clipboard`와 `comins-table/selection`은 기존 React state 계약을 유지합니다. 중립 state에는 `/core`의 대응 helper를 사용하며 두 state 계약을 혼용하지 않습니다. 패키지의 React peer dependency는 유지됩니다. Core 분리 자체는 프레임워크 지원 근거가 아니며 React Table SSR HTML·hydration 범위는 [Quick Start](01-quick-start.md)를 따릅니다. Vue는 지원 계약에 포함하지 않습니다.

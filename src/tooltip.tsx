@@ -1,5 +1,6 @@
+import { useCominsLayoutEffect } from "./react/layout-effect";
 import type React from "react";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 type CominsTooltipPlacement = "above" | "below";
 
@@ -50,7 +51,7 @@ export function CominsPointerTooltip({
     top: y + 12,
   });
 
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     const element = tooltipRef.current;
 
     if (!element) {

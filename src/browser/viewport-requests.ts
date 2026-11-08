@@ -4,6 +4,28 @@ export type CominsViewportRequest = CoreViewportRequest & { signal: AbortSignal 
 type WithSignal<TEvent> = TEvent extends { request: CoreViewportRequest } ? Omit<TEvent, "request"> & { request: CominsViewportRequest } : TEvent;
 export type BrowserViewportDataEvent<T> = WithSignal<CominsViewportDataEvent<T>>;
 
+/** Detach completion work even when the consumer ignores cancellation. */
+export async function settleRequestCompletion(
+  result: void | Promise<void>,
+  signal: AbortSignal,
+  onSettled: () => void,
+): Promise<void> {
+  let cancel!: () => void;
+  // abort Event를 결과값으로 보유하면 signal의 오류 스택이 테이블을 붙잡을 수 있다.
+  const cancellation = new Promise<void>(resolve => { cancel = () => resolve(); });
+  signal.addEventListener("abort", cancel, { once: true });
+  try {
+    // 모듈 경계의 race만 외부 Promise에 연결하여 종료된 컴포넌트 컨텍스트를 분리한다.
+    if (signal.aborted) cancel();
+    await Promise.race([result, cancellation]);
+  } catch {
+    // Error and retry UI remain owned by the consumer, including late rejections.
+  } finally {
+    signal.removeEventListener("abort", cancel);
+    if (!signal.aborted) onSettled();
+  }
+}
+
 export function createViewportRequestExecutor(options: {
   onRequest: (request: CominsViewportRequest) => void | Promise<void>;
   onSettled: (requestId: string) => void;
@@ -23,10 +45,10 @@ export function createViewportRequestExecutor(options: {
       const entry = { controller, done: false };
       const request = { ...descriptor, signal: controller.signal };
       active.set(descriptor.requestId, entry);
-      Promise.resolve().then(() => { if (!controller.signal.aborted) return options.onRequest(request); }).catch(() => {
-        // Low-level consumers acknowledge errors in their controlled snapshot.
-      }).finally(() => {
-        if (controller.signal.aborted) return;
+      const execution = Promise.resolve().then(() => {
+        if (!controller.signal.aborted) return options.onRequest(request);
+      });
+      void settleRequestCompletion(execution, controller.signal, () => {
         entry.done = true;
         options.onSettled(descriptor.requestId);
       });

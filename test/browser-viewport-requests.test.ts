@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { execFileSync } from "node:child_process";
+import { resolve } from "node:path";
 const modules = import.meta.glob("../src/browser/viewport-requests.ts", { eager: true });
 function browser() {
   expect(modules["../src/browser/viewport-requests.ts"], "browser viewport executor").toBeDefined();
@@ -7,6 +9,10 @@ function browser() {
 const descriptor = (requestId = "r") => ({ requestId, revision: "a", startIndex: 0, endIndex: 2, retainRange: { startIndex: 0, endIndex: 2 } });
 const flush = async () => { for (let index = 0; index < 8; index++) await Promise.resolve(); };
 describe("Browser request executor", () => {
+  it("releases a disposed completion owner while the external consumer stays pending", () => {
+    const output = execFileSync(process.execPath, ["--expose-gc", resolve("test/fixtures/lazy-load-lifetime.mjs"), "viewport"], { encoding: "utf8", timeout: 5_000 });
+    expect(JSON.parse(output)).toEqual({ retainedBeforeSourceSettlement: false });
+  });
   it("cancels before execution and suppresses settlement after cancellation or disposal", async () => {
     const requests: AbortSignal[] = [];
     const settled: string[] = [];
@@ -35,6 +41,45 @@ describe("Browser request executor", () => {
     const executor = browser().createViewportRequestExecutor({ onRequest: request => { signal = request.signal; }, onSettled() {} });
     executor.start(descriptor()); await flush(); executor.cancel("r");
     expect(signal.aborted).toBe(true);
+  });
+  it("does not let a cancelled request settle or release a new request with the same ID", async () => {
+    const signals: AbortSignal[] = [];
+    const finish: Array<() => void> = [];
+    const settled: string[] = [];
+    const executor = browser().createViewportRequestExecutor({
+      onRequest(request) { signals.push(request.signal); return new Promise<void>(resolve => finish.push(resolve)); },
+      onSettled(id) { settled.push(id); },
+    });
+    executor.start(descriptor()); await flush(); executor.cancel("r");
+    executor.start(descriptor()); await flush();
+    finish[0]!(); await flush();
+    expect(settled).toEqual([]);
+    executor.release("r"); executor.dispose();
+    expect(signals.map(signal => signal.aborted)).toEqual([true, true]);
+    finish[1]!(); await flush();
+    expect(settled).toEqual([]);
+  });
+  it("marks synchronous failure complete before acknowledgement inside onSettled", async () => {
+    let signal!: AbortSignal;
+    const settled: string[] = [];
+    const executor = browser().createViewportRequestExecutor({
+      onRequest(request) { signal = request.signal; throw new Error("consumer failure"); },
+      onSettled(id) { settled.push(id); executor.release(id); },
+    });
+    executor.start(descriptor()); await flush(); executor.dispose();
+    expect(settled).toEqual(["r"]);
+    expect(signal.aborted).toBe(false);
+  });
+  it("consumes a late raw consumer rejection without settling a disposed request", async () => {
+    let reject!: (error: Error) => void;
+    const settled: string[] = [];
+    const executor = browser().createViewportRequestExecutor({
+      onRequest() { return new Promise<void>((_resolve, no) => { reject = no; }); },
+      onSettled(id) { settled.push(id); },
+    });
+    executor.start(descriptor()); await flush(); executor.dispose();
+    reject(new Error("late consumer failure")); await flush();
+    expect(settled).toEqual([]);
   });
 });
 

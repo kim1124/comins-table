@@ -97,7 +97,7 @@ describe("README preview contract", () => {
       expect(migration).toContain(`\`${entry}\``);
     }
     const support = getReadmeSection(readme, "Version and support");
-    for (const term of ["client-only", "SSR", "Vue", "Chrome and Edge", "Firefox and Safari", "telemetry"]) {
+    for (const term of ["hydration", "SSR", "Vue", "Chrome and Edge", "Firefox and Safari", "telemetry"]) {
       expect(support).toContain(term);
     }
     expect(getReadmeSection(readme, "Installation")).toContain("React and React DOM `>=18.0.0 <20.0.0`");
@@ -116,7 +116,7 @@ describe("README preview contract", () => {
       "actions/workflows/verify.yml/badge.svg?branch=main", "License-MIT",
       "https://raw.githubusercontent.com/kim1124/comins-table/main/docs/assets/comins-table-overview.gif",
       "Application-owned data", "virtualization", "Tree Grid", "row grouping",
-      "comins-table/core", "comins-table/styles.css", "client-only",
+      "comins-table/core", "comins-table/styles.css", "hydration",
     ]) expect(readme).toContain(text);
     expect(readme).not.toContain("does not yet exist on the npm registry");
     expect(readme).not.toContain("first public version must be published interactively");

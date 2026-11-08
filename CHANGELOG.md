@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Added
+
+- Add explicit `CominsTableRef.releaseFocus()` for consumers to release focus inside the Table before navigation or removal, preserving native blur callbacks and ordinary selection events. This is not automatic unmount cleanup.
+
+- Opt-in Excel Table UI theme through `theme.className: "comins-table-theme--excel"`, with a Playground preview.
+- React 18/19 initial server HTML and hydration support; preserve browser layout effects while avoiding server layout-effect warnings. Initial props must match; Next.js/RSC and streaming integrations remain unvalidated.
+
+### Fixed
+
+- Release active cell-tooltip ownership during SPA unmount and prevent late callbacks from queuing state for a retired Table, while preserving initial child autoFocus.
+
+- Keep pending `copySelection()` clipboard completion isolated from a retired Table while preserving the copied text and late success or rejection.
+
+- Release cancelled Lazy Load and direct Viewport request completion callbacks when a consumer Promise stays pending after unmount, while preserving controlled data ownership and ignoring late completion or rejection.
+
 ## 0.2.3 - 2026-11-04
 
 ### Fixed

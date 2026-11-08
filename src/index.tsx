@@ -1,8 +1,10 @@
+import { useCominsLayoutEffect } from "./react/layout-effect";
 import { createCrossTableAutoScroll, isCominsNativeEditor as isNativeEditor } from "./browser/pointer";
 import { createMeasurementObserver, hasCominsResizeObserver, measureCominsElement, observeCominsViewport, observeCominsFontChanges, getCominsElementRect } from "./browser/measurements";
 import { setCominsScrollTop, setCominsScrollLeft, scrollCominsRowIntoView, focusCominsElement, createCominsDetailFocusRestorer } from "./browser/scroll";
 import { writeCominsClipboardText, readCominsClipboardEvent, writeCominsClipboardEvent } from "./browser/clipboard";
 import { getCrossTableTransferHit as getBrowserTransferHit } from "./browser/table-transfer";
+import { settleRequestCompletion } from "./browser/viewport-requests";
 import {
   getEffectiveColumnMinWidth,
   getEffectiveColumnMaxWidth,
@@ -30,7 +32,6 @@ import {
   useEffect,
   useId,
   useImperativeHandle,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -613,6 +614,8 @@ export type CominsRowDetailProps<TData> = {
 };
 
 export type CominsTableRef<TData = unknown> = {
+  /** Explicitly blur the focused element inside this table before consumer-driven removal. */
+  releaseFocus: () => boolean;
   copySelection: (target?: CominsCopyTarget) => Promise<string | null>;
   fillSelection: (direction: "down" | "right") => boolean;
   getSelectedRows: () => TData[];
@@ -2177,7 +2180,7 @@ function CominsTableInner<TData, TGroup>(
     pendingTransferFocusFrameRef.current = window.requestAnimationFrame(attemptFocus);
   };
 
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     onLazyLoadRef.current = onLazyLoad;
   }, [onLazyLoad]);
 
@@ -2224,18 +2227,14 @@ function CominsTableInner<TData, TGroup>(
       return;
     }
 
-    void Promise.resolve(result)
-      .catch(() => {
-        // Error and retry UI are intentionally left to the consumer in this API pass.
-      })
-      .finally(() => {
-        if (lazyRequestIdRef.current !== requestId) {
-          return;
-        }
+    void settleRequestCompletion(result, controller.signal, () => {
+      if (lazyRequestIdRef.current !== requestId) {
+        return;
+      }
 
-        lazyLoadingReasonRef.current = null;
-        lazyAbortControllerRef.current = null;
-      });
+      lazyLoadingReasonRef.current = null;
+      lazyAbortControllerRef.current = null;
+    });
   };
 
   useEffect(() => {
@@ -2302,7 +2301,7 @@ function CominsTableInner<TData, TGroup>(
     scrollCommitTimeoutRef,
   }), []);
 
-  useLayoutEffect(createViewportMeasurementEffect({
+  useCominsLayoutEffect(createViewportMeasurementEffect({
     containerRef,
     setContainerHeight,
     setContainerWidth,
@@ -2503,7 +2502,7 @@ function CominsTableInner<TData, TGroup>(
     return observer;
   };
 
-  useLayoutEffect(createDetailObserverCleanupEffect({
+  useCominsLayoutEffect(createDetailObserverCleanupEffect({
     detailObserverRef,
     detailElementsRef,
     fallbackMeasuredDetailElementsRef,
@@ -2923,7 +2922,7 @@ function CominsTableInner<TData, TGroup>(
 
   useCominsTableTransferRegistration({ config: normalizedTableTransfer, snapshot: transferSnapshotRef, root: tableRootRef, viewport: containerRef });
 
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     if (!groupingProjection || !orderedGroupModel) {
       previousGroupedDataIndexesRef.current = null;
       pendingGroupDisclosureFocusRef.current = null;
@@ -3204,7 +3203,7 @@ function CominsTableInner<TData, TGroup>(
     virtualized,
     viewportContext !== undefined,
   ]);
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     if (!treeContext) return;
     treeContext.drag.navigateRef.current = (rowId) => {
       const viewport = containerRef.current;
@@ -3244,7 +3243,7 @@ function CominsTableInner<TData, TGroup>(
     viewportAnchor = { index, offset: logical - previousViewportIndex.getPrefixHeight(index), previousPhysicalScrollTop: physical };
   }
   const viewportAnchorLogical = viewportAnchor && viewportHeightIndex ? viewportHeightIndex.getPrefixHeight(viewportAnchor.index) + Math.min(viewportAnchor.offset, viewportHeightIndex.getHeight(viewportAnchor.index)) : undefined;
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     if (!viewportHeightIndex) return;
     committedViewportIndexRef.current = { key: viewportIndexKey, index: viewportHeightIndex };
     viewportMeasurementAnchorRef.current = null;
@@ -3295,7 +3294,7 @@ function CominsTableInner<TData, TGroup>(
     [containerHeight, detailContentWidth, mixedProjection, rowHeight, rowLayoutKey, rowContentRevision, fullProjectionSlots, getRowHeight, viewportContext?.data.retainRange],
   );
 
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     committedDetailObserverSnapshotRef.current =
       detailObserverSnapshotCandidate;
 
@@ -3492,7 +3491,7 @@ function CominsTableInner<TData, TGroup>(
     pendingDetailAnchor?.status === "pending"
       ? pendingDetailAnchor
       : pendingVirtualAnchor;
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     if (viewportContext) return;
     if (!currentVirtualProjection) {
       previousVirtualProjectionRef.current = null;
@@ -3648,7 +3647,7 @@ function CominsTableInner<TData, TGroup>(
     setLogicalAnchorTransaction(nextAnchorTransaction);
     setScrollTop(actualPhysicalScrollTop);
   }, [currentVirtualProjection, pendingAnchorTransaction]);
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     // Wait for both controlled data and the anchor-adjusted virtual window.
     // Fixed-height virtual slots reuse DOM nodes, so either pending update
     // can otherwise change the identity of an already focused handle.
@@ -3666,7 +3665,7 @@ function CominsTableInner<TData, TGroup>(
   const selectedRowIdSet = useMemo(() => new Set(state.selection.rowIds), [state.selection.rowIds]);
   const hasHorizontalOverflow =
     typeof columnWidthTotal === "number" && containerWidth > 0 ? columnWidthTotal > containerWidth + 1 : false;
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     const nextContentWidth = containerRef.current?.scrollWidth ?? 0;
     const nextViewportOuterWidth = containerRef.current?.offsetWidth ?? 0;
     const nextViewportWidth = containerRef.current?.clientWidth ?? 0;
@@ -3718,7 +3717,7 @@ function CominsTableInner<TData, TGroup>(
     ) + stateRowCount * rowHeight;
   const emptyFillerHeight = virtualized ? 0 : Math.max(0, containerHeight - renderedRowsHeight);
   const renderedHeaderVisible = state.showHeader && (persistHeaderWhenEmpty || !isEmpty || resolvedLoading);
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     const scrollLeft = containerRef.current?.scrollLeft ?? 0;
 
     // 새 Header·Summary만 현재 body 위치에 맞추고 활성 스크롤 영역은 건드리지 않는다.
@@ -3937,11 +3936,27 @@ function CominsTableInner<TData, TGroup>(
   useImperativeHandle(
     ref,
     () => ({
-      copySelection: async (target = "auto") => {
-        const result = prepareSelectionCopy(target);
-        if (!result) return null;
-        await writeCominsClipboardText(result.text);
-        return result.text;
+      releaseFocus: () => {
+        const root = tableRootRef.current;
+        const doc = root?.ownerDocument;
+        const view = doc?.defaultView;
+        const focused = doc?.activeElement;
+
+        if (!root || !doc || !view || !(focused instanceof view.HTMLElement) || !root.contains(focused)) {
+          return false;
+        }
+
+        focused.blur();
+        return doc.activeElement !== focused;
+      },
+      copySelection: (target = "auto") => {
+        try {
+          const result = prepareSelectionCopy(target);
+          // 완료 대기는 문자열만 보유하고 컴포넌트 컨텍스트를 보유하지 않는다.
+          return result ? writeCominsClipboardText(result.text) : Promise.resolve(null);
+        } catch (error) {
+          return Promise.reject(error);
+        }
       },
       fillSelection: (direction) => cellFill.fillSelection(direction),
       getSelectedRows: () => selectedRowData(stateRef.current),
@@ -4100,7 +4115,7 @@ function CominsTableInner<TData, TGroup>(
     setColumnMoveTarget(null);
   };
 
-  useLayoutEffect(createColumnInteractionCleanupEffect({
+  useCominsLayoutEffect(createColumnInteractionCleanupEffect({
     columnPointerInteractionRef,
     suppressedSortClickRef,
     columnMoveAnimationCleanupRef,
@@ -4138,7 +4153,7 @@ function CominsTableInner<TData, TGroup>(
     columnMoveAnimationSnapshotRef.current = snapshot;
   };
 
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     const snapshot = columnMoveAnimationSnapshotRef.current;
     columnMoveAnimationSnapshotRef.current = null;
 

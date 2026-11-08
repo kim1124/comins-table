@@ -20,7 +20,7 @@ async function commit(page: Page, action: "replace" | "fresh" | "deleteHalf", la
 }
 
 for (const profile of ["basic", "large"] as const) {
-  test(`React production obsolete arrays and every row are released: ${profile} @perf`, async ({ page }, testInfo) => {
+  test(`React production obsolete arrays and every row are released: ${profile} @perf @memory-lifetime`, async ({ page }, testInfo) => {
     test.setTimeout(900_000);
     const site = await startProductionRetention();
     const session = await page.context().newCDPSession(page);

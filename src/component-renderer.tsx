@@ -1,4 +1,5 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCominsLayoutEffect } from "./react/layout-effect";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type React from "react";
 
 import type {
@@ -379,7 +380,7 @@ function CominsHeaderMenuComponent<TData, TValue>({
   };
 
   const requestOpenRef = useRef<HeaderMenuOpenRequest>(requestOpen);
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     // 완료되지 않은 render의 설정이 native event에 노출되지 않도록 commit된 콜백만 갱신한다.
     requestOpenRef.current = requestOpen;
   });
@@ -391,7 +392,7 @@ function CominsHeaderMenuComponent<TData, TValue>({
     return installHeaderMenuDismissListeners(document, triggerRef, menuRef, requestOpenRef);
   }, [open]);
 
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     if (!open || typeof window === "undefined") {
       return undefined;
     }
@@ -548,7 +549,7 @@ function CominsCellVirtualListComponent<TData, TValue>({
     setScrollTop(0);
   }, [items.length, limit]);
 
-  useLayoutEffect(() => {
+  useCominsLayoutEffect(() => {
     const viewport = itemsViewportRef.current;
 
     if (!viewport) {

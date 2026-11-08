@@ -14,7 +14,8 @@
         "src/model.ts",
         "src/table-state.ts",
         "src/row-value.ts",
-        "src/index.tsx"
+        "src/index.tsx",
+        "src/react/layout-effect.ts"
       ],
       "targetLayers": [
         "core",
@@ -257,6 +258,7 @@
         "test/viewport-data.test.ts",
         "test/viewport-table.test.tsx",
         "test/core-request-policy.test.ts",
+        "test/browser-lazy-load.test.ts",
         "test/browser-viewport-requests.test.ts",
         "test/table-interaction.test.tsx"
       ],

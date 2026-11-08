@@ -8,8 +8,8 @@ export default defineConfig({
   forbidOnly: true,
   outputDir: "reports/artifacts/playwright",
   reporter: isCI
-    ? [["github"], ["html", { open: "never", outputFolder: "reports/artifacts/playwright-html" }], ["list"]]
-    : [["html", { open: "never", outputFolder: "reports/artifacts/playwright-html" }], ["list"]],
+    ? [["./test/playwright/reporters/memory-layers.ts"], ["github"], ["html", { open: "never", outputFolder: "reports/artifacts/playwright-html" }], ["list"]]
+    : [["./test/playwright/reporters/memory-layers.ts"], ["html", { open: "never", outputFolder: "reports/artifacts/playwright-html" }], ["list"]],
   retries: 0,
   failOnFlakyTests: true,
   workers: 1,
