@@ -79,27 +79,26 @@ function featurePage({
   };
 }
 
+function escapeReferenceText(text: string): string {
+  return text.replace(/[&<>"']/gu, character => {
+    switch (character) {
+      case "&": return "&amp;";
+      case "<": return "&lt;";
+      case ">": return "&gt;";
+      case '"': return "&quot;";
+      default: return "&#x27;";
+    }
+  });
+}
+
 function ImplementedApiReference() {
   const { locale } = usePlaygroundLocale();
-  const implementedGroups = getImplementedDataTableOptionGuide(locale);
-
-  return (
-    <div className="docs-reference-list">
-      {implementedGroups.map((group) => (
-        <section key={group.title} className="docs-reference-list__group">
-          <h2>{group.title}</h2>
-          <dl>
-            {group.items.map((item) => (
-              <div key={item.name} className="docs-reference-list__item">
-                <dt>{item.name}</dt>
-                <dd>{item.description}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      ))}
-    </div>
-  );
+  const groups = getImplementedDataTableOptionGuide(locale);
+  // This document block contains text only; escape each value before joining static markup.
+  const html = groups.map(group => `<section class="docs-reference-list__group"><h2>${escapeReferenceText(group.title)}</h2><dl>${
+    group.items.map(item => `<div class="docs-reference-list__item"><dt>${escapeReferenceText(item.name)}</dt><dd>${escapeReferenceText(item.description)}</dd></div>`).join("")
+  }</dl></section>`).join("");
+  return <div className="docs-reference-list" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 const englishDocsPages: DocsPage[] = [

@@ -11,6 +11,8 @@
 
 ### Fixed
 
+- Reduce React element construction for static Playground API reference text while preserving localized DOM and server markup.
+
 - Avoid scroll-only React updates in non-virtual Tables while preserving loading overlay positions and virtual-mode transitions.
 
 - Cancel pending automatic Row Detail growth when leaving the Playground example, preventing state updates after unmount.
