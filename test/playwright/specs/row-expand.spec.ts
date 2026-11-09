@@ -21,6 +21,64 @@ function collectBrowserDiagnostics(page: Page) {
   return diagnostics;
 }
 
+test("cancels pending automatic Detail growth before leaving through the SPA", async ({ page }) => {
+  await page.clock.install();
+  await page.addInitScript(() => {
+    const nativeSet = window.setTimeout.bind(window);
+    const nativeClear = window.clearTimeout.bind(window);
+    const pending = new Set<number>();
+    let armed = false;
+    let fired = 0;
+    let cancelled = 0;
+    window.setTimeout = ((handler: TimerHandler, delay?: number, ...args: unknown[]) => {
+      if (!armed || typeof handler !== "function" || delay !== 50) {
+        return nativeSet(handler, delay, ...args);
+      }
+      const id = nativeSet(() => { pending.delete(id); fired++; handler(...args); }, delay);
+      pending.add(id);
+      return id;
+    }) as typeof window.setTimeout;
+    window.clearTimeout = id => {
+      if (id !== undefined && pending.delete(id)) cancelled++;
+      nativeClear(id);
+    };
+    Object.assign(window, {
+      armDetailTimerProbe: (active: boolean) => { armed = active; },
+      readDetailTimers: () => ({ pending: pending.size, fired, cancelled }),
+    });
+  });
+  const diagnostics = collectBrowserDiagnostics(page);
+  await page.goto("/examples/row-expand");
+  await page.getByTestId("row-expand-example-auto").getByTestId("row-detail-toggle-auto-1").click();
+  await expect(page.getByTestId("auto-detail-grow-auto-1")).toBeVisible();
+  const before = await page.evaluate(() => {
+    const grow = document.querySelector<HTMLButtonElement>('[data-testid="auto-detail-grow-auto-1"]')!;
+    const link = document.querySelector<HTMLAnchorElement>('a[href="/api/props"]')!;
+    const documentToken = performance.timeOrigin;
+    const probe = window as unknown as {
+      armDetailTimerProbe: (active: boolean) => void;
+      readDetailTimers: () => { pending: number };
+    };
+    probe.armDetailTimerProbe(true);
+    try { grow.click(); grow.click(); }
+    finally { probe.armDetailTimerProbe(false); }
+    const timers = probe.readDetailTimers();
+    link.click();
+    return { ...timers, documentToken };
+  });
+  expect(before.pending).toBe(2);
+  await expect(page).toHaveURL(/\/api\/props$/u);
+  await expect(page.locator("[data-comins-table-instance-id]")).toHaveCount(0);
+  await expect(page.locator("tr[data-comins-row-data-index]")).toHaveCount(0);
+  await page.clock.runFor(150);
+  const after = await page.evaluate(() => ({
+    documentToken: performance.timeOrigin,
+    ...(window as unknown as { readDetailTimers: () => { pending: number; fired: number; cancelled: number } }).readDetailTimers(),
+  }));
+  expect(after).toEqual({ documentToken: before.documentToken, pending: 0, fired: 0, cancelled: 2 });
+  expect(diagnostics).toEqual([]);
+});
+
 test("controls fixed Row Details with semantic disclosure state and focus restoration", async ({ page }) => {
   const diagnostics = collectBrowserDiagnostics(page);
   await page.goto("/examples/row-expand");

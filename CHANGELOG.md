@@ -11,6 +11,8 @@
 
 ### Fixed
 
+- Cancel pending automatic Row Detail growth when leaving the Playground example, preventing state updates after unmount.
+
 - Release active cell-tooltip ownership during SPA unmount and prevent late callbacks from queuing state for a retired Table, while preserving initial child autoFocus.
 
 - Keep pending `copySelection()` clipboard completion isolated from a retired Table while preserving the copied text and late success or rejection.
