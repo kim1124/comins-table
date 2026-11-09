@@ -2310,6 +2310,17 @@ function CominsTableInner<TData, TGroup>(
     setHorizontalViewportWidth,
   }), []);
 
+  useCominsLayoutEffect(() => {
+    if (virtualized) {
+      const currentScrollTop = containerRef.current?.scrollTop ?? 0;
+      pendingScrollTopRef.current = currentScrollTop;
+      setScrollTop(currentScrollTop);
+    } else if (scrollFrameRef.current !== null) {
+      window.cancelAnimationFrame(scrollFrameRef.current);
+      scrollFrameRef.current = null;
+    }
+  }, [virtualized]);
+
   useEffect(() => {
     reconcileCominsDetailMeasurements(
       detailMeasurementsRef.current,
@@ -6204,7 +6215,7 @@ function CominsTableInner<TData, TGroup>(
       scrollCommitTimeoutRef.current = null;
     }
 
-    if (scrollFrameRef.current === null) {
+    if (virtualized && scrollFrameRef.current === null) {
       scrollFrameRef.current = window.requestAnimationFrame(() => {
         scrollFrameRef.current = null;
         commitPendingScrollTop();
@@ -7089,7 +7100,7 @@ function CominsTableInner<TData, TGroup>(
             className="comins-table__loading-overlay"
             data-testid="data-table-loading-overlay"
             role="status"
-            style={{ transform: `translate(${containerRef.current?.scrollLeft ?? 0}px, ${scrollTop}px)`, width: containerRef.current?.clientWidth }}
+            style={{ transform: `translate(${containerRef.current?.scrollLeft ?? 0}px, ${containerRef.current?.scrollTop ?? scrollTop}px)`, width: containerRef.current?.clientWidth }}
           >
             <span className="comins-table__loading-spinner" data-testid="data-table-loading-spinner" />
             <span>{loadingContent?.render ? resolveDefaultRender(loadingContent.render(), "불러오는 중입니다.") : loadingComponent ?? "불러오는 중입니다."}</span>

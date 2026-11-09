@@ -11,6 +11,8 @@
 
 ### Fixed
 
+- Avoid scroll-only React updates in non-virtual Tables while preserving loading overlay positions and virtual-mode transitions.
+
 - Cancel pending automatic Row Detail growth when leaving the Playground example, preventing state updates after unmount.
 
 - Release active cell-tooltip ownership during SPA unmount and prevent late callbacks from queuing state for a retired Table, while preserving initial child autoFocus.
