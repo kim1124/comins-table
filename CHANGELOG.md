@@ -11,6 +11,10 @@
 
 ### Fixed
 
+- Cancel queued virtual scroll frames during layout cleanup so SPA exits release retired Table models.
+
+- Suppress retired Viewport settlement updates while preserving completion planning across Suspense reconnection.
+
 - End active Table pointer gestures during layout cleanup so replacement-page layout events cannot queue state for an unmounted Table.
 
 - Reduce React element construction for static Playground API reference text while preserving localized DOM and server markup.

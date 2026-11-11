@@ -1641,7 +1641,6 @@ type TableUnmountResources = {
   transferRejectionTimerRef: TableLifecycleRef<number | null>;
   transferRejectionTargetRef: TableLifecycleRef<HTMLElement | null>;
   pendingTransferFocusFrameRef: TableLifecycleRef<number | null>;
-  scrollFrameRef: TableLifecycleRef<number | null>;
   scrollCommitTimeoutRef: TableLifecycleRef<number | null>;
 };
 
@@ -1693,6 +1692,14 @@ function createTablePointerGestureCleanupEffect(
   };
 }
 
+function createTableScrollCleanupEffect(scrollFrameRef: TableLifecycleRef<number | null>): React.EffectCallback {
+  return () => () => {
+    const frame = scrollFrameRef.current;
+    scrollFrameRef.current = null;
+    if (frame !== null) window.cancelAnimationFrame(frame);
+  };
+}
+
 function createTableUnmountEffect(resources: TableUnmountResources): React.EffectCallback {
   return () => () => {
     resources.detailFocusRestorer.dispose();
@@ -1717,10 +1724,6 @@ function createTableUnmountEffect(resources: TableUnmountResources): React.Effec
 
     if (resources.pendingTransferFocusFrameRef.current !== null) {
       window.cancelAnimationFrame(resources.pendingTransferFocusFrameRef.current);
-    }
-
-    if (resources.scrollFrameRef.current !== null) {
-      window.cancelAnimationFrame(resources.scrollFrameRef.current);
     }
 
     if (resources.scrollCommitTimeoutRef.current !== null) {
@@ -2297,6 +2300,7 @@ function CominsTableInner<TData, TGroup>(
   }, [state.rows.length]);
 
   useCominsLayoutEffect(createTablePointerGestureCleanupEffect(activePointerGestureCleanupRef), []);
+  useCominsLayoutEffect(createTableScrollCleanupEffect(scrollFrameRef), []);
 
   useEffect(createTableUnmountEffect({
     detailFocusRestorer,
@@ -2304,7 +2308,6 @@ function CominsTableInner<TData, TGroup>(
     transferRejectionTimerRef,
     transferRejectionTargetRef,
     pendingTransferFocusFrameRef,
-    scrollFrameRef,
     scrollCommitTimeoutRef,
   }), []);
 

@@ -40,14 +40,14 @@ Files: src/index.tsx; test/nonvirtual-scroll-render-cost.test.tsx.
 ### Task 3: Remaining target causes and fixes
 - [ ] Reuse unchanged evidence; choose distinguishing hypothesis for virtual, pending and group.
 - [ ] Each investigation round <=30 minutes prep-through-record, <=2 new experiments; invalid retries included.
-- [ ] Actual Astra/high for hard boundaries and independent lifetime/fix review.
-- [ ] Each confirmed fix has meaningful pre-fix failure and post-fix pass.
+- [x] Actual Astra/high for hard boundaries and independent lifetime/fix review.
+- [x] Each confirmed fix has meaningful pre-fix failure and post-fix pass.
 
 ### Task 4: Acceptance and PR
 - [ ] Focused tests; each target numeric independent3x300 and scoped L1/L2.
 - [ ] Required verify/E2E and one final full test:perf after last meaningful change.
 - [ ] Report unrelated FAIL separately; all target FAILs prevent goal completion.
-- [ ] Korean scoped commits, dedicated branch push, new PR/base dependency and attach artifact.
+- [x] Scoped commits, dedicated branch push, new PR/base dependency and attach artifact (#100 above #98).
 - [ ] Verify actual head CI and independent review; no merge/version/tag/publish/deploy.
 
 ## 2026-11-09 추가 진행 상태 (Round15–19)
@@ -64,3 +64,11 @@ Files: src/index.tsx; test/nonvirtual-scroll-render-cost.test.tsx.
 - 정적API문서텍스트의Reactelement생성을줄인최소Playground변경을구현했다. final은322,796B감소했지만peak30,064B증가·수치3.204%FAIL이므로중간최적화이며사전조건전체합격이아니다.
 -19집중단위/14영향E2E/전체verify1118단위PASS, Astra코드리뷰·같은diff의CodexSecurity보고finding0. SDK/React내부/runtime플래그변경없음.
 - 공통free문서변경으로이전비가상3×300PASS를현재입력의PASS로승계하지않는다. 최종4대상검증·전체perf·새PR/실제headCI가남아있다.
+
+## 2026-11-11 R29–R33: priority and confirmed SDK fixes
+
+Column groups were investigated first, followed by Unmount. R29 confirmed the active group-resize layout/passive gap (late callback1 and retired models2/Fiber1 ->0); R31/R32 confirmed and fixed pending Viewport settlement retaining an empty retired Fiber (1->0), preserving real Suspense resume and StrictMode; R33 confirmed and fixed queued virtual-scroll RAF after actual SPA removal retaining a 100000-row SDK model/input/Fiber (1/1/1->0/0/0). Raw rows remain app-owned. Each fix has RED/GREEN and separate calibrated actual-SPA retention evidence, with actual Astra/high independent scoped review.
+
+R30 inspected 67 served SDK modules,130 observed bindings,473 regular export cells and157 property-bearing functions; no increasing inspected JS payload was found. Accessor/external-context/prototype boundaries remain explicit. This does not establish whole SDK lifetime or total numeric cause.
+
+Latest whole numeric run before Viewport/RAF fixes: full-perf-current-02,83PASS/26FAIL,allheap; DOM/listener budget violations0;633frozen inputs unchanged and matched d7670e3. Current final-source verify124files/1144tests PASS and focused performance8PASS. A final whole performance run and the newest PR-head CI remain required. All original FAILs remain, and no target/goal/release completion is authorized by scoped fixes. R27 administrative recording overrun is preserved.
