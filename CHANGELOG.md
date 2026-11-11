@@ -11,6 +11,8 @@
 
 ### Fixed
 
+- End active Table pointer gestures during layout cleanup so replacement-page layout events cannot queue state for an unmounted Table.
+
 - Reduce React element construction for static Playground API reference text while preserving localized DOM and server markup.
 
 - Avoid scroll-only React updates in non-virtual Tables while preserving loading overlay positions and virtual-mode transitions.

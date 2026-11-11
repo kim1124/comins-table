@@ -1636,7 +1636,6 @@ type ViewportMeasurementResources = {
 };
 
 type TableUnmountResources = {
-  activePointerGestureCleanupRef: TableLifecycleRef<TablePointerGestureCleanup | null>;
   detailFocusRestorer: ReturnType<typeof createCominsDetailFocusRestorer>;
   externalDropMarkerRef: TableLifecycleRef<HTMLElement | null>;
   transferRejectionTimerRef: TableLifecycleRef<number | null>;
@@ -1683,12 +1682,19 @@ function createViewportMeasurementEffect(resources: ViewportMeasurementResources
   };
 }
 
+function createTablePointerGestureCleanupEffect(
+  activePointerGestureCleanupRef: TableLifecycleRef<TablePointerGestureCleanup | null>,
+): React.EffectCallback {
+  return () => () => {
+    const cleanup = activePointerGestureCleanupRef.current;
+
+    activePointerGestureCleanupRef.current = null;
+    cleanup?.(true);
+  };
+}
+
 function createTableUnmountEffect(resources: TableUnmountResources): React.EffectCallback {
   return () => () => {
-    const cleanup = resources.activePointerGestureCleanupRef.current;
-
-    resources.activePointerGestureCleanupRef.current = null;
-    cleanup?.(true);
     resources.detailFocusRestorer.dispose();
 
     const marker = resources.externalDropMarkerRef.current;
@@ -2290,8 +2296,9 @@ function CominsTableInner<TData, TGroup>(
     }
   }, [state.rows.length]);
 
+  useCominsLayoutEffect(createTablePointerGestureCleanupEffect(activePointerGestureCleanupRef), []);
+
   useEffect(createTableUnmountEffect({
-    activePointerGestureCleanupRef,
     detailFocusRestorer,
     externalDropMarkerRef,
     transferRejectionTimerRef,
