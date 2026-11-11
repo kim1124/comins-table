@@ -1,7 +1,24 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { reduceCominsViewportData, type CominsViewportData, type CominsViewportRange } from "../core/viewport/data";
 import { planViewportRequests, type CoreActiveViewportRequest } from "../core/viewport/requests";
 import { createViewportRequestExecutor, type CominsViewportRequest } from "../browser/viewport-requests";
+import { useCominsLayoutEffect } from "./layout-effect";
+
+type ViewportRequestConnection = { connected: boolean; refreshPending: boolean };
+
+function createViewportRequestConnectionEffect(
+  connection: { current: ViewportRequestConnection },
+  setVersion: Dispatch<SetStateAction<number>>,
+) {
+  return () => {
+    connection.current.connected = true;
+    if (connection.current.refreshPending) {
+      connection.current.refreshPending = false;
+      setVersion(value => value + 1);
+    }
+    return () => { connection.current.connected = false; };
+  };
+}
 
 let nextRequestId = 0;
 export function useCominsViewportRequests<T>(input: {
@@ -15,6 +32,8 @@ export function useCominsViewportRequests<T>(input: {
   const executor = useRef<ReturnType<typeof createViewportRequestExecutor> | null>(null);
   const retryBlocks = useRef(new Set<number>());
   const [version, setVersion] = useState(0);
+  const connection = useRef<ViewportRequestConnection>({ connected: false, refreshPending: false });
+  useCominsLayoutEffect(createViewportRequestConnectionEffect(connection, setVersion), []);
   const { data, onRequest, onChangeData } = input;
   const start = input.range.startIndex, end = input.range.endIndex;
   useEffect(() => {
@@ -30,7 +49,8 @@ export function useCominsViewportRequests<T>(input: {
         const entry = [...active.current.values()].find(candidate => candidate.request.requestId === requestId);
         if (!entry) return;
         entry.done = true;
-        setVersion(value => value + 1);
+        if (connection.current.connected) setVersion(value => value + 1);
+        else connection.current.refreshPending = true;
       },
     });
     return () => {
