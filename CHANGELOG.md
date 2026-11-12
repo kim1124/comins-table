@@ -11,6 +11,8 @@
 
 ### Fixed
 
+- Keep header input-boundary registration on its DOM owner so retired headers leave no module-wide WeakSet capacity history.
+
 - Cancel queued virtual scroll frames during layout cleanup so SPA exits release retired Table models.
 
 - Suppress retired Viewport settlement updates while preserving completion planning across Suspense reconnection.

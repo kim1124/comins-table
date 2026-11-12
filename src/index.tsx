@@ -1414,10 +1414,12 @@ function blurCominsColumnPlaceholderFocus(event: React.FocusEvent<HTMLElement>) 
   }
 }
 
-const cominsColumnPlaceholderNativeBoundaries = new WeakSet<HTMLElement>();
+const COMINS_COLUMN_PLACEHOLDER_NATIVE_BOUNDARY = Symbol("comins-column-placeholder-native-boundary");
 
-function bindCominsColumnPlaceholderNativeBoundary(element: HTMLElement | null) {
-  if (!element || cominsColumnPlaceholderNativeBoundaries.has(element)) {
+function bindCominsColumnPlaceholderNativeBoundary(
+  element: (HTMLElement & { [COMINS_COLUMN_PLACEHOLDER_NATIVE_BOUNDARY]?: true }) | null,
+) {
+  if (!element || element[COMINS_COLUMN_PLACEHOLDER_NATIVE_BOUNDARY]) {
     return;
   }
 
@@ -1430,7 +1432,7 @@ function bindCominsColumnPlaceholderNativeBoundary(element: HTMLElement | null) 
 
   element.addEventListener("change", blockActiveInput, true);
   element.addEventListener("input", blockActiveInput, true);
-  cominsColumnPlaceholderNativeBoundaries.add(element);
+  Object.defineProperty(element, COMINS_COLUMN_PLACEHOLDER_NATIVE_BOUNDARY, { value: true });
 }
 
 const COMINS_COLUMN_PLACEHOLDER_INTERACTION_PROPS = {
