@@ -21,7 +21,7 @@
 | L3 전체 화면 | Playground의 세 지표 예산 | `npm run test:memory:counter -- --workers=1`, `npm run test:memory:legacy -- --workers=1` | JS Heap·DOM Nodes·리스너 각각 2% 이하. legacy도 필수 gate 유지 |
 | 계측 | 카운터 분리와 계측 유효성 회귀 | `npm run test:memory:instrumentation -- --workers=1` | 테스트 도구 회귀이며 L1/L2/L3 합격을 대체하지 않음 |
 
-**최종 전체 명령은 기존 `npm run test:perf -- --workers=1`이다.** @perf 테스트 107건을 보존했다. 분류가 없는 기존 perf도 전체에서 제외하지 않는다. 선택 명령 결과로 출시를 승인하지 않는다. `MEMORY_AUDIT_DIAGNOSTICS=1`은 별도 진단 실행이며 카운터 태그/수치 합격을 제공하지 않는다. 진단 실행을 기본 정식 명령에 혼합하지 않는다.
+**최종 전체 명령은 기존 `npm run test:perf -- --workers=1`이다.** 기존 모든 @perf 테스트와 추가 회귀를 포함한다. 분류가 없는 기존 perf도 전체에서 제외하지 않는다. 선택 명령 결과로 출시를 승인하지 않는다. `MEMORY_AUDIT_DIAGNOSTICS=1`은 별도 진단 실행이며 카운터 태그/수치 합격을 제공하지 않는다. 진단 실행을 기본 정식 명령에 혼합하지 않는다.
 
 `memory-verdict.ts`는 사전에 고정된 필수 ID 목록과 별도 관측 결과를 집계한다. requiredNumeric/requiredCoverage를 성공한 결과에서 생성해서는 안 된다. 빈 목록, 중복, 필수 누락, 무효, 미실행, artifact 불일치, 미해결 확정 결함은 차단한다. 필수 대상의 미해결 생존은 소유자가 SDK/소비자/runtime/미확정인지와 별개로 차단하며 SDK 추측 수정을 허용하지 않는다.
 
@@ -73,3 +73,14 @@ N/A는 실행 전에 근거를 남긴 승인 목록에서 필수 제외로 선�
 - context 소멸·교체·초기화 실패·CDP 예외는 실행 실패다. 새 context로 복구하지 않으며 마지막 scroll 이후에도 완료 직전 부작용 없는 verify로 무효화를 확인한다. helper는 자신의 listener만 제거하며 session detach는 실행 finally가 담당한다.
 - 해당 세 시나리오는 cold-before-tooling 전에 Runtime context 추적을 설치하고 protocol에 기록한다. 이 cold 이름은 initializeMemoryInstrumentation 전 단계이며 diagnostic resource hooks(addInitScript)와 적용 시 scroll context는 이미 활성이다. 모든 도구 설치 이전이라는 뜻이 아니다. 기능 Unmount workload에는 사용하지 않는 scroll context를 설치하지 않는다.
 - 원래 warmup10·fraction 순서·300회·checkpoint·GC·mounted/free·2% 기준과 과거 FAIL은 유지한다. 전달 경계가 달라졌으므로 과거 선택 실행의 PASS를 새 계약의 정식 독립3회 검증으로 대체하지 않는다.
+
+
+## 개발 모드의 동일 ID 데이터 교체 회귀
+
+`row-data-retirement.spec.ts`는 별도 `@perf @memory-lifetime` 회귀다. 실제 SPA의 동일 문서에서 A1000행을 렌더·측정한 뒤 r0을 화면 밖으로 이동하고 같은 ID의 B/C를 별도 commit으로 교체한다. SDK의 실제 개발 debugStack·생성자 Script/HTTP·원시 snapshot 전체 노드를 검증하여 A0/C1000을 요구한다. 같은 App에서 강한 보유1/해제0 교정을 먼저 통과해야 한다.
+
+fixture의 새 controller는 setter만 캡처하며 대상 배열/객체/WeakRef 코호트 이력을 저장하지 않는다. 기존 공용 fixture의 무관한 빈 계측 초기화는 보존한다. 이 추가 사례는 mounted 상태에서 교체된 A 코호트의 해제만 판정하며, C의 Unmount·모든 SDK 자원/원시 캐시·조건부 skeleton/summary/select/radio 경로 또는 전체 수치 합격을 대신하지 않는다. 기존 필수 ID·counter/legacy·2%·warmup10·독립3×300·중간 FAIL 보존은 그대로다.
+
+수정 전/후 회귀를 고정할 때 development fixture의 `COMINS_RETENTION_SOURCE_ROOT`는 보존된 SDK source 디렉터리만 교체한다. 기본값은 현재 저장소이며, 실제 alias 경로·Script/HTTP 및 소스 전후 해시를 검증한다. 보존된 이전 source와 새 source의 SDK 차이, 독립 서버/cache URL 차이를 기록한다. fixture 파일이 같다는 사실을 실제 HTTP 바이트 전체 동일로 표현하지 않는다.
+
+교정·schema·source 검증 실패는 실행 무효이며 제품 RED가 아니다. 실제 행의 prototype→constructor 소유 관계로 생성자를 검증하고, 같은 이름의 사용되지 않는 VM closure 개수로 생성자 수를 제한하지 않는다. 정상 교체 후 `completed: true`·`FAIL_A_COHORT_RETAINED`가 기록되면 유효한 보유 실패다. 이 회귀의 성공도 정식 L3 수치·기존 L1/L2 범위를 대체하지 않는다.

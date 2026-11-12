@@ -8,9 +8,11 @@ import type { CDPSession, Page } from "@playwright/test";
 
 const hash = (bytes: string | Buffer) => createHash("sha256").update(bytes).digest("hex");
 
-/** StrictMode 개발 effect 재설정만 검증하며 production 회수 결과와 합산하지 않는다. */
+/** Development-only lifecycle diagnostics; keep them separate from production release evidence. */
 export async function startDevelopmentRetention() {
   const repository = process.cwd();
+  const sourceRoot = path.resolve(process.env.COMINS_RETENTION_SOURCE_ROOT ?? repository);
+  const source = path.join(sourceRoot, "src/index.tsx");
   const directory = await mkdtemp(path.join(os.tmpdir(), "comins-retention-dev-"));
   const previousNodeEnv = process.env.NODE_ENV;
   const restoreNodeEnv = () => {
@@ -22,12 +24,12 @@ export async function startDevelopmentRetention() {
     // Vite reads NODE_ENV during transforms too; retain development mode until close.
     process.env.NODE_ENV = "development";
     server = await createServer({ configFile: false, root: path.join(repository, "test/fixtures/react-retention-consumer"),
-    plugins: [react()], resolve: { alias: { "comins-retention-source": path.join(repository, "src/index.tsx") }, dedupe: ["react", "react-dom"] },
-    cacheDir: path.join(directory, "cache"), server: { host: "127.0.0.1", port: 0, strictPort: true, fs: { allow: [repository] } } });
+    plugins: [react()], resolve: { alias: { "comins-retention-source": source }, dedupe: ["react", "react-dom"] },
+    cacheDir: path.join(directory, "cache"), server: { host: "127.0.0.1", port: 0, strictPort: true, fs: { allow: [repository, sourceRoot] } } });
     await server.listen();
     const address = server.httpServer!.address();
     if (!address || typeof address === "string") throw new Error("Development fixture has no TCP address");
-    return { url: `http://127.0.0.1:${address.port}/`, async close() {
+    return { url: `http://127.0.0.1:${address.port}/`, provenance: { sourceRoot, sourceSha256: hash(await readFile(source)) }, async close() {
       try { await server!.close(); await rm(directory, { recursive: true, force: true }); }
       finally { restoreNodeEnv(); }
     } };
