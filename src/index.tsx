@@ -1636,13 +1636,11 @@ type ViewportMeasurementResources = {
 };
 
 type TableUnmountResources = {
-  activePointerGestureCleanupRef: TableLifecycleRef<TablePointerGestureCleanup | null>;
   detailFocusRestorer: ReturnType<typeof createCominsDetailFocusRestorer>;
   externalDropMarkerRef: TableLifecycleRef<HTMLElement | null>;
   transferRejectionTimerRef: TableLifecycleRef<number | null>;
   transferRejectionTargetRef: TableLifecycleRef<HTMLElement | null>;
   pendingTransferFocusFrameRef: TableLifecycleRef<number | null>;
-  scrollFrameRef: TableLifecycleRef<number | null>;
   scrollCommitTimeoutRef: TableLifecycleRef<number | null>;
 };
 
@@ -1683,12 +1681,27 @@ function createViewportMeasurementEffect(resources: ViewportMeasurementResources
   };
 }
 
+function createTablePointerGestureCleanupEffect(
+  activePointerGestureCleanupRef: TableLifecycleRef<TablePointerGestureCleanup | null>,
+): React.EffectCallback {
+  return () => () => {
+    const cleanup = activePointerGestureCleanupRef.current;
+
+    activePointerGestureCleanupRef.current = null;
+    cleanup?.(true);
+  };
+}
+
+function createTableScrollCleanupEffect(scrollFrameRef: TableLifecycleRef<number | null>): React.EffectCallback {
+  return () => () => {
+    const frame = scrollFrameRef.current;
+    scrollFrameRef.current = null;
+    if (frame !== null) window.cancelAnimationFrame(frame);
+  };
+}
+
 function createTableUnmountEffect(resources: TableUnmountResources): React.EffectCallback {
   return () => () => {
-    const cleanup = resources.activePointerGestureCleanupRef.current;
-
-    resources.activePointerGestureCleanupRef.current = null;
-    cleanup?.(true);
     resources.detailFocusRestorer.dispose();
 
     const marker = resources.externalDropMarkerRef.current;
@@ -1711,10 +1724,6 @@ function createTableUnmountEffect(resources: TableUnmountResources): React.Effec
 
     if (resources.pendingTransferFocusFrameRef.current !== null) {
       window.cancelAnimationFrame(resources.pendingTransferFocusFrameRef.current);
-    }
-
-    if (resources.scrollFrameRef.current !== null) {
-      window.cancelAnimationFrame(resources.scrollFrameRef.current);
     }
 
     if (resources.scrollCommitTimeoutRef.current !== null) {
@@ -2290,14 +2299,15 @@ function CominsTableInner<TData, TGroup>(
     }
   }, [state.rows.length]);
 
+  useCominsLayoutEffect(createTablePointerGestureCleanupEffect(activePointerGestureCleanupRef), []);
+  useCominsLayoutEffect(createTableScrollCleanupEffect(scrollFrameRef), []);
+
   useEffect(createTableUnmountEffect({
-    activePointerGestureCleanupRef,
     detailFocusRestorer,
     externalDropMarkerRef,
     transferRejectionTimerRef,
     transferRejectionTargetRef,
     pendingTransferFocusFrameRef,
-    scrollFrameRef,
     scrollCommitTimeoutRef,
   }), []);
 
@@ -2309,6 +2319,17 @@ function CominsTableInner<TData, TGroup>(
     setHorizontalViewportOuterWidth,
     setHorizontalViewportWidth,
   }), []);
+
+  useCominsLayoutEffect(() => {
+    if (virtualized) {
+      const currentScrollTop = containerRef.current?.scrollTop ?? 0;
+      pendingScrollTopRef.current = currentScrollTop;
+      setScrollTop(currentScrollTop);
+    } else if (scrollFrameRef.current !== null) {
+      window.cancelAnimationFrame(scrollFrameRef.current);
+      scrollFrameRef.current = null;
+    }
+  }, [virtualized]);
 
   useEffect(() => {
     reconcileCominsDetailMeasurements(
@@ -6204,7 +6225,7 @@ function CominsTableInner<TData, TGroup>(
       scrollCommitTimeoutRef.current = null;
     }
 
-    if (scrollFrameRef.current === null) {
+    if (virtualized && scrollFrameRef.current === null) {
       scrollFrameRef.current = window.requestAnimationFrame(() => {
         scrollFrameRef.current = null;
         commitPendingScrollTop();
@@ -7089,7 +7110,7 @@ function CominsTableInner<TData, TGroup>(
             className="comins-table__loading-overlay"
             data-testid="data-table-loading-overlay"
             role="status"
-            style={{ transform: `translate(${containerRef.current?.scrollLeft ?? 0}px, ${scrollTop}px)`, width: containerRef.current?.clientWidth }}
+            style={{ transform: `translate(${containerRef.current?.scrollLeft ?? 0}px, ${containerRef.current?.scrollTop ?? scrollTop}px)`, width: containerRef.current?.clientWidth }}
           >
             <span className="comins-table__loading-spinner" data-testid="data-table-loading-spinner" />
             <span>{loadingContent?.render ? resolveDefaultRender(loadingContent.render(), "불러오는 중입니다.") : loadingComponent ?? "불러오는 중입니다."}</span>

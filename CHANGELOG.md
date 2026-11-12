@@ -11,6 +11,18 @@
 
 ### Fixed
 
+- Cancel queued virtual scroll frames during layout cleanup so SPA exits release retired Table models.
+
+- Suppress retired Viewport settlement updates while preserving completion planning across Suspense reconnection.
+
+- End active Table pointer gestures during layout cleanup so replacement-page layout events cannot queue state for an unmounted Table.
+
+- Reduce React element construction for static Playground API reference text while preserving localized DOM and server markup.
+
+- Avoid scroll-only React updates in non-virtual Tables while preserving loading overlay positions and virtual-mode transitions.
+
+- Cancel pending automatic Row Detail growth when leaving the Playground example, preventing state updates after unmount.
+
 - Release active cell-tooltip ownership during SPA unmount and prevent late callbacks from queuing state for a retired Table, while preserving initial child autoFocus.
 
 - Keep pending `copySelection()` clipboard completion isolated from a retired Table while preserving the copied text and late success or rejection.

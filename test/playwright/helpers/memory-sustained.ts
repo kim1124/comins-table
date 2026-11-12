@@ -8,6 +8,7 @@ import { findHeapGrowth, readMemoryHeap, saveMemoryHeap } from "./memory-heap";
 import { installMemoryResources } from "./memory-resources";
 import { readBrowserResidentMemory } from "./memory-process";
 import { initializeMemoryInstrumentation } from "./memory-instrumentation";
+import { createMemoryScroller, MEMORY_SCROLL_DELIVERY_PROTOCOL } from "./memory-scroll";
 import { initializePlaygroundLocale } from "./playground-locale";
 import { createUnmountWorkload, unmountScenarios, type UnmountScenario } from "./memory-unmount-workloads";
 import { readBrowserBundleEvidence, readMemoryRuntime } from "./memory-runtime";
@@ -56,17 +57,6 @@ async function route(page: Page, target: string, token: string) {
   } else {
     await expect(page.locator("[data-comins-table-instance-id]").first()).toBeVisible();
   }
-}
-
-async function scroll(page: Page, fraction: number) {
-  await page.getByTestId("data-table-viewport").evaluate(async (element, value) => {
-    const range = element.scrollHeight - element.clientHeight;
-    if (range <= 0) throw new Error("Memory workload has no scrollable range");
-    element.scrollTop = range * value;
-    element.dispatchEvent(new Event("scroll", { bubbles: true }));
-    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-    if (value > 0 && element.scrollTop <= 0) throw new Error("Memory workload did not scroll");
-  }, fraction);
 }
 
 async function readCounter(session: CDPSession, processSession: CDPSession, step: string, auxiliaryWarnings: string[], diagnostic: boolean) {
@@ -133,10 +123,11 @@ export async function runSustainedMemory(scenario: MemoryScenario, repeat: numbe
   const points: MemoryPoint[] = [], mounted: MemoryPoint[] = [], unmounted: MemoryPoint[] = [], heaps: MemoryPoint[] = [], heapFiles: string[] = [];
   const measurements: MemoryPoint[] = [];
   const heapGroups: Record<string, MemoryPoint[]> = { mounted: [], free: [] };
-  const result = { scenario, repeat, diagnostic, directory, browser: browser.version(), runtime, protocol: { instrumentation: "Playwright utility/main worlds initialized before cold-free; pre-tooling cold preserved separately", warmup, cycles: 300, checkpoints, viewport: { width: 1280, height: 720 }, gcPerPoint: 3, resourceTracker: diagnostic ? "weak observers and live timer IDs" : "not installed in counter process", resourceCoverage: diagnostic ? "observer/timer diagnostics" : "not collected", residentMemory: "all CDP-reported browser processes; RSS includes JS and native; not added to heap", nativeSnapshotCoverage: diagnostic ? "separate diagnostic process" : "not collected in counter run", continuousHeapProfilerSession: true, contract: "devtools-three-counters-two-percent", thresholdPercent: 2, featureMountsPerCycle: (scenario === "cross-table-drag-gesture-unmount" || scenario === "loading-pending-unmount") ? 3 : scenario === "selection-clipboard-gesture-unmount" ? 2 : 1, attributionScope: "actual Playground interactions; separate controlled-consumer ownership diagnostics are not implied", comparison: "fixed same-state baseline; previous-point deltas are diagnostic only" }, before, measurements, points, mounted, unmounted, heaps, heapGroups, heapFiles, errors, auxiliaryWarnings, completed: false, layer: diagnostic ? "diagnostic" : "counter", buildMode: "vite-development", coverage: "numeric counters only; product retention attribution is separate" };
+  const result = { scenario, repeat, diagnostic, directory, browser: browser.version(), runtime, protocol: { instrumentation: "cold-before-tooling precedes initializeMemoryInstrumentation; diagnostic resource hooks and applicable scroll-context tracking are already active", scrollDelivery: workload ? "not used by this workload" : MEMORY_SCROLL_DELIVERY_PROTOCOL, warmup, cycles: 300, checkpoints, viewport: { width: 1280, height: 720 }, gcPerPoint: 3, resourceTracker: diagnostic ? "weak observers and live timer IDs" : "not installed in counter process", resourceCoverage: diagnostic ? "observer/timer diagnostics" : "not collected", residentMemory: "all CDP-reported browser processes; RSS includes JS and native; not added to heap", nativeSnapshotCoverage: diagnostic ? "separate diagnostic process" : "not collected in counter run", continuousHeapProfilerSession: true, contract: "devtools-three-counters-two-percent", thresholdPercent: 2, featureMountsPerCycle: (scenario === "cross-table-drag-gesture-unmount" || scenario === "loading-pending-unmount") ? 3 : scenario === "selection-clipboard-gesture-unmount" ? 2 : 1, attributionScope: "actual Playground interactions; separate controlled-consumer ownership diagnostics are not implied", comparison: "fixed same-state baseline; previous-point deltas are diagnostic only" }, before, measurements, points, mounted, unmounted, heaps, heapGroups, heapFiles, errors, auxiliaryWarnings, completed: false, layer: diagnostic ? "diagnostic" : "counter", buildMode: "vite-development", coverage: "numeric counters only; product retention attribution is separate" };
   result.buildMode = buildMode === "production" ? "vite-production" : "vite-development";
   let session: CDPSession | undefined;
   let processSession: CDPSession | undefined;
+  let scroller: Awaited<ReturnType<typeof createMemoryScroller>> | undefined;
   async function persist() { await writeFile(path.join(directory, "result.json"), JSON.stringify(result, null, 2)); }
   async function point(step: string, target: MemoryPoint[], heap = false) {
     await settle(page);
@@ -167,6 +158,7 @@ export async function runSustainedMemory(scenario: MemoryScenario, repeat: numbe
     processSession = await browser.newBrowserCDPSession();
     await session.send("Performance.enable");
     await session.send("HeapProfiler.enable");
+    if (!workload) scroller = await createMemoryScroller(session);
     const toolingCold = await readCounter(session, processSession!, "cold-before-tooling", auxiliaryWarnings, diagnostic);
     await writeFile(path.join(directory, "cold-before-tooling.json"), JSON.stringify(toolingCold, null, 2));
     await initializeMemoryInstrumentation(page);
@@ -184,15 +176,15 @@ export async function runSustainedMemory(scenario: MemoryScenario, repeat: numbe
         await leave();
       } else if (scenario === "route-unmount") {
         await route(page, basic, token);
-        await scroll(page, 0.5);
-        await scroll(page, 0);
+        await scroller!.scroll(0.5);
+        await scroller!.scroll(0);
         if (measured && checkpoints.includes(index)) await point(`mounted-${index}`, mounted, diagnostic);
         await route(page, free, token);
       } else {
         // 같은 구간, 새로운 구간, 재방문 구간을 섞되 비교 시점은 시작점으로 고정한다.
         const fraction = [0.5, ((index % 97) + 1) / 98, 0.5][index % 3]!;
-        await scroll(page, fraction);
-        await scroll(page, 0);
+        await scroller!.scroll(fraction);
+        await scroller!.scroll(0);
       }
     }
     await enter();
@@ -215,7 +207,7 @@ export async function runSustainedMemory(scenario: MemoryScenario, repeat: numbe
       scriptEvidenceProtocol: "HTTP bytes collected in Node before baselines; fixed URL inventory during measured cycles; same-URL repeated body/status not reverified; no additional in-page history" });
     await point("free-baseline", unmounted, diagnostic);
     await enter();
-    if (!workload) { await scroll(page, 0.5); await scroll(page, 0); }
+    if (!workload) { await scroller!.scroll(0.5); await scroller!.scroll(0); }
     await point("mounted-baseline", mounted, diagnostic && isUnmount);
     if (isUnmount) await leave();
     await point("baseline", points, diagnostic);
@@ -236,6 +228,7 @@ export async function runSustainedMemory(scenario: MemoryScenario, repeat: numbe
     const growth = findMemoryStateFailures(measurements);
     const nativeGrowth = diagnostic ? Object.values(heapGroups).flatMap(group => findHeapGrowth(group)) : undefined;
     Object.assign(result, { after, growth, numericStatus: diagnostic ? "DIAGNOSTIC_ONLY" : memoryAuditStatus(growth), nativeGrowth, coverage: diagnostic ? "separate heap diagnostic; not numeric acceptance evidence" : result.coverage });
+    scroller?.verify();
     completeMemoryAudit(result);
     // This counter/diagnostic run supplies no L1/L2 evidence. Do not infer leak absence.
     Object.assign(result, { verdict: evaluateMemoryVerdict({
@@ -258,6 +251,7 @@ export async function runSustainedMemory(scenario: MemoryScenario, repeat: numbe
   } finally {
     servedScripts.dispose();
     await workload?.dispose();
+    scroller?.dispose();
     await session?.detach();
     await processSession?.detach();
     await browser.close();

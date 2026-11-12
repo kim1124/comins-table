@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   CominsTable,
@@ -84,6 +84,17 @@ export function RowExpandFeature() {
   const [autoExpandedRowIds, setAutoExpandedRowIds] = useState<readonly CominsRowId[]>([]);
   const [tallExpandedRowIds, setTallExpandedRowIds] = useState<readonly CominsRowId[]>([]);
   const [autoDetailGrown, setAutoDetailGrown] = useState(false);
+  const autoDetailTimers = useRef(new Set<number>());
+  const mounted = useRef(false);
+  useLayoutEffect(() => {
+    mounted.current = true;
+    const timers = autoDetailTimers.current;
+    return () => {
+      mounted.current = false;
+      for (const timer of timers) window.clearTimeout(timer);
+      timers.clear();
+    };
+  }, []);
   const [fixedPageIndex, setFixedPageIndex] = useState(0);
   const originalFixedLayout = useMemo<CominsColumnLayout>(
     () => ({
@@ -225,7 +236,11 @@ export function RowExpandFeature() {
                 data-testid={`auto-detail-grow-${row.id}`}
                 disabled={autoDetailGrown}
                 onClick={() => {
-                  window.setTimeout(() => setAutoDetailGrown(true), 50);
+                  const timer = window.setTimeout(() => {
+                    autoDetailTimers.current.delete(timer);
+                    if (mounted.current) setAutoDetailGrown(true);
+                  }, 50);
+                  autoDetailTimers.current.add(timer);
                 }}
                 type="button"
               >

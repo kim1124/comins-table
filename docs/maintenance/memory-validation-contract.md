@@ -63,3 +63,11 @@ N/A는 실행 전에 근거를 남긴 승인 목록에서 필수 제외로 선�
 수치 FAIL을 rebaseline/워밍업 추가/평균/대조군 차감/jitless로 해제하지 않는다. 수정 착수는 종료 객체→불필요한 강한 root→제품 source→수정 전 실패 회귀 또는 불필요한 저장소 누적→정리 책임 source→회귀의 증거가 필요하다. 원인 조사30분·가설1개·새 실험2회(무효/재시도 포함)를 유지한다. 고정 회귀 실행을 새 원인 실험의 우회 명칭으로 사용하지 않는다. 실제 Astra/high는 새 변경/증거만 리뷰한다.
 
 과거 79 PASS/28 FAIL과 원시 증거는 별도 epoch로 보존하며 새 실행은 새 디렉터리에 기록한다. 원래 Goal/Excel·SSR·WebGPU 후속 목표·Main/Vue 로컬 작업·릴리스 승인 경계를 변경하지 않는다.
+
+## 반복 스크롤 전달 경계
+
+- plain-scroll/virtual-scroll/route-unmount의 스크롤은 실행당 하나의 CDP helper가 최초 main frame/default context에서 수행한다. 고정 함수에 유한한 [0,1] fraction만 전달하며 DOM/remote handle을 저장하지 않는다. 실제 경로 이동은 기존 anchor/React Router를 유지한다.
+- 호출자는 기존 mount/visible/settle 조건으로 일반 DOM viewport 준비를 확인한다. helper는 정확히 하나의 data-testid viewport, 양수 scroll range, 원래 scrollTop 대입·bubbling event·2 RAF·양수 이동 확인을 유지한다. Locator의 attached 대기나 shadow DOM 탐색을 제공하는 범용 helper가 아니다.
+- context 소멸·교체·초기화 실패·CDP 예외는 실행 실패다. 새 context로 복구하지 않으며 마지막 scroll 이후에도 완료 직전 부작용 없는 verify로 무효화를 확인한다. helper는 자신의 listener만 제거하며 session detach는 실행 finally가 담당한다.
+- 해당 세 시나리오는 cold-before-tooling 전에 Runtime context 추적을 설치하고 protocol에 기록한다. 이 cold 이름은 initializeMemoryInstrumentation 전 단계이며 diagnostic resource hooks(addInitScript)와 적용 시 scroll context는 이미 활성이다. 모든 도구 설치 이전이라는 뜻이 아니다. 기능 Unmount workload에는 사용하지 않는 scroll context를 설치하지 않는다.
+- 원래 warmup10·fraction 순서·300회·checkpoint·GC·mounted/free·2% 기준과 과거 FAIL은 유지한다. 전달 경계가 달라졌으므로 과거 선택 실행의 PASS를 새 계약의 정식 독립3회 검증으로 대체하지 않는다.
