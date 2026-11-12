@@ -364,6 +364,7 @@
         "src/core/layout/virtual.ts",
         "src/core/layout/viewport.ts",
         "src/core/layout/row-height.ts",
+        "src/react/row-font.ts",
         "src/browser/measurements.ts",
         "src/browser/scroll.ts",
         "src/browser/clipboard.ts",
@@ -390,6 +391,7 @@
         "test/virtual-layout.test.ts",
         "test/core-layout-invalidation.test.ts",
         "test/browser-measurements.test.ts",
+        "test/row-height.test.tsx",
         "test/viewport-data.test.ts",
         "test/table-calculations.test.ts"
       ],

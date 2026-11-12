@@ -1,14 +1,67 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CominsTable } from "../src";
-import { resolveCominsRowHeight } from "../src/row-height";
+import { reconcileCominsRowMeasurements, resolveCominsRowHeight } from "../src/row-height";
 import { createCominsDataVirtualSlot, getCominsSlotHeight } from "../src/virtual-layout";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 describe("business Row height", () => {
+  it("keeps font invalidation active after data replacement and removes StrictMode subscriptions", () => {
+    const original = Object.getOwnPropertyDescriptor(document, "fonts");
+    const fonts = new EventTarget();
+    Object.defineProperty(document, "fonts", { configurable: true, value: fonts });
+    const added = vi.spyOn(fonts, "addEventListener"), removed = vi.spyOn(fonts, "removeEventListener");
+    const getRowHeight = vi.fn(() => "auto" as const);
+    const columns = [{ field: "id", label: "ID" }];
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    const render = (id: string, enabled: boolean) => act(() => root.render(<StrictMode><CominsTable columns={columns} data={[{ id }]} getRowId={row => row.id} getRowHeight={enabled ? getRowHeight : undefined} /></StrictMode>));
+    try {
+      render("A", true);
+      render("B", true);
+      const before = getRowHeight.mock.calls.length;
+      act(() => fonts.dispatchEvent(new Event("loadingdone")));
+      expect(getRowHeight.mock.calls.length).toBeGreaterThan(before);
+      render("C", false);
+      const disabled = getRowHeight.mock.calls.length;
+      act(() => fonts.dispatchEvent(new Event("loadingdone")));
+      expect(getRowHeight.mock.calls.length).toBe(disabled);
+      expect(added.mock.calls.length).toBe(removed.mock.calls.length);
+      render("D", true);
+    } finally {
+      act(() => root.unmount());
+      host.remove();
+      if (original) Object.defineProperty(document, "fonts", original);
+      else Reflect.deleteProperty(document, "fonts");
+    }
+    expect(added.mock.calls.length).toBe(removed.mock.calls.length);
+    const unmounted = getRowHeight.mock.calls.length;
+    act(() => fonts.dispatchEvent(new Event("loadingdone")));
+    expect(getRowHeight.mock.calls.length).toBe(unmounted);
+  });
+
+  it("releases removed and replaced row measurements while preserving reordered current rows", () => {
+    const oldRow = { id: "replaced", payload: "old data" };
+    const keptRow = { id: "kept" };
+    const removedRow = { id: "removed" };
+    const measurement = (row: typeof keptRow) => ({ row, height: 72, layoutKey: "wide" });
+    const keptMeasurement = measurement(keptRow);
+    const measurements = new Map([
+      ["replaced", measurement(oldRow)],
+      ["kept", keptMeasurement],
+      ["removed", measurement(removedRow)],
+    ]);
+    reconcileCominsRowMeasurements(measurements, ["kept", "replaced"], [keptRow, { id: "replaced" }]);
+    expect([...measurements]).toEqual([["kept", keptMeasurement]]);
+    expect(measurements.get("kept")).toBe(keptMeasurement);
+    reconcileCominsRowMeasurements(measurements, [], []);
+    expect(measurements.size).toBe(0);
+  });
+
   it("normalizes defaults and uses measurements only for the same data and layout", () => {
     const row = { id: "a" };
     const contentRevision = {};
