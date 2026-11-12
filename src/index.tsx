@@ -21,6 +21,7 @@ import {
 } from "./table-state";
 import { reconcileReactState, notifyReactInputChanges, notifyReactStateChanges } from "./react/state";
 import { CominsCellTooltip, useCominsCellTooltip } from "./react/cell-tooltip";
+import { createCominsRowFontChangeHandler } from "./react/row-font";
 import { getSortedReactTree, projectReactRows, projectCoreViewportWindow, getCorePageProjection } from "./react/rows";
 import type { CominsEventRow } from "./model";
 export type { CominsEventRow } from "./model";
@@ -114,7 +115,7 @@ import { createCominsViewportData, reduceCominsViewportData, normalizeCominsView
 import { CominsViewportHeightIndex } from "./viewport-layout";
 import { useCominsViewportRequests } from "./react/viewport";
 import type { CominsViewportDatasource } from "./use-viewport";
-import { normalizeCominsRowHeight, resolveCominsRowHeight, type CominsRowHeight, type CominsRowHeightParams, type CominsRowMeasurement } from "./row-height";
+import { normalizeCominsRowHeight, reconcileCominsRowMeasurements, resolveCominsRowHeight, type CominsRowHeight, type CominsRowHeightParams, type CominsRowMeasurement } from "./row-height";
 import { useCominsTreeDrag, type CominsBeforeTreeRowDragPayload, type CominsTreeRowDragPayload, type CominsAfterTreeRowDragPayload } from "./tree-drag";
 import { resolveCominsSummaryValues } from "./summary";
 import {
@@ -2338,13 +2339,11 @@ function CominsTableInner<TData, TGroup>(
       detailMeasurementsRef.current,
       new Set(state.rowIds),
     );
-    const ids = new Set(state.rowIds);
-    for (const id of rowMeasurementsRef.current.keys()) if (!ids.has(id)) rowMeasurementsRef.current.delete(id);
-  }, [state.rowIds]);
+    reconcileCominsRowMeasurements(rowMeasurementsRef.current, state.rowIds, state.rows);
+  }, [state.rowIds, state.rows]);
   useEffect(() => {
     if (!getRowHeight) return;
-    const changed = () => setRowFontRevision(value => value + 1);
-    return observeCominsFontChanges(changed);
+    return observeCominsFontChanges(createCominsRowFontChangeHandler(setRowFontRevision));
   }, [Boolean(getRowHeight)]);
 
   const updateMixedProjectionDetailHeight = (
