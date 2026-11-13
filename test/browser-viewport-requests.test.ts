@@ -9,6 +9,45 @@ function browser() {
 const descriptor = (requestId = "r") => ({ requestId, revision: "a", startIndex: 0, endIndex: 2, retainRange: { startIndex: 0, endIndex: 2 } });
 const flush = async () => { for (let index = 0; index < 8; index++) await Promise.resolve(); };
 describe("Browser request executor", () => {
+  it("preserves the caller options receiver for active request and settlement callbacks", async () => {
+    const receivers: unknown[] = [];
+    const options = Object.freeze({
+      onRequest(this: unknown) { receivers.push(this); },
+      onSettled(this: unknown) { receivers.push(this); },
+    });
+    const executor = browser().createViewportRequestExecutor(options);
+    executor.start(descriptor()); await flush();
+    expect(receivers).toEqual([options, options]);
+    executor.release("r"); executor.dispose();
+    expect(Object.isFrozen(options)).toBe(true);
+  });
+  it("is disposed before synchronous abort listeners reenter, preserving default AbortError", async () => {
+    const signals: AbortSignal[] = [];
+    const settled = vi.fn();
+    let aborts = 0;
+    const executor = browser().createViewportRequestExecutor(Object.freeze({
+      onRequest(request: { signal: AbortSignal }) {
+        signals.push(request.signal);
+        request.signal.addEventListener("abort", () => {
+          aborts++;
+          executor.start(descriptor("reentrant"));
+          executor.release("r");
+          executor.cancel("r");
+          executor.dispose();
+        });
+        return new Promise<void>(() => {});
+      },
+      onSettled: settled,
+    }));
+    executor.start(descriptor()); await flush(); executor.dispose();
+    expect(aborts).toBe(1);
+    expect(signals[0]!.aborted).toBe(true);
+    expect(signals[0]!.reason).toBeInstanceOf(DOMException);
+    expect(signals[0]!.reason.name).toBe("AbortError");
+    await flush();
+    expect(signals).toHaveLength(1);
+    expect(settled).not.toHaveBeenCalled();
+  });
   it("releases a disposed completion owner while the external consumer stays pending", () => {
     const output = execFileSync(process.execPath, ["--expose-gc", resolve("test/fixtures/lazy-load-lifetime.mjs"), "viewport"], { encoding: "utf8", timeout: 5_000 });
     expect(JSON.parse(output)).toEqual({ retainedBeforeSourceSettlement: false });
