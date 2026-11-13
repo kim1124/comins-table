@@ -365,6 +365,8 @@
         "src/core/layout/viewport.ts",
         "src/core/layout/row-height.ts",
         "src/react/row-font.ts",
+        "src/react/header-renderer.tsx",
+        "src/react/body-renderer.tsx",
         "src/browser/measurements.ts",
         "src/browser/scroll.ts",
         "src/browser/clipboard.ts",
@@ -392,6 +394,9 @@
         "test/core-layout-invalidation.test.ts",
         "test/browser-measurements.test.ts",
         "test/row-height.test.tsx",
+        "test/header-render-boundary.test.tsx",
+        "test/body-render-order.test.tsx",
+        "test/body-render-row-identity.test.tsx",
         "test/viewport-data.test.ts",
         "test/table-calculations.test.ts"
       ],

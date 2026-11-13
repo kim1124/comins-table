@@ -22,6 +22,8 @@ import {
 import { reconcileReactState, notifyReactInputChanges, notifyReactStateChanges } from "./react/state";
 import { CominsCellTooltip, useCominsCellTooltip } from "./react/cell-tooltip";
 import { createCominsRowFontChangeHandler } from "./react/row-font";
+import { renderCominsHeaderRows, renderCominsColumnSizing } from "./react/header-renderer";
+import { deferredDefaultCellValue, renderCominsBodyRows, type CominsBodyRenderOutput } from "./react/body-renderer";
 import { getSortedReactTree, projectReactRows, projectCoreViewportWindow, getCorePageProjection } from "./react/rows";
 import type { CominsEventRow } from "./model";
 export type { CominsEventRow } from "./model";
@@ -1305,8 +1307,6 @@ function getRenderableCellStyle<TData>(
   return typeof style === "function" ? style(payload) : style;
 }
 
-const deferredDefaultCellValue = Symbol("deferredDefaultCellValue");
-
 function formatRenderableCellValue<TData>(
   column: CominsTableRuntimeColumn<TData>,
   payload: CominsCellComponentPayload<TData>,
@@ -1319,7 +1319,7 @@ function formatRenderableCellValue<TData>(
 }
 
 function createHeaderComponentPayload<TData>(
-  state: CominsTableState<TData>,
+  state: Pick<CominsTableState<TData>, "columns" | "columnState" | "columnGroupState" | "sortModel">,
   column: CominsTableRuntimeColumn<TData>,
   columnIndex: number,
 ): CominsHeaderComponentPayload<TData> {
@@ -1378,10 +1378,12 @@ function renderCominsComponentSlots<TData>(
     return [];
   }
 
-  return getRenderableCominsComponents(components, payload)
+  const placedComponents = getRenderableCominsComponents(components, payload)
     .map((component, index) => ({ component, index }))
-    .filter(({ component }) => (component.direction ?? "left") === direction)
-    .map(({ component, index }) => (
+    .filter(({ component }) => (component.direction ?? "left") === direction);
+  const slots: React.ReactNode[] = [];
+  for (const { component, index } of placedComponents) {
+    slots.push(
       <span
         className="comins-table__component-slot"
         data-comins-component-align={component.align ?? "center"}
@@ -1390,8 +1392,10 @@ function renderCominsComponentSlots<TData>(
         key={component.id ?? `${component.type}-${index}`}
       >
         {renderCominsBuiltInComponent(component as never, payload as never, interaction)}
-      </span>
-    ));
+      </span>,
+    );
+  }
+  return slots;
 }
 
 // 종료된 disclosure ref가 slot과 렌더 컨텍스트를 함께 보유하지 않게 한다.
@@ -1872,7 +1876,7 @@ function CominsTableInner<TData, TGroup>(
   const synchronizedScrollLeftRef = useRef(0);
   const tableRootRef = useRef<HTMLDivElement | null>(null);
   const cellTooltip = useCominsCellTooltip();
-  let activeCellTooltipContent: React.ReactNode;
+  const bodyRenderOutput: CominsBodyRenderOutput = { activeCellTooltipContent: undefined };
   const copiedCellRef = useRef<CominsCopiedCell | null>(null);
   const copiedRangeRef = useRef<CominsCopiedCellRange | null>(null);
   const copiedRowRef = useRef<CominsCopiedRow<TData> | null>(null);
@@ -5610,512 +5614,7 @@ function CominsTableInner<TData, TGroup>(
     onChangeModel(nextModel);
   };
 
-  const renderHeaderCell = (cell: CominsHeaderCell<TData>, fallbackIndex: number) => {
-    if (cell.kind === "group") {
-      const isDropTarget = columnMoveTarget?.kind === "group" && columnMoveTarget.id === cell.groupId;
-      const isGroupPlaceholder = movingGroupId === cell.groupId;
-      const groupPositionLocked =
-        cell.group.lockPosition === true ||
-        state.columnGroupState[cell.groupId]?.pinned !== undefined;
-      const groupColumnIds = visibleColumns
-        .map((column) => column.id)
-        .filter((columnId) => cell.group.children.includes(columnId));
-      const firstGroupPin = groupColumnIds[0]
-        ? getPinnedColumnAttributes(groupColumnIds[0])
-        : undefined;
-      const lastGroupPin = groupColumnIds.at(-1)
-        ? getPinnedColumnAttributes(groupColumnIds.at(-1)!)
-        : undefined;
-      const groupPinned = firstGroupPin?.pinned && groupColumnIds.every(
-        (columnId) => getPinnedColumnAttributes(columnId).pinned === firstGroupPin.pinned,
-      )
-        ? firstGroupPin.pinned
-        : undefined;
-      const groupPinStyle = groupPinned === "left"
-        ? firstGroupPin?.style
-        : groupPinned === "right"
-          ? lastGroupPin?.style
-          : undefined;
-      const groupPinBoundary = groupPinned === "left"
-        ? lastGroupPin?.boundary
-        : groupPinned === "right"
-          ? firstGroupPin?.boundary
-          : undefined;
-      const groupPlaceholderLabel = getCominsColumnPlaceholderText(cell.group.label, cell.groupId);
-      return (
-        <th
-          aria-label={isGroupPlaceholder ? groupPlaceholderLabel : undefined}
-          className={[
-            "comins-table__th comins-table__group-th px-3 py-2 text-left font-semibold",
-            isGroupPlaceholder ? "comins-column-moving" : undefined,
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          colSpan={cell.colSpan}
-          data-column-drop-target={isDropTarget ? "true" : undefined}
-          data-column-drop-valid={
-            isDropTarget && columnMoveTarget.status !== "neutral"
-              ? columnMoveTarget.status === "valid"
-                ? "true"
-                : "false"
-              : undefined
-          }
-          data-column-moving={isGroupPlaceholder ? "true" : undefined}
-          data-column-placeholder={isGroupPlaceholder ? "true" : undefined}
-          data-column-position-locked={groupPositionLocked ? "true" : undefined}
-          data-comins-column-depth="0"
-          data-comins-column-group-id={cell.groupId}
-          data-comins-column-end={groupColumnIds.at(-1) === visibleColumns.at(-1)?.id ? "true" : undefined}
-          data-comins-pin-boundary={groupPinBoundary ? "true" : undefined}
-          data-comins-pinned={groupPinned}
-          data-testid={`header-group-${cell.groupId}`}
-          key={`group-${cell.groupId}`}
-          onPointerDown={(event) => beginGroupPointerInteraction(event, cell.group)}
-          rowSpan={cell.rowSpan}
-          scope="colgroup"
-          style={groupPinStyle}
-        >
-          <span aria-hidden="true" className="comins-column-drop-marker" />
-          <span
-            {...(isGroupPlaceholder ? COMINS_COLUMN_PLACEHOLDER_INTERACTION_PROPS : {})}
-            aria-hidden={isGroupPlaceholder ? "true" : undefined}
-            className="comins-table__header-content"
-            data-comins-header-body="true"
-            inert={isGroupPlaceholder ? true : undefined}
-            ref={bindCominsColumnPlaceholderNativeBoundary}
-          >
-            {showColumnMoveHandle && !groupPositionLocked ? (
-              <span
-                aria-hidden="true"
-                className="comins-column-move-handle"
-                data-comins-column-move-handle="true"
-                data-testid={`column-group-move-handle-${cell.groupId}`}
-                draggable={false}
-                onClick={(event) => event.stopPropagation()}
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  beginGroupPointerInteraction(event, cell.group, true);
-                }}
-              >
-                <CominsTableIcon name="columnMove" />
-              </span>
-            ) : null}
-            <span className="comins-table__header-label">{isGroupPlaceholder ? null : cell.group.label}</span>
-          </span>
-          {isGroupPlaceholder ? (
-            <span aria-hidden="true" className="comins-column-placeholder-label">
-              {groupPlaceholderLabel}
-            </span>
-          ) : null}
-          <span
-            aria-hidden="true"
-            className="comins-table__resize"
-            data-resizing={resizingColumnId === cell.groupId ? "true" : undefined}
-            data-testid={`resize-group-${cell.groupId}`}
-            onClick={(event) => event.stopPropagation()}
-            onPointerDown={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              const startX = event.clientX;
-              const measuredWidth = getCominsElementRect(event.currentTarget.closest<HTMLTableCellElement>("th"))?.width;
-              const visibleWidthSnapshot = new Map<string, number>();
 
-              for (const childId of cell.group.children) {
-                const visibleColumn = visibleColumns.find((column) => column.id === childId);
-
-                if (!visibleColumn) {
-                  continue;
-                }
-
-                const headerCell = Array.from(
-                  headerRef.current?.querySelectorAll<HTMLTableCellElement>("[data-comins-column-id]") ?? [],
-                ).find((element) => element.dataset.cominsColumnId === visibleColumn.id);
-                const measuredColumnWidth = getCominsElementRect(headerCell)?.width;
-                const fallbackWidth = stateRef.current.columnState[visibleColumn.id]?.width ?? visibleColumn.width ?? 160;
-
-                visibleWidthSnapshot.set(
-                  visibleColumn.id,
-                  measuredColumnWidth && Number.isFinite(measuredColumnWidth) ? measuredColumnWidth : fallbackWidth,
-                );
-              }
-
-              const fallbackGroupWidth = [...visibleWidthSnapshot.values()].reduce((sum, width) => sum + width, 0);
-              const startWidth =
-                measuredWidth && Number.isFinite(measuredWidth) ? measuredWidth : Math.max(1, fallbackGroupWidth);
-              const resizeMaxWidth = getCominsPinnedBlockResizeMaxWidth(
-                columnPinningBlocks,
-                columnPinning,
-                `group:${cell.groupId}`,
-                containerWidth,
-              );
-              setResizingColumnId(cell.groupId);
-              const handlePointerMove = (moveEvent: PointerEvent) => {
-                commitState(
-                  (current) => {
-                    let next = current;
-
-                    for (const [visibleColumnId, visibleColumnWidth] of visibleWidthSnapshot) {
-                      next = setCominsColumnWidth(next, visibleColumnId, visibleColumnWidth);
-                    }
-
-                    return setCominsColumnGroupWidth(
-                      next,
-                      cell.groupId,
-                      Math.min(resizeMaxWidth ?? Number.POSITIVE_INFINITY, startWidth + moveEvent.clientX - startX),
-                    );
-                  },
-                  { columnLayoutChanged: true },
-                );
-              };
-              const cleanup = () => {
-                window.removeEventListener("pointermove", handlePointerMove);
-                window.removeEventListener("pointerup", handlePointerUp);
-                window.removeEventListener("pointercancel", handlePointerCancel);
-                window.removeEventListener("blur", handlePointerCancel);
-
-                if (activePointerGestureCleanupRef.current === cleanup) {
-                  activePointerGestureCleanupRef.current = null;
-                }
-              };
-              const handlePointerUp = () => {
-                cleanup();
-                setResizingColumnId(null);
-              };
-              const handlePointerCancel = () => {
-                cleanup();
-                setResizingColumnId(null);
-              };
-              registerActivePointerGesture(cleanup);
-              window.addEventListener("pointermove", handlePointerMove);
-              window.addEventListener("pointerup", handlePointerUp);
-              window.addEventListener("pointercancel", handlePointerCancel);
-              window.addEventListener("blur", handlePointerCancel);
-            }}
-          >
-            <span className="comins-table__resize-line" />
-          </span>
-        </th>
-      );
-    }
-
-    const column = cell.column;
-    const index = visibleColumns.findIndex((visibleColumn) => visibleColumn.id === column.id);
-    const safeIndex = index >= 0 ? index : fallbackIndex;
-    const columnState = state.columnState[column.id];
-    const pinnedColumn = getPinnedColumnAttributes(column.id);
-    const headerProps = column.header?.props ?? {};
-    const sortRule = getSortRule(state.sortModel, column.id);
-    const sortIndicatorState = getSortIndicatorState(state.sortModel, column.id);
-    const sortIndicatorVisible = sortIndicatorState === "asc" || sortIndicatorState === "desc";
-    const showSortPriority = sortRule !== null && state.sortModel.length > 1;
-    const isMovingGroupChild = Boolean(movingGroup?.children.includes(column.id));
-    const isColumnPlaceholder = movingColumnId === column.id || isMovingGroupChild;
-    const columnPlaceholderLabel = getCominsColumnPlaceholderText(column.label, column.id);
-    const headerClassName = [
-      "comins-table__th px-3 py-2 text-left font-semibold",
-      movingColumnId === column.id ? "comins-column-moving" : undefined,
-      headerProps.className,
-    ]
-      .filter(Boolean)
-      .join(" ");
-    const headerPayload = createHeaderComponentPayload(state, column, safeIndex);
-    const headerRenderer = column.header?.render ?? column.header?.renderer;
-    const headerRendererKind = column.header?.render ? "render" : "legacy";
-    const cachedHeaderRendererBody = headerRenderer ? headerRendererBodyRef.current.get(column.id) : undefined;
-
-    const shouldRefreshHeaderRendererBody =
-      Boolean(headerRenderer) && (!isColumnPlaceholder || cachedHeaderRendererBody?.renderer !== headerRenderer || cachedHeaderRendererBody?.kind !== headerRendererKind);
-    const headerRendererBody = headerRenderer
-      ? shouldRefreshHeaderRendererBody
-        ? headerRenderer(headerPayload)
-        : cachedHeaderRendererBody?.body
-      : null;
-
-    if (headerRenderer && shouldRefreshHeaderRendererBody) {
-      renderedHeaderRendererBodies.set(column.id, { body: headerRendererBody, renderer: headerRenderer, kind: headerRendererKind });
-    } else if (headerRenderer && cachedHeaderRendererBody) {
-      renderedHeaderRendererBodies.set(column.id, cachedHeaderRendererBody);
-    }
-    const useDefaultHeader = !headerRenderer || (headerRendererKind === "render" && headerRendererBody === undefined);
-    const headerLeftSlots = useDefaultHeader
-      ? renderCominsComponentSlots(column.header?.components, headerPayload, "left")
-      : [];
-    const headerRightSlots = useDefaultHeader
-      ? renderCominsComponentSlots(column.header?.components, headerPayload, "right")
-      : [];
-    const hasHeaderComponents = headerLeftSlots.length > 0 || headerRightSlots.length > 0;
-    const isDropTarget = columnMoveTarget?.kind === "column" && columnMoveTarget.id === column.id;
-    const columnPositionLocked =
-      column.lockPosition === true ||
-      (!cell.groupId && columnState?.pinned !== undefined);
-    const columnFilterKind = column.filter?.kind;
-    const columnFilterable =
-      filteringRequested &&
-      (columnFilterKind === "boolean" ||
-        columnFilterKind === "date" ||
-        columnFilterKind === "number" ||
-        columnFilterKind === "text");
-
-    return (
-      <th
-        {...headerProps}
-        aria-label={isColumnPlaceholder ? columnPlaceholderLabel : headerProps["aria-label"] ?? (column.sort ? columnPlaceholderLabel : undefined)}
-        aria-labelledby={isColumnPlaceholder ? undefined : headerProps["aria-labelledby"]}
-        className={headerClassName}
-        colSpan={cell.colSpan}
-        data-column-drop-target={isDropTarget ? "true" : undefined}
-        data-column-drop-valid={
-          isDropTarget && columnMoveTarget.status !== "neutral"
-            ? columnMoveTarget.status === "valid"
-              ? "true"
-              : "false"
-            : undefined
-        }
-        data-column-moving={movingColumnId === column.id ? "true" : undefined}
-        data-column-placeholder={isColumnPlaceholder ? "true" : undefined}
-        data-column-position-locked={columnPositionLocked ? "true" : undefined}
-        data-comins-column-depth={cell.groupId ? "1" : "0"}
-        data-comins-column-id={column.id}
-        data-comins-column-end={column.id === visibleColumns.at(-1)?.id ? "true" : undefined}
-        data-comins-column-index={safeIndex}
-        data-comins-column-parent-group-id={cell.groupId}
-        data-comins-pin-boundary={pinnedColumn.boundary ? "true" : undefined}
-        data-comins-pinned={pinnedColumn.pinned}
-        data-sort-count={sortRule ? state.sortModel.length : undefined}
-        data-sort-direction={sortRule?.rule.direction}
-        data-sort-priority={sortRule?.priority}
-        data-sortable={column.sort ? "true" : "false"}
-        data-filter-active={normalizedColumnFilterById.has(column.id) ? "true" : undefined}
-        data-testid={`header-${column.id}`}
-        aria-sort={column.sort ? getAriaSortState(state.sortModel, column.id) : undefined}
-        key={`column-${column.id}`}
-        onClick={(event) => {
-          if (isColumnPlaceholder) {
-            event.preventDefault();
-            return;
-          }
-
-          headerProps.onClick?.(event);
-
-          if (event.defaultPrevented || !column.sort) {
-            return;
-          }
-
-          if (consumeSuppressedSortClick(column.id)) {
-            return;
-          }
-
-          activateHeaderSort(column, event.shiftKey);
-        }}
-        onKeyDown={(event) => {
-          if (isColumnPlaceholder) {
-            event.preventDefault();
-            return;
-          }
-
-          headerProps.onKeyDown?.(event);
-
-          if (event.defaultPrevented || !column.sort) {
-            return;
-          }
-
-          if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
-            event.preventDefault();
-            activateHeaderSort(column, event.shiftKey);
-          }
-        }}
-        onPointerDown={(event) => beginHeaderPointerInteraction(event, cell)}
-        rowSpan={cell.rowSpan}
-        scope="col"
-        style={{ width: columnState?.width ?? column.width, ...headerProps.style, ...pinnedColumn.style }}
-        tabIndex={column.sort && !isColumnPlaceholder ? 0 : undefined}
-      >
-        <span aria-hidden="true" className="comins-column-drop-marker" />
-        <span
-          {...(isColumnPlaceholder ? COMINS_COLUMN_PLACEHOLDER_INTERACTION_PROPS : {})}
-          aria-hidden={isColumnPlaceholder ? "true" : undefined}
-          className="comins-table__header-content"
-          data-comins-header-body="true"
-          data-comins-header-components={hasHeaderComponents ? "true" : undefined}
-          data-comins-sort-indicator-visible={sortIndicatorVisible ? "true" : undefined}
-          inert={isColumnPlaceholder ? true : undefined}
-          ref={bindCominsColumnPlaceholderNativeBoundary}
-        >
-          <span className="comins-table__header-slot" data-comins-header-slot="left">
-            {showColumnMoveHandle && !columnPositionLocked ? (
-              <span
-                aria-hidden="true"
-                className="comins-column-move-handle"
-                data-comins-column-move-handle="true"
-                data-testid={`column-move-handle-${column.id}`}
-                draggable={false}
-                onClick={(event) => event.stopPropagation()}
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  beginHeaderPointerInteraction(event, cell, true);
-                }}
-              >
-                <CominsTableIcon name="columnMove" />
-              </span>
-            ) : null}
-            {headerLeftSlots}
-          </span>
-          <span className="comins-table__header-label">
-            {!useDefaultHeader ? headerRendererBody : isColumnPlaceholder ? null : column.label}
-          </span>
-          <span className="comins-sort-meta" data-sort-visible={sortIndicatorVisible ? "true" : undefined}>
-            {column.sort ? <CominsTableIconButton
-              aria-label={`Sort ${columnPlaceholderLabel}`}
-              className="comins-sort-indicator"
-              data-sort-state={sortIndicatorState}
-              data-sort-visible={sortIndicatorVisible ? "true" : undefined}
-              data-testid={`sort-indicator-${column.id}`}
-              onPointerDown={event => event.stopPropagation()}
-              onKeyDown={event => event.stopPropagation()}
-              icon={sortIndicatorState === "asc" ? "sortAscending" : sortIndicatorState === "desc" ? "sortDescending" : "sortUnsorted"}
-            /> : null}
-            {showSortPriority ? (
-              <span
-                aria-hidden="true"
-                className="comins-sort-priority"
-                data-testid={`sort-priority-${column.id}`}
-              >
-                {sortRule.priority}
-              </span>
-            ) : null}
-          </span>
-          {showSortPriority ? (
-            <span className="comins-table__sort-status">
-              {`Sorted ${sortRule.rule.direction === "asc" ? "ascending" : "descending"}, priority ${sortRule.priority} of ${state.sortModel.length}`}
-            </span>
-          ) : null}
-          <span className="comins-table__header-slot" data-comins-header-slot="right">
-            {columnFilterable && !isColumnPlaceholder ? (
-              <CominsColumnFilterControl
-                column={column}
-                valueSource={{ columns: state.columns, rows: filterSourceRows, model: columnFiltering?.model ?? [], columnId: column.id }}
-                onChangeModel={columnFiltering?.onChangeModel}
-                getPortalContainer={() => tableRootRef.current}
-                columnId={column.id}
-                columnLabel={columnPlaceholderLabel}
-                kind={columnFilterKind as CominsColumnFilterKind}
-                onChangeRule={typeof columnFiltering?.onChangeModel === "function"
-                  ? (nextRule) => changeColumnFilterRule(column.id, nextRule)
-                  : undefined}
-                onOpenChange={typeof columnFiltering?.onChangeOpenColumnId === "function"
-                  ? columnFiltering.onChangeOpenColumnId
-                  : undefined}
-                open={columnFiltering?.openColumnId === column.id}
-                rule={normalizedColumnFilterById.get(column.id)}
-              />
-            ) : null}
-            {headerRightSlots}
-          </span>
-        </span>
-        {isColumnPlaceholder ? (
-          <span aria-hidden="true" className="comins-column-placeholder-label">
-            {columnPlaceholderLabel}
-          </span>
-        ) : null}
-        <span
-          aria-hidden="true"
-          className="comins-table__resize"
-          data-resizing={resizingColumnId === column.id ? "true" : undefined}
-          data-testid={`resize-${column.id}`}
-          onClick={(event) => event.stopPropagation()}
-          onPointerDown={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            const startX = event.clientX;
-            const measuredWidth = getCominsElementRect(event.currentTarget.closest<HTMLTableCellElement>("th"))?.width;
-            const visibleWidthSnapshot = new Map<string, number>();
-
-            for (const visibleColumn of visibleColumns) {
-              const headerCell = Array.from(
-                headerRef.current?.querySelectorAll<HTMLTableCellElement>("[data-comins-column-id]") ?? [],
-              ).find((element) => element.dataset.cominsColumnId === visibleColumn.id);
-              const measuredColumnWidth = getCominsElementRect(headerCell)?.width;
-              const fallbackWidth = stateRef.current.columnState[visibleColumn.id]?.width ?? visibleColumn.width ?? 160;
-
-              visibleWidthSnapshot.set(
-                visibleColumn.id,
-                measuredColumnWidth && Number.isFinite(measuredColumnWidth) ? measuredColumnWidth : fallbackWidth,
-              );
-            }
-
-            const startWidth =
-              visibleWidthSnapshot.get(column.id) ??
-              (measuredWidth && Number.isFinite(measuredWidth) ? measuredWidth : (columnState?.width ?? column.width ?? 160));
-            const resizeMaxWidth = cell.groupId
-              ? undefined
-              : getCominsPinnedBlockResizeMaxWidth(
-                  columnPinningBlocks,
-                  columnPinning,
-                  `column:${column.id}`,
-                  containerWidth,
-                );
-            setResizingColumnId(column.id);
-            const handlePointerMove = (moveEvent: PointerEvent) => {
-              commitState(
-                (current) => {
-                  let next = current;
-
-                  for (const [visibleColumnId, visibleColumnWidth] of visibleWidthSnapshot) {
-                    next = setCominsColumnWidth(next, visibleColumnId, visibleColumnWidth);
-                  }
-
-                  return setColumnWidthInsideParentGroup(
-                    next,
-                    column.id,
-                    Math.min(
-                      resizeMaxWidth ?? Number.POSITIVE_INFINITY,
-                      Math.max(getEffectiveColumnMinWidth(column), startWidth + moveEvent.clientX - startX),
-                    ),
-                  );
-                },
-                { columnLayoutChanged: true },
-              );
-            };
-            const cleanup = () => {
-              window.removeEventListener("pointermove", handlePointerMove);
-              window.removeEventListener("pointerup", handlePointerUp);
-              window.removeEventListener("pointercancel", handlePointerCancel);
-              window.removeEventListener("blur", handlePointerCancel);
-
-              if (activePointerGestureCleanupRef.current === cleanup) {
-                activePointerGestureCleanupRef.current = null;
-              }
-            };
-            const handlePointerUp = () => {
-              cleanup();
-              setResizingColumnId(null);
-            };
-            const handlePointerCancel = () => {
-              cleanup();
-              setResizingColumnId(null);
-            };
-            registerActivePointerGesture(cleanup);
-            window.addEventListener("pointermove", handlePointerMove);
-            window.addEventListener("pointerup", handlePointerUp);
-            window.addEventListener("pointercancel", handlePointerCancel);
-            window.addEventListener("blur", handlePointerCancel);
-          }}
-        >
-          <span className="comins-table__resize-line" />
-        </span>
-      </th>
-    );
-  };
-
-  const renderColumnSizing = () => (
-    <colgroup>
-      {visibleColumns.map((column, index) => (
-        <col key={column.id} style={{ width: columnWidths[index] }} />
-      ))}
-    </colgroup>
-  );
   const commitPendingScrollTop = () => {
     setScrollTop((current) => {
       const next = pendingScrollTopRef.current;
@@ -6358,13 +5857,45 @@ function CominsTableInner<TData, TGroup>(
             className="comins-table__table comins-table__header-table min-w-full table-fixed"
             style={{ width: tableWidth }}
           >
-            {renderColumnSizing()}
+            {renderCominsColumnSizing(visibleColumns, columnWidths)}
             <thead className="comins-table__thead">
-              {headerRows.map((headerRow, rowIndex) => (
-                <tr key={`header-row-${rowIndex}`}>
-                  {headerRow.map((cell, cellIndex) => renderHeaderCell(cell, cellIndex))}
-                </tr>
-              ))}
+              {renderCominsHeaderRows({
+                columnMoveTarget,
+                movingGroupId,
+                state: { columns: state.columns, columnState: state.columnState, columnGroupState: state.columnGroupState, sortModel: state.sortModel },
+                visibleColumns,
+                getPinnedColumnAttributes,
+                getCominsColumnPlaceholderText,
+                showColumnMoveHandle,
+                COMINS_COLUMN_PLACEHOLDER_INTERACTION_PROPS,
+                bindCominsColumnPlaceholderNativeBoundary,
+                beginGroupPointerInteraction,
+                resizingColumnId,
+                headerRef,
+                stateRef,
+                columnPinningBlocks,
+                columnPinning,
+                containerWidth,
+                setResizingColumnId,
+                commitState,
+                activePointerGestureCleanupRef,
+                registerActivePointerGesture,
+                movingGroup,
+                movingColumnId,
+                createHeaderComponentPayload,
+                headerRendererBodyRef,
+                renderedHeaderRendererBodies,
+                renderCominsComponentSlots,
+                filteringRequested,
+                normalizedColumnFilterById,
+                consumeSuppressedSortClick,
+                activateHeaderSort,
+                beginHeaderPointerInteraction,
+                filterSourceRows,
+                columnFiltering,
+                tableRootRef,
+                changeColumnFilterRule,
+              }, headerRows)}
             </thead>
           </table>
           {hasHorizontalOverflow ? (
@@ -6407,7 +5938,7 @@ function CominsTableInner<TData, TGroup>(
               : { width: tableWidth }
           }
         >
-          {renderColumnSizing()}
+          {renderCominsColumnSizing(visibleColumns, columnWidths)}
         <tbody>
           {shouldRenderSkeleton
             ? Array.from({ length: resolvedSkeletonRowCount }).map((_, skeletonIndex) => (
@@ -6453,629 +5984,88 @@ function CominsTableInner<TData, TGroup>(
               </td>
             </tr>
           ) : null}
-          {rowWindow.slots.map((slot, entryIndex) => {
-            if (slot.kind === "group") {
-              const node = orderedGroupModel?.groupsById.get(slot.groupId);
-
-              if (!node) {
-                return null;
-              }
-
-              const expanded = expandedGroupIdSet.has(slot.groupId);
-              const isLastRenderedSlot = entryIndex === rowWindow.slots.length - 1;
-              const isLastLogicalSlot = fullProjectionSlots.at(-1)?.key === slot.key;
-              const virtualContentFillsViewport = rowWindow.scrollHeight >= containerHeight - 1;
-              const isViewportEndRow =
-                isLastRenderedSlot &&
-                (virtualized
-                  ? isLastLogicalSlot && virtualContentFillsViewport
-                  : emptyFillerHeight === 0);
-              const aggregateValues = Object.fromEntries(
-                [...node.aggregationState].map(([columnId, aggregateState]) => [
-                  columnId,
-                  getCominsAggregateValue(aggregateState),
-                ]),
-              );
-              const groupRenderParams = {
-                aggregateValues,
-                expanded,
-                group: node.group,
-                groupId: node.groupId,
-                groupIndex: node.groupIndex,
-                isEmpty: node.leafSourceIndexes.length === 0,
-                rowCount: node.leafSourceIndexes.length,
-              };
-              const groupRowProps = rowGrouping?.getGroupRowProps?.(groupRenderParams);
-              const groupRender = rowGrouping?.content?.render ?? rowGrouping?.renderGroupContent;
-              const customContent = groupRender?.(groupRenderParams);
-              const useDefaultGroupContent = !groupRender || (Boolean(rowGrouping?.content?.render) && customContent === undefined);
-              const aggregateContent = Object.entries(aggregateValues).flatMap(([columnId, value]) => {
-                if (value === null) {
-                  return [];
-                }
-
-                const column = state.columns.find((candidate) => candidate.id === columnId);
-
-                return [
-                  <span className="comins-row-group-aggregate" key={columnId}>
-                    {String(column?.label ?? columnId)}: {String(value)}
-                  </span>,
-                ];
-              });
-              const groupDraggable =
-                rowGrouping?.groupDraggable === true &&
-                (typeof rowGrouping.onChangeGroups === "function" || Boolean(normalizedTableTransfer));
-              const groupDropPosition =
-                rowGroupMoveState?.targetTableId === undefined &&
-                rowGroupMoveState?.targetGroupId === slot.groupId &&
-                rowGroupMoveState.sourceGroupId !== slot.groupId
-                  ? rowGroupMoveState.position
-                  : undefined;
-              const isRowDropTarget =
-                rowMoveState?.targetTableId === undefined &&
-                rowMoveState?.targetGroupId === slot.groupId;
-
-              return (
-                <tr
-                  className={[
-                    "comins-table__tr comins-table__group-row",
-                    groupRowProps?.className,
-                    isViewportEndRow ? "comins-table__tr--viewport-end" : undefined,
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  data-comins-group-id={String(slot.groupId)}
-                  data-comins-group-index={node.groupIndex}
-                  data-comins-group-row="true"
-                  data-comins-transfer-group-id={getCominsTransferIdentity(slot.groupId)}
-                  data-comins-group-drag-source={
-                    rowGroupMoveState?.sourceGroupId === slot.groupId ? "true" : undefined
-                  }
-                  data-comins-group-drop-position={groupDropPosition}
-                  data-comins-row-drop-valid={
-                    isRowDropTarget ? (rowMoveState.valid ? "true" : "false") : undefined
-                  }
-                  data-testid={`group-row-${encodeURIComponent(String(slot.groupId))}`}
-                  key={slot.key}
-                  style={{ ...groupRowProps?.style, height: rowHeight }}
-                >
-                  <th
-                    className="comins-table__td comins-table__group-cell px-3 py-2"
-                    colSpan={Math.max(1, visibleColumns.length)}
-                    scope="rowgroup"
-                    style={{ height: rowHeight }}
-                  >
-                    <span className="comins-row-group-cell-content">
-                      {groupDraggable ? (
-                        <CominsTableIconButton
-                          aria-label={`Move ${String(node.label)} group`}
-                          className="comins-row-group-drag-handle"
-                          data-testid={`group-drag-handle-${encodeURIComponent(String(slot.groupId))}`}
-                          icon="columnMove"
-                          onPointerDown={(event) => beginRowGroupHandlePointerDrag(event, slot.groupId)}
-                        />
-                      ) : null}
-                      <CominsTableIconButton
-                        aria-expanded={expanded}
-                        aria-label={`${expanded ? "Collapse" : "Expand"} ${String(node.label)} group`}
-                        className="comins-row-group-expander"
-                        data-testid={`group-toggle-${encodeURIComponent(String(slot.groupId))}`}
-                        disabled={typeof rowGrouping?.onChangeExpandedGroupIds !== "function"}
-                        icon={expanded ? "disclosureExpanded" : "disclosureCollapsed"}
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          toggleRowGroup(slot.groupId);
-                        }}
-                        ref={createDisclosureElementRef(groupDisclosureElementsRef, slot.groupId)}
-                      />
-                      <span className="comins-row-group-content">
-                        {!useDefaultGroupContent ? customContent : (
-                          <>
-                            <span className="comins-row-group-label">{node.label}</span>
-                            <span className="comins-row-group-count">
-                              {node.leafSourceIndexes.length} Rows
-                            </span>
-                            {aggregateContent}
-                          </>
-                        )}
-                      </span>
-                    </span>
-                  </th>
-                </tr>
-              );
-            }
-
-            if (slot.kind === "placeholder") {
-              const request = viewportContext?.data.requests.find(request => request.startIndex <= slot.absoluteIndex && request.endIndex > slot.absoluteIndex);
-              return (
-              <tr className="comins-table__tr comins-table__skeleton-row" data-testid="viewport-placeholder" data-comins-absolute-index={slot.absoluteIndex} key={slot.key} style={{ height: slot.height }}>
-                {visibleColumns.map((column, columnIndex) => <td className="comins-table__td comins-table__skeleton-cell" key={column.id} style={{ height: slot.height, ...getPinnedColumnAttributes(column.id).style }}>{request?.status === "error" && columnIndex === 0 ? <button type="button" data-testid="viewport-retry" onClick={() => retryViewport(slot.absoluteIndex)}>Retry loading rows</button> : <span className="comins-table__skeleton-block" />}</td>)}
-              </tr>
-            ); }
-            const entry = slot;
-            const actualRowStyleHeight = entry.autoHeight ? "auto" : entry.rowHeight ?? rowHeight;
-            const rowRuntimeProps = resolveRowProps(effectiveRowProps, entry.row, entry.visibleIndex);
-            const isRowSelected = selectedRowIdSet.has(entry.rowId);
-            const isLastRenderedSlot = entryIndex === rowWindow.slots.length - 1;
-            const isLastLogicalRow = fullProjectionSlots.at(-1)?.key === entry.key;
-            const virtualContentFillsViewport = rowWindow.scrollHeight >= containerHeight - 1;
-            const isViewportEndRow =
-              isLastRenderedSlot &&
-              (virtualized
-                ? isLastLogicalRow && virtualContentFillsViewport
-                : emptyFillerHeight === 0);
-            const rowCustomBackground = getRowCustomBackground(rowRuntimeProps.style);
-            const rowRenderKey =
-              virtualized && (rowWindow.mixed || rowDetailEnabled)
-                ? entry.key
-                : virtualized
-                  ? `virtual-row-slot-${entryIndex}`
-                  : String(entry.rowId);
-            const rowDetailParams: CominsRowDetailParams<TData> = { row: createEventRow(entry) };
-            const rowDetailExpandable = rowDetailEnabled && (isRowExpandable?.(rowDetailParams) ?? true);
-            const rowDetailExpanded = rowDetailExpandable && effectiveExpandedRowIdSet.has(entry.rowId);
-            const rowDetailFixedHeight =
-              rowDetailExpanded && entry.detail?.mode === "fixed"
-                ? entry.detail.height
-                : undefined;
-            const rowDetailMode = entry.detail?.mode ?? "fixed";
-            const rowDetailIdToken = `${typeof entry.rowId}-${encodeURIComponent(String(entry.rowId))}`;
-            const rowDetailId = `comins-row-detail-${encodeURIComponent(rowDetailIdPrefix)}-${rowDetailIdToken}`;
-            const rowDetailContentId = `${rowDetailId}-content`;
-            const rowDetailToggleId = `${rowDetailId}-toggle`;
-
-            return (
-              <Fragment key={rowRenderKey}>
-                {
-                  rowMoveState?.targetTableId === undefined &&
-                  rowMoveState?.targetDataIndex === entry.dataIndex &&
-                  rowMoveState.sourceRowId !== entry.rowId ? (
-                  <tr
-                    aria-hidden="true"
-                    className="comins-row-move-placeholder"
-                    data-comins-row-drop-valid={rowMoveState.valid ? "true" : "false"}
-                  >
-                    <td colSpan={Math.max(1, visibleColumns.length)}>
-                      <div data-testid="row-move-placeholder">이 위치로 이동</div>
-                    </td>
-                  </tr>
-                ) : null}
-              <tr
-                aria-disabled={rowRuntimeProps.disabled ? "true" : undefined}
-                ref={entry.autoHeight ? element => registerDetailElement(entry.rowId, "auto", element, "row") : undefined}
-                data-comins-row-auto-height={entry.autoHeight ? "true" : undefined}
-                aria-selected={isRowSelected}
-                className={[
-                  "comins-table__tr",
-                  isViewportEndRow && !rowDetailExpanded ? "comins-table__tr--viewport-end" : undefined,
-                  isRowSelected ? "comins-row-selected" : undefined,
-                  rowRuntimeProps.className,
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                data-disabled={rowRuntimeProps.disabled ? "true" : undefined}
-                data-comins-row-custom-background={rowCustomBackground === undefined ? undefined : "true"}
-                data-comins-row-data-index={entry.dataIndex}
-                data-comins-absolute-index={entry.absoluteIndex}
-                data-comins-tree-drop={treeContext?.drag.preview?.context.target.rowId === entry.rowId ? treeContext.drag.preview.context.position : undefined}
-                data-comins-tree-drop-valid={treeContext?.drag.preview?.context.target.rowId === entry.rowId ? String(treeContext.drag.preview.valid) : undefined}
-                data-comins-row-parity={entry.visibleIndex % 2 === 0 ? "even" : "odd"}
-                data-comins-transfer-row-id={getCominsTransferIdentity(entry.rowId)}
-                data-row-draggable={rowRuntimeProps.draggable ? "true" : "false"}
-                data-selected-row={isRowSelected ? "true" : undefined}
-                data-testid={`row-${String(entry.rowId)}`}
-                draggable={false}
-                key={rowRenderKey}
-                onClick={(event) => {
-                  if (rowRuntimeProps.disabled) {
-                    event.preventDefault();
-                    return;
-                  }
-
-                  if (rowSelectionOnClick && !(event as React.MouseEvent<HTMLTableRowElement> & { __cominsCellSelectionHandled?: boolean })
-                    .__cominsCellSelectionHandled) {
-                    selectRowFromInteraction(event, entry);
-                  }
-                  onClickRow?.(createRowPayload(event, entry));
-                }}
-                onContextMenu={(event) => {
-                  if (rowRuntimeProps.disabled) {
-                    event.preventDefault();
-                    return;
-                  }
-
-                  if (rowSelectionOnClick) commitState((current) => selectRowForContextMenu(current, entry.rowId));
-                  lastRowAnchorRef.current = entry.rowId;
-                  onContextMenuRow?.(createRowPayload(event, entry));
-                }}
-                onDoubleClick={(event) => {
-                  if (rowRuntimeProps.disabled) {
-                    event.preventDefault();
-                    return;
-                  }
-
-                  onDoubleClickRow?.(createRowPayload(event, entry));
-                }}
-                onKeyDown={(event) => handleRowKeyDown(event, entry, rowRuntimeProps.disabled)}
-                style={{ ...getResolvedRowStyle(rowHeight, rowRuntimeProps.style, rowCustomBackground), ...(getRowHeight ? { height: actualRowStyleHeight } : {}) }}
-                tabIndex={rowRuntimeProps.disabled ? -1 : 0}
-              >
-                {visibleColumns.map((column, columnIndex) => {
-                  const pinnedColumn = getPinnedColumnAttributes(column.id);
-                  const rawValue = getCominsCellValue(state, entry.row, column.id);
-                  const address = { columnId: column.id, rowId: entry.rowId };
-                  const isCellInRange = cellSelection && isCominsCellInSelectedRange(
-                    state,
-                    address,
-                    getSelectionRowOrder(),
-                  );
-                  const isCellSelected = cellSelection && isCominsCellSelected(state, address);
-                  // 기본 셀은 콜백용 payload를 사용하지 않으므로 설정이 있을 때만 생성한다.
-                  const cellPayload = column.cell ? createCellComponentPayload(
-                    entry,
-                    rowRuntimeProps.disabled,
-                    isRowSelected,
-                    state.selection.rowIds.length,
-                    column,
-                    columnIndex,
-                    rawValue,
-                  ) : undefined;
-                  const cellProps = cellPayload ? resolveRenderableCellProps(column, cellPayload) : undefined;
-                  const cellDisabled = rowRuntimeProps.disabled || (cellPayload !== undefined && isRenderableCellDisabled(cellProps, cellPayload));
-                  const componentInteraction: CominsBuiltInComponentInteraction = {
-                    requestRowSelection: ({ event, mode }) => {
-                      if (cellDisabled) {
-                        return false;
-                      }
-
-                      if (mode === "exclusive") {
-                        commitState((current) => selectRow(current, entry.rowId));
-                        lastRowAnchorRef.current = entry.rowId;
-                        return true;
-                      }
-
-                      selectRowFromInteraction(event, entry);
-                      return true;
-                    },
-                  };
-                  const cellClassName = cellPayload ? toClassName(getRenderableCellClassName(cellProps, cellPayload)) : undefined;
-                  const cellStyle = cellPayload ? getRenderableCellStyle(cellProps, cellPayload) : undefined;
-                  const hasCellComponents = Boolean(column.cell?.components?.length);
-                  const configuredCellValue = cellPayload ? formatRenderableCellValue(column, cellPayload) : deferredDefaultCellValue;
-                  const cellComponents = column.cell?.components?.map((component) => {
-                    if (component.type !== "input") {
-                      return component;
-                    }
-
-                    const onValueChange = component.onValueChange;
-
-                    return {
-                      ...component,
-                      onValueChange: (payload) => {
-                        commitState((current) =>
-                          updateCominsRows(current, [
-                            {
-                              id: payload.row.id,
-                              patch: (currentRow) =>
-                                setCominsNestedInputValue(currentRow, payload.column.field, payload.value),
-                            },
-                          ]),
-                        );
-                        onValueChange?.(payload);
-                      },
-                    } satisfies CominsCellComponent<TData>;
-                  });
-                  const visibleCellComponents = cellPayload ? getRenderableCominsComponents(cellComponents, cellPayload) : [];
-                  const cellRender = column.cell?.render ?? column.cell?.renderer;
-                  const customCellContent = cellRender?.(cellPayload!);
-                  const useDefaultCellContent = !cellRender || (Boolean(column.cell?.render) && customCellContent === undefined);
-                  const formattedCellValue = configuredCellValue === deferredDefaultCellValue
-                    ? useDefaultCellContent && visibleCellComponents.length === 0
-                      ? rawValue == null ? "" : String(rawValue)
-                      : undefined
-                    : configuredCellValue;
-                  const cellContent = !useDefaultCellContent ? customCellContent : hasCellComponents ? (
-                    renderCominsContentWithComponents(formattedCellValue, cellComponents, cellPayload!, {
-                      interaction: componentInteraction,
-                      showContent: false,
-                    })
-                  ) : (
-                    <span className="comins-table__cell-value">{formattedCellValue}</span>
-                  );
-                  const tooltip =
-                    typeof column.cell?.tooltip === "function" ? column.cell.tooltip(cellPayload!) : column.cell?.tooltip;
-                  const tooltipConfig = column.cell?.tooltip;
-                  const customTooltip = typeof tooltipConfig === "object" && tooltipConfig !== null ? tooltipConfig : undefined;
-                  const tooltipKey = JSON.stringify([typeof entry.rowId, entry.rowId, column.id]);
-                  if (cellTooltip.active?.ready && cellTooltip.active.key === tooltipKey && customTooltip?.render) {
-                    activeCellTooltipContent = customTooltip.render(cellPayload!);
-                  }
-                  const treeEntry =
-                    column.id === treeContext?.treeColumnId
-                      ? treeContext.entriesByRowId.get(entry.rowId)
-                      : undefined;
-                  const treeSlots = treeContext?.slots;
-                  const treeSlotParams = treeEntry ? { ...treeEntry, defaultContent: cellContent } : null;
-                  const hasTreeSlots = Boolean(treeSlots?.leading || treeSlots?.content || treeSlots?.trailing);
-                  const renderedCellContent = treeEntry ? (
-                    <span
-                      className={`comins-tree-cell-content${hasTreeSlots ? " comins-tree-cell-content--slots" : ""}`}
-                      style={{ "--comins-tree-depth": treeEntry.depth } as React.CSSProperties}
-                    >
-                      {treeEntry.hasChildren ? (
-                        <CominsTableIconButton
-                          aria-expanded={treeEntry.expanded}
-                          aria-label={`${treeEntry.expanded ? "Collapse" : "Expand"} ${String(entry.rowId)}`}
-                          className="comins-tree-expander"
-                          data-testid={`tree-expander-${String(entry.rowId)}`}
-                          icon={treeEntry.expanded ? "disclosureExpanded" : "disclosureCollapsed"}
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            treeContext?.onToggle(entry.rowId);
-                          }}
-                          onMouseDown={(event) => event.stopPropagation()}
-                          onPointerDown={(event) => event.stopPropagation()}
-                        />
-                      ) : (
-                        <span aria-hidden="true" className="comins-tree-expander-spacer" />
-                      )}
-                      {treeSlotParams && treeSlots?.leading ? renderTreeSlot("leading", resolveTreeSlotContent(treeSlots.leading, treeSlotParams)) : null}
-                      <span className="comins-tree-cell-value">
-                        {treeSlotParams && treeSlots?.content ? renderTreeSlot("content", resolveTreeSlotContent(treeSlots.content, treeSlotParams, cellContent)) : cellContent}
-                      </span>
-                      {treeSlotParams && treeSlots?.trailing ? renderTreeSlot("trailing", resolveTreeSlotContent(treeSlots.trailing, treeSlotParams)) : null}
-                    </span>
-                  ) : (
-                    cellContent
-                  );
-
-                  return (
-                    <td
-                      aria-disabled={cellDisabled ? "true" : undefined}
-                      className={[
-                        "comins-table__td px-3 py-2",
-                        isCellInRange ? "comins-cell-range-selected" : undefined,
-                        cellFill.isPreview(address) ? "comins-cell-fill-preview" : undefined,
-                        cellClassName,
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-	                      data-disabled={cellDisabled ? "true" : undefined}
-	                      data-comins-cell-column-id={column.id}
-	                      data-comins-component-cell={visibleCellComponents.length > 0 ? "true" : undefined}
-                      data-comins-data-index={entry.dataIndex}
-                      data-comins-pin-boundary={pinnedColumn.boundary ? "true" : undefined}
-                      data-comins-pinned={pinnedColumn.pinned}
-                      data-range-selected={isCellInRange ? "true" : undefined}
-                      data-selected={isCellSelected ? "true" : undefined}
-                      data-testid={`cell-${String(entry.rowId)}-${column.id}`}
-                      draggable={false}
-                      key={column.id}
-                      onClick={(event) => {
-                        if (onClickCell) {
-                          event.stopPropagation();
-                        }
-
-                        if (cellDisabled) {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          return;
-                        }
-
-                        if (rangeDragMovedRef.current) {
-                          rangeDragMovedRef.current = false;
-                          (event as React.MouseEvent<HTMLTableCellElement> & { __cominsCellSelectionHandled?: boolean })
-                            .__cominsCellSelectionHandled = true;
-                          return;
-                        }
-
-                        const anchor = cellSelection ? (state.selection.cell ?? lastCellAnchorRef.current) : null;
-
-                        if (event.shiftKey && anchor) {
-                          if (!isLoadedCellRange(anchor.rowId, address.rowId)) { event.preventDefault(); event.stopPropagation(); return; }
-                          (event as React.MouseEvent<HTMLTableCellElement> & { __cominsCellSelectionHandled?: boolean })
-                            .__cominsCellSelectionHandled = true;
-                          lastCellAnchorRef.current = anchor;
-                          commitState((current) => {
-                            const nextRows = !rowSelectionOnClick ? current :
-                              lastRowAnchorRef.current !== null
-                                ? selectRows(
-                                    current,
-                                    getVisibleRowIdsBetween(current, lastRowAnchorRef.current, entry.rowId),
-                                  )
-                                : selectRow(current, entry.rowId);
-
-                            return selectCellRange(nextRows, { anchor, focus: address });
-                          });
-                          lastRowAnchorRef.current = entry.rowId;
-                          return;
-                        }
-
-                        if (cellSelection) {
-                          lastCellAnchorRef.current = address;
-                        }
-
-                        commitState((current) => {
-                          const nextRows = !rowSelectionOnClick ? current : selectRow(current, entry.rowId, {
-                            multi: event.ctrlKey || event.metaKey,
-                            toggle: event.ctrlKey || event.metaKey,
-                          });
-
-                          return cellSelection
-                            ? selectCell(nextRows, address, {
-                                multi: event.ctrlKey || event.metaKey,
-                                toggle: event.ctrlKey || event.metaKey,
-                              })
-                            : nextRows;
-                        });
-                        (event as React.MouseEvent<HTMLTableCellElement> & { __cominsCellSelectionHandled?: boolean })
-                          .__cominsCellSelectionHandled = true;
-                        lastRowAnchorRef.current = entry.rowId;
-                        onClickCell?.(createCellPayload(event, entry, column, columnIndex, rawValue));
-                      }}
-                      onContextMenu={(event) => {
-                        if ((event.target as Element).closest(".comins-row-detail-expander")) {
-                          event.stopPropagation();
-                          return;
-                        }
-
-                        if (cellDisabled) {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          return;
-                        }
-
-                        commitState((current) => {
-                          const nextRows = rowSelectionOnClick ? selectRowForContextMenu(current, entry.rowId) : current;
-                          const alreadySelected = isCominsCellSelected(current, address)
-                            || isCominsCellInSelectedRange(current, address, getSelectionRowOrder());
-                          return cellSelection && !alreadySelected ? selectCell(nextRows, address) : nextRows;
-                        });
-                        lastRowAnchorRef.current = entry.rowId;
-
-                        if (cellSelection) {
-                          lastCellAnchorRef.current = address;
-                        }
-
-                        if (onContextMenuCell) {
-                          event.stopPropagation();
-                          onContextMenuCell(createCellPayload(event, entry, column, columnIndex, rawValue));
-                        }
-                      }}
-                      onDoubleClick={(event) => {
-                        if ((event.target as Element).closest(".comins-row-detail-expander")) {
-                          event.stopPropagation();
-                          return;
-                        }
-
-                        if (onDoubleClickCell) {
-                          event.stopPropagation();
-                        }
-
-                        if (cellDisabled) {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          return;
-                        }
-
-                        onDoubleClickCell?.(createCellPayload(event, entry, column, columnIndex, rawValue));
-                      }}
-                      data-comins-tooltip-key={customTooltip?.render ? tooltipKey : undefined}
-                      onFocusCapture={(event) => { if (customTooltip?.render) cellTooltip.enter(tooltipKey, event.currentTarget, "focus"); }}
-                      onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) cellTooltip.leave(tooltipKey, "focus"); }}
-                      onKeyDown={(event) => handleCellKeyDown(event, entry, column, columnIndex, address, cellDisabled)}
-                      onMouseDown={(event) => beginCellRangeDrag(event, address, cellDisabled)}
-                      onMouseOver={(event) => {
-                        if (event.buttons === 1 && !activePointerGestureCleanupRef.current) {
-                          updateCellRangeDrag(address);
-                        }
-                      }}
-                      onMouseUp={endCellRangeDrag}
-                      onPointerDown={(event) => beginCellRangePointerDrag(event, address, cellDisabled)}
-                      onPointerEnter={(event) => {
-                        if (customTooltip?.render && event.buttons === 0) cellTooltip.enter(tooltipKey, event.currentTarget, "hover");
-                        if (event.buttons === 1) {
-                          updateCellRangeDrag(address);
-                        }
-                      }}
-                      onPointerLeave={() => cellTooltip.leave(tooltipKey, "hover")}
-                      onPointerMove={(event) => {
-                        if (event.buttons === 1) {
-                          updateCellRangeDrag(address);
-                        }
-                      }}
-                      onPointerUp={endCellRangeDrag}
-                      style={{ height: rowHeight, ...cellStyle, ...pinnedColumn.style, ...(getRowHeight ? { height: actualRowStyleHeight } : {}) }}
-                      title={typeof tooltip === "string" ? tooltip : undefined}
-                      tabIndex={cellDisabled ? -1 : 0}
-                    >
-                      {columnIndex === 0 && (rowDetailEnabled || rowRuntimeProps.draggable) ? (
-                        <div className="comins-row-cell-content">
-                          <span className="comins-row-leading-controls">
-                            {rowDetailEnabled ? (
-                              rowDetailExpandable ? (
-                                <CominsRowDetailToggle
-                                  controlsId={rowDetailContentId}
-                                  disabled={!onChangeExpandedRowIds}
-                                  expanded={rowDetailExpanded}
-                                  id={rowDetailToggleId}
-                                  label={`${rowDetailExpanded ? "Collapse" : "Expand"} ${String(entry.rowId)} details`}
-                                  onElement={createDisclosureElementRef(rowDetailToggleElementsRef, entry.rowId)}
-                                  onToggle={() => toggleRowDetail(entry.rowId, rowDetailExpandable)}
-                                  testId={`row-detail-toggle-${String(entry.rowId)}`}
-                                />
-                              ) : (
-                                <span
-                                  aria-hidden="true"
-                                  className="comins-row-detail-expander-spacer"
-                                  data-comins-row-leading-control="disclosure"
-                                />
-                              )
-                            ) : null}
-                            {rowRuntimeProps.draggable && treeContext ? (
-                              <button
-                                type="button"
-                                aria-label={`Move ${String(entry.rowId)}`}
-                                className="comins-row-drag-handle"
-                                data-comins-tree-drag-handle="true"
-                                data-testid={`row-drag-handle-${String(entry.rowId)}`}
-                                disabled={rowRuntimeProps.disabled}
-                                onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}
-                                onPointerDown={(event) => { if (!rowRuntimeProps.disabled) treeContext.drag.onPointerDown(event, createEventRow(entry)); }}
-                                onKeyDown={(event) => treeContext.drag.onKeyDown(event, createEventRow(entry))}
-                              />
-                            ) : rowRuntimeProps.draggable ? (
-                              <span
-                                aria-hidden="true"
-                                className="comins-row-drag-handle"
-                                data-comins-row-leading-control="drag"
-                                data-testid={`row-drag-handle-${String(entry.rowId)}`}
-                                draggable={false}
-                                onClick={(event) => event.stopPropagation()}
-                                onMouseDown={(event) => event.stopPropagation()}
-                                onPointerDown={(event) =>
-                                  beginRowHandlePointerDrag(
-                                    event,
-                                    entry,
-                                    rowRuntimeProps.disabled,
-                                    rowRuntimeProps.draggable,
-                                  )
-                                }
-                              />
-                            ) : null}
-                          </span>
-                          <div className="comins-row-cell-content__value">{renderedCellContent}</div>
-                        </div>
-                      ) : (
-                        renderedCellContent
-                      )}
-                      {!cellDisabled && cellFill.handleAddress?.rowId === address.rowId && cellFill.handleAddress.columnId === address.columnId ? cellFill.handle : null}
-                    </td>
-                  );
-                })}
-              </tr>
-              {rowDetailExpanded ? (
-                <CominsRowDetailRow
-                  colSpan={visibleColumns.length}
-                  contentId={rowDetailContentId}
-                  fixedHeight={rowDetailFixedHeight}
-                  labelId={rowDetailToggleId}
-                  onContentElement={(element) =>
-                    registerDetailElement(entry.rowId, rowDetailMode, element)
-                  }
-                  ownerId={String(entry.rowId)}
-                  testId={`row-detail-content-${String(entry.rowId)}`}
-                  getToggleElement={() => rowDetailToggleElementsRef.current.get(entry.rowId) ?? null}
-                  restoreFocus={detailFocusRestorer.restore}
-                >
-                  {resolvedRowDetailRender?.(rowDetailParams)}
-                </CominsRowDetailRow>
-              ) : null}
-              </Fragment>
-            );
-          })}
+          {renderCominsBodyRows<TData, TGroup>({
+            state,
+            rowWindow,
+            orderedGroupModel,
+            expandedGroupIdSet,
+            fullProjectionSlots,
+            containerHeight,
+            virtualized,
+            emptyFillerHeight,
+            rowGrouping,
+            normalizedTableTransfer,
+            rowGroupMoveState,
+            rowMoveState,
+            rowHeight,
+            visibleColumns,
+            getCominsTransferIdentity,
+            beginRowGroupHandlePointerDrag,
+            toggleRowGroup,
+            createDisclosureElementRef,
+            groupDisclosureElementsRef,
+            viewportContext,
+            getPinnedColumnAttributes,
+            retryViewport,
+            resolveRowProps,
+            effectiveRowProps,
+            selectedRowIdSet,
+            getRowCustomBackground,
+            rowDetailEnabled,
+            createEventRow,
+            isRowExpandable,
+            effectiveExpandedRowIdSet,
+            rowDetailIdPrefix,
+            registerDetailElement,
+            treeContext,
+            rowSelectionOnClick,
+            selectRowFromInteraction,
+            onClickRow,
+            createRowPayload,
+            commitState,
+            selectRowForContextMenu,
+            lastRowAnchorRef,
+            onContextMenuRow,
+            onDoubleClickRow,
+            handleRowKeyDown,
+            getResolvedRowStyle,
+            getRowHeight,
+            cellSelection,
+            getSelectionRowOrder,
+            createCellComponentPayload,
+            resolveRenderableCellProps,
+            isRenderableCellDisabled,
+            toClassName,
+            getRenderableCellClassName,
+            getRenderableCellStyle,
+            formatRenderableCellValue,
+            getRenderableCominsComponents,
+            renderCominsContentWithComponents,
+            cellTooltip,
+            renderTreeSlot,
+            resolveTreeSlotContent,
+            cellFill,
+            onClickCell,
+            rangeDragMovedRef,
+            lastCellAnchorRef,
+            isLoadedCellRange,
+            getVisibleRowIdsBetween,
+            createCellPayload,
+            onContextMenuCell,
+            onDoubleClickCell,
+            handleCellKeyDown,
+            beginCellRangeDrag,
+            activePointerGestureCleanupRef,
+            updateCellRangeDrag,
+            endCellRangeDrag,
+            beginCellRangePointerDrag,
+            onChangeExpandedRowIds,
+            rowDetailToggleElementsRef,
+            toggleRowDetail,
+            beginRowHandlePointerDrag,
+            detailFocusRestorer,
+            resolvedRowDetailRender,
+          }, bodyRenderOutput)}
           {shouldRenderInfiniteLoadingRow ? (
             <tr className="comins-table__tr comins-table__infinite-loading-row" style={{ height: rowHeight }}>
               <td
@@ -7126,7 +6116,7 @@ function CominsTableInner<TData, TGroup>(
           style={{ width: synchronizedHorizontalViewportWidth }}
         >
           <table className="comins-table__table comins-table__summary-table min-w-full table-fixed" style={{ width: tableWidth }}>
-            {renderColumnSizing()}
+            {renderCominsColumnSizing(visibleColumns, columnWidths)}
             <tfoot>
               <tr
                 className={["comins-table__summary-row", summary.className].filter(Boolean).join(" ")}
@@ -7195,7 +6185,7 @@ function CominsTableInner<TData, TGroup>(
           />
         </div>
       ) : null}
-      {cellTooltip.active ? <CominsCellTooltip controller={cellTooltip} content={activeCellTooltipContent} /> : null}
+      {cellTooltip.active ? <CominsCellTooltip controller={cellTooltip} content={bodyRenderOutput.activeCellTooltipContent} /> : null}
       {movingHeaderLabel && columnMovePointer ? (
         <div
           aria-hidden="true"

@@ -77,7 +77,8 @@ function ActivityConsumer() {
 }
 const root = createRoot(document.getElementById("app")!);
 const refProfile = query.get("profile");
-if (refProfile === "value-filter-ref" || refProfile === "row-group-ref" || refProfile === "row-detail-ref") Object.assign(window, { valueFilterRef: startValueFilterRefConsumer(root, refProfile) });
+if (refProfile === "row-data-retirement") void import("./row-data-retirement").then(({ startRowDataRetirementConsumer }) => startRowDataRetirementConsumer(root));
+else if (refProfile === "value-filter-ref" || refProfile === "row-group-ref" || refProfile === "row-detail-ref") Object.assign(window, { valueFilterRef: startValueFilterRefConsumer(root, refProfile) });
 else root.render(query.has("activity") ? <ActivityConsumer /> : query.has("strict") ? <StrictMode><Consumer /></StrictMode> : <Consumer />);
 
 const controller = {
