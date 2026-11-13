@@ -12,9 +12,11 @@ const sha = (value: string | Buffer) => createHash("sha256").update(value).diges
 type Controller = {
   state: { signal?: AbortSignal; executor?: unknown };
   calibrate(): void; releaseCalibration(): void; install(): void; dispose(): void; dropSignal(): void; hasMountedRoot(): boolean;
+  rememberOwnerFiber(): { selected: number };
+  probeSchema(): { key: string; marker: string; immutable: boolean; weakRef: boolean }[];
 };
 
-test("actual React hook callback owner after unmount while consumer holds default aborted signal @perf @memory-lifetime", async ({ page, browser, baseURL }, info) => {
+test("actual React hook releases callback owner and original Fiber while consumer holds default aborted signal @perf @memory-lifetime", async ({ page, browser, baseURL }, info) => {
   test.setTimeout(180000);
   const repository = process.cwd();
   if (!baseURL) throw new Error("INVALID main Playground URL");
@@ -33,7 +35,7 @@ test("actual React hook callback owner after unmount while consumer holds defaul
   const directory = process.env.COMINS_ABORT_OWNER_EVIDENCE ? path.resolve(process.env.COMINS_ABORT_OWNER_EVIDENCE) : info.outputPath("abort-owner");
   await mkdir(directory, { recursive: true });
   const errors: string[] = [], scripts = new Map<string, { url: string; sha256: string }>(), pending = new Set<Promise<void>>();
-  const evidence: Record<string, unknown> = { scope: "actual useCominsViewportRequests state callback owner only; development Chrome L1, no numeric verdict", browser: browser.version(), source, sourceBefore, inputsBefore, completed: false, status: "INVALID" };
+  const evidence: Record<string, unknown> = { scope: "actual hook callback owner plus one fixed original OwnerComponent Fiber; diagnostic WeakRefs, no formal counter or numeric verdict", browser: browser.version(), source, sourceBefore, inputsBefore, completed: false, status: "INVALID" };
   const snapshots: Record<string, { file: string; sha256: string }> = {};
   const phases: Record<string, Awaited<ReturnType<typeof readAbortOwnerSnapshot>>> = {};
   const persist = () => writeFile(path.join(directory, "result.json"), JSON.stringify({ ...evidence, phases, snapshots, scripts: [...scripts.values()], errors }, null, 2));
@@ -61,6 +63,11 @@ test("actual React hook callback owner after unmount while consumer holds defaul
     session = await page.context().newCDPSession(page);
     await session.send("HeapProfiler.enable");
     const capture = async (name: string) => {
+      const schema = await page.evaluate(() => (window as unknown as { abortOwner: Controller }).abortOwner.probeSchema());
+      const expectedKeys = name.startsWith("calibration-") ? ["controlReference"] : ["controlReference", "originalOwnerFiber"];
+      expect(schema.map(entry => entry.key)).toEqual(expectedKeys);
+      expect(schema.every(entry => entry.immutable && entry.weakRef)).toBe(true);
+      evidence.probeSchema = schema;
       await collectAfterJob(page, session!);
       await session!.send("HeapProfiler.collectGarbage");
       const file = path.join(directory, `${name}.heapsnapshot`);
@@ -69,19 +76,22 @@ test("actual React hook callback owner after unmount while consumer holds defaul
       while (pending.size) await Promise.all(pending);
       const sdkScripts = [...scripts.keys()].filter(value => new URL(value).pathname.endsWith(source));
       if (sdkScripts.length !== 1) throw new Error(`INVALID actual SDK Script count ${sdkScripts.length}`);
-      const result = await readAbortOwnerSnapshot(file, [...scripts.values()], `${url}/main.tsx`, sdkScripts[0]!, [{ name: "useCominsViewportRequests", url: [...scripts.keys()].find(value => new URL(value).pathname.endsWith("/src/react/viewport.ts")) ?? "MISSING" }]);
+      const result = await readAbortOwnerSnapshot(file, [...scripts.values()], `${url}/main.tsx`, sdkScripts[0]!, [{ name: "useCominsViewportRequests", url: [...scripts.keys()].find(value => new URL(value).pathname.endsWith("/src/react/viewport.ts")) ?? "MISSING" }], undefined,
+        { referenceClass: "OwnerFiberReference", marker: name.startsWith("calibration-") ? "owner-fiber-control" : "original-owner-fiber",
+          expectedTypeName: name === "owner-held" ? "OwnerComponent" : undefined });
       phases[name] = result;
       await persist();
       return result;
     };
     // No probe object crosses the browser boundary; only primitive state is returned.
     await page.evaluate(() => (window as unknown as { abortOwner: Controller }).abortOwner.calibrate());
-    expect(await capture("calibration-held")).toMatchObject({ rawOwners: 1, strongOwners: 1 });
+    expect(await capture("calibration-held")).toMatchObject({ rawOwners: 1, strongOwners: 1, fiberProbe: { rawTargets: 1, strongTargets: 1 } });
     await page.evaluate(() => (window as unknown as { abortOwner: Controller }).abortOwner.releaseCalibration());
-    expect(await capture("calibration-dropped")).toMatchObject({ rawOwners: 0, strongOwners: 0 });
+    expect(await capture("calibration-dropped")).toMatchObject({ rawOwners: 0, strongOwners: 0, fiberProbe: { rawTargets: 0, strongTargets: 0 } });
     await page.evaluate(() => (window as unknown as { abortOwner: Controller }).abortOwner.install());
     await page.waitForFunction(() => (window as unknown as { abortOwner: Controller }).abortOwner.state.signal instanceof AbortSignal);
-    expect(await capture("owner-held")).toMatchObject({ rawOwners: 1, strongOwners: 1 });
+    expect(await page.evaluate(() => (window as unknown as { abortOwner: Controller }).abortOwner.rememberOwnerFiber())).toEqual({ selected: 1 });
+    expect(await capture("owner-held")).toMatchObject({ rawOwners: 1, strongOwners: 1, fiberProbe: { rawTargets: 1, strongTargets: 1 } });
     await page.evaluate(() => (window as unknown as { abortOwner: Controller }).abortOwner.dispose());
     evidence.abortState = await page.evaluate(() => {
       const state = (window as unknown as { abortOwner: Controller }).abortOwner.state, signal = state.signal!;
@@ -91,13 +101,21 @@ test("actual React hook callback owner after unmount while consumer holds defaul
     expect(await page.evaluate(() => (window as unknown as { abortOwner: Controller }).abortOwner.hasMountedRoot())).toBe(false);
     await capture("consumer-signal-held");
     await page.evaluate(() => (window as unknown as { abortOwner: Controller }).abortOwner.dropSignal());
-    expect(await capture("consumer-signal-dropped")).toMatchObject({ rawOwners: 0, strongOwners: 0 });
+    expect(await capture("consumer-signal-dropped")).toMatchObject({ rawOwners: 0, strongOwners: 0, fiberProbe: { rawTargets: 0, strongTargets: 0 } });
     expect(await page.evaluate(() => performance.timeOrigin)).toBe(origin);
     evidence.inputsAfter = await inputs();
     expect(evidence.inputsAfter).toEqual(inputsBefore);
     expect(errors).toEqual([]);
     const held = phases["consumer-signal-held"]!;
     evidence.ownerStatus = held.rawOwners === 0 && held.strongOwners === 0 ? "PASS_SCOPED" : "FAIL_OWNER_RETAINED";
+    const fiber = "fiberProbe" in held ? held.fiberProbe : undefined;
+    if (!fiber) throw new Error("INVALID missing fixed original Fiber evidence");
+    evidence.fiberStatus = fiber.rawTargets === 0 && fiber.strongTargets === 0 ? "PASS_SCOPED_ORIGINAL_FIBER" : "FAIL_ORIGINAL_FIBER_RETAINED";
+    if (fiber.strongTargets === 1) {
+      expect(fiber.strongPath.some(edge => edge.to.name === "system / ErrorStackData")).toBe(true);
+      expect(fiber.strongPath.some(edge => edge.key === "setVersion")).toBe(true);
+      expect(fiber.sourceBindings.some(binding => binding.url.endsWith("/src/react/viewport.ts") && binding.body?.includes("executor.current?.dispose()"))).toBe(true);
+    }
     const mainBundlesAfter = readBrowserBundleEvidence(repository);
     evidence.mainBundles = { before: mainBundlesBefore, after: mainBundlesAfter };
     const cacheUnchanged = JSON.stringify(mainBundlesAfter) === JSON.stringify(mainBundlesBefore);
@@ -105,9 +123,9 @@ test("actual React hook callback owner after unmount while consumer holds defaul
     if (!cacheUnchanged) evidence.status = "FAIL_FIXTURE_CACHE_ISOLATION";
     expect(mainBundlesAfter, "Fixture must preserve the main Playground runtime cache").toEqual(mainBundlesBefore);
     evidence.completed = true;
-    evidence.status = held.rawOwners === 0 && held.strongOwners === 0 ? "PASS_SCOPED" : "FAIL_OWNER_RETAINED";
+    evidence.status = evidence.ownerStatus !== "PASS_SCOPED" ? "FAIL_OWNER_RETAINED" : fiber.rawTargets === 0 && fiber.strongTargets === 0 ? "PASS_SCOPED" : "FAIL_ORIGINAL_FIBER_RETAINED";
     await persist();
-    expect(phases["consumer-signal-held"]).toMatchObject({ rawOwners: 0, strongOwners: 0 });
+    expect(phases["consumer-signal-held"]).toMatchObject({ rawOwners: 0, strongOwners: 0, fiberProbe: { rawTargets: 0, strongTargets: 0 } });
   } catch (error) {
     evidence.executionError = String(error); throw error;
   } finally {

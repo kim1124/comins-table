@@ -127,3 +127,24 @@ it("resumes completed request planning after actual Suspense hide and reveal", a
   expect(requests.map(request => request.startIndex)).toEqual([0, 2]);
   expect(requests[0]!.signal.aborted).toBe(false);
 });
+
+it.each([false, true])("restarts after revision cleanup and ignores late old completion with StrictMode=%s", async strict => {
+  const content = () => strict ? <StrictMode><Harness snapshot={data} /></StrictMode> : <Harness snapshot={data} />;
+  await render(content());
+  expect(requests).toHaveLength(1);
+  data = createCominsViewportData<Row>({ revision: "next-boundary", rowCount: 4, blockSize: 2 });
+  await render(content());
+  expect(requests).toHaveLength(2);
+  expect(requests.map(request => request.signal.aborted)).toEqual([true, false]);
+  observation.retired = true;
+  await act(async () => finish[0]!());
+  observation.retired = false;
+  expect(observation.retiredDispatches).toBe(0);
+  const current = requests[1]!;
+  data = reduceCominsViewportData(data, { type: "request", request: current });
+  data = reduceCominsViewportData(data, { type: "success", request: current, rows: [{ id: 0 }, { id: 1 }] });
+  await render(content());
+  await act(async () => finish[1]!());
+  expect(requests.map(request => [request.revision, request.startIndex])).toEqual([["boundary", 0], ["next-boundary", 0], ["next-boundary", 2]]);
+  expect(current.signal.aborted).toBe(false);
+});
