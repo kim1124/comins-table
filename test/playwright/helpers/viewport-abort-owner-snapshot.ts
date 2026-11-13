@@ -89,8 +89,10 @@ class Snapshot {
 }
 
 
-/** Executor-only L1 regression. Unsupported source/schema evidence is INVALID. */
-export async function readAbortOwnerSnapshot(file: string, scripts: { url: string; sha256: string }[], fixtureURL: string, sdkURL: string, additionalSDKFunctions: { name: string; url: string }[] = []) {
+/** Callback-owner L1 regression. Unsupported source/schema evidence is INVALID. */
+export async function readAbortOwnerSnapshot(file: string, scripts: { url: string; sha256: string }[], fixtureURL: string, sdkURL: string, additionalSDKFunctions: { name: string; url: string }[] = [], target = {
+  sdkFunction: "createViewportRequestExecutor", ownerClass: "CominsAbortCallbackOwner", ownerMarker: "executor-on-settled-owner",
+}) {
   const graph = new Snapshot(JSON.parse(await readFile(file, "utf8")) as Heap);
   const ids = new Map<number, number>();
   for (let i = 0; i < graph.count; i++) ids.set(graph.node(i).id, i);
@@ -129,7 +131,7 @@ export async function readAbortOwnerSnapshot(file: string, scripts: { url: strin
   let rawOwners = 0, strongOwners = 0, sdkFunctions = 0;
   for (let i = 0; i < graph.count; i++) {
     const node = graph.node(i);
-    if (node.type === "closure" && node.name === "createViewportRequestExecutor") {
+    if (node.type === "closure" && node.name === target.sdkFunction) {
       const script = graph.functionScript(i);
       if (script !== null && graph.scriptURL(script) === sdkURL) { verify(script, sdkURL); sdkFunctions++; }
     }
@@ -138,9 +140,9 @@ export async function readAbortOwnerSnapshot(file: string, scripts: { url: strin
       const script = graph.functionScript(i);
       if (script !== null && graph.scriptURL(script) === target.url) { verify(script, target.url); additionalCounts[index]!++; }
     }
-    if (node.type !== "object" || node.name !== "CominsAbortCallbackOwner") continue;
+    if (node.type !== "object" || node.name !== target.ownerClass) continue;
     const marker = graph.field(i, "marker");
-    if (marker === null || graph.node(marker).name !== "executor-on-settled-owner") continue;
+    if (marker === null || graph.node(marker).name !== target.ownerMarker) continue;
     const ctor = graph.required(graph.required(i, "__proto__"), "constructor");
     const script = graph.functionScript(ctor);
     if (script === null) throw new Error("INVALID missing probe constructor Script");

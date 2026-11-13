@@ -1792,6 +1792,19 @@ function createColumnInteractionCleanupEffect(resources: ColumnInteractionResour
   };
 }
 
+function createCominsLazyLoadCleanup(
+  lazyRequestIdRef: { current: number },
+  lazyLoadingReasonRef: { current: CominsLazyLoadReason | null },
+  lazyAbortControllerRef: { current: AbortController | null },
+) {
+  return () => {
+    lazyRequestIdRef.current += 1;
+    lazyLoadingReasonRef.current = null;
+    lazyAbortControllerRef.current?.abort();
+    lazyAbortControllerRef.current = null;
+  };
+}
+
 function CominsTableInner<TData, TGroup>(
   {
     "buffer-size": bufferSize,
@@ -2260,12 +2273,7 @@ function CominsTableInner<TData, TGroup>(
 
     requestLazyLoad("initial");
 
-    return () => {
-      lazyRequestIdRef.current += 1;
-      lazyLoadingReasonRef.current = null;
-      lazyAbortControllerRef.current?.abort();
-      lazyAbortControllerRef.current = null;
-    };
+    return createCominsLazyLoadCleanup(lazyRequestIdRef, lazyLoadingReasonRef, lazyAbortControllerRef);
   }, [filteringRequested, groupingRequested, hasLazyLoadHandler, lazyLoad, resolvedLazyLoadBatchSize]);
 
   useEffect(() => {
