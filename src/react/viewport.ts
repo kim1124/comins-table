@@ -20,6 +20,19 @@ function createViewportRequestConnectionEffect(
   };
 }
 
+function createViewportRequestExecutorCleanup(
+  active: { current: Map<number, CoreActiveViewportRequest & { onRequest: (request: CominsViewportRequest) => void | Promise<void> }> },
+  executor: { current: ReturnType<typeof createViewportRequestExecutor> | null },
+  retryBlocks: { current: Set<number> },
+) {
+  return () => {
+    executor.current?.dispose();
+    executor.current = null;
+    active.current.clear();
+    retryBlocks.current.clear();
+  };
+}
+
 function createViewportRequestExecutorEffect(
   active: { current: Map<number, CoreActiveViewportRequest & { onRequest: (request: CominsViewportRequest) => void | Promise<void> }> },
   executor: { current: ReturnType<typeof createViewportRequestExecutor> | null },
@@ -44,12 +57,7 @@ function createViewportRequestExecutorEffect(
         else connection.current.refreshPending = true;
       },
     });
-    return () => {
-      executor.current?.dispose();
-      executor.current = null;
-      active.current.clear();
-      retryBlocks.current.clear();
-    };
+    return createViewportRequestExecutorCleanup(active, executor, retryBlocks);
   };
 }
 

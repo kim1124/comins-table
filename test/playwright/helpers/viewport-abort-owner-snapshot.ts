@@ -72,6 +72,11 @@ class Snapshot {
     if (value === null) throw new Error(`Missing ${key} on ${this.node(index).name}`);
     return value;
   }
+  size(index: number) {
+    const field = this.fields.self_size;
+    if (field === undefined) throw new Error("Missing heap node size");
+    return this.heap.nodes[index * this.width + field]!;
+  }
   functionScript(index: number) {
     const shared = this.field(index, "shared");
     return shared === null ? null : this.field(shared, "script");
@@ -92,7 +97,7 @@ class Snapshot {
 /** Callback-owner L1 regression. Unsupported source/schema evidence is INVALID. */
 export async function readAbortOwnerSnapshot(file: string, scripts: { url: string; sha256: string }[], fixtureURL: string, sdkURL: string, additionalSDKFunctions: { name: string; url: string }[] = [], target = {
   sdkFunction: "createViewportRequestExecutor", ownerClass: "CominsAbortCallbackOwner", ownerMarker: "executor-on-settled-owner",
-}) {
+}, fiberProbe?: { referenceClass: string; marker: string; expectedTypeName?: string }) {
   const graph = new Snapshot(JSON.parse(await readFile(file, "utf8")) as Heap);
   const ids = new Map<number, number>();
   for (let i = 0; i < graph.count; i++) ids.set(graph.node(i).id, i);
@@ -110,15 +115,19 @@ export async function readAbortOwnerSnapshot(file: string, scripts: { url: strin
     pairs.push({ key, value, table });
   }
   const reached = new Uint8Array(graph.count), queue = [0]; reached[0] = 1;
+  const parents = fiberProbe ? new Map<number, { from: number; key: string; type: string }>() : undefined;
   let cursor = 0, progress = true;
   while (progress) {
-    while (cursor < queue.length) for (const edge of graph.edges(queue[cursor++]!)) {
-      if (["weak", "shortcut"].includes(edge.type) || edge.key.includes("part of key")) continue;
-      if (!reached[edge.to]) { reached[edge.to] = 1; queue.push(edge.to); }
+    while (cursor < queue.length) {
+      const from = queue[cursor++]!;
+      for (const edge of graph.edges(from)) {
+        if (["weak", "shortcut"].includes(edge.type) || edge.key.includes("part of key")) continue;
+        if (!reached[edge.to]) { reached[edge.to] = 1; parents?.set(edge.to, { from, key: edge.key, type: edge.type }); queue.push(edge.to); }
+      }
     }
     progress = false;
     for (const pair of pairs) if (reached[pair.key] && reached[pair.table] && !reached[pair.value]) {
-      reached[pair.value] = 1; queue.push(pair.value); progress = true;
+      reached[pair.value] = 1; parents?.set(pair.value, { from: pair.key, key: "conditional ephemeron (key and table reached)", type: "conditional-ephemeron" }); queue.push(pair.value); progress = true;
     }
   }
   const verified = new Set<string>();
@@ -151,5 +160,54 @@ export async function readAbortOwnerSnapshot(file: string, scripts: { url: strin
   }
   if (sdkFunctions !== 1) throw new Error(`INVALID SDK function count ${sdkFunctions}`);
   if (additionalCounts.some(count => count !== 1)) throw new Error(`INVALID additional SDK function counts ${additionalCounts}`);
-  return { rawOwners, strongOwners, sdkFunctions, opaqueNativeEphemerons, verified: [...verified] };
+  const base = { rawOwners, strongOwners, sdkFunctions, opaqueNativeEphemerons, verified: [...verified] };
+  if (!fiberProbe) return base;
+  const references: number[] = [];
+  for (let i = 0; i < graph.count; i++) {
+    const node = graph.node(i), marker = graph.field(i, "marker");
+    if (node.type !== "object" || node.name !== fiberProbe.referenceClass || marker === null || graph.node(marker).name !== fiberProbe.marker) continue;
+    const ctor = graph.required(graph.required(i, "__proto__"), "constructor"), script = graph.functionScript(ctor);
+    if (script === null) throw new Error("INVALID missing fixed WeakRef constructor source");
+    verify(script, fixtureURL); references.push(i);
+  }
+  if (references.length !== 1 || !reached[references[0]!]) throw new Error("INVALID fixed WeakRef must be unique and strongly registered");
+  const weakEdges = graph.edges(references[0]!).filter(edge => edge.type === "weak" && ["target", "weak_target"].includes(edge.key));
+  if (weakEdges.length > 1) throw new Error("INVALID ambiguous fixed WeakRef target");
+  const original = weakEdges[0]?.to;
+  if (fiberProbe.expectedTypeName) {
+    if (original === undefined || graph.node(original).name !== "FiberNode") throw new Error("INVALID missing initial actual Fiber target");
+    const type = graph.required(original, "type"), typeNode = graph.node(type), script = graph.functionScript(type);
+    if (typeNode.type !== "closure" || typeNode.name !== fiberProbe.expectedTypeName || script === null) throw new Error("INVALID initial Fiber type");
+    verify(script, fixtureURL);
+  }
+  const strongPath: { from: ReturnType<Snapshot["node"]>; key: string; type: string; to: ReturnType<Snapshot["node"]> }[] = [];
+  if (original !== undefined && reached[original]) {
+    let current = original;
+    while (current !== 0) {
+      const parent = parents!.get(current);
+      if (!parent || strongPath.length > graph.count) throw new Error("INVALID strong path parent");
+      strongPath.push({ from: graph.node(parent.from), key: parent.key, type: parent.type, to: graph.node(current) }); current = parent.from;
+    }
+    strongPath.reverse();
+  }
+  const sourceBindings = [];
+  for (const index of new Set(strongPath.flatMap(edge => [edge.from.index, edge.to.index]))) {
+    if (graph.node(index).type !== "closure") continue;
+    const script = graph.functionScript(index); if (script === null) continue;
+    const url = graph.scriptURL(script);
+    if (!scripts.some(item => item.url === url)) continue;
+    verify(script, url);
+    const shared = graph.required(index, "shared");
+    const position = (key: string) => {
+      const number = graph.field(shared, key), value = number === null ? null : graph.field(number, "value");
+      return value === null || !/^\d+$/u.test(graph.node(value).name) ? null : Number(graph.node(value).name);
+    };
+    const start = position("start_position"), end = position("end_position");
+    sourceBindings.push({ node: graph.node(index), url, sha256: digest(graph.scriptSource(script)), start, end,
+      body: start === null || end === null ? null : graph.scriptSource(script).slice(start, end) });
+  }
+  return { ...base, verified: [...verified], fiberProbe: { marker: fiberProbe.marker, references: 1, rawTargets: original === undefined ? 0 : 1,
+    strongTargets: original !== undefined && reached[original] ? 1 : 0,
+    target: original === undefined ? null : { ...graph.node(original), bytes: graph.size(original) }, weakEdge: weakEdges[0]?.key ?? null,
+    strongPath, sourceBindings } };
 }
