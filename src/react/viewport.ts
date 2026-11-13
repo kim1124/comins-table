@@ -20,23 +20,14 @@ function createViewportRequestConnectionEffect(
   };
 }
 
-let nextRequestId = 0;
-export function useCominsViewportRequests<T>(input: {
-  data?: CominsViewportData<T>;
-  range: CominsViewportRange;
-  maxConcurrentRequests?: number;
-  onRequest?: (request: CominsViewportRequest) => void | Promise<void>;
-  onChangeData?: (data: CominsViewportData<T>) => void;
-}) {
-  const active = useRef(new Map<number, CoreActiveViewportRequest & { onRequest: NonNullable<typeof input.onRequest> }>());
-  const executor = useRef<ReturnType<typeof createViewportRequestExecutor> | null>(null);
-  const retryBlocks = useRef(new Set<number>());
-  const [version, setVersion] = useState(0);
-  const connection = useRef<ViewportRequestConnection>({ connected: false, refreshPending: false });
-  useCominsLayoutEffect(createViewportRequestConnectionEffect(connection, setVersion), []);
-  const { data, onRequest, onChangeData } = input;
-  const start = input.range.startIndex, end = input.range.endIndex;
-  useEffect(() => {
+function createViewportRequestExecutorEffect(
+  active: { current: Map<number, CoreActiveViewportRequest & { onRequest: (request: CominsViewportRequest) => void | Promise<void> }> },
+  executor: { current: ReturnType<typeof createViewportRequestExecutor> | null },
+  retryBlocks: { current: Set<number> },
+  connection: { current: ViewportRequestConnection },
+  setVersion: Dispatch<SetStateAction<number>>,
+) {
+  return () => {
     executor.current = createViewportRequestExecutor({
       onRequest(request) {
         const entry = active.current.get(request.startIndex);
@@ -59,7 +50,26 @@ export function useCominsViewportRequests<T>(input: {
       active.current.clear();
       retryBlocks.current.clear();
     };
-  }, [data?.revision, data?.rowCount, data?.blockSize]);
+  };
+}
+
+let nextRequestId = 0;
+export function useCominsViewportRequests<T>(input: {
+  data?: CominsViewportData<T>;
+  range: CominsViewportRange;
+  maxConcurrentRequests?: number;
+  onRequest?: (request: CominsViewportRequest) => void | Promise<void>;
+  onChangeData?: (data: CominsViewportData<T>) => void;
+}) {
+  const active = useRef(new Map<number, CoreActiveViewportRequest & { onRequest: NonNullable<typeof input.onRequest> }>());
+  const executor = useRef<ReturnType<typeof createViewportRequestExecutor> | null>(null);
+  const retryBlocks = useRef(new Set<number>());
+  const [version, setVersion] = useState(0);
+  const connection = useRef<ViewportRequestConnection>({ connected: false, refreshPending: false });
+  useCominsLayoutEffect(createViewportRequestConnectionEffect(connection, setVersion), []);
+  const { data, onRequest, onChangeData } = input;
+  const start = input.range.startIndex, end = input.range.endIndex;
+  useEffect(createViewportRequestExecutorEffect(active, executor, retryBlocks, connection, setVersion), [data?.revision, data?.rowCount, data?.blockSize]);
   useEffect(() => {
     if (!data || !onRequest || !executor.current) return;
     const range = { startIndex: start, endIndex: end };

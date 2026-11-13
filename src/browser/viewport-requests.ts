@@ -30,6 +30,7 @@ export function createViewportRequestExecutor(options: {
   onRequest: (request: CominsViewportRequest) => void | Promise<void>;
   onSettled: (requestId: string) => void;
 }) {
+  let liveOptions: typeof options | undefined = options;
   const active = new Map<string, { controller: AbortController; done: boolean }>();
   let disposed = false;
   const cancel = (requestId: string) => {
@@ -46,11 +47,11 @@ export function createViewportRequestExecutor(options: {
       const request = { ...descriptor, signal: controller.signal };
       active.set(descriptor.requestId, entry);
       const execution = Promise.resolve().then(() => {
-        if (!controller.signal.aborted) return options.onRequest(request);
+        if (!controller.signal.aborted) return liveOptions?.onRequest(request);
       });
       void settleRequestCompletion(execution, controller.signal, () => {
         entry.done = true;
-        options.onSettled(descriptor.requestId);
+        liveOptions?.onSettled(descriptor.requestId);
       });
     },
     cancel,
@@ -61,6 +62,8 @@ export function createViewportRequestExecutor(options: {
     dispose() {
       if (disposed) return;
       disposed = true;
+      // Native abort reasons may retain this scope through their synchronous error stack.
+      liveOptions = undefined;
       for (const requestId of active.keys()) cancel(requestId);
     },
   };
