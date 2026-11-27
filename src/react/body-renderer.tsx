@@ -16,7 +16,9 @@ import type { createCominsDetailFocusRestorer } from "../browser/scroll";
 import type { CominsHeaderRenderEnvironment } from "./header-renderer";
 import { CominsRowDetailRow, CominsRowDetailToggle } from "../row-detail";
 import { CominsTableIconButton } from "../table-icons";
-import { getCominsCellValue, isCominsCellInSelectedRange, isCominsCellSelected, selectCell, selectCellRange, selectRow, selectRows, updateCominsRows } from "./core-compat";
+import { isCominsCellInSelectedRange, isCominsCellSelected, selectCell, selectCellRange, selectRow, selectRows, updateCominsRows } from "./core-compat";
+import { getNestedFieldValue } from "../core/state/access";
+import type { getCellRangeMembership } from "../core/selection/state";
 import { setCominsNestedInputValue } from "../row-value";
 
 // Shared with the adapter formatter; remains a single private module sentinel.
@@ -31,13 +33,18 @@ type RowGroupMoveState = { position: "after" | "append" | "before"; sourceGroupI
 type TreeRenderContext<TData> = { drag: ReturnType<typeof useCominsTreeDrag<TData>>; entriesByRowId: Map<CominsRowId, CominsVisibleTreeRow<TData>>; onToggle: (rowId: CominsRowId) => void; treeColumnId: string | null; slots?: CominsTreeSlots<TData> };
 
 /** Render-local output; read at the original tooltip JSX position only. */
+function getCellTooltipKey(rowId: CominsRowId, columnId: string) {
+  return JSON.stringify([typeof rowId, rowId, columnId]);
+}
+
 export type CominsBodyRenderOutput = { activeCellTooltipContent: React.ReactNode };
 export type CominsBodyRenderEnvironment<TData, TGroup> = {
   state: CominsTableState<TData>;
   rowWindow: { mixed: boolean; scrollHeight: number; slots: CominsVirtualSlot<TData>[] };
   orderedGroupModel: CominsGroupModel<TGroup> | null;
   expandedGroupIdSet: ReadonlySet<CominsRowId>;
-  fullProjectionSlots: readonly CominsVirtualSlot<TData>[];
+  lastProjectionSlotKey: string | undefined;
+  rangeMembership: ReturnType<typeof getCellRangeMembership>;
   containerHeight: number;
   virtualized: boolean;
   emptyFillerHeight: number;
@@ -138,7 +145,7 @@ export function renderCominsBodySlot<TData, TGroup>(
     rowWindow,
     orderedGroupModel,
     expandedGroupIdSet,
-    fullProjectionSlots,
+    lastProjectionSlotKey,
     containerHeight,
     virtualized,
     emptyFillerHeight,
@@ -224,7 +231,7 @@ export function renderCominsBodySlot<TData, TGroup>(
 
     const expanded = expandedGroupIdSet.has(slot.groupId);
     const isLastRenderedSlot = entryIndex === rowWindow.slots.length - 1;
-    const isLastLogicalSlot = fullProjectionSlots.at(-1)?.key === slot.key;
+    const isLastLogicalSlot = lastProjectionSlotKey === slot.key;
     const virtualContentFillsViewport = rowWindow.scrollHeight >= containerHeight - 1;
     const isViewportEndRow =
       isLastRenderedSlot &&
@@ -347,7 +354,7 @@ export function renderCominsBodySlot<TData, TGroup>(
   const rowRuntimeProps = resolveRowProps(effectiveRowProps, entry.row, entry.visibleIndex);
   const isRowSelected = selectedRowIdSet.has(entry.rowId);
   const isLastRenderedSlot = entryIndex === rowWindow.slots.length - 1;
-  const isLastLogicalRow = fullProjectionSlots.at(-1)?.key === entry.key;
+  const isLastLogicalRow = lastProjectionSlotKey === entry.key;
   const virtualContentFillsViewport = rowWindow.scrollHeight >= containerHeight - 1;
   const isViewportEndRow =
     isLastRenderedSlot &&
@@ -360,7 +367,7 @@ export function renderCominsBodySlot<TData, TGroup>(
       ? entry.key
       : virtualized
         ? `virtual-row-slot-${entryIndex}`
-        : String(entry.rowId);
+        : entry.key;
   const rowDetailParams: CominsRowDetailParams<TData> = { row: createEventRow(entry) };
   const rowDetailExpandable = rowDetailEnabled && (isRowExpandable?.(rowDetailParams) ?? true);
   const rowDetailExpanded = rowDetailExpandable && effectiveExpandedRowIdSet.has(entry.rowId);
@@ -485,7 +492,6 @@ export function renderCominsDataCell<TData, TGroup>(
     rowWindow,
     orderedGroupModel,
     expandedGroupIdSet,
-    fullProjectionSlots,
     containerHeight,
     virtualized,
     emptyFillerHeight,
@@ -564,13 +570,10 @@ export function renderCominsDataCell<TData, TGroup>(
   } = env;
   const { entry, actualRowStyleHeight, rowRuntimeProps, isRowSelected, rowDetailContentId, rowDetailToggleId, rowDetailExpandable, rowDetailExpanded } = view;
   const pinnedColumn = getPinnedColumnAttributes(column.id);
-  const rawValue = getCominsCellValue(state, entry.row, column.id);
+  const rawValue = getNestedFieldValue(entry.row, column.field);
   const address = { columnId: column.id, rowId: entry.rowId };
-  const isCellInRange = cellSelection && isCominsCellInSelectedRange(
-    state,
-    address,
-    getSelectionRowOrder(),
-  );
+  const isCellInRange = env.rangeMembership?.rowIds.has(address.rowId) === true &&
+    env.rangeMembership.columnIds.has(address.columnId);
   const isCellSelected = cellSelection && isCominsCellSelected(state, address);
   // 기본 셀은 콜백용 payload를 사용하지 않으므로 설정이 있을 때만 생성한다.
   const cellPayload = column.cell ? createCellComponentPayload(
@@ -584,7 +587,11 @@ export function renderCominsDataCell<TData, TGroup>(
   ) : undefined;
   const cellProps = cellPayload ? resolveRenderableCellProps(column, cellPayload) : undefined;
   const cellDisabled = rowRuntimeProps.disabled || (cellPayload !== undefined && isRenderableCellDisabled(cellProps, cellPayload));
-  const componentInteraction: CominsBuiltInComponentInteraction = {
+  const cellClassName = cellPayload ? toClassName(getRenderableCellClassName(cellProps, cellPayload)) : undefined;
+  const cellStyle = cellPayload ? getRenderableCellStyle(cellProps, cellPayload) : undefined;
+  const hasCellComponents = Boolean(column.cell?.components?.length);
+  const componentInteraction: CominsBuiltInComponentInteraction | undefined = hasCellComponents ? {
+    cellDisabled,
     requestRowSelection: ({ event, mode }) => {
       if (cellDisabled) {
         return false;
@@ -599,10 +606,7 @@ export function renderCominsDataCell<TData, TGroup>(
       selectRowFromInteraction(event, entry);
       return true;
     },
-  };
-  const cellClassName = cellPayload ? toClassName(getRenderableCellClassName(cellProps, cellPayload)) : undefined;
-  const cellStyle = cellPayload ? getRenderableCellStyle(cellProps, cellPayload) : undefined;
-  const hasCellComponents = Boolean(column.cell?.components?.length);
+  } : undefined;
   const configuredCellValue = cellPayload ? formatRenderableCellValue(column, cellPayload) : deferredDefaultCellValue;
   const cellComponents = column.cell?.components?.map((component) => {
     if (component.type !== "input") {
@@ -636,19 +640,25 @@ export function renderCominsDataCell<TData, TGroup>(
       ? rawValue == null ? "" : String(rawValue)
       : undefined
     : configuredCellValue;
+  const hasLeadingRowControls = columnIndex === 0 && (rowDetailEnabled || rowRuntimeProps.draggable);
+  const isFillHandleCell = !cellDisabled && cellFill.handleAddress?.rowId === address.rowId &&
+    cellFill.handleAddress.columnId === address.columnId;
+  const renderPlainTextDirectly = column.cell === undefined && !treeContext && !hasLeadingRowControls &&
+    !getRowHeight && !isFillHandleCell && !onClickCell && !onContextMenuCell && !onDoubleClickCell &&
+    !onClickRow && !onContextMenuRow && !onDoubleClickRow;
   const cellContent = !useDefaultCellContent ? customCellContent : hasCellComponents ? (
     renderCominsContentWithComponents(formattedCellValue, cellComponents, cellPayload!, {
       interaction: componentInteraction,
       showContent: false,
     })
   ) : (
-    <span className="comins-table__cell-value">{formattedCellValue}</span>
+    renderPlainTextDirectly ? formattedCellValue : <span className="comins-table__cell-value">{formattedCellValue}</span>
   );
   const tooltip =
     typeof column.cell?.tooltip === "function" ? column.cell.tooltip(cellPayload!) : column.cell?.tooltip;
   const tooltipConfig = column.cell?.tooltip;
   const customTooltip = typeof tooltipConfig === "object" && tooltipConfig !== null ? tooltipConfig : undefined;
-  const tooltipKey = JSON.stringify([typeof entry.rowId, entry.rowId, column.id]);
+  const tooltipKey = customTooltip?.render ? getCellTooltipKey(entry.rowId, column.id) : undefined;
   if (cellTooltip.active?.ready && cellTooltip.active.key === tooltipKey && customTooltip?.render) {
     output.activeCellTooltipContent = customTooltip.render(cellPayload!);
   }
@@ -699,6 +709,7 @@ export function renderCominsDataCell<TData, TGroup>(
         "comins-table__td px-3 py-2",
         isCellInRange ? "comins-cell-range-selected" : undefined,
         cellFill.isPreview(address) ? "comins-cell-fill-preview" : undefined,
+        renderPlainTextDirectly ? "comins-table__td--plain-text" : undefined,
         cellClassName,
       ]
         .filter(Boolean)
@@ -823,9 +834,9 @@ export function renderCominsDataCell<TData, TGroup>(
 
         onDoubleClickCell?.(createCellPayload(event, entry, column, columnIndex, rawValue));
       }}
-      data-comins-tooltip-key={customTooltip?.render ? tooltipKey : undefined}
-      onFocusCapture={(event) => { if (customTooltip?.render) cellTooltip.enter(tooltipKey, event.currentTarget, "focus"); }}
-      onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) cellTooltip.leave(tooltipKey, "focus"); }}
+      data-comins-tooltip-key={tooltipKey}
+      onFocusCapture={tooltipKey === undefined ? undefined : event => cellTooltip.enter(tooltipKey, event.currentTarget, "focus")}
+      onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) cellTooltip.leave(tooltipKey ?? getCellTooltipKey(entry.rowId, column.id), "focus"); }}
       onKeyDown={(event) => handleCellKeyDown(event, entry, column, columnIndex, address, cellDisabled)}
       onMouseDown={(event) => beginCellRangeDrag(event, address, cellDisabled)}
       onMouseOver={(event) => {
@@ -836,12 +847,12 @@ export function renderCominsDataCell<TData, TGroup>(
       onMouseUp={endCellRangeDrag}
       onPointerDown={(event) => beginCellRangePointerDrag(event, address, cellDisabled)}
       onPointerEnter={(event) => {
-        if (customTooltip?.render && event.buttons === 0) cellTooltip.enter(tooltipKey, event.currentTarget, "hover");
+        if (tooltipKey !== undefined && event.buttons === 0) cellTooltip.enter(tooltipKey, event.currentTarget, "hover");
         if (event.buttons === 1) {
           updateCellRangeDrag(address);
         }
       }}
-      onPointerLeave={() => cellTooltip.leave(tooltipKey, "hover")}
+      onPointerLeave={() => cellTooltip.leave(tooltipKey ?? getCellTooltipKey(entry.rowId, column.id), "hover")}
       onPointerMove={(event) => {
         if (event.buttons === 1) {
           updateCellRangeDrag(address);
@@ -852,7 +863,9 @@ export function renderCominsDataCell<TData, TGroup>(
       title={typeof tooltip === "string" ? tooltip : undefined}
       tabIndex={cellDisabled ? -1 : 0}
     >
-      {columnIndex === 0 && (rowDetailEnabled || rowRuntimeProps.draggable) ? (
+      {renderPlainTextDirectly ? formattedCellValue : (
+        <>
+          {hasLeadingRowControls ? (
         <div className="comins-row-cell-content">
           <span className="comins-row-leading-controls">
             {rowDetailEnabled ? (
@@ -912,7 +925,9 @@ export function renderCominsDataCell<TData, TGroup>(
       ) : (
         renderedCellContent
       )}
-      {!cellDisabled && cellFill.handleAddress?.rowId === address.rowId && cellFill.handleAddress.columnId === address.columnId ? cellFill.handle : null}
+          {isFillHandleCell ? cellFill.handle : null}
+        </>
+      )}
     </td>
   );
 }

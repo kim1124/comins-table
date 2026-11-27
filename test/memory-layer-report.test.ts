@@ -43,6 +43,9 @@ it("writes a legacy numeric FAIL attachment separately from the failed test exec
     expect(output.numericBudget).toBe("FAIL");
     expect(output.executionsByLayer.legacy).toEqual({ failed: 1 });
     expect(output.releaseMemoryGate).toBe("BLOCKED");
+    const ordinary = new Reporter();
+    ordinary.onEnd({ status: "passed" } as any);
+    expect(JSON.parse(readFileSync(process.env.MEMORY_LAYER_REPORT, "utf8"))).toEqual(output);
   } finally {
     if (previous === undefined) delete process.env.MEMORY_LAYER_REPORT;
     else process.env.MEMORY_LAYER_REPORT = previous;

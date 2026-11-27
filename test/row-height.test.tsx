@@ -62,6 +62,22 @@ describe("business Row height", () => {
     expect(measurements.size).toBe(0);
   });
 
+  it("discards measurements from retired layout and content generations", () => {
+    const row = { id: "a" };
+    const current = { layoutKey: "wide", contentRevision: {} };
+    const measurement = { row, height: 72, ...current };
+    const measurements = new Map([[row.id, measurement]]);
+    reconcileCominsRowMeasurements(measurements, [row.id], [row], current);
+    expect(measurements.get(row.id)).toBe(measurement);
+
+    reconcileCominsRowMeasurements(measurements, [row.id], [row], { ...current, contentRevision: {} });
+    expect(measurements.size).toBe(0);
+
+    measurements.set(row.id, measurement);
+    reconcileCominsRowMeasurements(measurements, [row.id], [row], { ...current, layoutKey: "narrow" });
+    expect(measurements.size).toBe(0);
+  });
+
   it("normalizes defaults and uses measurements only for the same data and layout", () => {
     const row = { id: "a" };
     const contentRevision = {};

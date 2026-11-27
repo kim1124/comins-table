@@ -3,9 +3,15 @@ import { act, Children } from "react";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter, useLocation, useNavigate, type NavigateFunction } from "react-router";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import * as router from "react-router";
 import { DocsShell } from "../example/src/components/docs/DocsShell";
 import * as article from "../example/src/components/docs/DocsArticle";
 import { PLAYGROUND_LOCALE_STORAGE_KEY, PlaygroundLocaleProvider } from "../example/src/i18n/playground-locale";
+
+vi.mock(import("react-router"), async (importOriginal) => {
+  const original = await importOriginal();
+  return { ...original, useRoutes: vi.fn(original.useRoutes) };
+});
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 let root: ReturnType<typeof createRoot>;
@@ -106,4 +112,19 @@ it("reuses route definitions across navigation and rebuilds them when locale cha
   await act(async () => { await navigate("/api/props/"); });
   expect(routeConversions.mock.calls.length).toBe(localizedConversions);
   expect(host.querySelector("input[type=search]")!.getAttribute("aria-label")).toBe("전체 문서 검색");
+});
+
+it("renders canonical documents directly and preserves fallback matching", async () => {
+  const match = vi.mocked(router.useRoutes);
+  match.mockClear();
+  await mount();
+  expect(match).not.toHaveBeenCalled();
+
+  await act(async () => { await navigate("/API/PROPS/"); });
+  expect(match.mock.lastCall?.[0].length).toBeGreaterThan(1);
+  expect(host.querySelector(".docs-article h1")?.textContent).toBe("Props");
+
+  await act(async () => { await navigate("/examples/basic"); });
+  expect(host.querySelector("output")!.dataset.path).toBe("/docs/getting-started");
+  expect(match.mock.lastCall?.[0].some(route => route.path === "/examples/basic")).toBe(true);
 });

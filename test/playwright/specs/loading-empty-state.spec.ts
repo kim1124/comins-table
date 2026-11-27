@@ -201,3 +201,9 @@ test("lazy load integration maps remote data and ignores a stale empty response"
     for (const request of lazyRequests) request.release();
   }
 });
+
+test("regression: a failed request is shown as an error rather than an empty success", async ({ page }) => {
+  await page.route("https://dummyjson.com/**", route => route.fulfill({ status: 503, json: { message: "Unavailable" } }));
+  await page.goto("/examples/loading");
+  await expect(page.getByTestId("loading-request-error")).toBeVisible({ timeout: 3000 });
+});

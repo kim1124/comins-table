@@ -167,3 +167,24 @@ test("ordinary cell clicks preserve native renderer button focus", async ({ page
   await expect(page.getByTestId("cell-a-locked")).toBeFocused();
   expect(diagnostics).toEqual([]);
 });
+
+test("regression: pastes text into an editable selection sample cell", async ({ page }) => {
+  await page.goto("/examples/selection-clipboard");
+  const cell = page.getByTestId("cell-a-name");
+  await cell.click();
+  await cell.evaluate(node => {
+    const clipboardData = new DataTransfer();
+    clipboardData.setData("text/plain", "Replaced");
+    node.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData }));
+  });
+  await expect(cell).toHaveText("Replaced", { timeout: 3000 });
+});
+
+test("regression: outside clicks dismiss the selection context menu", async ({ page }) => {
+  await page.goto("/examples/selection-clipboard");
+  await page.getByTestId("cell-a-name").click({ button: "right" });
+  const menu = page.getByRole("menu");
+  await expect(menu).toHaveCount(1);
+  await page.locator("h1").click();
+  await expect(menu).toHaveCount(0, { timeout: 3000 });
+});

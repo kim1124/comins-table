@@ -7,11 +7,11 @@ test("export helper example renders CSV and JSON output", async ({ page }) => {
   await expect(page.locator("h1", { hasText: "내보내기 헬퍼" })).toBeVisible();
   await expect(page.getByTestId("export-viewport").locator("tbody tr[data-comins-row-data-index]")).toHaveCount(30);
   await expect(page.getByTestId("export-output")).toContainText("name,age,role");
-  await expect(page.getByTestId("export-output")).toContainText("Data 1,Data 1,Owner");
+  await expect(page.getByTestId("export-output")).toContainText("Data 1,31,Owner");
 
   await page.locator('[data-feature-option="export"]').getByRole("button", { exact: true, name: "JSON" }).click();
   await expect(page.getByTestId("export-output")).toContainText('"name": "Data 1"');
-  await expect(page.getByTestId("export-output")).toContainText('"age": "Data 1"');
+  await expect(page.getByTestId("export-output")).toContainText('"age": 31');
 });
 
 test("CSV file import replaces rows atomically and downloads round-trip data", async ({ page }) => {

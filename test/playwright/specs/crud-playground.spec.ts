@@ -92,3 +92,14 @@ test("CRUD example adds every click, updates active row JSON, and deletes select
 
   expect(diagnostics).toEqual([]);
 });
+
+test("regression: reset clears table selection and allows the next delete", async ({ page }) => {
+  await page.goto("/examples/crud");
+  await page.getByTestId("cell-a-column1").click();
+  await expect(page.getByTestId("row-a")).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("button", { name: "초기화", exact: true }).click();
+  await expect(page.getByTestId("row-a")).not.toHaveAttribute("aria-selected", "true", { timeout: 3000 });
+  await page.getByTestId("cell-a-column1").click();
+  await page.getByRole("button", { name: "삭제", exact: true }).click();
+  await expect(page.getByTestId("row-a")).toHaveCount(0);
+});

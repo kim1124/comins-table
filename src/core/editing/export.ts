@@ -47,7 +47,7 @@ function escapeCominsCsvCell(value: unknown) {
 }
 
 function getCominsExportHeader<TData>(column: CominsExportColumn<TData>, headerOverrides?: Record<string, string>) {
-  if (column.id && headerOverrides?.[column.id] !== undefined) {
+  if (column.id && headerOverrides && Object.hasOwn(headerOverrides, column.id) && headerOverrides[column.id] !== undefined) {
     return headerOverrides[column.id];
   }
 

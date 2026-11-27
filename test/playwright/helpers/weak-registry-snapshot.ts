@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 type Heap = {
-  snapshot: { node_count: number; meta: {
+  snapshot: { node_count: number; edge_count: number; meta: {
     node_fields: string[]; edge_fields: string[];
     node_types: (string[] | string)[]; edge_types: (string[] | string)[];
   } };
@@ -24,23 +24,35 @@ export async function readWeakRegistrySnapshot(file: string, field: string, held
   const nodeTypes = meta.node_types[nf.type!] as string[];
   const edgeTypes = meta.edge_types[ef.type!] as string[];
   if (!Array.isArray(nodeTypes) || !Array.isArray(edgeTypes)) throw new Error("Unsupported heap types");
-  const count = heap.snapshot.node_count;
+  const { node_count: count, edge_count: edgeCount } = heap.snapshot;
+  if (!Number.isSafeInteger(count) || count < 1 || heap.nodes.length !== count * width ||
+    !Number.isSafeInteger(edgeCount) || edgeCount < 0 || heap.edges.length !== edgeCount * edgeWidth || nodeTypes[heap.nodes[nf.type!]!] !== "synthetic") {
+    throw new Error("Invalid heap layout or root");
+  }
   const offsets = new Uint32Array(count + 1), ids = new Map<string, number>();
   const type = (i: number) => nodeTypes[heap.nodes[i * width + nf.type!]!]!;
   const name = (i: number) => heap.strings[heap.nodes[i * width + nf.name!]!]!;
   for (let i = 0; i < count; i++) {
-    offsets[i + 1] = offsets[i]! + heap.nodes[i * width + nf.edge_count!]! * edgeWidth;
+    const edgeCount = heap.nodes[i * width + nf.edge_count!]!;
+    const nextOffset = offsets[i]! + edgeCount * edgeWidth;
+    if (!Number.isSafeInteger(edgeCount) || edgeCount < 0 || nextOffset > heap.edges.length) {
+      throw new Error("Invalid heap edge count");
+    }
+    offsets[i + 1] = nextOffset;
     const id = heap.nodes[i * width + nf.id!]!;
     if (!Number.isSafeInteger(id)) throw new Error("Unsupported heap object ID");
     ids.set(String(id), i);
   }
+  if (offsets[count] !== heap.edges.length) throw new Error("Invalid heap edge offsets");
   const edge = (i: number) => {
     const kind = edgeTypes[heap.edges[i + ef.type!]!]!;
     const raw = heap.edges[i + ef.name_or_index!]!;
     const key = ["element", "hidden"].includes(kind) ? String(raw) : heap.strings[raw] ?? (kind === "weak" ? String(raw) : undefined);
-    if (key === undefined) throw new Error("Unsupported heap edge name");
-    return { kind, key,
-      to: heap.edges[i + ef.to_node!]! / width };
+    const to = heap.edges[i + ef.to_node!]! / width;
+    if (!kind || key === undefined || !Number.isInteger(to) || to < 0 || to >= count) {
+      throw new Error("Invalid heap edge");
+    }
+    return { kind, key, to };
   };
   const conditional: { key: number; value: number; table: number }[] = [];
   let opaqueNativeEphemeronEdges = 0;

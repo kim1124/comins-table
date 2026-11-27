@@ -65,4 +65,43 @@ describe("lazy append cleanup boundary", () => {
     expect(receivers).toEqual([undefined, undefined]);
     await act(async () => { finish[1]!(); });
   });
+
+  it("blocks a scroll request dispatched synchronously by an abort listener during cleanup", async () => {
+    const requests: CominsLazyLoadRequest[] = [];
+    const finish: Array<() => void> = [];
+    function onLazyLoad(request: CominsLazyLoadRequest) {
+      requests.push(request);
+      if (requests.length === 1) {
+        request.signal.addEventListener("abort", () => {
+          host!.querySelector('[data-testid="lazy-append-viewport"]')!
+            .dispatchEvent(new Event("scroll"));
+        }, { once: true });
+      }
+      return new Promise<void>(resolve => finish.push(resolve));
+    }
+
+    createHost();
+    const render = (size: number) => act(async () => {
+      root!.render(<CominsTable columns={columns} data={rows} getRowId={getRowId}
+        data-testid="lazy-append-viewport" lazyLoad lazyLoadMode="append" hasMoreRows
+        lazyLoadBatchSize={size} onLazyLoad={onLazyLoad} />);
+    });
+
+    try {
+      await render(1);
+      await render(2);
+      expect(requests.map(({ reason, limit, signal }) => [reason, limit, signal.aborted]))
+        .toEqual([["initial", 1, true], ["initial", 2, false]]);
+
+      act(() => root!.unmount());
+      root = undefined;
+      expect(requests[1]!.signal.aborted).toBe(true);
+    } finally {
+      if (root) {
+        act(() => root!.unmount());
+        root = undefined;
+      }
+      await act(async () => { finish.forEach(resolve => resolve()); });
+    }
+  });
 });

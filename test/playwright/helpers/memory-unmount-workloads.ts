@@ -1,11 +1,14 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { createLoadingWorkload } from "./memory-loading-workload";
+import { exerciseColumnGroupLayout } from "./column-group-layout-workload";
 
 export const unmountScenarios = [
   "cross-table-drag-gesture-unmount", "loading-pending-unmount", "portal-menu-tooltip-teardown-case8",
   "column-groups-open-ui-unmount", "selection-clipboard-gesture-unmount", "column-filtering-open-ui-unmount-case2",
 ] as const;
-export type UnmountScenario = typeof unmountScenarios[number];
+// Additional L3 counter coverage; keep the existing L2 sample inventory unchanged.
+export const numericUnmountScenarios = [...unmountScenarios, "column-groups-layout-operations-unmount"] as const;
+export type UnmountScenario = typeof numericUnmountScenarios[number];
 type Navigation = { enter: () => Promise<void>; leave: () => Promise<void> };
 const modifier = process.platform === "darwin" ? "Meta" : "Control";
 const selectedRows = ["a", "b", "c", "row-3", "row-4"];
@@ -131,6 +134,7 @@ export async function createUnmountWorkload(page: Page, scenario: UnmountScenari
     "loading-pending-unmount": "/examples/loading",
     "portal-menu-tooltip-teardown-case8": "/examples/cell",
     "column-groups-open-ui-unmount": "/examples/column-groups",
+    "column-groups-layout-operations-unmount": "/examples/column-groups",
     "selection-clipboard-gesture-unmount": "/examples/selection-clipboard",
     "column-filtering-open-ui-unmount-case2": "/examples/column-filtering",
   };
@@ -142,6 +146,12 @@ export async function createUnmountWorkload(page: Page, scenario: UnmountScenari
         .evaluateAll(tables => tables.map(table => table.querySelectorAll("tr[data-comins-row-data-index]").length));
       expect(counts).toEqual([2, 22, 1, 1]);
     }
+    if (scenario === "column-groups-layout-operations-unmount") {
+      await expect(page.locator("[data-comins-table-instance-id]")).toHaveCount(2);
+      await expect(page.locator("tr[data-comins-row-data-index]")).toHaveCount(60);
+      await page.getByTestId("header-example-groups").scrollIntoViewIfNeeded();
+      await page.getByTestId("header-example-groups").getByRole("button", { name: "Reset", exact: true }).focus();
+    }
     if (loading) await loading.ready();
     if (scenario === "selection-clipboard-gesture-unmount") await expect(page.getByTestId("selection-clipboard-viewport").locator("tr[data-comins-row-data-index]")).toHaveCount(30);
   };
@@ -150,6 +160,15 @@ export async function createUnmountWorkload(page: Page, scenario: UnmountScenari
     if (scenario === "selection-clipboard-gesture-unmount") return selection(page, navigation);
     if (scenario === "portal-menu-tooltip-teardown-case8") return tooltipBeforeTimer(page, navigation.leave);
     if (loading) return loading.exercise(navigation);
+    if (scenario === "column-groups-layout-operations-unmount") {
+      const proof = await exerciseColumnGroupLayout(page);
+      await ready();
+      await navigation.leave();
+      await expect(page.locator("[data-comins-table-instance-id]")).toHaveCount(0);
+      await expect(page.locator("tr[data-comins-row-data-index]")).toHaveCount(0);
+      await expect(page.locator("[data-playground-multi-select-portal]")).toHaveCount(0);
+      return proof;
+    }
     if (scenario === "column-groups-open-ui-unmount") {
       await page.getByTestId("column-group-column-select-trigger").click();
       await expect(page.getByTestId("column-group-column-select-content")).toBeVisible();

@@ -229,3 +229,18 @@ test("README Cross-Table Drag demo moves a Group bundle and shows duplicate feed
   await expect(right.getByTestId("row-shared")).toContainText("Shared from right");
   expect(diagnostics).toEqual([]);
 });
+
+test("regression: narrow README demo can scroll to the viewport caption", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 420 });
+  await page.goto("/readme-demo?feature=viewport-datasource");
+  const caption = page.getByTestId("readme-demo").locator(".readme-demo__caption").last();
+  await expect(caption).toBeAttached();
+  const scrollport = page.locator(".readme-demo-scroll");
+  await expect(scrollport).toHaveCSS("overflow-y", "auto");
+  await scrollport.evaluate(element => element.scrollTo(0, element.scrollHeight));
+  const bounds = await caption.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(375);
+  await expect(caption).toBeInViewport({ ratio: 1, timeout: 3000 });
+});

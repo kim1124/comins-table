@@ -1,4 +1,5 @@
 import { useCominsLayoutEffect } from "./react/layout-effect";
+import { getCellRangeMembership } from "./core/selection/state";
 import { createCrossTableAutoScroll, isCominsNativeEditor as isNativeEditor } from "./browser/pointer";
 import { createMeasurementObserver, hasCominsResizeObserver, measureCominsElement, observeCominsViewport, observeCominsFontChanges, getCominsElementRect } from "./browser/measurements";
 import { setCominsScrollTop, setCominsScrollLeft, scrollCominsRowIntoView, focusCominsElement, createCominsDetailFocusRestorer } from "./browser/scroll";
@@ -54,6 +55,8 @@ import {
   getCominsHeaderRows,
   getCominsSortedRowIndexes,
   getCominsVisibleColumns,
+  getReactColumnLayoutProjection,
+  initializeCominsTableAndLayout,
   isCominsCellInSelectedRange,
   isCominsCellSelected,
   moveCominsColumn,
@@ -82,6 +85,7 @@ import {
   getCominsPinnedBlockResizeMaxWidth,
   getCominsColumnPinningSpanFragments,
   resolveCominsColumnPinning,
+  type CominsResolvedColumnPinning,
 } from "./column-pinning";
 import { renderCominsBuiltInComponent, type CominsBuiltInComponentInteraction } from "./component-renderer";
 import {
@@ -130,6 +134,7 @@ import {
   CominsHeightIndex,
   captureCominsScrollAnchor,
   createCominsDataVirtualSlot,
+  getCominsDataSlotKey,
   getCominsMixedVirtualRange,
   getCominsPhysicalScrollTop,
   getCominsScrollScale,
@@ -298,7 +303,21 @@ export { importCominsRowsFromCsv } from "./core/editing/import";
 export type { CominsCsvImportOptions, CominsCsvImportRow } from "./model";
 export { getCominsSummaryValues } from "./summary";
 export type { CominsSummaryBuiltin, CominsSummaryAggregator, CominsSummaryFormatPayload, CominsSummaryRenderPayload, CominsSummaryColumnConfig, CominsSummaryColumn, CominsTableSummaryConfig } from "./summary";
-export * from "./tree";
+export {
+  flattenCominsTree,
+  getCominsTreeLeafItems,
+  moveCominsTreeNode,
+  sortCominsTreeSiblings,
+  toggleCominsTreeNode,
+  updateCominsTreeItem,
+  type CominsTreeDropContext,
+  type CominsTreeDropPosition,
+  type CominsTreeExpansionOptions,
+  type CominsTreeMoveDestination,
+  type CominsTreeNode,
+  type CominsTreeRowDragConfig,
+  type CominsVisibleTreeRow,
+} from "./tree";
 export { createCominsViewportData, reduceCominsViewportData } from "./viewport-data";
 export type { CominsViewportData, CominsViewportDataOptions, CominsViewportDataEvent, CominsViewportBlock, CominsViewportRange, CominsViewportRequest, CominsViewportRequestState, CominsViewportRevision, CominsViewportPatch } from "./viewport-data";
 export { useCominsViewport } from "./use-viewport";
@@ -1383,13 +1402,19 @@ function renderCominsComponentSlots<TData>(
     .filter(({ component }) => (component.direction ?? "left") === direction);
   const slots: React.ReactNode[] = [];
   for (const { component, index } of placedComponents) {
+    const stateful = component.type === "checkbox" || component.type === "toggle" ||
+      component.type === "input" || component.type === "virtual-list";
+    const slotId = component.id ?? `${component.type}-${index}`;
+    const key = stateful && isCominsCellComponentPayload(payload)
+      ? JSON.stringify([slotId, payload.row.id])
+      : slotId;
     slots.push(
       <span
         className="comins-table__component-slot"
         data-comins-component-align={component.align ?? "center"}
         data-comins-component-direction={direction}
-        data-comins-component-id={component.id ?? `${component.type}-${index}`}
-        key={component.id ?? `${component.type}-${index}`}
+        data-comins-component-id={slotId}
+        key={key}
       >
         {renderCominsBuiltInComponent(component as never, payload as never, interaction)}
       </span>,
@@ -1419,25 +1444,35 @@ function blurCominsColumnPlaceholderFocus(event: React.FocusEvent<HTMLElement>) 
   }
 }
 
+const EMPTY_COMINS_COLUMN_PINNING: CominsResolvedColumnPinning = {
+  columns: new Map(),
+  orderedColumnIds: [],
+};
+
 const COMINS_COLUMN_PLACEHOLDER_NATIVE_BOUNDARY = Symbol("comins-column-placeholder-native-boundary");
 
-function bindCominsColumnPlaceholderNativeBoundary(
-  element: (HTMLElement & { [COMINS_COLUMN_PLACEHOLDER_NATIVE_BOUNDARY]?: true }) | null,
-) {
-  if (!element || element[COMINS_COLUMN_PLACEHOLDER_NATIVE_BOUNDARY]) {
+type ColumnPlaceholderBoundary = HTMLTableSectionElement & { [COMINS_COLUMN_PLACEHOLDER_NATIVE_BOUNDARY]?: true };
+
+function blockNativeColumnPlaceholderInput(event: Event) {
+  const target = event.target as Node | null;
+  const element = target?.nodeType === 1 ? target as Element : target?.parentElement;
+  const placeholder = element?.closest('[data-comins-header-body][inert][aria-hidden="true"]');
+  const header = event.currentTarget as HTMLTableSectionElement;
+
+  if (placeholder && header.contains(placeholder)) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+}
+
+function bindCominsColumnPlaceholderNativeBoundary(header: ColumnPlaceholderBoundary | null) {
+  if (!header || header[COMINS_COLUMN_PLACEHOLDER_NATIVE_BOUNDARY]) {
     return;
   }
 
-  const blockActiveInput = (event: Event) => {
-    if (element.hasAttribute("inert") && element.getAttribute("aria-hidden") === "true") {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  };
-
-  element.addEventListener("change", blockActiveInput, true);
-  element.addEventListener("input", blockActiveInput, true);
-  Object.defineProperty(element, COMINS_COLUMN_PLACEHOLDER_NATIVE_BOUNDARY, { value: true });
+  header.addEventListener("change", blockNativeColumnPlaceholderInput, true);
+  header.addEventListener("input", blockNativeColumnPlaceholderInput, true);
+  Object.defineProperty(header, COMINS_COLUMN_PLACEHOLDER_NATIVE_BOUNDARY, { value: true });
 }
 
 const COMINS_COLUMN_PLACEHOLDER_INTERACTION_PROPS = {
@@ -1633,13 +1668,51 @@ type TableLifecycleRef<T> = { current: T };
 
 type TablePointerGestureCleanup = (unmounting?: boolean) => void;
 
+type HorizontalViewportMeasurement = {
+  scrollWidth: number;
+  outerWidth: number;
+  viewportWidth: number;
+};
+
+type ViewportGeometryState = HorizontalViewportMeasurement & {
+  height: number;
+  width: number | undefined;
+};
+
+const INITIAL_VIEWPORT_GEOMETRY: ViewportGeometryState = {
+  height: 0,
+  width: undefined,
+  scrollWidth: 0,
+  outerWidth: 0,
+  viewportWidth: 0,
+};
+
+type MeasuredViewportGeometry = ViewportGeometryState & { width: number };
+type NativeViewportFit = { columnWidthTotal: number; renderedRowsHeight: number };
+
+function viewportFitsNativeLayout(
+  element: HTMLElement,
+  header: HTMLElement | null,
+  fit: NativeViewportFit | null,
+  measurement: MeasuredViewportGeometry,
+): boolean {
+  if (!fit || measurement.width <= 0 || measurement.height <= 0 ||
+      measurement.width < fit.columnWidthTotal || measurement.height > fit.renderedRowsHeight ||
+      measurement.viewportWidth !== measurement.outerWidth ||
+      measurement.scrollWidth !== measurement.viewportWidth ||
+      measurement.width !== measurement.viewportWidth) return false;
+  return element.firstElementChild?.getBoundingClientRect().width === measurement.width &&
+    (!header || (header.getBoundingClientRect().width === measurement.width &&
+      header.firstElementChild?.getBoundingClientRect().width === measurement.width));
+}
+
 type ViewportMeasurementResources = {
   containerRef: TableLifecycleRef<HTMLElement | null>;
-  setContainerHeight: React.Dispatch<React.SetStateAction<number>>;
-  setContainerWidth: React.Dispatch<React.SetStateAction<number>>;
-  setHorizontalScrollContentWidth: React.Dispatch<React.SetStateAction<number>>;
-  setHorizontalViewportOuterWidth: React.Dispatch<React.SetStateAction<number>>;
-  setHorizontalViewportWidth: React.Dispatch<React.SetStateAction<number>>;
+  observedHorizontalGeometry: TableLifecycleRef<HorizontalViewportMeasurement | null>;
+  setViewportGeometry: React.Dispatch<React.SetStateAction<ViewportGeometryState>>;
+  viewportFit: TableLifecycleRef<NativeViewportFit | null>;
+  measurements: TableLifecycleRef<MeasuredViewportGeometry | null>;
+  headerRef: TableLifecycleRef<HTMLDivElement | null>;
 };
 
 type TableUnmountResources = {
@@ -1679,11 +1752,16 @@ function createViewportMeasurementEffect(resources: ViewportMeasurementResources
     }
 
     return observeCominsViewport(element, measurement => {
-      resources.setContainerHeight(measurement.height);
-      resources.setContainerWidth(measurement.width);
-      resources.setHorizontalScrollContentWidth(measurement.scrollWidth);
-      resources.setHorizontalViewportOuterWidth(measurement.outerWidth);
-      resources.setHorizontalViewportWidth(measurement.viewportWidth);
+      resources.observedHorizontalGeometry.current = measurement;
+      resources.measurements.current = measurement;
+      if (viewportFitsNativeLayout(element, resources.headerRef.current, resources.viewportFit.current, measurement)) return;
+      resources.setViewportGeometry(current =>
+        current.height === measurement.height &&
+        current.width === measurement.width &&
+        current.scrollWidth === measurement.scrollWidth &&
+        current.outerWidth === measurement.outerWidth &&
+        current.viewportWidth === measurement.viewportWidth ? current : measurement,
+      );
     });
   };
 }
@@ -1799,9 +1877,14 @@ function createCominsLazyLoadCleanup(
 ) {
   return () => {
     lazyRequestIdRef.current += 1;
-    lazyLoadingReasonRef.current = null;
-    lazyAbortControllerRef.current?.abort();
+    const controller = lazyAbortControllerRef.current;
     lazyAbortControllerRef.current = null;
+    // Keep the request busy while synchronous abort listeners can dispatch scroll.
+    try {
+      controller?.abort();
+    } finally {
+      lazyLoadingReasonRef.current = null;
+    }
   };
 }
 
@@ -1946,11 +2029,18 @@ function CominsTableInner<TData, TGroup>(
   const scrollCommitTimeoutRef = useRef<number | null>(null);
   const scrollFrameRef = useRef<number | null>(null);
   const suppressedSortClickRef = useRef<CominsSuppressedSortClick | null>(null);
-  const [containerHeight, setContainerHeight] = useState(0);
-  const [containerWidth, setContainerWidth] = useState(0);
-  const [horizontalScrollContentWidth, setHorizontalScrollContentWidth] = useState(0);
-  const [horizontalViewportOuterWidth, setHorizontalViewportOuterWidth] = useState(0);
-  const [horizontalViewportWidth, setHorizontalViewportWidth] = useState(0);
+  const [viewportGeometry, setViewportGeometry] = useState(INITIAL_VIEWPORT_GEOMETRY);
+  const {
+    height: containerHeight,
+    width: measuredContainerWidth,
+    scrollWidth: horizontalScrollContentWidth,
+    outerWidth: horizontalViewportOuterWidth,
+    viewportWidth: horizontalViewportWidth,
+  } = viewportGeometry;
+  const containerWidth = measuredContainerWidth ?? 0;
+  const observedHorizontalGeometry = useRef<HorizontalViewportMeasurement | null>(null);
+  const viewportFit = useRef<NativeViewportFit | null>(null);
+  const viewportMeasurements = useRef<MeasuredViewportGeometry | null>(null);
   const [detailLayoutVersion, setDetailLayoutVersion] = useState(0);
   const [rowFontRevision, setRowFontRevision] = useState(0);
   const [movingColumnId, setMovingColumnId] = useState<string | null>(null);
@@ -2005,8 +2095,10 @@ function CominsTableInner<TData, TGroup>(
   const effectiveRowProps = filteringRequested
     ? { ...rowProps, draggable: false }
     : rowProps;
-  const [state, setState] = useState(() =>
-    createCominsTableState({
+  // Reuse the projection only in the render that actually initialized this state.
+  let initial: ReturnType<typeof initializeCominsTableAndLayout<TData>> | undefined;
+  const [state, setState] = useState(() => {
+    initial = initializeCominsTableAndLayout({
       columnGroups,
       columns,
       getRowId,
@@ -2014,10 +2106,12 @@ function CominsTableInner<TData, TGroup>(
       rows: effectiveData,
       showHeader,
       theme,
-    }),
-  );
+    });
+    return initial.state;
+  });
   const stateRef = useRef(state);
   const columnOrderHistoryRef = useRef(state.columnOrder);
+  const retiredColumnIdsRef = useRef<readonly string[]>([]);
   const stateInputRef = useRef({ columnGroups, columns, data: effectiveData, getRowId, pagination: effectivePagination, showHeader });
   const virtualBufferSize = Math.max(0, Math.floor(Number.isFinite(bufferSize) ? Number(bufferSize) : 10));
   const resolvedLazyLoadBatchSize = Math.max(1, Math.floor(lazyLoadBatchSize));
@@ -2296,12 +2390,14 @@ function CominsTableInner<TData, TGroup>(
       current,
       nextInput: { columnGroups, columns, getRowId, pagination: effectivePagination, rows: effectiveData, showHeader },
       columnOrderHistory: columnOrderHistoryRef.current,
+      retiredColumnIds: retiredColumnIdsRef.current,
       dataChanged: previousInput.data !== effectiveData,
       getRowIdChanged: previousInput.getRowId !== getRowId,
       viewportIndices: viewportContext?.indices,
     });
     const next = result.state;
     columnOrderHistoryRef.current = result.columnOrderHistory;
+    retiredColumnIdsRef.current = result.retiredColumnIds;
     result.invalidatedDetailRowIds.forEach(rowId => detailMeasurementsRef.current.delete(rowId));
     stateRef.current = next;
     setState(next);
@@ -2328,11 +2424,11 @@ function CominsTableInner<TData, TGroup>(
 
   useCominsLayoutEffect(createViewportMeasurementEffect({
     containerRef,
-    setContainerHeight,
-    setContainerWidth,
-    setHorizontalScrollContentWidth,
-    setHorizontalViewportOuterWidth,
-    setHorizontalViewportWidth,
+    observedHorizontalGeometry,
+    viewportFit,
+    measurements: viewportMeasurements,
+    headerRef,
+    setViewportGeometry,
   }), []);
 
   useCominsLayoutEffect(() => {
@@ -2351,7 +2447,6 @@ function CominsTableInner<TData, TGroup>(
       detailMeasurementsRef.current,
       new Set(state.rowIds),
     );
-    reconcileCominsRowMeasurements(rowMeasurementsRef.current, state.rowIds, state.rows);
   }, [state.rowIds, state.rows]);
   useEffect(() => {
     if (!getRowHeight) return;
@@ -2597,7 +2692,12 @@ function CominsTableInner<TData, TGroup>(
     notifyChanges(current, next, options);
   };
 
-  const visibleColumns = useMemo(() => getCominsVisibleColumns(state), [state]);
+  const { columns: runtimeColumns, columnGroups: runtimeGroups, columnOrder, columnState, columnGroupState } = state;
+  const { visibleColumns, headerRows } = useMemo(() => initial?.state === state ? initial.layout : getReactColumnLayoutProjection({
+    columns: runtimeColumns, columnGroups: runtimeGroups, columnOrder, columnState, columnGroupState,
+  }), [runtimeColumns, runtimeGroups, columnOrder, columnState, columnGroupState]);
+  // Do not let closures from the mounting render retain its initial state.
+  initial = undefined;
   const renderedHeaderRendererBodies = new Map<string, { body: React.ReactNode; renderer: unknown; kind: "render" | "legacy" }>();
 
   useEffect(() => {
@@ -2649,7 +2749,13 @@ function CominsTableInner<TData, TGroup>(
       return Math.min(maxWidth, Math.max(minWidth, width));
     });
   }, [containerWidth, state.columnState, visibleColumns]);
+  // 요약 셀은 고정 열이 없어도 열 위치와 span을 계산할 때 이 투영을 사용한다.
+  const needsColumnPinning = Boolean(summary) ||
+    visibleColumns.some((column) => state.columnState[column.id]?.pinned !== undefined) ||
+    state.columnGroups.some((group) => state.columnGroupState[group.id]?.pinned !== undefined);
   const columnPinningBlocks = useMemo(() => {
+    if (!needsColumnPinning) return [];
+
     const groupIdByColumnId = new Map<string, string>();
 
     for (const group of state.columnGroups) {
@@ -2696,10 +2802,12 @@ function CominsTableInner<TData, TGroup>(
       }];
     });
 
-  }, [columnWidths, state.columnGroupState, state.columnGroups, state.columnState, visibleColumns]);
+  }, [columnWidths, needsColumnPinning, state.columnGroupState, state.columnGroups, state.columnState, visibleColumns]);
   const columnPinning = useMemo(
-    () => resolveCominsColumnPinning(columnPinningBlocks, containerWidth),
-    [columnPinningBlocks, containerWidth],
+    () => needsColumnPinning
+      ? resolveCominsColumnPinning(columnPinningBlocks, containerWidth)
+      : EMPTY_COMINS_COLUMN_PINNING,
+    [columnPinningBlocks, containerWidth, needsColumnPinning],
   );
   const getPinnedColumnAttributes = (columnId: string) => {
     const pin = columnPinning.columns.get(columnId);
@@ -2739,7 +2847,6 @@ function CominsTableInner<TData, TGroup>(
     typeof tableWidth === "number" && Number.isFinite(tableWidth)
       ? Math.round(tableWidth)
       : 0;
-  const headerRows = useMemo(() => getCominsHeaderRows(state), [state]);
   const normalizedColumnFilters = useMemo(
     () => filteringRequested
       ? normalizeCominsColumnFilterModel({
@@ -2754,20 +2861,18 @@ function CominsTableInner<TData, TGroup>(
     () => new Map(normalizedColumnFilters.map((rule) => [rule.column.id, rule] as const)),
     [normalizedColumnFilters],
   );
-  const filterSourceRows = useMemo(() => state.rows.map((data, dataIndex) => ({ data, dataIndex, id: state.rowIds[dataIndex]! })), [state.rows, state.rowIds]);
+  const filterSourceRows = useMemo(() => filteringRequested
+    ? state.rows.map((data, dataIndex) => ({ data, dataIndex, id: state.rowIds[dataIndex]! }))
+    : [], [filteringRequested, state.rows, state.rowIds]);
   const filteredDataIndexes = useMemo(
     () => filteringRequested
       ? getCominsFilteredRowIndexes({
           columns: state.columns,
           model: columnFiltering?.model,
-          rows: state.rows.map((data, dataIndex) => ({
-            data,
-            dataIndex,
-            id: state.rowIds[dataIndex]!,
-          })),
+          rows: filterSourceRows,
         })
       : state.rows.map((_row, index) => index),
-    [columnFiltering?.model, filteringRequested, state.columns, state.rowIds, state.rows],
+    [columnFiltering?.model, filteringRequested, state.columns, filterSourceRows, state.rows],
   );
   const filteredRows = useMemo(
     () => filteredDataIndexes.flatMap((dataIndex) => {
@@ -2798,7 +2903,7 @@ function CominsTableInner<TData, TGroup>(
 
     while (columnIndex < visibleColumns.length) {
       const column = visibleColumns[columnIndex]!;
-      const configuredColumn = summary.columns[column.id];
+      const configuredColumn = Object.hasOwn(summary.columns, column.id) ? summary.columns[column.id] : undefined;
       const config =
         typeof configuredColumn === "object" && configuredColumn !== null ? configuredColumn : undefined;
       const requestedColSpan = config?.colSpan;
@@ -2808,6 +2913,8 @@ function CominsTableInner<TData, TGroup>(
           : 1;
       const colSpan = Math.min(normalizedColSpan, visibleColumns.length - columnIndex);
 
+      const values = summaryValues?.values;
+      const value = values && Object.hasOwn(values, column.id) ? values[column.id] : undefined;
       cells.push({
         className: config?.className,
         colSpan,
@@ -2815,8 +2922,8 @@ function CominsTableInner<TData, TGroup>(
         startIndex: columnIndex,
         style: config?.style,
         value: summaryValues?.renderedColumnIds.has(column.id)
-          ? summaryValues.values[column.id]
-          : summaryValues?.values[column.id] ?? (cells.length === 0 ? summary.label : null),
+          ? value
+          : value ?? (cells.length === 0 ? summary.label : null),
       });
       columnIndex += colSpan;
     }
@@ -3013,7 +3120,8 @@ function CominsTableInner<TData, TGroup>(
   }, [groupingProjection, orderedGroupModel]);
   const sortedRowIndexes = useMemo(
     () => (treeContext || groupingActive ? null : getCominsSortedRowIndexes(state, filteredDataIndexes)),
-    [filteredDataIndexes, groupingActive, state, treeContext],
+    // Layout and selection changes do not change row order.
+    [filteredDataIndexes, groupingActive, state.columns, state.rows, state.sortModel, treeContext],
   );
   const projectedDataIndexes = useMemo(
     () => groupingProjection
@@ -3022,6 +3130,9 @@ function CominsTableInner<TData, TGroup>(
     [filteredDataIndexes, groupingProjection, sortedRowIndexes],
   );
   const selectionRowIds = useMemo(() => projectedDataIndexes.map(index => state.rowIds[index]!), [projectedDataIndexes, state.rowIds]);
+  const rangeMembership = useMemo(() => cellSelection && state.selection.range
+    ? getCellRangeMembership(visibleColumns, state.selection.range, selectionRowIds)
+    : null, [cellSelection, state.selection.range, visibleColumns, selectionRowIds]);
   const visibleRowCount = projectedDataIndexes.length;
   const visibleSlotCount = viewportContext?.data.rowCount ?? groupingProjection?.entries.length ?? visibleRowCount;
   const { pageSize, maxPageIndex, effectivePageIndex, pageStartIndex } = getCorePageProjection(visibleRowCount, state.pagination);
@@ -3121,14 +3232,30 @@ function CominsTableInner<TData, TGroup>(
   ]);
   const rowLayoutKey = `${detailContentWidth}:${visibleColumns.map((column, index) => `${column.id}:${columnWidths[index]}`).join("|")}:${JSON.stringify(theme ?? state.theme)}:${rowHeight}`;
   const rowContentRevision = useMemo(() => ({}), [columns, rowProps?.style, className, style, theme, rowFontRevision]);
+  const autoRowHeightEnabled = Boolean(getRowHeight);
+  useCominsLayoutEffect(() => {
+    const measurements = rowMeasurementsRef.current;
+    if (!autoRowHeightEnabled) {
+      measurements.clear();
+      return;
+    }
+    reconcileCominsRowMeasurements(measurements, state.rowIds, state.rows, {
+      layoutKey: rowLayoutKey,
+      contentRevision: rowContentRevision,
+    });
+  }, [autoRowHeightEnabled, rowContentRevision, rowLayoutKey, state.rowIds, state.rows]);
   const viewportIndexById = useMemo(() => viewportContext ? new Map(effectiveData.map((row, index) => [getRowId!(row, index), viewportContext.indices[index]!] as const)) : null, [effectiveData, getRowId, viewportContext?.indices]);
+  const fixedVirtualRows = virtualized && !viewportContext && !treeContext && !groupingProjection &&
+    !getRowHeight && !rowDetailEnabled;
   const rowProjection = useMemo(() => {
+    if (fixedVirtualRows) return null;
     const source = { rows: state.rows, rowIds: state.rowIds, dataIndexes: projectedDataIndexes };
     if (viewportIndexById) return projectReactRows({ ...source, mode: "viewport", absoluteIndexById: viewportIndexById, rowCount: viewportContext!.data.rowCount });
     if (groupingProjection) return projectReactRows({ ...source, mode: "grouped", projection: groupingProjection });
     return treeContext ? projectReactRows({ ...source, mode: "tree" }) : projectReactRows({ ...source, mode: "flat", virtualized: true });
-  }, [state.rows, state.rowIds, projectedDataIndexes, viewportIndexById, groupingProjection, treeContext !== undefined]);
+  }, [state.rows, state.rowIds, projectedDataIndexes, viewportIndexById, groupingProjection, treeContext !== undefined, fixedVirtualRows]);
   const fullProjectionSlots = useMemo<Array<CominsVirtualSlot<TData>>>(() => {
+    if (!rowProjection) return [];
     const safeRowHeight = Math.max(1, rowHeight);
     return rowProjection.entries.flatMap<CominsVirtualSlot<TData>>((projectionEntry) => {
       if (projectionEntry.kind === "placeholder") return [];
@@ -3440,7 +3567,16 @@ function CominsTableInner<TData, TGroup>(
         mixed: false,
         renderOffset,
         scrollHeight: physicalTotalHeight,
-        slots: fullProjectionSlots.slice(startIndex, endIndex),
+        slots: fixedVirtualRows
+          ? projectedDataIndexes.slice(startIndex, endIndex).flatMap((dataIndex, offset) => {
+              const row = state.rows[dataIndex];
+              const rowId = state.rowIds[dataIndex];
+              if (row === undefined || rowId === undefined) return [];
+              return [createCominsDataVirtualSlot({
+                dataIndex, detail: null, row, rowId, rowHeight: safeRowHeight, visibleIndex: startIndex + offset,
+              })];
+            })
+          : fullProjectionSlots.slice(startIndex, endIndex),
       };
     }
 
@@ -3455,11 +3591,15 @@ function CominsTableInner<TData, TGroup>(
   }, [
     containerHeight,
     detailLayoutVersion,
+    fixedVirtualRows,
     fullProjectionSlots,
     groupingActive,
     logicalAnchorTransaction,
     mixedProjection,
     pageStartIndex,
+    projectedDataIndexes,
+    state.rowIds,
+    state.rows,
     rowHeight,
     scrollTop,
     pageSize,
@@ -3485,14 +3625,18 @@ function CominsTableInner<TData, TGroup>(
               mixed: true,
             }
           : {
-              keys: fullProjectionSlots.map((slot) => slot.key),
+              keys: fixedVirtualRows
+                ? selectionRowIds.map(getCominsDataSlotKey)
+                : fullProjectionSlots.map((slot) => slot.key),
               mixed: false,
               rowHeight: Math.max(1, rowHeight),
               visibleRowCount: visibleSlotCount,
             },
     [
       mixedProjection,
+      fixedVirtualRows,
       fullProjectionSlots,
+      selectionRowIds,
       rowHeight,
       virtualized,
       visibleSlotCount,
@@ -3530,8 +3674,11 @@ function CominsTableInner<TData, TGroup>(
     if (!currentVirtualProjection) {
       previousVirtualProjectionRef.current = null;
       pendingDetailAnchorRef.current = null;
-      logicalAnchorTransactionRef.current = null;
-      setLogicalAnchorTransaction(null);
+      // The ref tracks the last queued transaction, including updates React has not rendered.
+      if (logicalAnchorTransactionRef.current !== null) {
+        logicalAnchorTransactionRef.current = null;
+        setLogicalAnchorTransaction(null);
+      }
       return;
     }
 
@@ -3700,17 +3847,30 @@ function CominsTableInner<TData, TGroup>(
   const hasHorizontalOverflow =
     typeof columnWidthTotal === "number" && containerWidth > 0 ? columnWidthTotal > containerWidth + 1 : false;
   useCominsLayoutEffect(() => {
+    // ResizeObserver delivers the initial scrollbar geometry with the first viewport measurement.
+    if (measuredContainerWidth === undefined && hasCominsResizeObserver()) return;
+
     const nextContentWidth = containerRef.current?.scrollWidth ?? 0;
     const nextViewportOuterWidth = containerRef.current?.offsetWidth ?? 0;
     const nextViewportWidth = containerRef.current?.clientWidth ?? 0;
+    // Avoid scheduling a second update for geometry already published by the observer.
+    const observed = observedHorizontalGeometry.current;
+    if (observed &&
+        Math.abs(observed.scrollWidth - nextContentWidth) <= 0.5 &&
+        Math.abs(observed.outerWidth - nextViewportOuterWidth) <= 0.5 &&
+        Math.abs(observed.viewportWidth - nextViewportWidth) <= 0.5) {
+      return;
+    }
 
-    setHorizontalScrollContentWidth((current) =>
-      Math.abs(current - nextContentWidth) > 0.5 ? nextContentWidth : current);
-    setHorizontalViewportOuterWidth((current) =>
-      Math.abs(current - nextViewportOuterWidth) > 0.5 ? nextViewportOuterWidth : current);
-    setHorizontalViewportWidth((current) =>
-      Math.abs(current - nextViewportWidth) > 0.5 ? nextViewportWidth : current);
-  }, [containerWidth, hasHorizontalOverflow, tableWidth]);
+    observedHorizontalGeometry.current = null;
+    setViewportGeometry(current => {
+      const scrollWidth = Math.abs(current.scrollWidth - nextContentWidth) > 0.5 ? nextContentWidth : current.scrollWidth;
+      const outerWidth = Math.abs(current.outerWidth - nextViewportOuterWidth) > 0.5 ? nextViewportOuterWidth : current.outerWidth;
+      const viewportWidth = Math.abs(current.viewportWidth - nextViewportWidth) > 0.5 ? nextViewportWidth : current.viewportWidth;
+      if (scrollWidth === current.scrollWidth && outerWidth === current.outerWidth && viewportWidth === current.viewportWidth) return current;
+      return { ...current, scrollWidth, outerWidth, viewportWidth };
+    });
+  }, [measuredContainerWidth, hasHorizontalOverflow, tableWidth]);
   const synchronizedHorizontalViewportWidth =
     horizontalViewportWidth > 0
       ? horizontalViewportWidth
@@ -3750,6 +3910,24 @@ function CominsTableInner<TData, TGroup>(
       0,
     ) + stateRowCount * rowHeight;
   const emptyFillerHeight = virtualized ? 0 : Math.max(0, containerHeight - renderedRowsHeight);
+  const mayUseNativeViewport = measuredContainerWidth === undefined && horizontalViewportWidth === 0 &&
+    !virtualized && !viewportContext && !summary &&
+    !needsColumnPinning && !rowDetailEnabled && !getRowHeight && !resolvedLoading && !resolvedLoadingMore &&
+    columnWidthTotal !== undefined && visibleColumns.length > 0;
+  useCominsLayoutEffect(() => {
+    viewportFit.current = mayUseNativeViewport && columnWidthTotal !== undefined
+      ? { columnWidthTotal, renderedRowsHeight }
+      : null;
+    const measurement = viewportMeasurements.current;
+    const viewport = containerRef.current;
+    if (measuredContainerWidth === undefined && measurement && viewport &&
+        !viewportFitsNativeLayout(viewport, headerRef.current, viewportFit.current, measurement)) {
+      setViewportGeometry(measurement);
+    }
+  }, [mayUseNativeViewport, measuredContainerWidth, columnWidthTotal, renderedRowsHeight]);
+  const nativeViewportTableWidth = mayUseNativeViewport && typeof tableWidth === "number"
+    ? `max(100%, ${tableWidth}px)`
+    : tableWidth;
   const renderedHeaderVisible = state.showHeader && (persistHeaderWhenEmpty || !isEmpty || resolvedLoading);
   useCominsLayoutEffect(() => {
     const scrollLeft = containerRef.current?.scrollLeft ?? 0;
@@ -3775,9 +3953,10 @@ function CominsTableInner<TData, TGroup>(
     anchorRowId: CominsRowId,
     focusRowId: CominsRowId,
   ) => {
-    if (groupingProjection) {
-      const anchorIndex = groupingProjection.visibleLeafRowIds.indexOf(anchorRowId);
-      const focusIndex = groupingProjection.visibleLeafRowIds.indexOf(focusRowId);
+    const visibleIds = groupingProjection?.visibleLeafRowIds ?? (filteringRequested ? selectionRowIds : null);
+    if (visibleIds) {
+      const anchorIndex = visibleIds.indexOf(anchorRowId);
+      const focusIndex = visibleIds.indexOf(focusRowId);
 
       if (anchorIndex < 0 || focusIndex < 0) {
         return [focusRowId];
@@ -3786,7 +3965,7 @@ function CominsTableInner<TData, TGroup>(
       const start = Math.min(anchorIndex, focusIndex);
       const end = Math.max(anchorIndex, focusIndex);
 
-      return groupingProjection.visibleLeafRowIds.slice(start, end + 1);
+      return visibleIds.slice(start, end + 1);
     }
 
     const visibleRowIndexes = treeContext ? current.rows.map((_row, index) => index) : getCominsSortedRowIndexes(current);
@@ -3918,11 +4097,13 @@ function CominsTableInner<TData, TGroup>(
   };
 
   const getColumnMoveTarget = (clientX: number, clientY: number): CominsColumnMoveHeader | null => {
-    const targetHeader = document
+    const tableRoot = tableRootRef.current;
+    if (!tableRoot) return null;
+    const targetHeader = tableRoot.ownerDocument
       .elementFromPoint(clientX, clientY)
       ?.closest<HTMLElement>("[data-comins-column-id], [data-comins-column-group-id]");
 
-    if (!targetHeader) {
+    if (!targetHeader || targetHeader.closest("[data-comins-table-instance-id]") !== tableRoot) {
       return null;
     }
 
@@ -4669,7 +4850,7 @@ function CominsTableInner<TData, TGroup>(
         ? copyCominsCellRange(
             clipboardState,
             state.selection.range,
-            groupingProjection?.visibleLeafRowIds ?? state.rowIds,
+            getSelectionRowOrder(),
           )
         : null;
       copiedCellRef.current = copiedRangeRef.current ? null : copyCominsCell(clipboardState, address);
@@ -4682,14 +4863,15 @@ function CominsTableInner<TData, TGroup>(
       event.preventDefault();
       event.stopPropagation();
       if (viewportContext && copiedRangeRef.current) {
-        const start = state.rowIds.indexOf(address.rowId);
+        const start = editingRowIds.indexOf(address.rowId);
         const end = start + copiedRangeRef.current.rows.length - 1;
-        if (start < 0 || state.rowIds[end] === undefined || !isLoadedCellRange(address.rowId, state.rowIds[end]!)) return;
+        const endRowId = editingRowIds[end];
+        if (start < 0 || endRowId === undefined || !isLoadedCellRange(address.rowId, endRowId)) return;
       }
       commitState((current) => {
         const clipboardState = getClipboardState(current);
         const next = copiedRangeRef.current
-          ? pasteCominsCellRange(clipboardState, address, copiedRangeRef.current, clipboard ? getSelectionRowOrder() : groupingProjection?.visibleLeafRowIds ?? current.rowIds)
+          ? pasteCominsCellRange(clipboardState, address, copiedRangeRef.current, editingRowIds)
           : pasteCominsCell(clipboardState, address, copiedCellRef.current);
         return next === clipboardState ? current : { ...next, columns: current.columns };
       });
@@ -4818,7 +5000,8 @@ function CominsTableInner<TData, TGroup>(
     disabled: boolean,
     draggable: boolean,
   ) => {
-    if (disabled || !draggable || event.button !== 0) {
+    const tableRoot = tableRootRef.current;
+    if (disabled || !draggable || event.button !== 0 || !tableRoot) {
       return;
     }
 
@@ -4828,9 +5011,12 @@ function CominsTableInner<TData, TGroup>(
     const sourceTableId = normalizedTableTransfer?.tableId;
     const row = createEventRow(entry);
 
-    if (onBeforeRowDrag?.({ event, row, sourceGroupId, sourceTableId }) === false) {
+    const allowed = onBeforeRowDrag?.({ event, row, sourceGroupId, sourceTableId });
+    if (tableRootRef.current !== tableRoot) {
+      event.stopPropagation();
       return;
     }
+    if (allowed === false) return;
 
     event.preventDefault();
     event.stopPropagation();
@@ -4985,6 +5171,7 @@ function CominsTableInner<TData, TGroup>(
       clientY: number,
       pointerEvent: PointerEvent = lastPointerEvent,
     ) => {
+      if (finished) return;
       lastPointerEvent = pointerEvent;
       const pointElement = document.elementFromPoint(clientX, clientY);
       const target = pointElement
@@ -5067,7 +5254,9 @@ function CominsTableInner<TData, TGroup>(
         return;
       }
 
-      crossTarget = resolveCrossTarget(clientX, clientY);
+      const resolvedCrossTarget = resolveCrossTarget(clientX, clientY);
+      if (finished) return;
+      crossTarget = resolvedCrossTarget;
 
       if (crossTarget) {
         setExternalDropMarker(crossTarget.marker, "row", crossTarget.valid);
@@ -5077,18 +5266,18 @@ function CominsTableInner<TData, TGroup>(
           targetTableId: crossTarget.snapshot.endpoint.tableId,
           valid: crossTarget.valid,
         });
-        notifyTarget(pointerEvent, {
-          groupId: crossTarget.targetGroupId,
-          rowId: crossTarget.targetRowId,
-          tableId: crossTarget.snapshot.endpoint.tableId,
-          valid: crossTarget.valid,
-        });
         autoScroll.update(
           crossTarget.snapshot.viewport,
           clientX,
           clientY,
           crossTarget.valid,
         );
+        notifyTarget(pointerEvent, {
+          groupId: crossTarget.targetGroupId,
+          rowId: crossTarget.targetRowId,
+          tableId: crossTarget.snapshot.endpoint.tableId,
+          valid: crossTarget.valid,
+        });
         return;
       }
 
@@ -5119,6 +5308,7 @@ function CominsTableInner<TData, TGroup>(
     };
     const handlePointerUp = (upEvent: PointerEvent) => {
       updateTarget(upEvent.clientX, upEvent.clientY, upEvent);
+      if (finished) return;
 
       const moveState = rowMoveStateRef.current;
       const finalCrossTarget = crossTarget;
@@ -5264,13 +5454,15 @@ function CominsTableInner<TData, TGroup>(
     };
 
     registeredCleanup = (unmounting = false) => cancel(null, "pointer-cancel", !unmounting);
-    updateTarget(event.clientX, event.clientY, event.nativeEvent);
-    registerActivePointerGesture(registeredCleanup);
+    clearActivePointerGesture();
+    if (tableRootRef.current !== tableRoot || activePointerGestureCleanupRef.current) return;
+    activePointerGestureCleanupRef.current = registeredCleanup;
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
     window.addEventListener("pointercancel", handlePointerCancel);
     window.addEventListener("blur", handleWindowBlur);
     window.addEventListener("keydown", handleKeyDown);
+    updateTarget(event.clientX, event.clientY, event.nativeEvent);
   };
   const beginRowGroupHandlePointerDrag = (
     event: React.PointerEvent<HTMLElement>,
@@ -5859,14 +6051,14 @@ function CominsTableInner<TData, TGroup>(
         <div
           className="comins-table__header"
           ref={headerRef}
-          style={{ width: synchronizedHorizontalViewportWidth }}
+          style={{ width: mayUseNativeViewport ? "100%" : synchronizedHorizontalViewportWidth }}
         >
           <table
             className="comins-table__table comins-table__header-table min-w-full table-fixed"
-            style={{ width: tableWidth }}
+            style={{ width: nativeViewportTableWidth }}
           >
             {renderCominsColumnSizing(visibleColumns, columnWidths)}
-            <thead className="comins-table__thead">
+            <thead className="comins-table__thead" ref={bindCominsColumnPlaceholderNativeBoundary}>
               {renderCominsHeaderRows({
                 columnMoveTarget,
                 movingGroupId,
@@ -5876,7 +6068,6 @@ function CominsTableInner<TData, TGroup>(
                 getCominsColumnPlaceholderText,
                 showColumnMoveHandle,
                 COMINS_COLUMN_PLACEHOLDER_INTERACTION_PROPS,
-                bindCominsColumnPlaceholderNativeBoundary,
                 beginGroupPointerInteraction,
                 resizingColumnId,
                 headerRef,
@@ -5943,7 +6134,7 @@ function CominsTableInner<TData, TGroup>(
                   transform: `translate3d(0, ${rowWindow.renderOffset}px, 0)`,
                   width: tableWidth,
                 }
-              : { width: tableWidth }
+              : { width: nativeViewportTableWidth }
           }
         >
           {renderCominsColumnSizing(visibleColumns, columnWidths)}
@@ -5997,7 +6188,10 @@ function CominsTableInner<TData, TGroup>(
             rowWindow,
             orderedGroupModel,
             expandedGroupIdSet,
-            fullProjectionSlots,
+            lastProjectionSlotKey: fixedVirtualRows
+              ? currentVirtualProjection?.keys.at(-1)
+              : fullProjectionSlots.at(-1)?.key,
+            rangeMembership,
             containerHeight,
             virtualized,
             emptyFillerHeight,

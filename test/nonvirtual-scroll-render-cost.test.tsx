@@ -90,9 +90,13 @@ it("starts virtualization at the existing nonvirtual viewport position", () => {
   expect(host.querySelector('[data-testid="cell-0-name"]')).toBeNull();
 });
 
-it("keeps the complete row projection stable during scroll but rebuilds it for new data", () => {
+it("keeps the complete projection for height callbacks stable during scroll and rebuilds it for new data", () => {
   const project = vi.spyOn(rowProjection, "projectReactRows");
-  const viewport = render(true);
+  const getRowHeight = () => 36;
+  act(() => root.render(<CominsTable columns={columns} data={data} data-testid="scroll-cost" getRowId={getRowId}
+    rowHeight={36} getRowHeight={getRowHeight} buffer-size={0} virtualized />));
+  flushFrames();
+  const viewport = host.querySelector<HTMLDivElement>("[data-testid='scroll-cost']")!;
   const initial = project.mock.calls.length;
   expect(initial).toBeGreaterThan(0);
   scroll(viewport, 360);
@@ -100,7 +104,7 @@ it("keeps the complete row projection stable during scroll but rebuilds it for n
   expect(project.mock.calls.length).toBe(initial);
   const updated = data.map(row => ({ ...row, name: `Updated ${row.id}` }));
   act(() => root.render(<CominsTable columns={columns} data={updated} data-testid="scroll-cost" getRowId={getRowId}
-    rowHeight={36} buffer-size={0} virtualized />));
+    rowHeight={36} getRowHeight={getRowHeight} buffer-size={0} virtualized />));
   flushFrames();
   expect(project.mock.calls.length).toBeGreaterThan(initial);
   expect(host.querySelector('[data-testid="cell-20-name"]')?.textContent).toBe("Updated 20");
@@ -122,4 +126,19 @@ it("cancels a queued virtual scroll commit when virtualization is disabled", () 
   flushFrames();
   expect(cellRenders).toBe(rendered);
   expect(host.querySelectorAll("tr[data-comins-row-data-index]")).toHaveLength(data.length);
+});
+
+it("creates fixed-height virtual slots only for the initial 100,000-row table window", async () => {
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const virtualLayout = await import("../src/virtual-layout");
+  const makeSlot = vi.spyOn(virtualLayout, "createCominsDataVirtualSlot");
+  try {
+    const data = Array.from({ length: 100_000 }, (_, id) => ({ id }));
+    const html = renderToStaticMarkup(<CominsTable data={data} getRowId={row => row.id}
+      columns={[{ field: "id", width: 120 }]} rowHeight={36} virtualized />);
+    expect(html.match(/data-comins-row-data-index=/g)).toHaveLength(22);
+    expect(makeSlot).toHaveBeenCalledTimes(22);
+  } finally {
+    makeSlot.mockRestore();
+  }
 });

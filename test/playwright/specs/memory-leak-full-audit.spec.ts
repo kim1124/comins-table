@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -8,6 +9,7 @@ import { findMemoryThresholdFailures } from "../helpers/memory-growth";
 
 import { initializeMemoryInstrumentation } from "../helpers/memory-instrumentation";
 import { initializePlaygroundLocale } from "../helpers/playground-locale";
+import { readBrowserBundleEvidence } from "../helpers/memory-runtime";
 
 test.describe.configure({ mode: "default" });
 
@@ -160,7 +162,9 @@ async function writeAuditArtifact(
 ) {
   const artifactsDir = process.env.MEMORY_AUDIT_ARTIFACT_DIR ?? path.join(process.cwd(), "reports", "artifacts");
   const safeScenario = scenario.replace(/[^a-z0-9-]+/giu, "-").replace(/^-|-$/gu, "");
-  const artifactPath = path.join(artifactsDir, `memory-leak-full-audit-${safeScenario}.json`);
+  const runDir = path.join(artifactsDir, "legacy-memory-runs", randomUUID());
+  const artifactPath = path.join(runDir, `memory-leak-full-audit-${safeScenario}.json`);
+  const bundle = readBrowserBundleEvidence();
   const toPoint = ({ step, nodes, jsEventListeners, jsHeapUsedSize }: DevtoolsAuditSnapshot) => ({ step, metrics: { nodes, jsEventListeners, jsHeapUsedSize } });
   const budgets = [assessNumericBudget([baseline, afterBasic].map(toPoint), "counter")];
   if (evidence.intermediate?.length) {
@@ -169,7 +173,7 @@ async function writeAuditArtifact(
   const numericStatus = budgets.some(item => item.status === "FAIL") ? "FAIL"
     : browserErrors || budgets.some(item => item.status !== "PASS") ? "INVALID" : "PASS";
   const payload = {
-    numericStatus, numericBudgets: budgets, diagnostic: false, completed: !browserErrors, layer: "legacy", buildMode: "vite-development",
+    numericStatus, numericBudgets: budgets, diagnostic: false, completed: !browserErrors, layer: "legacy", buildMode: `vite-${bundle.mode}`, bundle,
     afterBasic,
     baseline,
     ...evidence,
@@ -184,7 +188,7 @@ async function writeAuditArtifact(
     },
   };
 
-  await mkdir(artifactsDir, { recursive: true });
+  await mkdir(runDir, { recursive: true });
   await writeFile(artifactPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
   await testInfo.attach("legacy-numeric-budget", { path: artifactPath, contentType: "application/json" });
 }

@@ -25,7 +25,7 @@ beforeEach(() => {
   registrations = new Map();
   const original = HTMLElement.prototype.addEventListener;
   vi.spyOn(HTMLElement.prototype, "addEventListener").mockImplementation(function (type, listener, options) {
-    if (this.hasAttribute("data-comins-header-body") && ["input", "change"].includes(type) && options === true) {
+    if ((this.tagName === "THEAD" || this.hasAttribute("data-comins-header-body")) && ["input", "change"].includes(type) && options === true) {
       const counts = registrations.get(this) ?? new Map<string, number>();
       counts.set(type, (counts.get(type) ?? 0) + 1);
       registrations.set(this, counts);
@@ -40,14 +40,19 @@ afterEach(() => {
   host.remove();
 });
 
-it("registers each group and leaf header once across StrictMode ref reconnection and rerenders", () => {
+it("registers one native event boundary per table header across StrictMode ref reconnection and rerenders", () => {
   act(() => root.render(tables()));
   const headers = Array.from(host.querySelectorAll<HTMLElement>("[data-comins-header-body]"));
   expect(headers.length).toBeGreaterThanOrEqual(6);
   expect(host.querySelectorAll('th[scope="colgroup"] [data-comins-header-body]').length).toBeGreaterThanOrEqual(2);
   act(() => root.render(tables()));
   expect(Array.from(host.querySelectorAll("[data-comins-header-body]"))).toEqual(headers);
-  for (const header of headers) expect(Object.fromEntries(registrations.get(header) ?? [])).toEqual({ change: 1, input: 1 });
+  const tableHeaders = Array.from(host.querySelectorAll("thead"));
+  expect(tableHeaders).toHaveLength(2);
+  for (const header of tableHeaders) {
+    expect(Object.fromEntries(registrations.get(header) ?? [])).toEqual({ change: 1, input: 1 });
+  }
+  for (const header of headers) expect(registrations.has(header)).toBe(false);
 });
 
 it("blocks native input/change only while a group or leaf header is an inert hidden placeholder", () => {

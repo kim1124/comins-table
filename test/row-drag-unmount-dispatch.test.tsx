@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, createRef } from "react";
+import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { CominsTable, type CominsTableRef } from "../src";
@@ -115,3 +116,45 @@ it("still resets render state and cancels the gesture while mounted", () => {
   expect(afterDrag.mock.calls[0][0]).toMatchObject({ result: "cancelled", reason: "pointer-cancel" });
   for (const [name, listener] of listeners) expect(removed).toHaveBeenCalledWith(name, listener);
 });
+
+it.each(["before", "target"] as const)(
+  "keeps no gesture listeners when the %s row drag callback synchronously removes the table",
+  (phase) => {
+    const added = vi.spyOn(window, "addEventListener");
+    const removed = vi.spyOn(window, "removeEventListener");
+    const removeTable = () => flushSync(() => root!.render(null));
+    const beforeDrag = vi.fn(() => { if (phase === "before") removeTable(); });
+    const onRowDrag = vi.fn(() => { if (phase === "target") removeTable(); });
+    const afterDrag = vi.fn();
+    const gestureEvents = new Set(["pointermove", "pointerup", "pointercancel", "blur", "keydown"]);
+
+    act(() => root!.render(<CominsTable
+      columns={[{ field: "name" }]}
+      data={rows}
+      getRowId={row => row.id}
+      rowProps={{ draggable: true }}
+      onBeforeRowDrag={beforeDrag}
+      onRowDrag={onRowDrag}
+      onAfterDragRow={afterDrag}
+    />));
+    const handle = host.querySelector("[data-testid='row-drag-handle-a']")!;
+
+    try {
+      act(() => handle.dispatchEvent(new MouseEvent("pointerdown", {
+        bubbles: true, cancelable: true, button: 0, buttons: 1, clientX: 10, clientY: 10,
+      })));
+      expect(host.childElementCount).toBe(0);
+      const live = added.mock.calls.filter(([type, listener]) =>
+        gestureEvents.has(type) && !removed.mock.calls.some(([removedType, removedListener]) =>
+          type === removedType && listener === removedListener));
+      expect(live.map(([type]) => type)).toEqual([]);
+      act(() => window.dispatchEvent(new MouseEvent("pointermove", { buttons: 1 })));
+      expect(onRowDrag).toHaveBeenCalledTimes(phase === "target" ? 1 : 0);
+      expect(afterDrag).toHaveBeenCalledTimes(phase === "target" ? 1 : 0);
+    } finally {
+      for (const [type, listener, options] of added.mock.calls) {
+        if (gestureEvents.has(type)) window.removeEventListener(type, listener, options);
+      }
+    }
+  },
+);

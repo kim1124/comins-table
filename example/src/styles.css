@@ -845,6 +845,7 @@ body {
 }
 
 .ui-selectbox-popover--fixed {
+  box-sizing: border-box;
   max-height: min(320px, calc(100vh - 24px));
   overflow-y: auto;
   position: fixed;
@@ -2810,9 +2811,15 @@ body {
   }
 }
 
+.readme-demo-scroll {
+  height: 100%;
+  overflow: auto;
+}
+
 .readme-demo {
   box-sizing: border-box;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   gap: 16px;
   height: 655px;
@@ -2892,6 +2899,7 @@ body {
 
 .readme-demo__surface {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   min-height: 0;
   min-width: 0;
@@ -2958,6 +2966,7 @@ body {
 .readme-demo__tree-grid--caption,
 .readme-demo__scale-grid {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 8px;
   min-height: 0;
@@ -2965,6 +2974,7 @@ body {
 
 .readme-demo__scale-table {
   min-height: 0;
+  min-width: 0;
   max-width: 100%;
 }
 
@@ -2992,6 +3002,27 @@ body {
 .readme-demo__wrapped-content {
   white-space: normal;
   line-height: 22px;
+}
+
+@media (max-width: 600px) {
+  .readme-demo {
+    height: auto;
+    grid-template-rows: auto 360px;
+    padding: 16px;
+  }
+
+  .readme-demo__header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .readme-demo__view-switch {
+    justify-content: flex-start;
+  }
+
+  .readme-demo__tree-controls {
+    flex-wrap: wrap;
+  }
 }
 
 .readme-demo__caption {

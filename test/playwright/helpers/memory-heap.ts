@@ -1,19 +1,26 @@
 import { readFile } from "node:fs/promises";
 import type { CDPSession } from "@playwright/test";
 import { createWriteStream } from "node:fs";
+import { once } from "node:events";
 import { finished } from "node:stream/promises";
 import { findMemoryGrowth, type MemoryPoint } from "./memory-growth";
 
 export async function saveMemoryHeap(session: CDPSession, filename: string) {
   const stream = createWriteStream(filename, { flags: "wx" });
+  const completion = finished(stream).then(() => null, (error: unknown) => ({ error }));
   const receive = ({ chunk }: { chunk: string }) => { stream.write(chunk); };
-  session.on("HeapProfiler.addHeapSnapshotChunk", receive);
   try {
-    await session.send("HeapProfiler.takeHeapSnapshot", { reportProgress: false });
+    await once(stream, "open");
+    session.on("HeapProfiler.addHeapSnapshotChunk", receive);
+    try {
+      await session.send("HeapProfiler.takeHeapSnapshot", { reportProgress: false });
+    } finally {
+      session.off("HeapProfiler.addHeapSnapshotChunk", receive);
+    }
   } finally {
-    session.off("HeapProfiler.addHeapSnapshotChunk", receive);
     stream.end();
-    await finished(stream);
+    const result = await completion;
+    if (result) throw result.error;
   }
 }
 

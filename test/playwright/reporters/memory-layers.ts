@@ -1,4 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import type { FullResult, Reporter, TestCase, TestResult } from "@playwright/test/reporter";
 import type { NumericBudget } from "../helpers/memory-verdict";
@@ -48,8 +49,13 @@ export default class MemoryLayersReporter implements Reporter {
     });
   }
   onEnd(result: FullResult) {
+    if (this.executions.length === 0) return;
     const filename = path.resolve(process.env.MEMORY_LAYER_REPORT ?? "reports/artifacts/memory-layers.json");
+    const archive = path.join(path.dirname(filename), "memory-layer-runs");
+    const payload = JSON.stringify(summarizeMemoryExecutions(this.executions, result.status), null, 2);
+    mkdirSync(archive, { recursive: true });
+    writeFileSync(path.join(archive, `${randomUUID()}.json`), payload, { flag: "wx" });
     mkdirSync(path.dirname(filename), { recursive: true });
-    writeFileSync(filename, JSON.stringify(summarizeMemoryExecutions(this.executions, result.status), null, 2));
+    writeFileSync(filename, payload);
   }
 }

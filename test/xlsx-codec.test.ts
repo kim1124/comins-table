@@ -102,3 +102,12 @@ describe("public XLSX codec", () => {
     await expect(rows(bytes, { limits: { maxBytes: 0 } })).rejects.toMatchObject({ code: "INVALID_OPTIONS" });
   });
 });
+
+it("retains absolute ISO calendar fields before the 1904 numeric epoch", async () => {
+  const bytes = await fixture({
+    date1904: true,
+    cells: '<row r="1"><c r="A1" t="d"><v>1903-12-31T12:34:56Z</v></c></row>',
+    dimension: "A1",
+  });
+  expect(await rows(bytes)).toEqual([["1903-12-31 12:34:56"]]);
+});

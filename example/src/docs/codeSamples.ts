@@ -536,7 +536,12 @@ export const componentSamples: DocsCodeSample[] = [
     field: "done",
     label: "Done",
     cell: {
-      components: [{ type: "checkbox", checkedField: "done" }],
+      components: [{
+        type: "checkbox",
+        props: ({ row }) => ({ checked: row.data.done }),
+        onCheckedChange: ({ row, checked }) =>
+          setRows(current => current.map(item => item.id === row.id ? { ...item, done: checked } : item)),
+      }],
     },
   },
 ];`,
@@ -772,7 +777,7 @@ export const exportSamples: DocsCodeSample[] = [
   {
     code: `const exportColumns = [
   { id: "name", label: "name", value: (row) => row.name },
-  { id: "age", label: "age", value: (_row, index) => \`Data \${index + 1}\` },
+  { id: "age", label: "age", value: (row) => row.age },
   { id: "role", label: "role", value: (row) => row.role },
 ];
 

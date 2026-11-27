@@ -5,6 +5,9 @@ import { createViewportRequestExecutor, type CominsViewportRequest } from "../br
 import { useCominsLayoutEffect } from "./layout-effect";
 
 type ViewportRequestConnection = { connected: boolean; refreshPending: boolean };
+type ActiveViewportRequest = CoreActiveViewportRequest & {
+  onRequest?: (request: CominsViewportRequest) => void | Promise<void>;
+};
 
 function createViewportRequestConnectionEffect(
   connection: { current: ViewportRequestConnection },
@@ -21,7 +24,7 @@ function createViewportRequestConnectionEffect(
 }
 
 function createViewportRequestExecutorCleanup(
-  active: { current: Map<number, CoreActiveViewportRequest & { onRequest: (request: CominsViewportRequest) => void | Promise<void> }> },
+  active: { current: Map<number, ActiveViewportRequest> },
   executor: { current: ReturnType<typeof createViewportRequestExecutor> | null },
   retryBlocks: { current: Set<number> },
 ) {
@@ -34,7 +37,7 @@ function createViewportRequestExecutorCleanup(
 }
 
 function createViewportRequestExecutorEffect(
-  active: { current: Map<number, CoreActiveViewportRequest & { onRequest: (request: CominsViewportRequest) => void | Promise<void> }> },
+  active: { current: Map<number, ActiveViewportRequest> },
   executor: { current: ReturnType<typeof createViewportRequestExecutor> | null },
   retryBlocks: { current: Set<number> },
   connection: { current: ViewportRequestConnection },
@@ -46,7 +49,8 @@ function createViewportRequestExecutorEffect(
         const entry = active.current.get(request.startIndex);
         if (entry?.request.requestId === request.requestId) {
           const onRequest = entry.onRequest;
-          return onRequest(request);
+          entry.onRequest = undefined;
+          return onRequest?.(request);
         }
       },
       onSettled(requestId) {
@@ -69,7 +73,7 @@ export function useCominsViewportRequests<T>(input: {
   onRequest?: (request: CominsViewportRequest) => void | Promise<void>;
   onChangeData?: (data: CominsViewportData<T>) => void;
 }) {
-  const active = useRef(new Map<number, CoreActiveViewportRequest & { onRequest: NonNullable<typeof input.onRequest> }>());
+  const active = useRef(new Map<number, ActiveViewportRequest>());
   const executor = useRef<ReturnType<typeof createViewportRequestExecutor> | null>(null);
   const retryBlocks = useRef(new Set<number>());
   const [version, setVersion] = useState(0);

@@ -1229,3 +1229,170 @@ describe("comins-table component renderer API", () => {
     expect(firstList?.querySelector("[data-testid='virtual-list-overflow-a-items']")?.tagName).toBe("BUTTON");
   });
 });
+
+it.each(["initially disabled", "disabled during edit"])(
+  "blocks Enter and blur commits for a built-in input that is %s",
+  (phase) => {
+    const changeData = vi.fn();
+    const commitValue = vi.fn();
+    const columns = (disabled: boolean): CominsTableColumn<Row>[] => [
+      { field: "id" },
+      { field: "name", cell: {
+        props: { disabled },
+        components: [{ type: "input", props: payload => ({ value: String(payload.value) }), onValueChange: commitValue }],
+      } },
+    ];
+    const table = (disabled: boolean) => <CominsTable columns={columns(disabled)} data={baseRows}
+      getRowId={row => row.id} onChangeData={changeData} />;
+    render(table(phase === "initially disabled"));
+    act(() => container!.querySelector<HTMLElement>("[data-testid='cell-a-id']")!.click());
+    const input = container!.querySelector<HTMLInputElement>("[data-testid='cell-a-name'] input")!;
+    if (phase === "disabled during edit") input.focus();
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(input, "edited");
+      input.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText" }));
+    });
+    if (phase === "disabled during edit") act(() => root!.render(table(true)));
+    act(() => {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    });
+    expect(changeData).not.toHaveBeenCalled();
+    expect(commitValue).not.toHaveBeenCalled();
+    expect(input.disabled).toBe(true);
+  },
+);
+
+it("keeps checkbox state with its row when fixed virtual slots are recycled", () => {
+  const columns: CominsTableColumn<{ id: string; value: string }>[] = [{
+    field: "value", label: "Value",
+    cell: { components: [{ type: "checkbox", props: { defaultChecked: false } }] },
+  }];
+  const rows = Array.from({ length: 40 }, (_, index) => ({ id: String(index), value: "A" }));
+  const view = render(<CominsTable data={rows} columns={columns} getRowId={row => row.id} rowHeight={40} buffer-size={0} virtualized />);
+  const viewport = view.querySelector<HTMLElement>(".comins-table__body-viewport")!;
+  const before = view.querySelector<HTMLInputElement>("[data-testid='row-0'] input")!;
+  act(() => before.click());
+  expect(before.checked).toBe(true);
+  vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame"] });
+  try {
+    act(() => {
+      viewport.scrollTop = 800;
+      viewport.dispatchEvent(new Event("scroll"));
+      vi.advanceTimersByTime(16);
+    });
+  } finally {
+    vi.useRealTimers();
+  }
+  const after = view.querySelector<HTMLInputElement>("tr[data-comins-row-data-index] input")!;
+  expect(after.closest("tr")?.dataset.testid).not.toBe("row-0");
+  expect(view.querySelector("[data-testid='row-0']")).toBeNull();
+  expect(after).not.toBe(before);
+  expect(after.checked).toBe(false);
+});
+
+it("isolates independent radio groups with the same column and row IDs across two tables", () => {
+  const columns: CominsTableColumn<{ id: string; value: string }>[] = [{
+    field: "value", label: "Value",
+    cell: { components: [{
+      type: "radio",
+      options: [{ label: "A", value: "A" }, { label: "B", value: "B" }],
+    }] },
+  }];
+  const view = render(<><CominsTable data={[{ id: "same", value: "A" }]} columns={columns} getRowId={row => row.id} /><CominsTable data={[{ id: "same", value: "B" }]} columns={columns} getRowId={row => row.id} /></>);
+  const groups = Array.from(view.querySelectorAll("[role='radiogroup']"), group => Array.from(group.querySelectorAll<HTMLInputElement>("input")));
+  expect(groups[0]![0]!.name).not.toBe(groups[1]![0]!.name);
+  expect(groups.map(group => group.map(radio => radio.checked))).toEqual([[true, false], [false, true]]);
+});
+
+it("commits a tree move only for the pointer that started it", () => {
+  const changes = vi.fn();
+  const columns: CominsTableColumn<{ id: string; value: string }>[] = [{ field: "value", label: "Value" }];
+  const view = render(<CominsTable tree getRowId={row => row.id} data={[{ item: { id: "a", value: "A" } }, { item: { id: "b", value: "B" } }]} columns={columns} treeRowDrag={{}} onChangeData={changes} />);
+  const source = view.querySelector<HTMLButtonElement>("[data-testid='row-drag-handle-a']")!;
+  const target = view.querySelector<HTMLTableRowElement>("[data-testid='row-b']")!;
+  Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => target });
+  function pointer(type: string, pointerId: number) {
+    const event = new MouseEvent(type, { button: 0, bubbles: true, cancelable: true, clientY: 1 });
+    Object.defineProperty(event, "pointerId", { value: pointerId });
+    return event;
+  }
+  try {
+    act(() => source.dispatchEvent(pointer("pointerdown", 11)));
+    act(() => window.dispatchEvent(pointer("pointerup", 22)));
+    expect(changes).not.toHaveBeenCalled();
+    act(() => window.dispatchEvent(pointer("pointerup", 11)));
+    expect(changes).toHaveBeenCalledOnce();
+    expect(changes.mock.calls[0]?.[0].map((node: { item: { id: string } }) => node.item.id)).toEqual(["b", "a"]);
+  } finally {
+    Reflect.deleteProperty(document, "elementFromPoint");
+  }
+});
+
+it("gives numeric and string row IDs distinct React keys", () => {
+  const rows = [{ id: 1 }, { id: "1" }];
+  const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+  render(<CominsTable data={rows} columns={[{ field: "id", label: "ID" }]} getRowId={row => row.id} />);
+  try {
+    expect(errors.mock.calls.flat().join(" ")).not.toContain("same key");
+  } finally { errors.mockRestore(); }
+});
+
+
+it("does not recalculate an unchanged tree drag target every frame", () => {
+  vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame"] });
+  const changes = vi.fn();
+  const canDrop = vi.fn(() => true);
+  const drag = vi.fn();
+  const columns: CominsTableColumn<{ id: string; value: string }>[] = [{ field: "value", label: "Value" }];
+  const view = render(<CominsTable tree getRowId={row => row.id} data={[{ item: { id: "a", value: "A" } }, { item: { id: "b", value: "B" } }]} columns={columns} treeRowDrag={{ canDrop }} onChangeData={changes} onRowDrag={drag} />);
+  const source = view.querySelector<HTMLButtonElement>("[data-testid='row-drag-handle-a']")!;
+  const target = view.querySelector<HTMLTableRowElement>("[data-testid='row-b']")!;
+  Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => target });
+  try {
+    act(() => source.dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, cancelable: true, clientY: 1 })));
+    act(() => vi.advanceTimersByTime(160));
+    expect(drag).toHaveBeenCalledOnce();
+    expect(canDrop.mock.calls.length).toBe(1);
+    expect(changes).not.toHaveBeenCalled();
+    act(() => window.dispatchEvent(new Event("pointercancel")));
+  } finally {
+    Reflect.deleteProperty(document, "elementFromPoint");
+    vi.useRealTimers();
+  }
+});
+
+it("indexes tree drag previews once per gesture and copies ancestors only on drop", () => {
+  vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame"] });
+  const readDuringCopy = vi.fn();
+  const getRowId = vi.fn((row: { id: string }) => row.id);
+  const changes = vi.fn();
+  const data = [
+    { item: { id: "parent" }, expand: true, get copyProbe() { return readDuringCopy(); },
+      children: [{ item: { id: "a" } }, { item: { id: "b" } }, { item: { id: "c" } }] },
+  ];
+  const view = render(<CominsTable tree data={data} getRowId={getRowId}
+    columns={[{ field: "id", label: "ID" }]} treeRowDrag={{}} onChangeData={changes} />);
+  const source = view.querySelector<HTMLButtonElement>("[data-testid='row-drag-handle-a']")!;
+  let target = view.querySelector<HTMLTableRowElement>("[data-testid='row-b']")!;
+  Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => target });
+  const pointer = (type: string) => new MouseEvent(type, { button: 0, buttons: 1, bubbles: true, cancelable: true, clientY: 1 });
+  try {
+    getRowId.mockClear();
+    act(() => source.dispatchEvent(pointer("pointerdown")));
+    act(() => vi.advanceTimersByTime(32));
+    const initialLookups = getRowId.mock.calls.length;
+    target = view.querySelector<HTMLTableRowElement>("[data-testid='row-c']")!;
+    act(() => window.dispatchEvent(pointer("pointermove")));
+    // React renders the visible rows for the new preview, without rebuilding the move index.
+    expect(getRowId.mock.calls.length - initialLookups).toBe(data[0]!.children.length + 1);
+    expect(readDuringCopy).not.toHaveBeenCalled();
+    expect(changes).not.toHaveBeenCalled();
+    act(() => window.dispatchEvent(pointer("pointerup")));
+    expect(readDuringCopy).toHaveBeenCalled();
+    expect(changes.mock.calls[0]![0][0].children.map((node: { item: { id: string } }) => node.item.id)).toEqual(["b", "c", "a"]);
+  } finally {
+    Reflect.deleteProperty(document, "elementFromPoint");
+    vi.useRealTimers();
+  }
+});

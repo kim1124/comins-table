@@ -77,3 +77,13 @@ describe("column pinning", () => {
     ]);
   });
 });
+
+it("retains the left boundary when one summary fragment spans two left-pinned columns", () => {
+  const resolved = resolveCominsColumnPinning([
+    { columnIds: ["a", "b"], columnWidths: [80, 80], id: "left", pinned: "left" },
+    { columnIds: ["c"], columnWidths: [80], id: "center" },
+  ], 400);
+  expect(getCominsColumnPinningSpanFragments(resolved, 0, 3)[0]).toMatchObject({
+    boundary: true, pinned: "left", colSpan: 2, offset: 0,
+  });
+});

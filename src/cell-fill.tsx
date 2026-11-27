@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type EffectCallback, type Pointer
 import type { CominsCellAddress, CominsCellRange, CominsRowId, CominsTableState } from "./react/core-compat";
 import { getCominsDragAutoScrollVelocity, getCoreCellBounds as bounds, getCoreCellRange as rangeOf, resolveCoreFillTarget } from "./core/selection/navigation";
 import { applyCominsDragScroll, captureCominsPointer, focusCominsPointerTarget, registerCominsPointerListeners, startCominsPointerFrames } from "./browser/pointer";
+import { useCominsLayoutEffect } from "./react/layout-effect";
 
 function createCellFillCancelEffect(cancelRef: RefObject<(() => void) | null>): EffectCallback {
   return () => () => cancelRef.current?.();
@@ -22,7 +23,8 @@ export function useCominsCellFill<TData>(options: {
   releaseGesture: (cleanup: () => void) => void;
   scrollHorizontal: (delta: number) => void;
 }) {
-  const latest = useRef(options); latest.current = options;
+  const latest = useRef(options);
+  useCominsLayoutEffect(() => { latest.current = options; });
   const cancelRef = useRef<(() => void) | null>(null);
   const suppressClick = useRef(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -44,7 +46,11 @@ export function useCominsCellFill<TData>(options: {
     window.addEventListener("scroll", scroll, true); window.addEventListener("blur", scroll);
     return () => { document.removeEventListener("pointerdown", dismiss); document.removeEventListener("keydown", key); window.removeEventListener("scroll", scroll, true); window.removeEventListener("blur", scroll); };
   }, [menu]);
-  useEffect(() => { cancelRef.current?.(); setMenu(null); }, [options.enabled, options.state.rows, options.state.columnOrder, options.state.selection, options.rowIds]);
+  useEffect(() => {
+    cancelRef.current?.();
+    // Even an existing null dispatch can schedule another Table render after a layout update.
+    if (menu !== null) setMenu(null);
+  }, [options.enabled, options.state.rows, options.state.columnOrder, options.state.selection, options.rowIds]);
 
   const previewBox = options.enabled && preview ? bounds(preview, options.rowIds, options.columnIds) : null;
   const rowPositions = useMemo(() => options.enabled ? new Map(options.rowIds.map((id, index) => [id, index])) : null, [options.enabled, options.rowIds]);

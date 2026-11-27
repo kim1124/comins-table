@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { initializePlaygroundLocale } from "../helpers/playground-locale";
-import { createUnmountWorkload, unmountScenarios } from "../helpers/memory-unmount-workloads";
+import { createUnmountWorkload, numericUnmountScenarios, unmountScenarios } from "../helpers/memory-unmount-workloads";
 import { runSustainedMemory } from "../helpers/memory-sustained";
 import { memoryAuditStatus } from "../helpers/memory-growth";
 
@@ -59,7 +59,7 @@ for (const scenario of unmountScenarios) {
 }
 
 const diagnostic = process.env.MEMORY_AUDIT_DIAGNOSTICS === "1";
-for (const scenario of unmountScenarios) {
+for (const scenario of numericUnmountScenarios) {
   for (let repeat = 1; repeat <= (diagnostic ? 1 : 3); repeat += 1) {
     test(`${scenario} 300 cycles independent ${repeat}${diagnostic ? " heap diagnostic" : ""} @perf ${diagnostic ? "@memory-diagnostic" : "@memory-counter"}`, async ({ baseURL }, testInfo) => {
       test.setTimeout(45 * 60_000);

@@ -76,6 +76,23 @@ describe("custom cell tooltip", () => {
     focus(view.querySelector<HTMLElement>('[data-testid="cell-a-name"]')!);
     expect(document.querySelector('[role="tooltip"]')?.textContent).toBe("Restored tooltip");
   });
+  it("clears tooltip dismissal on blur while the tooltip configuration is absent", () => {
+    const tooltip = { render: () => "Restored tooltip" };
+    const view = mount(table(tooltip));
+    const cell = view.querySelector<HTMLElement>('[data-testid="cell-a-name"]')!;
+    focus(cell);
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe("Restored tooltip");
+
+    act(() => cell.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    expect(document.querySelector('[role="tooltip"]')).toBeNull();
+    act(() => root!.render(table(undefined)));
+    expect(view.querySelector('[data-testid="cell-a-name"]')).toBe(cell);
+    expect(cell.hasAttribute("data-comins-tooltip-key")).toBe(false);
+    act(() => cell.blur());
+    act(() => root!.render(table(tooltip)));
+    focus(cell);
+    expect(document.querySelector('[role="tooltip"]')?.textContent).toBe("Restored tooltip");
+  });
   it("repositions when informational component content changes its own size", () => {
     let height = 20;
     let grow!: () => void;

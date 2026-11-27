@@ -53,17 +53,30 @@ export function planCoreSelectionCopy({ cells, selectedRowIds, rowIds: order, co
 }
 
 const pathKey = (path: readonly number[]) => path.join(".");
+export function createCoreTreeDropResolver<TEntry extends { rowId: CominsRowId; path: readonly number[] }>(entries: readonly TEntry[]) {
+  const byId = new Map<CominsRowId, TEntry>();
+  const byPath = new Map<string, TEntry>();
+  for (const entry of entries) {
+    if (!byId.has(entry.rowId)) byId.set(entry.rowId, entry);
+    const key = pathKey(entry.path);
+    if (!byPath.has(key)) byPath.set(key, entry);
+  }
+  return (sourceId: CominsRowId, targetId: CominsRowId, position: CominsTreeDropPosition) => {
+    const source = byId.get(sourceId), target = byId.get(targetId);
+    if (!source || !target) return null;
+    const parentPath = target.path.slice(0, -1);
+    const parent = byPath.get(pathKey(parentPath));
+    const nextSibling = byPath.get(pathKey([...parentPath, target.path[target.path.length - 1]! + 1]));
+    return { source, target, position, destination: position === "inside"
+      ? { parentId: target.rowId, beforeRowId: null }
+      : { parentId: parent?.rowId ?? null, beforeRowId: position === "before" ? target.rowId : nextSibling?.rowId ?? null } };
+  };
+}
+
 export function resolveCoreTreeDropContext<TEntry extends { rowId: CominsRowId; path: readonly number[] }>({ entries, sourceId, targetId, position }: {
   entries: readonly TEntry[]; sourceId: CominsRowId; targetId: CominsRowId; position: CominsTreeDropPosition;
 }) {
-  const source = entries.find(entry => entry.rowId === sourceId), target = entries.find(entry => entry.rowId === targetId);
-  if (!source || !target) return null;
-  const parentPath = target.path.slice(0, -1);
-  const parent = entries.find(entry => pathKey(entry.path) === pathKey(parentPath));
-  const nextSibling = entries.find(entry => pathKey(entry.path.slice(0, -1)) === pathKey(parentPath) && entry.path[entry.path.length - 1] === target.path[target.path.length - 1]! + 1);
-  return { source, target, position, destination: position === "inside"
-    ? { parentId: target.rowId, beforeRowId: null }
-    : { parentId: parent?.rowId ?? null, beforeRowId: position === "before" ? target.rowId : nextSibling?.rowId ?? null } };
+  return createCoreTreeDropResolver(entries)(sourceId, targetId, position);
 }
 export function resolveCoreTreePointerPosition(fraction: number, allowReparent: boolean | undefined): CominsTreeDropPosition {
   return fraction < .25 ? "before" : fraction > .75 ? "after" : allowReparent ? "inside" : fraction < .5 ? "before" : "after";

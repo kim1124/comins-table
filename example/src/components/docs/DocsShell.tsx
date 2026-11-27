@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
-import { createRoutesFromElements, Navigate, Route, useLocation, useRoutes, type Location, type RouteObject } from "react-router";
+import { createRoutesFromElements, Navigate, Route, useLocation, useRoutes, type RouteObject } from "react-router";
 
 import { createDocsNavGroups, createDocsPages } from "../../docs/docsRoutes";
 import { usePlaygroundLocale } from "../../i18n/playground-locale";
@@ -9,8 +9,8 @@ import { DocsSidebar } from "./DocsSidebar";
 import { DocsTopNav } from "./DocsTopNav";
 import { RouteLifecycleBoundary } from "./RouteLifecycleBoundary";
 
-function DocsRoutes({ routes, location }: { routes: RouteObject[]; location: Location }) {
-  return useRoutes(routes, location);
+function DocsRoutes({ routes }: { routes: RouteObject[] }) {
+  return useRoutes(routes);
 }
 
 export function DocsShell() {
@@ -23,6 +23,13 @@ export function DocsShell() {
   const docsPages = useMemo(() => createDocsPages(locale), [locale]);
   const docsNavGroups = useMemo(() => createDocsNavGroups(createDocsPages("en")), []);
 
+  const pagesByPath = useMemo(() => new Map(docsPages.map(page => [
+    page.path,
+    <RouteLifecycleBoundary key={page.path} featureId={page.featureId} routePath={page.path}>
+      <DocsArticle page={page} />
+    </RouteLifecycleBoundary>,
+  ] as const)), [docsPages]);
+
   // 문서 목록이 같으면 JSX와 라우트 정의를 재사용하고 pathname key로 종료 경계를 유지한다.
   const routeElements = useMemo(() => (
     <>
@@ -30,24 +37,17 @@ export function DocsShell() {
       <Route element={<Navigate replace to="/docs/getting-started" />} path="/examples/basic" />
       <Route element={<Navigate replace to="/performance/virtualization" />} path="/examples/body" />
       <Route element={<Navigate replace to="/examples/column-groups" />} path="/examples/header-groups" />
-      {docsPages.map((page) => (
-        <Route
-          element={
-            <RouteLifecycleBoundary featureId={page.featureId} routePath={page.path}>
-              <DocsArticle page={page} />
-            </RouteLifecycleBoundary>
-          }
-          key={page.path}
-          path={page.path}
-        />
+      {Array.from(pagesByPath, ([path, element]) => (
+        <Route element={element} key={path} path={path} />
       ))}
       <Route element={<Navigate replace to="/docs/getting-started" />} path="*" />
     </>
-  ), [docsPages]);
+  ), [pagesByPath]);
   const routeObjects = useMemo(() => createRoutesFromElements(routeElements), [routeElements]);
+  const page = pagesByPath.get(location.pathname);
 
   if (location.pathname === "/readme-demo") {
-    return <ReadmeDemoPage />;
+    return <div className="readme-demo-scroll"><ReadmeDemoPage /></div>;
   }
 
   return (
@@ -56,7 +56,7 @@ export function DocsShell() {
       <div className="docs-shell__body">
         <DocsSidebar groups={docsNavGroups} />
         <main className="docs-shell__content" ref={contentRef}>
-          <DocsRoutes key={location.pathname} location={location} routes={routeObjects} />
+          {page ?? <DocsRoutes key={location.pathname} routes={routeObjects} />}
         </main>
       </div>
     </div>

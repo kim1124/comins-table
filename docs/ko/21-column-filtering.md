@@ -163,4 +163,4 @@ render 반환 undefined는 기본 콘텐츠, null/false/빈 문자열은 해당 
 
 중립 소비자는 comins-table/core의 getCominsColumnFilterOptions, setCominsColumnFilterValues, normalizeCominsColumnFilterModel, getCominsFilteredRowIndexes를 사용한다. Core는 중립 columns/source rows, root 함수는 React 열을 받는다. CominsColumnFilterOptionsInput/CominsColumnFilterOptionsResult/CominsColumnFilterValuesAction은 순수 계산·불변 제안 타입이다. 지원하지 않는 대상 또는 활성 기존 조건의 옵션 결과는 null이며 선택 action은 model을 유지한다. Clear만 대상 규칙을 제거한다. Core로 React/DOM/render 설정을 전달하지 않는다.
 
-배포된 0.2.1에는 신규 API가 없다. Tree/Viewport/Infinite/Lazy/서버 필터링 및 일반 행 드래그의 기존 제한을 유지한다. 옵션 목록 가상화는 제공하지 않으므로 고유 값이 많으면 비용이 커질 수 있다. Playground의 10,000행 측정 예제는 값을 자르거나 무제한 성능을 보장하지 않는다.
+배포된 0.2.1에는 신규 API가 없다. Tree/Viewport/Infinite/Lazy/서버 필터링 및 일반 행 드래그의 기존 제한을 유지한다. 기본 패널은 검색에 일치하는 옵션을 페이지당 최대 50개 표시한다. 검색과 검색 결과 전체 선택은 모든 페이지의 일치 옵션에 적용된다. 커스텀 패널의 옵션 표시 방식은 소비자가 정한다. 옵션 계산에는 전체 입력 데이터를 사용하며, Playground의 10,000행 예제에서 이 비용을 측정할 수 있다.

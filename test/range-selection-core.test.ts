@@ -36,6 +36,35 @@ function createState() {
 }
 
 describe("comins-table range selection core", () => {
+  it("matches enumerated membership across grouped hidden pinned and reordered layouts", () => {
+    const rowOrders = [["a", "b", "c"], ["c", "b", "a"], ["b", "a", "b", "c"]];
+    for (const order of [["name", "age", "role"], ["role", "age", "name"]]) {
+      for (const hidden of [false, true]) {
+        for (const groupHidden of [false, true]) {
+          let state = createCominsTableState<PersonRow>({
+            columns, rows, getRowId: row => row.id,
+            columnGroups: [{ id: "profile", label: "Profile", children: ["name", "age"] }],
+          });
+          state.columnOrder = order;
+          state.columnState.age!.hidden = hidden;
+          state.columnGroupState.profile!.hidden = groupHidden;
+          if (order[0] === "role") state.columnState.role!.pinned = "left";
+          state = selectCellRange(state, { anchor: { rowId: "a", columnId: "name" }, focus: { rowId: "c", columnId: "role" } });
+          for (const rowIds of rowOrders) {
+            const cells = getCominsSelectedCellRange(state, state.selection.range, rowIds);
+            for (const rowId of ["a", "b", "c", "missing"]) {
+              for (const columnId of ["name", "age", "role", "missing"]) {
+                expect(isCominsCellInSelectedRange(state, { rowId, columnId }, rowIds)).toBe(
+                  cells.some(cell => cell.rowId === rowId && cell.columnId === columnId),
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
   it("expands a rectangular selected cell range in row and visible column order", () => {
     let state = createState();
 

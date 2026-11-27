@@ -27,6 +27,7 @@ export function SelectionClipboardFeature() {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [copiedText, setCopiedText] = useState("");
   const [readSelection, setReadSelection] = useState("");
+  const [pasteError, setPasteError] = useState("");
   const copy = async (target: CominsCopyTarget = "auto") => {
     try { setCopiedText(await tableRef.current?.copySelection(target) ?? ""); }
     catch { setCopiedText(text(defineLocalizedText("클립보드에 접근할 수 없습니다.", "Clipboard access is unavailable."))); }
@@ -68,11 +69,11 @@ export function SelectionClipboardFeature() {
     setRows(createExampleRows(30));
     setSelection(createEmptySelection());
     setSampleVersion((current) => current + 1);
-    setCopiedText(""); setReadSelection(""); setMenu(null);
+    setCopiedText(""); setReadSelection(""); setPasteError(""); setMenu(null);
   };
 
   return (
-    <section className="feature-panel">
+    <section className="feature-panel" onPasteCapture={() => setPasteError("")}>
       <FeatureSampleSection
         description={text(defineLocalizedText(
           "Row/Cell/Range selection과 Ctrl/Cmd+C, Ctrl/Cmd+V를 controlled data 및 onChangeSelection과 연결합니다.",
@@ -103,6 +104,7 @@ export function SelectionClipboardFeature() {
           ref={tableRef}
           rowSelectionOnClick={false}
           clipboard
+          clipboardPaste
           onContextMenuCell={({ event }) => {
             event.preventDefault();
             setMenu({ x: Math.min(event.clientX, window.innerWidth - 210), y: Math.min(event.clientY, window.innerHeight - 160) });
@@ -114,12 +116,14 @@ export function SelectionClipboardFeature() {
           data-testid="selection-clipboard-viewport"
           getRowId={(row) => row.id}
           onChangeData={setRows}
+          onClipboardError={(error) => setPasteError(error.message)}
           onChangeSelection={setSelection}
           pagination={{ pageIndex: 0, pageSize: rows.length }}
           theme={{ density: "compact" }}
         />
         <pre className="state-output" data-testid="selection-read-result">{readSelection}</pre>
         <pre className="state-output" data-testid="selection-copy-result">{copiedText}</pre>
+        {pasteError ? <p role="alert">{pasteError}</p> : null}
         {menu ? <ContextMenu aria-label={text(defineLocalizedText("선택 복사 메뉴", "Selection copy menu"))}
           style={{ position: "fixed", left: menu.x, top: menu.y, zIndex: 100 }} onClose={() => setMenu(null)}
           items={[

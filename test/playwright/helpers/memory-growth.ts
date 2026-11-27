@@ -1,4 +1,4 @@
-export type MemoryPoint = { step: string; metrics: Record<string, number> };
+export type MemoryPoint = { step: string; metrics: Record<string, number>; stateSignature?: string; expectedState?: "free" | "mounted" };
 export type MemoryGrowth = {
   step: string;
   reference: string;
@@ -63,14 +63,59 @@ export function findMemoryThresholdFailures(points: readonly MemoryPoint[]): Mem
 }
 
 /** mounted/free 각각의 최초 동일 상태 기준을 모든 후속 측정에 유지한다. */
-export function findMemoryStateFailures(points: readonly MemoryPoint[]): MemoryThresholdFailure[] {
+export function compareMemoryCheckpoints(points: readonly MemoryPoint[]) {
   const free: MemoryPoint[] = [], mounted: MemoryPoint[] = [];
+  const stateErrors: string[] = [];
+  const invalidBaselines = new Set<MemoryPoint[]>();
   for (const point of points) {
-    const roots = point.metrics.tableRoots;
-    if (roots === undefined || !Number.isInteger(roots) || roots < 0) throw new Error(`Invalid table state at ${point.step}`);
-    (roots === 0 ? free : mounted).push(point);
+    const { tableRoots: roots, rows } = point.metrics;
+    if (roots === undefined || !Number.isInteger(roots) || roots < 0) {
+      if (point.expectedState) {
+        const expected = point.expectedState === "free" ? free : mounted;
+        if (expected.length === 0) invalidBaselines.add(expected);
+      }
+      stateErrors.push(`Invalid table state at ${point.step}`);
+      continue;
+    }
+    const observedState = roots === 0 ? "free" : "mounted";
+    const state = point.expectedState ?? observedState;
+    const group = state === "free" ? free : mounted;
+    if (invalidBaselines.has(group)) continue;
+    const baseline = group[0];
+    if (rows === undefined || !Number.isInteger(rows) || rows < 0 ||
+      state !== observedState || (roots === 0 && rows !== 0) || !point.stateSignature) {
+      if (!baseline) invalidBaselines.add(group);
+      stateErrors.push(`Invalid table state at ${point.step}`);
+      continue;
+    }
+    if (baseline && (baseline.stateSignature !== point.stateSignature || baseline.metrics.rows !== rows || baseline.metrics.tableRoots !== roots)) {
+      stateErrors.push(`Checkpoint state at ${point.step} differs from ${baseline.step}`);
+      continue;
+    }
+    group.push(point);
   }
-  return [...findMemoryThresholdFailures(free), ...findMemoryThresholdFailures(mounted)];
+  const failures = [free, mounted].flatMap((group, index) => {
+    const label = index === 0 ? "Free" : "Mounted";
+    if (group.length < 2) {
+      stateErrors.push(`${label} state: At least two comparable memory checkpoints are required`);
+      return [];
+    }
+    return group.slice(1).flatMap(point => {
+      try {
+        return findMemoryThresholdFailures([group[0]!, point]);
+      } catch (error) {
+        stateErrors.push(`${label} state: ${String(error)}`);
+        return [];
+      }
+    });
+  });
+  return { failures, stateErrors };
+}
+
+export function findMemoryStateFailures(points: readonly MemoryPoint[]): MemoryThresholdFailure[] {
+  const { failures, stateErrors } = compareMemoryCheckpoints(points);
+  if (stateErrors.length) throw new Error(stateErrors.join("\n"));
+  return failures;
 }
 
 /** 수치 PASS는 제품 보유 결함 부재나 native 진단 완료를 의미하지 않는다. */

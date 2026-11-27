@@ -1,4 +1,16 @@
+import { createHash } from "node:crypto";
 import { findMemoryThresholdFailures, type MemoryPoint, type MemoryThresholdFailure } from "./memory-growth";
+
+export function createMemoryArtifactKey(evidence: {
+  sources: Readonly<Record<string, string>>;
+  buildMode: "development" | "production";
+  browser: string;
+  runtime: unknown;
+  browserBundles: unknown;
+  servedScripts: unknown;
+}) {
+  return createHash("sha256").update(JSON.stringify(evidence)).digest("hex");
+}
 
 export type NumericBudget = "PASS" | "FAIL" | "INVALID" | "NOT_RUN";
 export type LifetimeObservation = "RELEASED_IN_SCOPE" | "SURVIVOR_OBSERVED" | "NOT_ASSESSED" | "INVALID";
@@ -53,6 +65,18 @@ export function evaluateMemoryVerdict(input: MemoryVerdictInput) {
   const numericBudget: NumericBudget = numericStates.includes("FAIL") ? "FAIL"
     : numericStates.includes("INVALID") ? "INVALID"
     : !numericStates.length || numericStates.includes("NOT_RUN") ? "NOT_RUN" : "PASS";
+  const calibrations = new Map<string, { held: number; released: number }>();
+  for (const { layer, phase, target } of input.requiredCoverage) {
+    if (phase !== "calibration-held" && phase !== "calibration-released") continue;
+    const key = JSON.stringify([layer, target]);
+    const pair = calibrations.get(key) ?? { held: 0, released: 0 };
+    if (phase === "calibration-held") pair.held += 1;
+    else pair.released += 1;
+    calibrations.set(key, pair);
+  }
+  for (const [target, pair] of calibrations) {
+    if (pair.held !== 1 || pair.released !== 1) blockers.push(`calibration ${target}: requires one held and one released observation`);
+  }
   for (const requirement of input.requiredCoverage) {
     const { id } = requirement;
     const matches = input.coverage.filter(item => item.id === id);
@@ -64,6 +88,10 @@ export function evaluateMemoryVerdict(input: MemoryVerdictInput) {
     if (item.artifact !== input.artifact || item.status !== "VERIFIED" || item.outcome !== "SATISFIED"
       || !validText(item.evidence) || !validText(item.target)) blockers.push(`coverage ${id}: not satisfied with valid evidence`);
     if (item.phase === "retired" && item.expectation === "retained") blockers.push(`coverage ${id}: retired target cannot expect retention`);
+    if ((item.phase === "calibration-held" && item.expectation !== "retained") ||
+      (item.phase === "calibration-released" && item.expectation !== "released")) {
+      blockers.push(`coverage ${id}: invalid calibration expectation`);
+    }
   }
   if (input.requiredCoverage.some(item => item.layer === "lifetime")
     && ["NOT_ASSESSED", "INVALID"].includes(input.lifetimeObservation)) blockers.push("lifetime observation incomplete");

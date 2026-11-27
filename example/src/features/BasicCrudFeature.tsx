@@ -19,6 +19,7 @@ export function BasicCrudFeature() {
   const [selectedRowJson, setSelectedRowJson] = useState("");
   const [error, setError] = useState("");
   const [nextRowIndex, setNextRowIndex] = useState(1);
+  const [resetVersion, setResetVersion] = useState(0);
   const columns = useMemo<Array<CominsTableColumn<CrudRow>>>(() => [
     { field: "column1", label: "column1", minWidth: 120, sort: true },
     { field: "column2", label: "column2", minWidth: 100, sort: true },
@@ -113,6 +114,7 @@ export function BasicCrudFeature() {
                   setSelectedRowJson("");
                   setError("");
                   setNextRowIndex(1);
+                  setResetVersion((current) => current + 1);
                 }}
               >
                 {text(defineLocalizedText("초기화", "Reset"))}
@@ -138,6 +140,7 @@ export function BasicCrudFeature() {
           </div>
           <div className="crud-table-pane">
             <CominsTable
+              key={resetVersion}
               rowProps={{ draggable: true }}
               className="example-table"
               columns={columns}

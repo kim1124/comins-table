@@ -1,7 +1,9 @@
 import type { CominsRowId, CominsSelectionState, CominsTableState, CominsTableStateInput } from "../model";
-import { serializeCominsColumnLayout } from "../layout/columns";
+import { normalizeColumns, normalizeColumnGroups, serializeColumnLayoutState, type ColumnLayoutDefinition, type ColumnGroupLayoutDefinition } from "../layout/columns";
 import { canPreserveSelection, insertDeclaredColumnsIntoOrder, reconcileColumnOrderHistory } from "../../table-state";
-import { createCominsTableState } from "./table";
+import { createNormalizedCominsTableState, defaultGetRowId } from "./table";
+
+const MAX_RETIRED_COLUMN_IDS = 128;
 
 export type CoreReconciliationInput<TData> = Pick<CominsTableStateInput<TData>,
   "columnGroups" | "columns" | "rows" | "getRowId" | "pagination" | "showHeader">;
@@ -10,29 +12,57 @@ export type CoreReconciliationOptions<TData> = {
   current: CominsTableState<TData>;
   nextInput: CoreReconciliationInput<TData>;
   columnOrderHistory: readonly string[];
+  retiredColumnIds?: readonly string[];
   dataChanged: boolean;
   getRowIdChanged: boolean;
   viewportIndices?: readonly number[];
 };
 
 /** Reconcile inputs without applying state, clearing caches, or notifying consumers. */
-export function reconcileCoreState<TData>({ current, nextInput, columnOrderHistory, dataChanged, getRowIdChanged, viewportIndices }: CoreReconciliationOptions<TData>): {
+export function reconcileCoreState<TData>({ current, nextInput, columnOrderHistory, retiredColumnIds, dataChanged, getRowIdChanged, viewportIndices }: CoreReconciliationOptions<TData>): {
   state: CominsTableState<TData>;
   columnOrderHistory: string[];
+  retiredColumnIds: string[];
   invalidatedDetailRowIds: CominsRowId[];
 } {
-  const declaredColumnOrder = nextInput.columns.map(column => String(column.id ?? column.field));
-  const historicalOrder = reconcileColumnOrderHistory(columnOrderHistory, current.columnOrder, current.columns.map(column => column.id));
-  const nextState = createCominsTableState({
+  const columns = normalizeColumns(nextInput.columns);
+  const columnGroups = normalizeColumnGroups(columns, nextInput.columnGroups);
+  return reconcileNormalizedTableState({ current, nextInput, columnOrderHistory, retiredColumnIds, dataChanged, getRowIdChanged, viewportIndices, columns, columnGroups });
+}
+
+// Data-only reconciliation; adapters retain ownership of their normalized definitions.
+export function reconcileNormalizedTableState<
+  TData,
+  TColumn extends ColumnLayoutDefinition & { sort?: unknown },
+  TGroup extends ColumnGroupLayoutDefinition,
+>({ current, nextInput, columnOrderHistory, retiredColumnIds, dataChanged, getRowIdChanged, viewportIndices, columns, columnGroups }: {
+  current: Omit<CominsTableState<TData>, "columns" | "columnGroups"> & { columns: TColumn[]; columnGroups: TGroup[] };
+  nextInput: Omit<CoreReconciliationInput<TData>, "columns" | "columnGroups">;
+  columnOrderHistory: readonly string[];
+  retiredColumnIds?: readonly string[];
+  dataChanged: boolean;
+  getRowIdChanged: boolean;
+  viewportIndices?: readonly number[];
+  columns: TColumn[];
+  columnGroups: TGroup[];
+}) {
+  const declaredColumnOrder = columns.map(column => column.id);
+  const previousDeclaredOrder = current.columns.map(column => column.id);
+  const historicalOrder = reconcileColumnOrderHistory(columnOrderHistory, current.columnOrder, previousDeclaredOrder);
+  // Keep the existing row-ID projection only while both inputs are unchanged.
+  const currentRowIds = !dataChanged && !getRowIdChanged &&
+    (nextInput.getRowId ?? defaultGetRowId) === current.getRowId
+    ? current.rowIds : undefined;
+  const nextState = createNormalizedCominsTableState({
     ...nextInput,
     columnLayout: {
-      ...serializeCominsColumnLayout(current),
+      ...serializeColumnLayoutState(current),
       order: insertDeclaredColumnsIntoOrder(historicalOrder, declaredColumnOrder),
     },
     // Only the adapter knows whether the original external data reference changed.
     rows: dataChanged ? nextInput.rows : current.rows,
     sortModel: current.sortModel,
-  });
+  }, columns, columnGroups, currentRowIds);
   const state = viewportIndices
     ? { ...nextState, selection: reconcileCoreViewportSelection(current.selection, nextState.rowIds, viewportIndices, nextState.columns.map(column => column.id)) }
     : (
@@ -49,9 +79,22 @@ export function reconcileCoreState<TData>({ current, nextInput, columnOrderHisto
       if (previousRowById.has(rowId) && previousRowById.get(rowId) !== state.rows[index]) invalidatedDetailRowIds.push(rowId);
     });
   }
+  const activeColumnIds = new Set(declaredColumnOrder);
+  const previousColumnIds = new Set(previousDeclaredOrder);
+  const previouslyRetired = retiredColumnIds ?? historicalOrder.filter(id => !previousColumnIds.has(id));
+  // Removal order is independent of display order, which can change after a drag.
+  const nextRetiredColumnIds = [
+    ...previouslyRetired.filter(id => !activeColumnIds.has(id) && !previousColumnIds.has(id)),
+    ...Array.from(previousColumnIds).filter(id => !activeColumnIds.has(id)),
+  ].slice(-MAX_RETIRED_COLUMN_IDS);
+  const rememberedColumnIds = new Set(nextRetiredColumnIds);
+  const nextColumnOrderHistory = reconcileColumnOrderHistory(historicalOrder, state.columnOrder, declaredColumnOrder)
+    .filter(id => activeColumnIds.has(id) || rememberedColumnIds.has(id));
+
   return {
     state,
-    columnOrderHistory: reconcileColumnOrderHistory(historicalOrder, state.columnOrder, declaredColumnOrder),
+    columnOrderHistory: nextColumnOrderHistory,
+    retiredColumnIds: nextRetiredColumnIds,
     invalidatedDetailRowIds,
   };
 }

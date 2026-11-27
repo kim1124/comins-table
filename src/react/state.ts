@@ -1,9 +1,8 @@
 import type { CominsColumnLayout, CominsSelectionState, CominsSortModel, CominsSortState } from "../model";
 import type { CominsTableState, CominsTableStateInput } from "../react-types";
 import { normalizeColumns, normalizeColumnGroups } from "../core/layout/columns";
-import { reconcileCoreState, type CoreReconciliationOptions } from "../core/state/reconcile";
+import { reconcileNormalizedTableState, type CoreReconciliationOptions } from "../core/state/reconcile";
 import { getCoreStateChanges } from "../core/state/changes";
-import { projectReactColumn, projectReactGroup, projectReactState } from "./model";
 import { serializeCominsColumnLayout } from "./core-compat";
 
 type ReactReconciliationOptions<TData> = Omit<CoreReconciliationOptions<TData>, "current" | "nextInput"> & {
@@ -14,12 +13,10 @@ type ReactReconciliationOptions<TData> = Omit<CoreReconciliationOptions<TData>, 
 export function reconcileReactState<TData>(options: ReactReconciliationOptions<TData>) {
   const columns = normalizeColumns(options.nextInput.columns);
   const columnGroups = normalizeColumnGroups(columns, options.nextInput.columnGroups);
-  const result = reconcileCoreState({
+  const result = reconcileNormalizedTableState({
     ...options,
-    current: projectReactState(options.current).core,
-    nextInput: { ...options.nextInput, columns: columns.map(projectReactColumn), columnGroups: columnGroups.map(projectReactGroup) },
+    columns, columnGroups,
   });
-  // New definitions do not belong to the old bridge. Restore their React metadata directly.
   return { ...result, state: { ...result.state, columns, columnGroups, theme: options.current.theme } };
 }
 

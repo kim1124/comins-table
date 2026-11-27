@@ -313,3 +313,30 @@ describe("cross-table transfer", () => {
     expect(target.data).toHaveLength(1);
   });
 });
+
+it.each(["id", "group"] as const)("rejects group transfer with a mismatched destination %s at the final insertion index", (invalid) => {
+  const member = { id: "a", label: "A", groupId: "source" };
+  const resident = { id: "b", label: "B", groupId: "destination" };
+  const source = groupedEndpoint("left", [member], [{ id: "source", label: "Source" }]);
+  const target = groupedEndpoint("right", [resident], [{ id: "destination", label: "Destination" }]);
+  if (invalid === "id") target.getRowId = (row, index) => row === member && index === 1 ? "b" : row.id;
+  else if ("getRowGroupId" in target) {
+    target.getRowGroupId = (row, index) => row === member && index === 1 ? "destination" : row.groupId ?? "";
+  }
+  const resolveConflict = vi.fn(() => "overwrite" as const);
+  expect(transferCominsGroupBetweenTables({ source, target, sourceGroupId: "source", resolveConflict })).toBeNull();
+  expect(resolveConflict).not.toHaveBeenCalled();
+  expect(source.data).toEqual([member]);
+  expect(target.data).toEqual([resident]);
+});
+
+it("moves 150,000 group rows without exceeding the JavaScript argument limit", () => {
+  const data = Array.from({ length: 150_000 }, (_, index) => ({ id: String(index), label: String(index), groupId: "moving" }));
+  const source = groupedEndpoint("left", data, [{ id: "moving", label: "Moving" }]);
+  const target = groupedEndpoint("right", [{ id: "resident", label: "Resident", groupId: "keep" }], [{ id: "keep", label: "Keep" }]);
+  const result = transferCominsGroupBetweenTables({ source, target, sourceGroupId: "moving" });
+  expect(result?.source.data).toEqual([]);
+  expect(result?.target.data).toHaveLength(150_001);
+  expect(result?.target.data[0]).toBe(target.data[0]);
+  expect(result?.target.data.at(-1)).toBe(data.at(-1));
+});

@@ -10,6 +10,7 @@ import type {
 } from "../model";
 import {
   setColumnWidth,
+  distributeRuntimeColumnWidths,
 } from "../../column-layout";
 import {
   normalizeCominsColumnPinned,
@@ -18,6 +19,14 @@ import {
   findColumn,
 } from "../state/access";
 const COMINS_MIN_COLUMN_WIDTH = 88;
+
+export type ColumnLayoutDefinition = Pick<CominsTableRuntimeColumn<unknown>, "id" | "hidden" | "pinned" | "width" | "lockPosition">;
+export type ColumnGroupLayoutDefinition = Pick<CominsTableRuntimeColumnGroup, "id" | "children" | "hidden" | "pinned" | "lockPosition">;
+
+type GroupLayoutMutationSource = Pick<CominsTableState<unknown>, "columnOrder" | "columnState" | "columnGroupState"> & {
+  columns: Array<Pick<CominsTableRuntimeColumn<unknown>, "id" | "width" | "minWidth" | "maxWidth" | "lockPosition">>;
+  columnGroups: Array<Pick<CominsTableRuntimeColumnGroup, "id" | "children" | "lockPosition">>;
+};
 
 export function normalizeColumns<TColumn extends { id?: string; field: string }>(columns: readonly TColumn[]) {
   return columns.map((column) => ({
@@ -64,44 +73,40 @@ export function normalizeColumnGroups<TGroup extends { id: string; children: str
   return groups;
 }
 
-export function normalizeColumnState<TData>(
-  columns: ReadonlyArray<CominsTableRuntimeColumn<TData>>,
+export function normalizeColumnState(
+  columns: ReadonlyArray<ColumnLayoutDefinition>,
   layout?: Partial<CominsColumnLayout>,
 ) {
-  const state: Record<string, CominsColumnRuntimeState> = {};
-
-  for (const column of columns) {
-    state[column.id] = {
-      hidden: layout?.columns?.[column.id]?.hidden ?? column.hidden,
+  const overrides = layout?.columns;
+  return Object.fromEntries<CominsColumnRuntimeState>(columns.map(column => {
+    const override = overrides && Object.hasOwn(overrides, column.id) ? overrides[column.id] : undefined;
+    return [column.id, {
+      hidden: override?.hidden ?? column.hidden,
       pinned: normalizeCominsColumnPinned(
-        layout === undefined ? column.pinned : layout.columns?.[column.id]?.pinned,
+        layout === undefined ? column.pinned : override?.pinned,
       ),
-      width: layout?.columns?.[column.id]?.width ?? column.width,
-    };
-  }
-
-  return state;
+      width: override?.width ?? column.width,
+    }];
+  }));
 }
 
 export function normalizeColumnGroupState(
-  columnGroups: ReadonlyArray<CominsTableRuntimeColumnGroup>,
+  columnGroups: ReadonlyArray<ColumnGroupLayoutDefinition>,
   layout?: Partial<CominsColumnLayout>,
 ) {
-  const state: Record<string, CominsColumnGroupRuntimeState> = {};
-
-  for (const group of columnGroups) {
-    state[group.id] = {
-      hidden: layout?.groups?.[group.id]?.hidden ?? group.hidden,
+  const overrides = layout?.groups;
+  return Object.fromEntries<CominsColumnGroupRuntimeState>(columnGroups.map(group => {
+    const override = overrides && Object.hasOwn(overrides, group.id) ? overrides[group.id] : undefined;
+    return [group.id, {
+      hidden: override?.hidden ?? group.hidden,
       pinned: normalizeCominsColumnPinned(
-        layout === undefined ? group.pinned : layout.groups?.[group.id]?.pinned,
+        layout === undefined ? group.pinned : override?.pinned,
       ),
-    };
-  }
-
-  return state;
+    }];
+  }));
 }
 
-export function getColumnGroupIdMap(columnGroups: ReadonlyArray<CominsTableRuntimeColumnGroup>) {
+export function getColumnGroupIdMap(columnGroups: ReadonlyArray<{ id: string; children: string[] }>) {
   const map = new Map<string, string>();
 
   for (const group of columnGroups) {
@@ -120,10 +125,11 @@ export function findColumnGroupById(
   return columnGroups.find((group) => group.id === groupId);
 }
 
-export function normalizeColumnOrder<TData>(
-  columns: ReadonlyArray<CominsTableRuntimeColumn<TData>>,
+export function normalizeColumnOrder(
+  columns: ReadonlyArray<ColumnLayoutDefinition>,
   layout?: Partial<CominsColumnLayout>,
-  columnGroups: ReadonlyArray<CominsTableRuntimeColumnGroup> = [],
+  columnGroups: ReadonlyArray<ColumnGroupLayoutDefinition> = [],
+  prepared?: LayoutGroupLookup<ColumnGroupLayoutDefinition>,
 ) {
   if (layout?.order?.length) {
     return normalizeRequestedColumnOrder(columns, layout, columnGroups);
@@ -135,9 +141,29 @@ export function normalizeColumnOrder<TData>(
     return declaredOrder;
   }
 
-  const groupIdByColumnId = getColumnGroupIdMap(columnGroups);
-  const groupById = new Map(columnGroups.map((group) => [group.id, group]));
+  const groupIdByColumnId = prepared?.groupIdByColumnId ?? getColumnGroupIdMap(columnGroups);
+  const groupById = prepared?.groupById ?? new Map(columnGroups.map((group) => [group.id, group]));
   const emittedGroups = new Set<string>();
+  let memberCount = 0;
+  for (const group of columnGroups) memberCount += group.children.length;
+  // Overlapping memberships and duplicate group IDs use the existing regrouping rules.
+  if (groupById.size === columnGroups.length && groupIdByColumnId.size === memberCount) {
+    let previousGroupId: string | undefined;
+    let contiguous = true;
+    for (const columnId of declaredOrder) {
+      const groupId = groupIdByColumnId.get(columnId);
+      if (groupId === previousGroupId) continue;
+      if (groupId && emittedGroups.has(groupId)) {
+        contiguous = false;
+        break;
+      }
+      if (groupId) emittedGroups.add(groupId);
+      previousGroupId = groupId;
+    }
+    if (contiguous) return declaredOrder;
+    emittedGroups.clear();
+  }
+
   const groupedOrder: string[] = [];
 
   for (const columnId of declaredOrder) {
@@ -165,15 +191,15 @@ export function normalizeColumnOrder<TData>(
   return groupedOrder;
 }
 
-function normalizeRequestedColumnOrder<TData>(
-  columns: ReadonlyArray<CominsTableRuntimeColumn<TData>>,
+function normalizeRequestedColumnOrder(
+  columns: ReadonlyArray<ColumnLayoutDefinition>,
   layout?: Partial<CominsColumnLayout>,
-  columnGroups: ReadonlyArray<CominsTableRuntimeColumnGroup> = [],
+  columnGroups: ReadonlyArray<ColumnGroupLayoutDefinition> = [],
 ) {
   const declaredOrder = columns.map((column) => column.id);
   const knownIds = new Set(declaredOrder);
-  const ordered = (layout?.order ?? []).filter((id) => knownIds.has(id));
-  const missing = declaredOrder.filter((id) => !ordered.includes(id));
+  const ordered = (layout?.order ?? []).filter((id) => knownIds.delete(id));
+  const missing = declaredOrder.filter((id) => knownIds.has(id));
   const flatOrder = [...ordered, ...missing];
   const columnById = new Map(columns.map((column) => [column.id, column]));
   const groupIdByColumnId = getColumnGroupIdMap(columnGroups);
@@ -379,7 +405,15 @@ export function setCominsColumnGroupHidden<TData>(
   groupId: string,
   hidden: boolean,
 ) {
-  if (!findColumnGroupById(state.columnGroups, groupId)) {
+  return setColumnGroupLayoutHidden(state, groupId, hidden);
+}
+
+export function setColumnGroupLayoutHidden<TState extends GroupLayoutMutationSource>(
+  state: TState,
+  groupId: string,
+  hidden: boolean,
+): TState {
+  if (!state.columnGroups.find((group) => group.id === groupId)) {
     return state;
   }
 
@@ -470,22 +504,30 @@ export function setCominsColumnGroupWidth<TData>(
   groupId: string,
   width: number,
 ) {
-  const group = findColumnGroupById(state.columnGroups, groupId);
+  return setColumnGroupLayoutWidth(state, groupId, width);
+}
+
+export function setColumnGroupLayoutWidth<TState extends GroupLayoutMutationSource>(
+  state: TState,
+  groupId: string,
+  width: number,
+): TState {
+  const group = state.columnGroups.find((candidate) => candidate.id === groupId);
 
   if (!group || state.columnGroupState[group.id]?.hidden === true) {
     return state;
   }
 
   const childColumns = group.children
-    .map((columnId) => findColumn(state, columnId))
-    .filter((column): column is CominsTableRuntimeColumn<TData> => Boolean(column))
+    .map((columnId) => state.columns.find((column) => column.id === columnId))
+    .filter((column): column is GroupLayoutMutationSource["columns"][number] => Boolean(column))
     .filter((column) => state.columnState[column.id]?.hidden !== true);
 
   if (childColumns.length === 0) {
     return state;
   }
 
-  const widths = distributeColumnGroupWidths(state, childColumns, width);
+  const widths = distributeRuntimeColumnWidths(state, childColumns, width);
   const columnState = { ...state.columnState };
 
   childColumns.forEach((column, index) => {
@@ -503,6 +545,13 @@ export function setCominsColumnGroupWidth<TData>(
 
 export function doesColumnMoveChangeLockedPositions<TData>(
   state: CominsTableState<TData>,
+  nextOrder: readonly string[],
+) {
+  return doesLayoutMoveChangeLockedPositions(state, nextOrder);
+}
+
+function doesLayoutMoveChangeLockedPositions(
+  state: GroupLayoutMutationSource,
   nextOrder: readonly string[],
 ) {
   const currentIndexByColumnId = new Map(
@@ -626,7 +675,15 @@ export function moveCominsColumnGroup<TData>(
   groupId: string,
   targetIndex: number,
 ) {
-  const group = findColumnGroupById(state.columnGroups, groupId);
+  return moveColumnGroupLayout(state, groupId, targetIndex);
+}
+
+export function moveColumnGroupLayout<TState extends GroupLayoutMutationSource>(
+  state: TState,
+  groupId: string,
+  targetIndex: number,
+): TState {
+  const group = state.columnGroups.find((candidate) => candidate.id === groupId);
 
   if (
     !group ||
@@ -643,10 +700,20 @@ export function moveCominsColumnGroup<TData>(
   }
 
   const current = state.columnOrder.filter((id) => !group.children.includes(id));
-  const nextIndex = Math.max(0, Math.min(targetIndex, current.length));
+  let nextIndex = Math.max(0, Math.min(targetIndex, current.length));
+  const targetGroup = state.columnGroups.find(candidate =>
+    candidate !== group && candidate.children.includes(current[nextIndex - 1]!) &&
+    candidate.children.includes(current[nextIndex]!));
+  if (targetGroup) {
+    if (state.columnOrder.indexOf(groupChildren[0]!) < state.columnOrder.indexOf(current[nextIndex]!)) {
+      while (nextIndex < current.length && targetGroup.children.includes(current[nextIndex]!)) nextIndex += 1;
+    } else {
+      while (nextIndex > 0 && targetGroup.children.includes(current[nextIndex - 1]!)) nextIndex -= 1;
+    }
+  }
   const nextOrder = [...current.slice(0, nextIndex), ...groupChildren, ...current.slice(nextIndex)];
 
-  if (doesColumnMoveChangeLockedPositions(state, nextOrder)) {
+  if (doesLayoutMoveChangeLockedPositions(state, nextOrder)) {
     return state;
   }
 
@@ -658,6 +725,14 @@ export function moveCominsColumnGroup<TData>(
 }
 
 export function serializeCominsColumnLayout<TData>(state: CominsTableState<TData>): CominsColumnLayout {
+  return serializeColumnLayoutState(state);
+}
+
+type LayoutSerializationSource = Pick<CominsTableState<unknown>, "columnState" | "columnGroupState" | "columnOrder"> & {
+  columnGroups: readonly { id: string }[];
+};
+
+export function serializeColumnLayoutState(state: LayoutSerializationSource): CominsColumnLayout {
   const groups =
     state.columnGroups.length === 0
       ? undefined
@@ -671,6 +746,13 @@ export function serializeCominsColumnLayout<TData>(state: CominsTableState<TData
 }
 
 export function applyCominsColumnLayout<TData>(state: CominsTableState<TData>, layout: CominsColumnLayout) {
+  return applyColumnLayoutState(state, layout);
+}
+
+export function applyColumnLayoutState<TState extends LayoutSource<ColumnLayoutDefinition, ColumnGroupLayoutDefinition>>(
+  state: TState,
+  layout: CominsColumnLayout,
+): TState {
   return {
     ...state,
     columnOrder: normalizeColumnOrder(state.columns, layout, state.columnGroups),
@@ -679,17 +761,53 @@ export function applyCominsColumnLayout<TData>(state: CominsTableState<TData>, l
   };
 }
 
+type LayoutSource<TColumn, TGroup> = Pick<CominsTableState<unknown>, "columnOrder" | "columnState" | "columnGroupState"> & {
+  columns: readonly TColumn[];
+  columnGroups: readonly TGroup[];
+};
+
+type LayoutHeaderCell<TColumn, TGroup> =
+  | { kind: "column"; colSpan: 1; rowSpan: 1 | 2; column: TColumn; columnId: string; groupId?: string }
+  | { kind: "group"; colSpan: number; rowSpan: 1; group: TGroup; groupId: string };
+
+export type LayoutGroupLookup<TGroup> = {
+  groupIdByColumnId: Map<string, string>;
+  groupById: Map<string, TGroup>;
+};
+
+export function createLayoutGroupLookup<TGroup extends { id: string; children: string[] }>(
+  groups: readonly TGroup[],
+): LayoutGroupLookup<TGroup> {
+  return {
+    groupIdByColumnId: getColumnGroupIdMap(groups),
+    groupById: new Map(groups.map(group => [group.id, group] as const)),
+  };
+}
+
 export function getCominsVisibleColumns<TData>(state: CominsTableState<TData>) {
-  const groupIdByColumnId = getColumnGroupIdMap(state.columnGroups);
-  const groupById = new Map(state.columnGroups.map((group) => [group.id, group]));
+  return getVisibleLayoutColumns(state);
+}
+
+// Layout only reads IDs and runtime layout; render/edit metadata stays with its owner.
+export function getVisibleLayoutColumns<TColumn extends { id: string }, TGroup extends { id: string; children: string[] }>(
+  state: LayoutSource<TColumn, TGroup>,
+) {
+  return buildVisibleLayoutColumns(state, createLayoutGroupLookup(state.columnGroups));
+}
+
+function buildVisibleLayoutColumns<TColumn extends { id: string }, TGroup extends { id: string; children: string[] }>(
+  state: LayoutSource<TColumn, TGroup>,
+  lookup: LayoutGroupLookup<TGroup>,
+) {
+  const { groupIdByColumnId, groupById } = lookup;
   const emittedGroups = new Set<string>();
   const blocks: Array<{
-    columns: Array<CominsTableRuntimeColumn<TData>>;
+    columns: Array<TColumn>;
     pinned?: CominsColumnPinned;
   }> = [];
 
   for (const columnId of state.columnOrder) {
-    const column = findColumn(state, columnId);
+    const column = state.columns.find(column => column.id === columnId);
 
     if (!column || state.columnState[column.id]?.hidden === true) {
       continue;
@@ -714,8 +832,8 @@ export function getCominsVisibleColumns<TData>(state: CominsTableState<TData>) {
 
     const columns = state.columnOrder
       .filter((currentId) => group.children.includes(currentId))
-      .map((currentId) => findColumn(state, currentId))
-      .filter((current): current is CominsTableRuntimeColumn<TData> =>
+      .map((currentId) => state.columns.find(column => column.id === currentId))
+      .filter((current): current is TColumn =>
         Boolean(current) && state.columnState[current!.id]?.hidden !== true,
       );
 
@@ -734,7 +852,30 @@ export function getCominsVisibleColumns<TData>(state: CominsTableState<TData>) {
 }
 
 export function getCominsHeaderRows<TData>(state: CominsTableState<TData>): Array<Array<CominsHeaderCell<TData>>> {
-  const visibleColumns = getCominsVisibleColumns(state);
+  return getLayoutHeaderRows(state);
+}
+
+export function getLayoutHeaderRows<TColumn extends { id: string }, TGroup extends { id: string; children: string[] }>(
+  state: LayoutSource<TColumn, TGroup>,
+): Array<Array<LayoutHeaderCell<TColumn, TGroup>>> {
+  const lookup = createLayoutGroupLookup(state.columnGroups);
+  const visibleColumns = buildVisibleLayoutColumns(state, lookup);
+  return buildLayoutHeaderRows(state, visibleColumns, lookup);
+}
+
+export function getLayoutProjection<TColumn extends { id: string }, TGroup extends { id: string; children: string[] }>(
+  state: LayoutSource<TColumn, TGroup>,
+  lookup = createLayoutGroupLookup(state.columnGroups),
+) {
+  const visibleColumns = buildVisibleLayoutColumns(state, lookup);
+  return { visibleColumns, headerRows: buildLayoutHeaderRows(state, visibleColumns, lookup) };
+}
+
+function buildLayoutHeaderRows<TColumn extends { id: string }, TGroup extends { id: string; children: string[] }>(
+  state: LayoutSource<TColumn, TGroup>,
+  visibleColumns: TColumn[],
+  lookup: LayoutGroupLookup<TGroup>,
+): Array<Array<LayoutHeaderCell<TColumn, TGroup>>> {
 
   if (state.columnGroups.length === 0) {
     return [
@@ -748,11 +889,10 @@ export function getCominsHeaderRows<TData>(state: CominsTableState<TData>): Arra
     ];
   }
 
-  const groupIdByColumnId = getColumnGroupIdMap(state.columnGroups);
-  const groupById = new Map(state.columnGroups.map((group) => [group.id, group]));
+  const { groupIdByColumnId, groupById } = lookup;
   const emittedGroups = new Set<string>();
-  const parentRow: Array<CominsHeaderCell<TData>> = [];
-  const childRow: Array<CominsHeaderCell<TData>> = [];
+  const parentRow: Array<LayoutHeaderCell<TColumn, TGroup>> = [];
+  const childRow: Array<LayoutHeaderCell<TColumn, TGroup>> = [];
 
   for (const column of visibleColumns) {
     const columnId = column.id;

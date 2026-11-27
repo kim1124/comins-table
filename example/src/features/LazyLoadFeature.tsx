@@ -52,11 +52,8 @@ export function LazyLoadFeature() {
       } else {
         request.signal.addEventListener("abort", abortFromTable, { once: true });
       }
-      if (request.reason === "scroll") {
-        setLoadingMore(true);
-      } else {
-        setLoading(true);
-      }
+      setLoadingMore(request.reason === "scroll");
+      setLoading(request.reason !== "scroll");
 
       try {
         const nextRows = await loadSampleRows(request, controller.signal);

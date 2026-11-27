@@ -53,6 +53,8 @@ During multi-sort only the first rule exposes `aria-sort="ascending"` or `"desce
 
 The live [`/api/ref`](http://127.0.0.1:4002/api/ref) example applies `setSortModel`, `clearSort`, `getColumnLayout`, and `setColumnLayout` against a Flat Table. Layout methods preserve current Column order, visibility, and width.
 
+When the `columns` prop changes, a mounted Table remembers the positions of its 128 most recently removed Column IDs. A returning Column whose ID has fallen out of that history uses the same insertion rules as a new Column. For layout persistence across larger schema changes or remounts, save and restore it with the layout methods above.
+
 ## Column reorder
 
 - A left-button mouse interaction activates column reorder at a 6-pixel horizontal drag threshold. Horizontal movement must be greater than vertical movement.

@@ -56,6 +56,13 @@ export function getCominsColumnFilterOptions<TData>(input: CominsColumnFilterOpt
 
 /** Immutable proposal: the application owns and acknowledges the returned model. */
 export function setCominsColumnFilterValues<TData>(input: CominsColumnFilterOptionsInput<TData> & { action: CominsColumnFilterValuesAction }): CominsColumnFilterModel {
+  return proposeCominsColumnFilterValues(input, () => getCominsColumnFilterOptions(input));
+}
+
+export function proposeCominsColumnFilterValues<TData>(
+  input: CominsColumnFilterOptionsInput<TData> & { action: CominsColumnFilterValuesAction },
+  getOptions: () => CominsColumnFilterOptionsResult | null,
+): CominsColumnFilterModel {
   const { action, columnId } = input;
   const model: CominsColumnFilterModel = Array.isArray(input.model) ? input.model : [];
   if (!input.columns.some(column => column.id === columnId)) return model;
@@ -67,7 +74,7 @@ export function setCominsColumnFilterValues<TData>(input: CominsColumnFilterOpti
     return next;
   };
   if (action.type === "clear") return replace(null);
-  const result = getCominsColumnFilterOptions(input);
+  const result = getOptions();
   if (!result) return model;
   const target = action.type === "setOption" ? result.options.filter(option => option.id === action.id) : result.visibleOptions;
   if (!target.length) return model;

@@ -85,9 +85,11 @@ function toComponentInputValue(value: unknown) {
 function CominsInputComponent<TData, TValue>({
   component,
   payload,
+  cellDisabled,
 }: {
   component: Extract<CominsAnyComponentConfig<TData, TValue>, { type: "input" }>;
   payload: CominsAnyComponentPayload<TData, TValue>;
+  cellDisabled?: boolean;
 }) {
   const props = resolveComponentProps<React.InputHTMLAttributes<HTMLInputElement>>(component.props, payload);
   const {
@@ -103,6 +105,7 @@ function CominsInputComponent<TData, TValue>({
     value,
     ...inputProps
   } = props;
+  const disabled = Boolean(cellDisabled || props.disabled);
   const propValue = toComponentInputValue(value ?? defaultValue);
   const [draftValue, setDraftValue] = useState(propValue);
   const lastCommittedValueRef = useRef(propValue);
@@ -111,10 +114,10 @@ function CominsInputComponent<TData, TValue>({
   useEffect(() => {
     setDraftValue(propValue);
     lastCommittedValueRef.current = propValue;
-  }, [propValue]);
+  }, [propValue, disabled]);
 
   const commitValue = (event: React.FocusEvent<HTMLInputElement> | React.KeyboardEvent<HTMLInputElement>) => {
-    if (draftValue === lastCommittedValueRef.current) {
+    if (disabled || event.currentTarget.disabled || draftValue === lastCommittedValueRef.current) {
       return;
     }
 
@@ -126,6 +129,7 @@ function CominsInputComponent<TData, TValue>({
   return (
     <input
       {...inputProps}
+      disabled={disabled}
       className={mergeClassName("comins-table__component", "comins-table__component-input", props.className)}
       onBlur={(event) => {
         onBlur?.(event);
@@ -807,7 +811,74 @@ function CominsCellVirtualListComponent<TData, TValue>({
   );
 }
 
+function CominsRadioComponent<TData, TValue>({
+  component,
+  payload,
+}: {
+  component: Extract<CominsAnyComponentConfig<TData, TValue>, { type: "radio" }>;
+  payload: CominsAnyComponentPayload<TData, TValue>;
+}) {
+  const props = resolveComponentProps<
+    React.HTMLAttributes<HTMLDivElement> & { value?: string | number | boolean }
+  >(component.props, payload);
+  const options = resolveComponentOptions(component.options, payload);
+  const selectedValue =
+    props.value ?? ("value" in payload ? (payload as CominsCellComponentPayload<TData, TValue>).value : undefined);
+  const groupName = useId();
+  const { value: _value, ...divProps } = props;
+
+  return (
+    <div
+      {...divProps}
+      className={mergeClassName("comins-table__component", "comins-table__component-radio", divProps.className)}
+      onClick={(event) => {
+        divProps.onClick?.(event);
+        stopComponentEvent(event);
+      }}
+      onKeyDown={(event) => {
+        divProps.onKeyDown?.(event);
+        stopComponentEvent(event);
+      }}
+      onMouseDown={(event) => {
+        divProps.onMouseDown?.(event);
+        stopComponentEvent(event);
+      }}
+      onPointerDown={(event) => {
+        divProps.onPointerDown?.(event);
+        stopComponentEvent(event);
+      }}
+      role="radiogroup"
+    >
+      {options.map((option) => (
+        <label key={String(option.value)} onClick={stopComponentEvent} onMouseDown={stopComponentEvent}>
+          <input
+            checked={selectedValue === undefined ? undefined : String(selectedValue) === String(option.value)}
+            disabled={option.disabled}
+            name={groupName}
+            onClick={stopComponentEvent}
+            onChange={(event) => {
+              stopComponentEvent(event);
+
+              if (event.currentTarget.checked) {
+                component.onValueChange?.({ ...payload, value: String(option.value) } as never);
+              }
+            }}
+            onKeyDown={stopComponentEvent}
+            onMouseDown={stopComponentEvent}
+            onPointerDown={stopComponentEvent}
+            style={{ height: 20, width: 20 }}
+            type="radio"
+            value={String(option.value)}
+          />
+          {option.label}
+        </label>
+      ))}
+    </div>
+  );
+}
+
 export type CominsBuiltInComponentInteraction = {
+  cellDisabled?: boolean;
   requestRowSelection?: (request: {
     event: React.KeyboardEvent<HTMLButtonElement> | React.MouseEvent<HTMLButtonElement>;
     mode: "exclusive" | "row-click";
@@ -878,7 +949,7 @@ export function renderCominsBuiltInComponent<TData, TValue>(
   }
 
   if (component.type === "input") {
-    return <CominsInputComponent component={component} payload={payload} />;
+    return <CominsInputComponent component={component} payload={payload} cellDisabled={interaction?.cellDisabled} />;
   }
 
   if (component.type === "checkbox") {
@@ -930,66 +1001,7 @@ export function renderCominsBuiltInComponent<TData, TValue>(
   }
 
   if (component.type === "radio") {
-    const props = resolveComponentProps<
-      React.HTMLAttributes<HTMLDivElement> & { value?: string | number | boolean }
-    >(component.props, payload);
-    const options = resolveComponentOptions(component.options, payload);
-    const selectedValue =
-      props.value ?? ("value" in payload ? (payload as CominsCellComponentPayload<TData, TValue>).value : undefined);
-    const groupName =
-      "row" in payload
-        ? `${payload.column.id}-${String((payload as CominsCellComponentPayload<TData, TValue>).row.id)}-radio`
-        : `${payload.column.id}-header-radio`;
-    const { value: _value, ...divProps } = props;
-
-    return (
-      <div
-        {...divProps}
-        className={mergeClassName("comins-table__component", "comins-table__component-radio", divProps.className)}
-        onClick={(event) => {
-          divProps.onClick?.(event);
-          stopComponentEvent(event);
-        }}
-        onKeyDown={(event) => {
-          divProps.onKeyDown?.(event);
-          stopComponentEvent(event);
-        }}
-        onMouseDown={(event) => {
-          divProps.onMouseDown?.(event);
-          stopComponentEvent(event);
-        }}
-        onPointerDown={(event) => {
-          divProps.onPointerDown?.(event);
-          stopComponentEvent(event);
-        }}
-        role="radiogroup"
-      >
-        {options.map((option) => (
-          <label key={String(option.value)} onClick={stopComponentEvent} onMouseDown={stopComponentEvent}>
-            <input
-              checked={selectedValue === undefined ? undefined : String(selectedValue) === String(option.value)}
-              disabled={option.disabled}
-              name={groupName}
-              onClick={stopComponentEvent}
-              onChange={(event) => {
-                stopComponentEvent(event);
-
-                if (event.currentTarget.checked) {
-                  component.onValueChange?.({ ...payload, value: String(option.value) } as never);
-                }
-              }}
-              onKeyDown={stopComponentEvent}
-              onMouseDown={stopComponentEvent}
-              onPointerDown={stopComponentEvent}
-              style={{ height: 20, width: 20 }}
-              type="radio"
-              value={String(option.value)}
-            />
-            {option.label}
-          </label>
-        ))}
-      </div>
-    );
+    return <CominsRadioComponent component={component} payload={payload} />;
   }
 
   if (component.type === "toggle") {

@@ -44,6 +44,12 @@ describe("independent memory verdicts", () => {
     const input = base(); input.lifetimeObservation = "SURVIVOR_OBSERVED";
     input.requiredCoverage.push({ id: "positive", layer: "lifetime", phase: "calibration-held", target: "probe", expectation: "retained" });
     input.coverage.push({ ...input.coverage[0]!, id: "positive", target: "probe", phase: "calibration-held", expectation: "retained", outcome: "SATISFIED" });
+    expect(evaluateMemoryVerdict(input).releaseMemoryGate).toBe("BLOCKED");
+    input.requiredCoverage.push({ id: "released", layer: "lifetime", phase: "calibration-released", target: "different-probe", expectation: "released" });
+    input.coverage.push({ ...input.coverage[0]!, id: "released", target: "different-probe", phase: "calibration-released", expectation: "released" });
+    expect(evaluateMemoryVerdict(input).releaseMemoryGate).toBe("BLOCKED");
+    input.requiredCoverage.at(-1)!.target = "probe";
+    input.coverage.at(-1)!.target = "probe";
     expect(evaluateMemoryVerdict(input).releaseMemoryGate).toBe("PASS");
   });
   it.each(["NOT_ASSESSED", "INVALID"] as const)("blocks required coverage %s", status => {
@@ -99,4 +105,30 @@ it.each(["missing-evidence", "duplicate"])("preserves recorded FAIL with %s whil
   if (kind === "missing-evidence") input.numeric[0]!.evidence = "";
   else input.numeric.push({ ...input.numeric[0]! });
   expect(evaluateMemoryVerdict(input)).toMatchObject({ numericBudget: "FAIL", releaseMemoryGate: "BLOCKED" });
+});
+
+it.each([["calibration-held", "released"], ["calibration-released", "retained"]] as const)(
+  "blocks a self-consistent manifest with the wrong %s expectation",
+  (phase, expectation) => {
+    const input = base();
+    input.requiredCoverage[0] = { ...input.requiredCoverage[0]!, phase, expectation };
+    input.coverage[0] = { ...input.coverage[0]!, phase, expectation };
+    expect(evaluateMemoryVerdict(input).releaseMemoryGate).toBe("BLOCKED");
+  },
+);
+
+it("separates matching source code from different actual memory measurement targets", async () => {
+  const { createMemoryArtifactKey } = await import("./playwright/helpers/memory-verdict");
+  const frozen = {
+    sources: { "src/index.tsx": "source" }, buildMode: "development" as const, browser: "Chromium 1",
+    runtime: { react: "19" }, browserBundles: { main: "build" }, servedScripts: { main: "served" },
+  };
+  const key = createMemoryArtifactKey(frozen);
+  expect(createMemoryArtifactKey({ ...frozen })).toBe(key);
+  for (const changed of [
+    { ...frozen, buildMode: "production" as const },
+    { ...frozen, browser: "Chromium 2" },
+    { ...frozen, runtime: { react: "18" } },
+    { ...frozen, servedScripts: { main: "different" } },
+  ]) expect(createMemoryArtifactKey(changed)).not.toBe(key);
 });

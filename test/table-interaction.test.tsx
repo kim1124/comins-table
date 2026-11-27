@@ -2,6 +2,7 @@
 
 import type React from "react";
 import { act, createRef, startTransition, StrictMode, Suspense, useState } from "react";
+import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -154,6 +155,39 @@ describe("state reconciliation notification contract", () => {
 });
 
 describe("column pinning interaction contract", () => {
+  it("updates pinning and summary on the same mounted table", () => {
+    const restoreResizeObserver = installTestResizeObserver(240, 400);
+    const ref = createRef<CominsTableRef<PersonRow>>();
+    const layoutColumns = columns.map(column => ({ ...column, width: 100 }));
+    const columnGroups = [{ children: ["name", "age"], id: "profile", label: "Profile" }];
+    const summary = { columns: { name: { aggregate: "count" as const, colSpan: 2 } } };
+    const render = (showSummary: boolean) => (
+      <CominsTable columns={layoutColumns} columnGroups={columnGroups} data={rows}
+        getRowId={getPersonRowId} ref={ref} summary={showSummary ? summary : undefined} />
+    );
+
+    try {
+      const element = renderTableElement(render(false));
+      const table = element.querySelector("[data-comins-table-instance-id]");
+      const groupHeader = () => element.querySelector("[data-testid='header-group-profile']");
+      expect(table).not.toBeNull();
+      expect(groupHeader()?.getAttribute("data-comins-pinned")).toBeNull();
+
+      act(() => ref.current?.setColumnLayout({ groups: { profile: { pinned: "left" } } }));
+      expect(groupHeader()?.getAttribute("data-comins-pinned")).toBe("left");
+      act(() => ref.current?.setColumnLayout({ groups: { profile: {} } }));
+      expect(groupHeader()?.getAttribute("data-comins-pinned")).toBeNull();
+
+      act(() => root?.render(render(true)));
+      expect(element.querySelector<HTMLTableCellElement>("[data-comins-summary-column-id='name']")?.colSpan).toBe(2);
+      act(() => root?.render(render(false)));
+      expect(element.querySelector("[data-comins-summary-column-id='name']")).toBeNull();
+      expect(element.querySelector("[data-comins-table-instance-id]")).toBe(table);
+    } finally {
+      restoreResizeObserver();
+    }
+  });
+
   it("renders responsive sticky Header, Body, and split Summary surfaces", () => {
     const restoreResizeObserver = installTestResizeObserver(240, 400);
 
@@ -897,6 +931,65 @@ describe("row grouping interaction contract", () => {
       reason: "pointer-cancel",
       result: "cancelled",
     }));
+  });
+
+  it.each(["canTransfer", "onRowDrag"] as const)("clears cross-table edge auto-scroll on source removal in %s", (callback) => {
+    const coordinator = createCominsTableTransferCoordinator<PersonRow>({});
+    const after = vi.fn();
+    function Fixture() {
+      const [showSource, setShowSource] = useState(true);
+      const removeSource = () => flushSync(() => setShowSource(false));
+      return <>
+        {showSource && <CominsTable
+          columns={columns} data={[rows[0]!]} data-testid="edge-source" getRowId={getPersonRowId}
+          onAfterDragRow={after}
+          onRowDrag={event => { if (callback === "onRowDrag" && event.target.tableId === "target") removeSource(); }}
+          rowProps={{ draggable: true }} tableTransfer={{ coordinator, scope: "edge", tableId: "source" }}
+        />}
+        <CominsTable
+          columns={columns} data={[rows[1]!]} data-testid="edge-target" getRowId={getPersonRowId}
+          tableTransfer={{
+            canTransfer: () => { if (callback === "canTransfer") removeSource(); return true; },
+            coordinator, scope: "edge", tableId: "target",
+          }}
+        />
+      </>;
+    }
+    const view = renderTableElement(<Fixture />);
+    const source = view.querySelector<HTMLElement>("[data-testid='row-drag-handle-a']")!;
+    const target = view.querySelector<HTMLElement>("[data-testid='edge-target']")!;
+    const targetRow = target.querySelector<HTMLElement>("[data-testid='row-b']")!;
+    const viewport = target.closest<HTMLElement>(".comins-table__body-viewport")
+      ?? target.querySelector<HTMLElement>(".comins-table__body-viewport")!;
+    vi.spyOn(viewport, "getBoundingClientRect").mockReturnValue({
+      top: 0, bottom: 100, left: 0, right: 100, width: 100, height: 100, x: 0, y: 0, toJSON: () => ({}),
+    });
+    Object.defineProperties(viewport, { scrollHeight: { value: 1000 }, clientHeight: { value: 100 } });
+    const rafs = new Set<number>();
+    let nextFrame = 0;
+    const request = vi.spyOn(window, "requestAnimationFrame").mockImplementation(() => {
+      rafs.add(++nextFrame);
+      return nextFrame;
+    });
+    const cancel = vi.spyOn(window, "cancelAnimationFrame").mockImplementation(id => { rafs.delete(id); });
+    const originalElementFromPoint = document.elementFromPoint;
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: (_x: number, y: number) => y === 95 ? targetRow : source,
+    });
+    try {
+      act(() => source.dispatchEvent(createMousePointerEvent("pointerdown", { bubbles: true, button: 0, clientX: 10, clientY: 10 })));
+      const existingFrames = new Set(rafs);
+      act(() => window.dispatchEvent(createMousePointerEvent("pointermove", { buttons: 1, clientX: 10, clientY: 95 })));
+      expect(source.isConnected).toBe(false);
+      expect(target.isConnected).toBe(true);
+      expect([...rafs].filter(frame => !existingFrames.has(frame))).toEqual([]);
+      expect(after).toHaveBeenCalledOnce();
+    } finally {
+      request.mockRestore();
+      cancel.mockRestore();
+      Object.defineProperty(document, "elementFromPoint", { configurable: true, value: originalElementFromPoint });
+    }
   });
 
   it("moves one draggable Row between flat Tables through a shared Coordinator", async () => {
@@ -2083,6 +2176,174 @@ describe("comins-table keyboard interaction", () => {
       }
     } finally {
       requestFrame.mockRestore(); cancelFrame.mockRestore();
+    }
+  });
+
+  it("waits for the first viewport observation before reading the scrollbar geometry", () => {
+    const resize = installControllableResizeObserver();
+    let reads = 0;
+    const outerWidth = vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
+      if (this.dataset.testid === "initial-viewport") reads += 1;
+      return 0;
+    });
+    try {
+      const host = renderTableElement(
+        <CominsTable columns={columns} data={rows} data-testid="initial-viewport" getRowId={getPersonRowId} />,
+      );
+      const viewport = host.querySelector<HTMLElement>('[data-testid="initial-viewport"]')!;
+
+      expect(reads).toBe(0);
+      act(() => resize.emit(viewport, 0));
+      expect(reads).toBeGreaterThan(1);
+
+      const readsAfterZeroWidth = reads;
+      setElementRect(viewport, 360, 240);
+      act(() => resize.emit(viewport, 240));
+      expect(reads).toBeGreaterThan(readsAfterZeroWidth);
+    } finally {
+      outerWidth.mockRestore();
+      resize.restore();
+    }
+  });
+
+  it("renders each row once after the first viewport observation", () => {
+    const resize = installControllableResizeObserver();
+    const rowClassName = vi.fn(() => "measurement-row");
+    try {
+      const host = renderTableElement(
+        <CominsTable columns={columns} data={rows} data-testid="observed-scrollbar"
+          getRowId={getPersonRowId} rowProps={{ className: rowClassName }} />,
+      );
+      const viewport = host.querySelector<HTMLElement>('[data-testid="observed-scrollbar"]')!;
+      setElementRect(viewport, 360, 240);
+      rowClassName.mockClear();
+
+      act(() => resize.emit(viewport, 240));
+
+      expect(rowClassName).toHaveBeenCalledTimes(rows.length);
+      expect(host.querySelectorAll(".measurement-row")).toHaveLength(rows.length);
+    } finally {
+      resize.restore();
+    }
+  });
+
+  it("skips a redundant viewport render and publishes fractional geometry", () => {
+    const resize = installControllableResizeObserver();
+    const rowClassName = vi.fn(() => "measurement-row");
+    const fixedColumns = [{ field: "name", label: "Name", width: 160 }];
+
+    try {
+      const host = renderTableElement(
+        <CominsTable columns={fixedColumns} data={rows} data-testid="native-fit-viewport"
+          getRowId={getPersonRowId} rowProps={{ className: rowClassName }} />,
+      );
+      const viewport = host.querySelector<HTMLElement>('[data-testid="native-fit-viewport"]')!;
+      const header = host.querySelector<HTMLElement>(".comins-table__header")!;
+      const viewportRect = setElementRect(viewport, 360, 60);
+      setElementRect(header, 360, 41);
+      setElementRect(header.firstElementChild!, 360, 41);
+      setElementRect(viewport.firstElementChild!, 360, 72);
+      Object.defineProperties(viewport, {
+        clientWidth: { value: 360 },
+        offsetWidth: { value: 360 },
+        scrollWidth: { value: 360 },
+      });
+      rowClassName.mockClear();
+
+      act(() => resize.emit(viewport, 60));
+
+      expect(rowClassName).not.toHaveBeenCalled();
+      expect(host.querySelectorAll(".measurement-row")).toHaveLength(rows.length);
+
+      viewportRect.mockReturnValue({ ...viewport.getBoundingClientRect(), width: 360.25 });
+      act(() => resize.emit(viewport, 60));
+
+      expect(rowClassName).toHaveBeenCalledTimes(rows.length);
+      expect(header.style.width).toBe("360px");
+    } finally {
+      resize.restore();
+    }
+  });
+
+  it("shares initial group membership and projects later group changes", () => {
+    const mountColumns = [{ field: "name", id: "lookup-name" }, { field: "age", id: "lookup-age" }];
+    const initialGroups = [{ id: "lookup-group", children: ["lookup-name", "lookup-age"], label: "Initial" }];
+    const nextGroups = [{ id: "lookup-group", children: ["lookup-age"], label: "Updated" }];
+    const render = (columnGroups: typeof initialGroups) => (
+      <CominsTable columns={mountColumns} columnGroups={columnGroups} data={rows} getRowId={getPersonRowId} />
+    );
+    const set = Map.prototype.set;
+    let entries = 0;
+    const collect = vi.spyOn(Map.prototype, "set").mockImplementation(function (this: Map<unknown, unknown>, key, value) {
+      if (key === "lookup-name" && value === "lookup-group") entries += 1;
+      return set.call(this, key, value);
+    });
+
+    try {
+      const host = renderTableElement(render(initialGroups));
+      expect(entries).toBe(1);
+      expect(host.querySelector("th[colspan='2']")?.textContent).toContain("Initial");
+
+      act(() => root?.render(render(nextGroups)));
+      expect(host.querySelector("th[colspan='2']")).toBeNull();
+      expect(host.querySelector("thead")?.textContent).toContain("Updated");
+    } finally {
+      collect.mockRestore();
+    }
+  });
+
+  it("keeps the newest scrollbar width when a viewport observation is pending", () => {
+    const resize = installControllableResizeObserver();
+    const ref = createRef<CominsTableRef<PersonRow>>();
+    try {
+      const host = renderTableElement(
+        <CominsTable ref={ref} columns={columns} data={rows} data-testid="concurrent-viewport" getRowId={getPersonRowId} />,
+      );
+      const viewport = host.querySelector<HTMLElement>('[data-testid="concurrent-viewport"]')!;
+      const header = host.querySelector<HTMLElement>(".comins-table__header")!;
+      let width = 360;
+      const rect = setElementRect(viewport, width, 240);
+      Object.defineProperty(viewport, "clientWidth", { get: () => width });
+      act(() => resize.emit(viewport, 240));
+      expect(header.style.width).toBe("360px");
+
+      act(() => {
+        startTransition(() => {
+          width = 340;
+          resize.emit(viewport, 240);
+        });
+        expect(header.style.width).toBe("360px");
+        width = 320;
+        flushSync(() => ref.current?.setColumnLayout({
+          columns: { name: { width: 400 }, age: { width: 400 } },
+        }));
+        expect(header.style.width).toBe("320px");
+      });
+
+      expect(header.style.width).toBe("320px");
+      rect.mockRestore();
+    } finally {
+      resize.restore();
+    }
+  });
+
+  it("reads initial scrollbar geometry when ResizeObserver is unavailable", () => {
+    const previous = Object.getOwnPropertyDescriptor(globalThis, "ResizeObserver");
+    Object.defineProperty(globalThis, "ResizeObserver", { configurable: true, value: undefined });
+    let reads = 0;
+    const outerWidth = vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
+      if (this.dataset.testid === "fallback-viewport") reads += 1;
+      return 0;
+    });
+    try {
+      renderTableElement(
+        <CominsTable columns={columns} data={rows} data-testid="fallback-viewport" getRowId={getPersonRowId} />,
+      );
+      expect(reads).toBeGreaterThan(0);
+    } finally {
+      outerWidth.mockRestore();
+      if (previous) Object.defineProperty(globalThis, "ResizeObserver", previous);
+      else Reflect.deleteProperty(globalThis, "ResizeObserver");
     }
   });
 
@@ -3502,6 +3763,47 @@ describe("comins-table keyboard interaction", () => {
     }
   });
 
+  it("uses the new scroll position when returning to a capped virtual window", () => {
+    const resize = installControllableResizeObserver();
+    const requestFrame = vi.spyOn(window, "requestAnimationFrame").mockImplementation(callback => {
+      callback(0);
+      return 1;
+    });
+    const tallRows = manyRows.slice(0, 100);
+    const renderProps = (virtualized: boolean) => (
+      <CominsTable columns={columns} data={tallRows} data-testid="virtual-mode-viewport"
+        getRowId={getPersonRowId} buffer-size={1} rowHeight={20_000} virtualized={virtualized} />
+    );
+    try {
+      const host = renderTableElement(renderProps(true));
+      const viewport = host.querySelector<HTMLElement>('[data-testid="virtual-mode-viewport"]')!;
+      setElementRect(viewport, 800, 240);
+      Object.defineProperty(viewport, "clientHeight", { value: 240 });
+      act(() => resize.emit(viewport, 240));
+
+      act(() => {
+        viewport.scrollTop = 750_000;
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      expect(host.querySelector("[data-testid='row-row-0']")).toBeNull();
+      expect(host.querySelector("[data-testid='row-row-50']")).not.toBeNull();
+
+      act(() => root?.render(renderProps(false)));
+      expect(viewport.hasAttribute("data-virtualized")).toBe(false);
+      expect(host.querySelectorAll("tr[data-comins-row-data-index]")).toHaveLength(tallRows.length);
+
+      viewport.scrollTop = 0;
+      act(() => root?.render(renderProps(true)));
+      expect(host.querySelector('[data-testid="virtual-mode-viewport"]')).toBe(viewport);
+      expect(viewport.getAttribute("data-virtualized")).toBe("true");
+      expect(host.querySelector("[data-testid='row-row-0']")).not.toBeNull();
+      expect(host.querySelector("[data-testid='row-row-50']")).toBeNull();
+    } finally {
+      requestFrame.mockRestore();
+      resize.restore();
+    }
+  });
+
   it("calls onLoadMore once when infinite scroll reaches the bottom threshold", () => {
     const onLoadMore = vi.fn();
     const element = renderTableElement(
@@ -3962,6 +4264,25 @@ describe("comins-table keyboard interaction", () => {
     expect(onChangeColumnLayout).not.toHaveBeenCalled();
   });
 
+  it("does not register placeholder input listeners on normal Header content", () => {
+    const registrations = vi.spyOn(HTMLElement.prototype, "addEventListener");
+    try {
+      const element = renderTableElement(<CominsTable
+        columns={[...columns]} columnGroups={[{ children: ["name", "age"], id: "profile" }]}
+        data={rows} getRowId={getPersonRowId}
+      />);
+      const headerBodies = new Set(element.querySelectorAll("[data-comins-header-body]"));
+      expect(headerBodies.size).toBe(3);
+      const placeholderRegistrations = registrations.mock.calls.filter(([type, , capture], index) =>
+        (type === "input" || type === "change") && capture === true &&
+        headerBodies.has(registrations.mock.contexts[index] as Element),
+      );
+      expect(placeholderRegistrations).toEqual([]);
+    } finally {
+      registrations.mockRestore();
+    }
+  });
+
   it("makes interactive custom Header content inert during Column Move and restores it after cancellation", () => {
     const onAction = vi.fn();
     const onFocus = vi.fn();
@@ -4038,10 +4359,20 @@ describe("comins-table keyboard interaction", () => {
     expect(document.activeElement).not.toBe(customInput);
     expect(onFocus).not.toHaveBeenCalled();
     expect(onAction).not.toHaveBeenCalled();
+    for (const type of ["input", "change"]) {
+      const event = new Event(type, { cancelable: true });
+      customInput.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+    }
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }));
     });
+    for (const type of ["input", "change"]) {
+      const event = new Event(type, { cancelable: true });
+      customInput.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+    }
 
     expect(ageHeader.getAttribute("data-column-placeholder")).toBeNull();
     expect(ageHeader.getAttribute("tabindex")).toBe("0");
@@ -6644,4 +6975,83 @@ describe("comins-table keyboard interaction", () => {
       requestAnimationFrame.mockRestore();
     }
   });
+});
+
+it("Shift-selects only visible rows when a filter hides an intervening row", () => {
+  const data = [{ id: "a", status: "shown" }, { id: "b", status: "hidden" }, { id: "c", status: "shown" }];
+  const selected = vi.fn();
+  const host = renderTableElement(<CominsTable
+    data={data}
+    getRowId={row => row.id}
+    columns={[{ field: "status", filter: { kind: "text" } }]}
+    columnFiltering={{ model: [{ columnId: "status", kind: "text", operator: "equals", value: "shown" }] }}
+    onChangeSelection={selected}
+  />);
+  const visible = [...host.querySelectorAll("tr[data-comins-row-data-index]")];
+  expect(visible.map(row => row.getAttribute("data-comins-row-data-index"))).toEqual(["0", "2"]);
+  act(() => visible[0]!.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+  act(() => visible[1]!.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true })));
+  expect(selected).toHaveBeenLastCalledWith(expect.objectContaining({ rowIds: ["a", "c"] }));
+});
+
+it("ignores a column-group drop on a different table with matching group IDs", () => {
+  {
+    let host: HTMLElement;
+    const originalHitTest = Object.getOwnPropertyDescriptor(document, "elementFromPoint");
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: () => host.querySelector('#target th[data-comins-column-group-id="second"]'),
+    });
+    const columns = [{ field: "a" }, { field: "b" }];
+    const columnGroups = [{ id: "first", children: ["a"] }, { id: "second", children: ["b"] }];
+    const data = [{ a: 1, b: 2 }];
+    const onSourceLayout = vi.fn();
+    const onTargetLayout = vi.fn();
+    try {
+      host = renderTableElement(<>
+        <div id="source"><CominsTable data={data} columns={columns} columnGroups={columnGroups} onChangeColumnLayout={onSourceLayout} /></div>
+        <div id="target"><CominsTable data={data} columns={columns} columnGroups={columnGroups} onChangeColumnLayout={onTargetLayout} /></div>
+      </>);
+      const groupHandle = host.querySelector('#source [data-testid="column-group-move-handle-first"]')!;
+      expect(groupHandle).not.toBeNull();
+      act(() => groupHandle.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 0, buttons: 1, clientX: 10, clientY: 10 })));
+      act(() => window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, button: 0, clientX: 200, clientY: 10 })));
+      expect(onSourceLayout).not.toHaveBeenCalled();
+      expect(onTargetLayout).not.toHaveBeenCalled();
+      const orders = (id: string) => [...host.querySelectorAll(`#${id} th[data-comins-column-group-id]`)].map(element => element.getAttribute("data-comins-column-group-id"));
+      expect(orders("source")).toEqual(["first", "second"]);
+      expect(orders("target")).toEqual(["first", "second"]);
+    } finally {
+      act(() => window.dispatchEvent(new MouseEvent("pointercancel")));
+      if (originalHitTest) Object.defineProperty(document, "elementFromPoint", originalHitTest);
+      else Reflect.deleteProperty(document, "elementFromPoint");
+    }
+  }
+});
+
+it("stores the clamped width when an independent column is dragged past maxWidth", () => {
+  const change = vi.fn();
+  const host = renderTableElement(<CominsTable data={[{ value: "A" }]} columns={[{ field: "value", width: 100, maxWidth: 140 }]}
+    onChangeColumnLayout={change} />);
+  const handle = host.querySelector("[data-testid='resize-value']")!;
+  act(() => handle.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, cancelable: true, button: 0, clientX: 100 })));
+  act(() => window.dispatchEvent(new MouseEvent("pointermove", { clientX: 300 })));
+  act(() => window.dispatchEvent(new MouseEvent("pointerup", { clientX: 300 })));
+  expect(change).toHaveBeenCalledOnce();
+  expect(change.mock.calls[0]?.[0].columns.value.width).toBe(140);
+});
+
+it("queries resize header cells once when capturing multiple visible columns", () => {
+  const host = renderTableElement(<CominsTable data={[{ a: 1, b: 2, c: 3 }]}
+    columns={[{ field: "a" }, { field: "b" }, { field: "c" }]} />);
+  const header = host.querySelector(".comins-table__header")!;
+  const queries = vi.spyOn(header, "querySelectorAll");
+  const handle = host.querySelector("[data-testid='resize-a']")!;
+  try {
+    act(() => handle.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0 })));
+    expect(queries.mock.calls.filter(([selector]) => selector === "[data-comins-column-id]")).toHaveLength(1);
+  } finally {
+    act(() => window.dispatchEvent(new MouseEvent("pointercancel")));
+    queries.mockRestore();
+  }
 });

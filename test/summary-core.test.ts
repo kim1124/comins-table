@@ -86,3 +86,16 @@ describe("comins-table summary core", () => {
     );
   });
 });
+
+it("keeps a summary whose column ID is __proto__", () => {
+  expect(getCominsSummaryValues([{ value: 5 }], [{ id: "__proto__", field: "value", label: "Value" }], {
+    columns: { ["__proto__"]: "sum" },
+  })).toEqual({ ["__proto__"]: 5 });
+});
+
+it("computes minimum and maximum for large column summaries", () => {
+  const data = Array.from({ length: 150_000 }, (_, value) => ({ value }));
+  const summaryColumns = [{ id: "value", field: "value", label: "Value" }];
+  expect(getCominsSummaryValues(data, summaryColumns, { columns: { value: "min" } })).toEqual({ value: 0 });
+  expect(getCominsSummaryValues(data, summaryColumns, { columns: { value: "max" } })).toEqual({ value: 149_999 });
+});
