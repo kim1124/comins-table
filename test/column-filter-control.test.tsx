@@ -245,3 +245,24 @@ it("restores native select-all indeterminate state and preserves user ref cleanu
   expect(ref.mock.calls.length).toBeGreaterThan(0);
   expect(cleaned).toHaveBeenCalledTimes(ref.mock.calls.filter(([node]) => node !== null).length);
 });
+
+it("does not re-read the current facet to propose a checkbox change", () => {
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  const getValue = vi.fn(({ value }: { value: unknown }) => value);
+  const rows = [{ status: "Ready" }, { status: "Blocked" }];
+  const columns = [{ field: "status", filter: { kind: "text" as const, mode: "values" as const, getValue } }];
+  const onChangeModel = vi.fn();
+  try {
+    act(() => root.render(<CominsTable data={rows} columns={columns}
+      columnFiltering={{ model: [], onChangeModel, openColumnId: "status", onChangeOpenColumnId: () => {} }} />));
+    getValue.mockClear();
+    act(() => host.querySelector<HTMLInputElement>('input[type=checkbox][aria-label=Ready]')!.click());
+    expect(onChangeModel).toHaveBeenCalledWith([{ columnId: "status", operator: "in", values: ["Blocked"] }]);
+    expect(getValue).not.toHaveBeenCalled();
+  } finally {
+    act(() => root.unmount());
+    host.remove();
+  }
+});

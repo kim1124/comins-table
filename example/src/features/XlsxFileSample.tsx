@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CominsTable, type CominsTableColumn } from "../../../src";
 import type { CominsXlsxExportStyles, CominsXlsxImportRow } from "../../../src/xlsx";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
@@ -8,6 +8,17 @@ import { Button } from "../components/ui/button";
 import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 import type { XlsxFileRequest, XlsxFileResponse, XlsxFileResult } from "./xlsx-file.protocol";
 type Row = { id: string; name: string; score: number; active: boolean; date: string | null };
+
+function previewChecksum(rows: readonly Row[]) {
+  let hash = 2166136261;
+  for (const { id, name, score, active, date } of rows) {
+    const fields = JSON.stringify([id, name, score, active, date]);
+    for (let index = 0; index < fields.length; index++) {
+      hash = Math.imul(hash ^ fields.charCodeAt(index), 16777619);
+    }
+  }
+  return (hash >>> 0).toString(16);
+}
 function createRows(count: number): Row[] {
   return Array.from({ length: count }, (_, i) => ({
     id: String(i + 1).padStart(5, "0"), name: `Row ${i + 1}`, score: i,
@@ -42,6 +53,7 @@ export function XlsxFileSample() {
   const label = (ko: string, en: string) => text(defineLocalizedText(ko, en));
   const [stylePreset, setStylePreset] = useState("comins");
   const [rows, setRows] = useState(initial); const [busy, setBusy] = useState(false);
+  const checksum = useMemo(() => previewChecksum(rows), [rows]);
   const [error, setError] = useState<string | null>(null); const [notice, setNotice] = useState<"ready" | "done" | "cancelled">("ready");
   const [sheets, setSheets] = useState<string[]>([]); const [sheet, setSheet] = useState("");
   const generation = useRef(0); const jobIds = useRef(0);
@@ -144,6 +156,6 @@ export function XlsxFileSample() {
     <p role="status" aria-live="polite">{busy ? label("처리 중", "Processing") : notice === "cancelled" ? label("취소됨", "Cancelled") : `${rows.length} ${label("행", "rows")}${notice === "done" ? ` · ${label("가져오기 완료", "Import complete")}` : ""}`}</p>
     {error && <p role="alert">{label("가져오기·내보내기 실패", "Import/export failed")}: {error}</p>}
     <CominsTable data-testid="xlsx-file-preview" data={rows} columns={columns} getRowId={row => row.id} className="example-table" pagination={{ pageIndex: 0, pageSize: Math.max(1, rows.length) }} virtualized theme={{ density: "compact" }} />
-    <output data-testid="xlsx-file-model" data-total-rows={rows.length} hidden>{JSON.stringify(rows)}</output>
+    <output data-testid="xlsx-file-model" data-total-rows={rows.length} hidden>{checksum}</output>
   </FeatureSampleSection>;
 }

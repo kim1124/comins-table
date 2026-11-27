@@ -1,8 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createCominsTableState } from "../src/core";
 import { normalizeColumnOrder } from "../src/core/layout/columns";
 
 describe("default column order calculation", () => {
+  it("keeps already contiguous groups without scanning their child lists again", () => {
+    const columns = ["a", "b", "plain", "c", "d"].map(id => ({ id }));
+    const groups = [
+      { id: "first", children: ["b", "a"] },
+      { id: "second", children: ["d", "c"] },
+    ];
+    const scans = groups.map(group => vi.spyOn(group.children, "includes"));
+
+    expect(normalizeColumnOrder(columns, undefined, groups)).toEqual(["a", "b", "plain", "c", "d"]);
+    for (const scan of scans) {
+      expect(scan).not.toHaveBeenCalled();
+    }
+  });
+
   it.each([
     { name: "flat declaration", grouped: false, emptyOrder: false, locked: false, expected: ["name", "role", "age"] },
     { name: "interleaved group", grouped: true, emptyOrder: false, locked: false, expected: ["name", "age", "role"] },

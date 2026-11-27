@@ -319,6 +319,7 @@ export function BodyFeature() {
         id="body"
         title={text(defineLocalizedText("대용량 데이터 표시", "Large dataset rendering"))}
       >
+        <span data-testid="virtualization-logical-row-count" data-row-count={rows.length} hidden />
         <CominsTable
           rowProps={{ draggable: true }}
           className="example-table body-virtualization-table"

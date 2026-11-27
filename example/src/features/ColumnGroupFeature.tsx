@@ -14,6 +14,16 @@ import {
 import { createExampleRows, type PersonRow } from "../fixtures/people";
 import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
+const columnGroupRowTemplates = createExampleRows(30);
+
+function createColumnGroupSample() {
+  // Each table owns fresh rows, including after navigating away and back.
+  return columnGroupRowTemplates.map(row => ({ ...row }));
+}
+
+const getExampleRowId = (row: PersonRow) => row.id;
+const samplePagination = { pageIndex: 0, pageSize: 30 };
+
 const columnGroupIdByColumnId = new Map(
   headerColumnGroups.flatMap((group) => group.children.map((columnId) => [columnId, group.id] as const)),
 );
@@ -21,7 +31,7 @@ const columnGroupIdByColumnId = new Map(
 export function ColumnGroupFeature() {
   const { text } = usePlaygroundLocale();
   const groupTableRef = useRef<CominsTableRef<PersonRow>>(null);
-  const [groupRows, setGroupRows] = useState(() => createExampleRows(30));
+  const [groupRows, setGroupRows] = useState(createColumnGroupSample);
   const richHeaderFixture = useMemo(
     () =>
       typeof window !== "undefined" &&
@@ -158,10 +168,10 @@ export function ColumnGroupFeature() {
               columns={renderedGroupColumns}
               data={groupRows}
               data-testid="header-groups-viewport"
-              getRowId={(row) => row.id}
+              getRowId={getExampleRowId}
               onChangeColumnLayout={setGroupLayout}
               onChangeData={setGroupRows}
-              pagination={{ pageIndex: 0, pageSize: 30 }}
+              pagination={samplePagination}
               ref={groupTableRef}
               rowProps={{ draggable: true }}
               theme={{ density: "compact" }}
@@ -187,7 +197,7 @@ const DynamicColumnGroupSample = memo(function DynamicColumnGroupSample({
   localizedHeaderColumnGroups: typeof headerColumnGroups;
 }) {
   const { locale, text } = usePlaygroundLocale();
-  const [dynamicRows] = useState(() => createExampleRows(30));
+  const [dynamicRows] = useState(createColumnGroupSample);
   const [dynamicColumnIds, setDynamicColumnIds] = useState(() => dynamicColumnOptions.map((option) => option.value));
   const [dynamicVisibleGroupIds, setDynamicVisibleGroupIds] = useState(() =>
     headerColumnGroups.map((group) => group.id),
@@ -248,8 +258,8 @@ const DynamicColumnGroupSample = memo(function DynamicColumnGroupSample({
             columns={dynamicColumns}
             data={dynamicRows}
             data-testid="dynamic-group-viewport"
-            getRowId={(row) => row.id}
-            pagination={{ pageIndex: 0, pageSize: 30 }}
+            getRowId={getExampleRowId}
+            pagination={samplePagination}
             theme={{ density: "compact" }}
           />
         </section>

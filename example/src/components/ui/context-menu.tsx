@@ -39,6 +39,14 @@ export function ContextMenu({ "aria-label": ariaLabel, className, items, onClose
     openerRef.current?.focus({ preventScroll: true });
     onClose();
   };
+  useLayoutEffect(() => {
+    const owner = menuRef.current?.ownerDocument;
+    const dismiss = (event: PointerEvent) => {
+      if (event.button === 0 && event.target instanceof Node && !menuRef.current?.contains(event.target)) onClose();
+    };
+    owner?.addEventListener("pointerdown", dismiss);
+    return () => owner?.removeEventListener("pointerdown", dismiss);
+  }, [onClose]);
 
   return (
     <div

@@ -19,6 +19,7 @@ export function InfiniteScrollFeature() {
   const [total, setTotal] = useState(0);
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [appendFailed, setAppendFailed] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const activeRequestRef = useRef<AbortController | null>(null);
   const pendingRequestRef = useRef(false);
@@ -63,6 +64,7 @@ export function InfiniteScrollFeature() {
     pendingRequestRef.current = true;
     setInitialLoading(true);
     setLoadingMore(false);
+    setAppendFailed(false);
     setRows([]);
     setTotal(0);
 
@@ -101,11 +103,13 @@ export function InfiniteScrollFeature() {
     activeRequestRef.current = controller;
     pendingRequestRef.current = true;
     setLoadingMore(true);
+    setAppendFailed(false);
 
     try {
       const response = await fetch(buildDummyUsersUrl(offset, BATCH_SIZE), {
         signal: controller.signal,
       });
+      if (!response.ok) throw new Error("Could not load more rows");
       const result = (await response.json()) as DummyUsersResponse;
 
       if (controller.signal.aborted || requestVersion !== requestVersionRef.current) {
@@ -123,7 +127,9 @@ export function InfiniteScrollFeature() {
       });
       setTotal(result.total);
     } catch {
-      // Preserve the current rows so the consumer can choose its own retry policy.
+      if (!controller.signal.aborted && requestVersion === requestVersionRef.current) {
+        setAppendFailed(true);
+      }
     } finally {
       if (requestVersion === requestVersionRef.current) {
         activeRequestRef.current = null;
@@ -166,6 +172,14 @@ export function InfiniteScrollFeature() {
             {locale === "ko" ? `불러옴 ${rows.length} / ${total}` : `Loaded ${rows.length} / ${total}`}
           </span>
         </div>
+        {appendFailed ? (
+          <div role="alert" data-testid="infinite-append-error">
+            {text(defineLocalizedText("다음 행을 불러오지 못했습니다.", "Could not load more rows."))}
+            <Button data-testid="infinite-append-retry" onClick={() => void appendRows()} variant="outline">
+              {text(defineLocalizedText("다시 시도", "Retry"))}
+            </Button>
+          </div>
+        ) : null}
         <CominsTable
           key={refreshVersion}
           className="example-table"

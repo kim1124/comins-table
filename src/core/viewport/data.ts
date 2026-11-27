@@ -64,6 +64,13 @@ function trim<T>(data: CominsViewportData<T>): CominsViewportData<T> {
   const remaining = Math.max(0, data.cacheSize - protectedErrors.length);
   return { ...data, blocks, requests: [...loading, ...protectedErrors, ...(remaining ? otherErrors.slice(-remaining) : [])] };
 }
+
+export function resizeCominsViewportCache<T>(data: CominsViewportData<T>, cacheSize: number): CominsViewportData<T> {
+  if (data.cacheSize === cacheSize) return data;
+  const resized = { ...data, cacheSize };
+  return cacheSize < data.cacheSize ? trim(resized) : resized;
+}
+
 export function reduceCominsViewportData<T>(data: CominsViewportData<T>, event: CominsViewportDataEvent<T>): CominsViewportData<T> {
   if (event.type === "reset") return createCominsViewportData<T>(event.options);
   if (event.type === "retain") {

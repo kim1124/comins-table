@@ -287,7 +287,8 @@ test("Value list high-cardinality measurements @perf", async ({ page }) => {
     const start = Date.now();
     await card.getByRole("button", { name: "Filter status", exact: true }).click();
     const popup = page.getByRole("dialog", { name: "Filter status", exact: true });
-    await expect(popup.locator(".comins-column-filter__option")).toHaveCount(Number(scale));
+    await expect(popup.locator(".comins-column-filter__options")).toHaveAttribute("data-total-options", scale);
+    await expect(popup.locator(".comins-column-filter__option")).toHaveCount(50);
     const opened = Date.now();
     await popup.getByRole("searchbox").fill("Value 00099");
     await expect(popup.locator(".comins-column-filter__option")).toHaveCount(1);
@@ -298,4 +299,30 @@ test("Value list high-cardinality measurements @perf", async ({ page }) => {
     await popup.getByRole("button", { name: "Clear filter" }).click();
     await page.keyboard.press("Escape");
   }
+});
+
+test("regression: custom value filter presents bounded options and can find the last value", async ({ page }) => {
+  await page.goto("/examples/column-filtering");
+  const card = valueCard(page);
+  await card.getByTestId("value-filter-scale").selectOption("10000");
+  await card.getByTestId("value-filter-variant").selectOption("custom");
+  await card.getByRole("button", { name: "Filter status", exact: true }).click();
+  const panel = page.getByTestId("value-filter-custom-panel");
+  expect(await panel.locator("li").count()).toBeLessThanOrEqual(50);
+  await panel.getByRole("searchbox").or(panel.locator("input[type=search]")).first().fill("Value 09999");
+  await expect(panel.locator("li")).toHaveCount(1);
+  await expect(panel.getByRole("checkbox", { name: "Value 09999", exact: true })).toBeVisible();
+});
+
+test("regression: mobile column selector opens within the screen and restores keyboard focus", async ({ page }) => {
+  await page.setViewportSize({ width: 450, height: 420 });
+  await page.goto("/examples/column-groups");
+  const trigger = page.getByTestId("column-group-column-select-trigger");
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.press("Enter");
+  const popup = page.getByTestId("column-group-column-select-content");
+  await expect(popup).toBeInViewport({ ratio: 1, timeout: 3000 });
+  await expect(popup.locator("input[type=checkbox]").first()).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
 });

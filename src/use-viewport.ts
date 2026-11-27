@@ -1,7 +1,8 @@
 import { useCominsLayoutEffect } from "./react/layout-effect";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { runViewportRequest } from "./browser/viewport-requests";
-import { createCominsViewportData, reduceCominsViewportData, type CominsViewportData, type CominsViewportDataEvent, type CominsViewportPatch, type CominsViewportRequest, type CominsViewportRevision } from "./viewport-data";
+import { resizeCominsViewportCache } from "./core/viewport/data";
+import { createCominsViewportData, normalizeCominsViewportInteger, reduceCominsViewportData, type CominsViewportData, type CominsViewportDataEvent, type CominsViewportPatch, type CominsViewportRequest, type CominsViewportRevision } from "./viewport-data";
 
 export type CominsViewportDatasource = {
   revision: CominsViewportRevision;
@@ -21,9 +22,16 @@ export type CominsViewportOptions<T> = {
 
 /** State lives with the consumer. The Table receives a controlled snapshot and callbacks. */
 export function useCominsViewport<T>(options: CominsViewportOptions<T>) {
-  const initial = useMemo(() => createCominsViewportData<T>({ revision: options.queryKey, rowCount: options.rowCount, blockSize: options.blockSize, cacheSize: options.cacheSize }), [options.queryKey, options.rowCount, options.blockSize, options.cacheSize]);
+  const { queryKey, rowCount } = options;
+  const blockSize = normalizeCominsViewportInteger(options.blockSize, 100);
+  const cacheSize = normalizeCominsViewportInteger(options.cacheSize, 12);
+  const initial = useMemo(() => createCominsViewportData<T>({ revision: queryKey, rowCount, blockSize }), [queryKey, rowCount, blockSize]);
   const [state, setState] = useState({ initial, data: initial });
-  const data = state.initial === initial ? state.data : initial;
+  const data = resizeCominsViewportCache(state.initial === initial ? state.data : initial, cacheSize);
+  if (state.initial !== initial || data !== state.data) {
+    // An empty generation has no request or retain event to replace the old snapshot.
+    setState({ initial, data });
+  }
   const latest = useRef(options);
   const activeInitial = useRef(initial);
   const mounted = useRef(false);
@@ -32,9 +40,10 @@ export function useCominsViewport<T>(options: CominsViewportOptions<T>) {
   const dispatch = useCallback((event: CominsViewportDataEvent<T>) => {
     if (!mounted.current || activeInitial.current !== initial) return;
     setState(previous => {
-      const current = previous.initial === initial ? previous.data : initial;
+      if (previous.initial !== initial) return previous;
+      const current = previous.data;
       const next = reduceCominsViewportData(current, event);
-      return previous.initial === initial && next === previous.data ? previous : { initial, data: next };
+      return next === current ? previous : { initial, data: next };
     });
   }, [initial]);
   const onViewportRequest = useCallback(async (request: CominsViewportRequest) => {

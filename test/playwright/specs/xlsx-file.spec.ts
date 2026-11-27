@@ -21,7 +21,8 @@ test("XLSX caches and visible sheet selection apply only validated rows", async 
   await sample.getByLabel("XLSX 파일 가져오기").setInputFiles({ name: "formula.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buffer: Buffer.from(bytes) });
   await expect(sample.getByLabel("가져올 시트")).toBeVisible(); await sample.getByLabel("가져올 시트").selectOption("Second");
   await sample.getByRole("button", { name: "선택 시트 가져오기" }).click();
-  await expect(sample.getByRole("status")).toContainText("가져오기 완료"); await expect(sample.getByTestId("xlsx-file-model")).toContainText('"score":0,"active":false');
+  await expect(sample.getByRole("status")).toContainText("가져오기 완료"); await expect(sample.getByTestId("cell-0001-score")).toHaveText("0");
+  await expect(sample.getByTestId("cell-0001-active")).toHaveText("false");
   const current = await sample.getByTestId("xlsx-file-model").textContent();
   for (const options of [{ cells: cells.replace('<v>0</v>', ''), dimension: "A1:E2" }, { cells, dimension: "A1:E2", merge: '<mergeCells><mergeCell ref="A1:B1"/></mergeCells>' }, { cells: "", dimension: "A1" }]) {
     await sample.getByLabel("XLSX 파일 가져오기").setInputFiles({ name: "invalid.xlsx", mimeType: "application/octet-stream", buffer: Buffer.from(await fixture(options)) });
@@ -70,7 +71,8 @@ test("terminates pending Workers and ignores delayed cancelled and superseded re
   await page.waitForFunction(()=>(window as any).xlsxWorkers.queued > 1);
   await input.setInputFiles({name:"new.xlsx",mimeType:"application/octet-stream",buffer:Buffer.from(await typedFixture("Newest","0002"))});
   await expect(sample.getByRole("status")).toContainText("가져오기 완료");
-  await expect(sample.getByTestId("xlsx-file-model")).toContainText("Newest"); await expect(sample.getByTestId("xlsx-file-model")).not.toContainText('"name":"Old"');
+  await expect(sample.getByTestId("cell-0002-name")).toHaveText("Newest");
+  await expect(sample.getByTestId("cell-0001-name")).toHaveCount(0);
   expect(await page.evaluate(()=>(window as any).xlsxWorkers.active)).toBe(0);
 });
 test("client route unmount terminates pending Worker without a late download", async ({ page }) => {
@@ -112,4 +114,13 @@ test("custom Excel styles reach the downloaded workbook without changing values"
   await sample.getByLabel("XLSX 파일 가져오기").setInputFiles(path!);
   await expect(sample.getByRole("status")).toContainText("가져오기 완료");
   await expect(sample.getByTestId("xlsx-file-model")).toHaveText(initial!);
+});
+
+test("regression: 10000-row preview does not duplicate the complete model in hidden DOM", async ({ page }) => {
+  await page.goto("/examples/export");
+  const sample = page.locator(sampleSelector);
+  await sample.getByRole("button", { name: "10000행 예제" }).click();
+  const model = sample.getByTestId("xlsx-file-model");
+  await expect(model).toHaveAttribute("data-total-rows", "10000");
+  expect((await model.textContent())?.length ?? 0).toBeLessThan(100);
 });

@@ -2,8 +2,8 @@ import type {
   CominsTableState, CominsRowId, CominsTableRuntimeColumn, CominsCopiedRow, CominsPasteRowOptions,
   CominsCellAddress, CominsCellRange, CominsCopiedCellRange, CominsCopiedCellRangeCell, CominsFillCellRangeOptions,
 } from "../model";
-import { addCominsRows, updateCominsRows, withRows, getCominsCellValue } from "../state/table";
-import { findRowIndex, getNestedFieldValue } from "../state/access";
+import { addCominsRows, updateCominsRows, withRows } from "../state/table";
+import { findRowIndex, getNestedFieldValue, indexCominsRows } from "../state/access";
 import { getCominsVisibleColumns } from "../layout/columns";
 import { getCellRangeBounds } from "../selection/state";
 import { parseCominsClipboardText, MAX_CLIPBOARD_CELLS } from "../../clipboard-text";
@@ -96,22 +96,23 @@ export function copyCominsCellRange<TData>(
   }
 
   const copiedRows: CominsCopiedCellRangeCell[][] = [];
+  const rowIndexes = indexCominsRows(state.rowIds);
 
   for (let rowIndex = bounds.rowStart; rowIndex <= bounds.rowEnd; rowIndex += 1) {
     const rowId = bounds.rowIds[rowIndex];
-    const dataIndex = rowId === undefined ? -1 : findRowIndex(state, rowId);
+    const dataIndex = rowId === undefined ? -1 : rowIndexes.get(rowId) ?? -1;
     const row = state.rows[dataIndex];
     const copiedCells: CominsCopiedCellRangeCell[] = [];
 
     for (let columnIndex = bounds.columnStart; columnIndex <= bounds.columnEnd; columnIndex += 1) {
       const column = bounds.visibleColumns[columnIndex];
 
-      if (row === undefined || rowId === undefined || !column || !canUseCellClipboard(state, row, rowId, column, "copy")) {
+      if (row === undefined || rowId === undefined || !column || !canUseCellClipboard(state, row, rowId, column, "copy", dataIndex)) {
         copiedCells.push(null);
         continue;
       }
 
-      const value = getCominsCellValue(state, row, column.id);
+      const value = getNestedFieldValue(row, column.field);
       copiedCells.push({
         columnId: column.id,
         text: value == null ? "" : String(value),
@@ -149,10 +150,11 @@ export function pasteCominsCellRange<TData>(
   }
 
   let changed = false;
+  const rowIndexes = indexCominsRows(state.rowIds);
 
   copied.rows.forEach((copiedRow, rowOffset) => {
     const rowId = rowIds[targetRowIndex + rowOffset];
-    const rowIndex = rowId === undefined ? -1 : findRowIndex(state, rowId);
+    const rowIndex = rowId === undefined ? -1 : rowIndexes.get(rowId) ?? -1;
     const row = rows[rowIndex];
 
     if (row === undefined || rowId === undefined) {
@@ -162,7 +164,7 @@ export function pasteCominsCellRange<TData>(
     copiedRow.forEach((copiedCell, columnOffset) => {
       const column = visibleColumns[targetColumnIndex + columnOffset];
 
-      if (!copiedCell || !column || !canUseCellClipboard(state, row, rowId, column, "paste")) {
+      if (!copiedCell || !column || !canUseCellClipboard(state, row, rowId, column, "paste", rowIndex)) {
         return;
       }
 

@@ -142,6 +142,35 @@ describe("viewport Table integration", () => {
     expect(element.querySelector("[data-testid='row-0']")?.textContent).toContain("Loaded");
     expect(getRows).toHaveBeenCalledTimes(1);
   });
+  it.each([[1, 2], [2, 1], [undefined, 12]])(
+    "preserves the active request when cache size changes from %s to %s",
+    async (from, to) => {
+      let finish!: (rows: Row[]) => void;
+      let snapshot!: CominsViewportData<Row>;
+      const getRows = vi.fn((_request: CominsViewportRequest) => new Promise<Row[]>(resolve => { finish = resolve; }));
+      const columns = [{ field: "name", label: "Name" }];
+      function Example({ cacheSize }: { cacheSize?: number }) {
+        const viewport = useCominsViewport({
+          rowCount: 2, queryKey: "a", blockSize: 2, maxConcurrentRequests: 1, cacheSize, getRows,
+        });
+        snapshot = viewport.data;
+        return <CominsTable {...viewport.tableProps} columns={columns} getRowId={id} />;
+      }
+
+      await act(async () => { mount(<Example cacheSize={from} />); });
+      const loading = snapshot.requests[0];
+      expect(loading?.status).toBe("loading");
+      await act(async () => root!.render(<Example cacheSize={to} />));
+      expect(snapshot.cacheSize).toBe(to);
+      expect(snapshot.requests[0]).toBe(loading);
+      expect(getRows.mock.calls[0]?.[0].signal.aborted).toBe(false);
+      await act(async () => finish([{ id: 0, name: "First" }, { id: 1, name: "Second" }]));
+      expect(element.querySelector("[data-testid='row-0']")?.textContent).toContain("First");
+      expect(element.querySelector("[data-testid='row-1']")?.textContent).toContain("Second");
+      expect(snapshot.requests).toEqual([]);
+      expect(getRows).toHaveBeenCalledTimes(1);
+    },
+  );
   it("passes absolute indexes to clipboard props and nested guards", async () => {
     let changed: CominsViewportData<Row> | undefined;
     function Example() {

@@ -12,7 +12,7 @@ import { createBaseColumns } from "../fixtures/columns";
 import type { PersonRow } from "../fixtures/people";
 import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
-type LoadingMode = "empty" | "initial" | "ready" | "refetch";
+type LoadingMode = "empty" | "error" | "initial" | "ready" | "refetch";
 type RemoteMode = "empty" | "idle" | "load";
 
 const REMOTE_EMPTY_OFFSET = 10_000;
@@ -24,6 +24,7 @@ export function LoadingStateFeature() {
   const [remoteMode, setRemoteMode] = useState<RemoteMode>("idle");
   const [remoteKey, setRemoteKey] = useState(0);
   const [remoteLoading, setRemoteLoading] = useState(false);
+  const [remoteError, setRemoteError] = useState(false);
   const [remoteTableRows, setRemoteTableRows] = useState<PersonRow[]>([]);
   const activePrimaryRequestRef = useRef<AbortController | null>(null);
   const primaryRequestVersionRef = useRef(0);
@@ -33,7 +34,7 @@ export function LoadingStateFeature() {
   });
   const columns = useMemo<Array<CominsTableColumn<PersonRow>>>(() => createBaseColumns(), []);
   const isLoading = mode === "initial" || mode === "refetch";
-  const loadPrimaryRows = useCallback(async (nextMode: LoadingMode) => {
+  const loadPrimaryRows = useCallback(async (nextMode: Exclude<LoadingMode, "error">) => {
     const requestVersion = primaryRequestVersionRef.current + 1;
     const controller = new AbortController();
     const offset = nextMode === "empty" ? REMOTE_EMPTY_OFFSET : 0;
@@ -50,6 +51,7 @@ export function LoadingStateFeature() {
       const response = await fetch(buildDummyUsersUrl(offset, 0), {
         signal: controller.signal,
       });
+      if (!response.ok) throw new Error("Could not load rows");
       const result = (await response.json()) as DummyUsersResponse;
 
       if (controller.signal.aborted || requestVersion !== primaryRequestVersionRef.current) {
@@ -63,7 +65,7 @@ export function LoadingStateFeature() {
         requestVersion === primaryRequestVersionRef.current
         && !(error instanceof DOMException && error.name === "AbortError")
       ) {
-        setMode("ready");
+        setMode("error");
       }
     } finally {
       if (requestVersion === primaryRequestVersionRef.current) {
@@ -90,11 +92,13 @@ export function LoadingStateFeature() {
     const offset = intent.mode === "empty" ? REMOTE_EMPTY_OFFSET : request.offset;
 
     setRemoteLoading(true);
+    setRemoteError(false);
 
     try {
       const response = await fetch(buildDummyUsersUrl(offset, 0), {
         signal: request.signal,
       });
+      if (!response.ok) throw new Error("Could not load rows");
       const result = (await response.json()) as DummyUsersResponse;
 
       if (request.signal.aborted || intent.version !== remoteIntentRef.current.version) {
@@ -102,10 +106,8 @@ export function LoadingStateFeature() {
       }
 
       setRemoteTableRows(toPersonRows(result));
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === "AbortError")) {
-        // Retry and error presentation remain application-owned in this focused example.
-      }
+    } catch {
+      if (!request.signal.aborted && intent.version === remoteIntentRef.current.version) setRemoteError(true);
     } finally {
       if (intent.version === remoteIntentRef.current.version) {
         setRemoteLoading(false);
@@ -149,10 +151,13 @@ export function LoadingStateFeature() {
           </Button>
           <span className="table-toolbar__state" data-testid="loading-state">
             {locale === "ko"
-              ? { empty: "빈 데이터", initial: "초기 로딩", ready: "준비", refetch: "재조회" }[mode]
+              ? { empty: "빈 데이터", error: "오류", initial: "초기 로딩", ready: "준비", refetch: "재조회" }[mode]
               : mode}{" · "}{rows.length}{locale === "ko" ? "개 행" : " rows"}
           </span>
         </div>
+        {mode === "error" ? <p role="alert" data-testid="loading-request-error">
+          {text(defineLocalizedText("행을 불러오지 못했습니다. 다시 시도해 주세요.", "Could not load rows. Please try again."))}
+        </p> : null}
         <CominsTable
           className="example-table"
           columns={columns}
@@ -189,6 +194,9 @@ export function LoadingStateFeature() {
               : remoteMode}{" · "}{remoteTableRows.length}{locale === "ko" ? "개 행" : " rows"}
           </span>
         </div>
+        {remoteError ? <p role="alert" data-testid="loading-lazy-request-error">
+          {text(defineLocalizedText("원격 요청에 실패했습니다.", "The remote request failed."))}
+        </p> : null}
         {remoteMode === "idle" ? (
           <div className="feature-empty-hint">
             {text(defineLocalizedText(

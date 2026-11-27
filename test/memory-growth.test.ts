@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { completeMemoryAudit, findMemoryGrowth, findMemoryStateFailures, findMemoryThresholdFailures, memoryAuditStatus } from "./playwright/helpers/memory-growth";
+import { compareMemoryCheckpoints, completeMemoryAudit, findMemoryGrowth, findMemoryStateFailures, findMemoryThresholdFailures, memoryAuditStatus } from "./playwright/helpers/memory-growth";
 
 const point = (step: string, heap: number, nodes = 10) => ({ step, metrics: { heap, nodes } });
 
@@ -50,8 +50,8 @@ describe("0.2.4 DevTools two-percent contract", () => {
     expect(result.numericStatus).toBe("FAIL");
   });
   it("keeps the earliest free baseline across an extra mounted baseline and a recovered endpoint", () => {
-    const free = (step: string, heap: number) => ({ step, metrics: { ...counters(step, heap).metrics, tableRoots: 0 } });
-    const mounted = (step: string) => ({ step, metrics: { ...counters(step, 1000).metrics, tableRoots: 1 } });
+    const free = (step: string, heap: number) => ({ step, metrics: { ...counters(step, heap).metrics, tableRoots: 0, rows: 0 }, stateSignature: 'free' });
+    const mounted = (step: string) => ({ step, metrics: { ...counters(step, 1000).metrics, tableRoots: 1, rows: 4 }, stateSignature: 'mounted' });
     expect(findMemoryStateFailures([free("free-first", 100), mounted("mounted-first"), free("later-baseline", 104),
       mounted("mounted-again"), free("middle", 104), free("recovered", 100)]))
       .toEqual([expect.objectContaining({ reference: "free-first", step: "later-baseline", delta: 4 }),
@@ -102,4 +102,33 @@ describe("0.2.4 DevTools two-percent contract", () => {
     expect(() => findMemoryThresholdFailures([counters("base"), { step: "end", metrics: { nodes: 100 } }])).toThrow();
     expect(() => findMemoryThresholdFailures([counters("base")])).toThrow();
   });
+});
+
+it("rejects mismatched mounted state and free checkpoints with business rows", () => {
+  const point = (step: string, tableRoots: number, rows: number, stateSignature: string) => ({
+    ...counters(step), metrics: { ...counters(step).metrics, tableRoots, rows }, stateSignature,
+  });
+  const baseline = [point("free-base", 0, 0, "/free"), point("mounted-base", 2, 60, "/table;scroll=0")];
+  expect(() => findMemoryStateFailures([...baseline,
+    point("mounted-checkpoint", 1, 24, "/table;scroll=500"), point("free-end", 0, 0, "/free"),
+  ])).toThrow(/state/);
+  expect(() => findMemoryStateFailures([...baseline,
+    point("mounted-end", 2, 60, "/table;scroll=0"), point("free-checkpoint", 0, 30, "/free"),
+  ])).toThrow(/state/);
+});
+
+it("rejects a mounted checkpoint on the free route while retaining an earlier numeric failure", () => {
+  const free = { ...counters("free-base", 100), metrics: { ...counters("free-base", 100).metrics, tableRoots: 0, rows: 0 }, stateSignature: "/free", expectedState: "free" as const };
+  const mounted = { ...counters("mounted-base", 100), metrics: { ...counters("mounted-base", 100).metrics, tableRoots: 1, rows: 4 }, stateSignature: "/table", expectedState: "mounted" as const };
+  const result = compareMemoryCheckpoints([
+    free, mounted, { ...mounted, step: "mounted-10", metrics: { ...mounted.metrics, jsHeapUsedSize: 103 } },
+    { ...mounted, step: "mounted-50", metrics: { ...mounted.metrics, jsHeapUsedSize: NaN } },
+    { ...free, step: "mounted-100", expectedState: "mounted" },
+    { ...free, step: "free-end" },
+  ]);
+  expect(result.failures).toEqual([expect.objectContaining({ reference: "mounted-base", step: "mounted-10" })]);
+  expect(result.stateErrors).toEqual([
+    expect.stringContaining("mounted-100"),
+    expect.stringContaining("Invalid or missing jsHeapUsedSize at mounted-50"),
+  ]);
 });

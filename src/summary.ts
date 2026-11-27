@@ -61,11 +61,11 @@ export function resolveCominsSummaryValues<TData>(
   summary: CominsTableSummaryConfig<TData>,
 ): { values: Record<string, React.ReactNode>; renderedColumnIds: ReadonlySet<string> } {
   const renderedColumnIds = new Set<string>();
-  const result = Object.entries(summary.columns).reduce<Record<string, React.ReactNode>>((valuesByColumnId, [columnId, configuredColumn]) => {
+  const entries = Object.entries(summary.columns).flatMap<[string, React.ReactNode]>(([columnId, configuredColumn]) => {
     const column = columns.find((candidate) => candidate.id === columnId);
 
     if (!column || !configuredColumn) {
-      return valuesByColumnId;
+      return [];
     }
 
     const config =
@@ -81,14 +81,12 @@ export function resolveCominsSummaryValues<TData>(
     if (config?.render) {
       renderedColumnIds.add(columnId);
       const rendered = config.render({ column, rows, value, values, formattedValue });
-      valuesByColumnId[columnId] = rendered === undefined ? formattedValue : rendered;
-    } else {
-      valuesByColumnId[columnId] = formattedValue;
+      return [[columnId, rendered === undefined ? formattedValue : rendered]];
     }
 
-    return valuesByColumnId;
-  }, {});
-  return { values: result, renderedColumnIds };
+    return [[columnId, formattedValue]];
+  });
+  return { values: Object.fromEntries(entries), renderedColumnIds };
 }
 
 export function getCominsSummaryValues<TData>(

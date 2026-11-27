@@ -42,6 +42,13 @@ export function setCominsColumnFilterValues<TData>(input: CominsColumnFilterOpti
   return valuesCore.setCominsColumnFilterValues({ ...input, columns: input.columns.map(projectReactColumn) });
 }
 
+export function proposeCominsColumnFilterValues<TData>(
+  input: CominsColumnFilterOptionsInput<TData> & { action: CominsColumnFilterValuesAction },
+  result: valuesCore.CominsColumnFilterOptionsResult | null,
+) {
+  return valuesCore.proposeCominsColumnFilterValues({ ...input, columns: input.columns.map(projectReactColumn) }, () => result);
+}
+
 export { getCominsColumnFilterOperators } from "./core/rows/filtering";
 import * as core from "./core/rows/filtering";
 import { projectReactColumn } from "./react/model";

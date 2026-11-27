@@ -3,9 +3,9 @@ import { useRef, useState } from "react";
 import type React from "react";
 import type { CominsRowId } from "./core";
 import type { CominsEventRow, CominsRowDragReason, CominsRowDragResult, CominsRowDragTarget, CominsTableRowProps } from "./index";
-import { resolveCoreTreeDropContext, resolveCoreTreePointerPosition } from "./core/selection/navigation";
+import { createCoreTreeDropResolver, resolveCoreTreePointerPosition } from "./core/selection/navigation";
 import { applyCominsDragScroll, focusCominsPointerTarget, registerCominsPointerListeners, startCominsPointerFrames } from "./browser/pointer";
-import { moveCominsTreeNode, type CominsTreeDropContext, type CominsTreeDropPosition, type CominsTreeNode, type CominsTreeRowDragConfig, type CominsVisibleTreeRow } from "./tree";
+import { prepareCominsTreeMove, type CominsTreeDropContext, type CominsTreeDropPosition, type CominsTreeNode, type CominsTreeRowDragConfig, type CominsVisibleTreeRow } from "./tree";
 
 export type CominsBeforeTreeRowDragPayload<T> = {
   event: React.PointerEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>;
@@ -42,6 +42,8 @@ type Gesture<T> = {
   source: CominsEventRow<T>;
   target: Preview<T> | null;
   keyboard: boolean;
+  preparedMove?: ReturnType<typeof prepareCominsTreeMove<T>>;
+  dropResolver?: { entries: Options<T>["entries"]; resolve: ReturnType<typeof createCoreTreeDropResolver<CominsVisibleTreeRow<T>>> };
   cleanup: () => void;
 };
 const pathKey = (path: readonly number[]) => path.join(".");
@@ -71,7 +73,8 @@ export function useCominsTreeDrag<T>(options: Options<T>) {
     let result: CominsRowDragResult = commit ? "rejected" : "cancelled";
     if (commit && current.target?.valid && props.onChangeData) {
       const target = current.target.context;
-      const next = props.config?.canDrop?.(target) === false ? props.data : moveCominsTreeNode(props.data, current.source.id, target.destination, props.getRowId, props.config);
+      const next = props.config?.canDrop?.(target) === false
+        ? props.data : current.preparedMove?.move(target.destination) ?? props.data;
       if (next !== props.data) {
         result = "moved";
         if (!current.keyboard) {
@@ -113,11 +116,20 @@ export function useCominsTreeDrag<T>(options: Options<T>) {
     const current = gesture.current;
     const props = committed.current;
     if (!current) return;
-    const context = resolveCoreTreeDropContext({ entries: props.entries, sourceId: current.source.id, targetId, position });
+    const previous = current.target?.context;
+    if (current.dropResolver?.entries === props.entries && previous?.target.rowId === targetId && previous.position === position) return;
+    if (!current.dropResolver || current.dropResolver.entries !== props.entries) {
+      current.dropResolver = { entries: props.entries, resolve: createCoreTreeDropResolver(props.entries) };
+    }
+    const context = current.dropResolver.resolve(current.source.id, targetId, position);
     if (!context) return;
-    const { source } = context;
-    const valid = !props.sorted && Boolean(props.config && props.onChangeData) && props.config?.canDrop?.(context) !== false && moveCominsTreeNode(props.data, source.rowId, context.destination, props.getRowId, props.config) !== props.data;
-    if (current.target?.context.target.rowId === targetId && current.target.context.position === position && current.target.valid === valid) return;
+    let valid = !props.sorted && Boolean(props.config && props.onChangeData) && props.config?.canDrop?.(context) !== false;
+    if (gesture.current !== current) return;
+    if (valid) {
+      current.preparedMove ??= prepareCominsTreeMove(props.data, current.source.id, props.getRowId, props.config);
+      valid = current.preparedMove.canMove(context.destination);
+    }
+    if (previous?.source === context.source && previous?.target === context.target && previous.position === position && current.target?.valid === valid) return;
     current.target = { context, valid };
     setPreview(current.target);
     setAnnouncement(`${position} ${String(targetId)}${valid ? "" : ", unavailable"}`);
@@ -168,9 +180,20 @@ export function useCominsTreeDrag<T>(options: Options<T>) {
       update(lastEvent);
       lastTime = now;
     };
-    const move = (pointer: PointerEvent) => { lastEvent = pointer; update(pointer); };
-    const up = (pointer: PointerEvent) => { update(pointer); finish(true, pointer, "drop"); };
-    const cancel = (pointer: PointerEvent) => finish(false, pointer, "pointer-cancel");
+    const pointerId = event.pointerId;
+    const move = (pointer: PointerEvent) => {
+      if (pointer.pointerId !== pointerId) return;
+      lastEvent = pointer;
+      update(pointer);
+    };
+    const up = (pointer: PointerEvent) => {
+      if (pointer.pointerId !== pointerId) return;
+      update(pointer);
+      if (gesture.current === current) finish(true, pointer, "drop");
+    };
+    const cancel = (pointer: PointerEvent) => {
+      if (pointer.pointerId === pointerId) finish(false, pointer, "pointer-cancel");
+    };
     const blur = () => finish(false, null, "blur");
     const key = (keyboard: KeyboardEvent) => { if (keyboard.key === "Escape") { keyboard.preventDefault(); finish(false, keyboard, "escape"); } };
     const removeListeners = registerCominsPointerListeners({ move, up, cancel, blur, key });

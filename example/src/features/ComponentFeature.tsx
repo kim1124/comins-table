@@ -139,28 +139,21 @@ const componentExampleEnglish: Record<ComponentExampleId, { description: string;
   },
 };
 
-const virtualListItemsFixture: CominsVirtualListItem[] = Array.from({ length: 10_000 }, (_value, index) => ({
-  data: { index },
-  label: `검색-${index + 1}`,
-  value: `검색-${index + 1}`,
-}));
-
-function getVirtualListItems() {
-  return virtualListItemsFixture;
-}
-
-function createComponentRows(componentId: ComponentExampleId): ComponentRow[] {
-  return createExampleRows(30).map((row) => ({
-    ...row,
-    id: `${componentId}-${row.id}`,
-    virtualListItems: componentId.startsWith("virtual-list") ? getVirtualListItems() : undefined,
-  }));
-}
-
 function createInitialRowsByExample(): Record<ComponentExampleId, ComponentRow[]> {
+  const virtualListItems: CominsVirtualListItem[] = Array.from({ length: 10_000 }, (_value, index) => ({
+    data: { index },
+    label: `검색-${index + 1}`,
+    value: `검색-${index + 1}`,
+  }));
+
   return componentExamples.reduce(
     (acc, example) => {
-      acc[example.id] = createComponentRows(example.id);
+      const items = example.id.startsWith("virtual-list") ? virtualListItems : undefined;
+      acc[example.id] = createExampleRows(30).map((row) => ({
+        ...row,
+        id: `${example.id}-${row.id}`,
+        virtualListItems: items,
+      }));
       return acc;
     },
     {} as Record<ComponentExampleId, ComponentRow[]>,

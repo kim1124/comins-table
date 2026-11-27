@@ -22,7 +22,7 @@ function fixture(released = false): Node[] {
     { type: "object", name: "Probe" },
   ];
 }
-async function inspect(nodes: Node[]) {
+async function inspect(nodes: Node[], declaredEdgeCount?: number) {
   const nodeTypes = ["synthetic", "object", "native", "array", "string"];
   const edgeTypes = ["internal", "context", "hidden", "property", "weak", "element", "shortcut"];
   const strings: string[] = [];
@@ -34,7 +34,7 @@ async function inspect(nodes: Node[]) {
   }
   const directory = await mkdtemp(path.join(os.tmpdir(), "comins-registry-")); directories.push(directory);
   const file = path.join(directory, "fixture.heapsnapshot");
-  await writeFile(file, JSON.stringify({ snapshot: { node_count: nodes.length, meta: {
+  await writeFile(file, JSON.stringify({ snapshot: { node_count: nodes.length, edge_count: declaredEdgeCount ?? edges.length / 3, meta: {
     node_fields: ["type", "name", "id", "self_size", "edge_count"], edge_fields: ["type", "name_or_index", "to_node"],
     node_types: [nodeTypes], edge_types: [edgeTypes],
   } }, nodes: rawNodes, edges, strings }));
@@ -63,4 +63,12 @@ it("requires both the WeakMap table and key before traversing its conditional va
   expect(await inspect(nodes)).toMatchObject({ stores: 1 });
   nodes[0]!.links![1]!.kind = "weak";
   expect(await inspect(nodes)).toMatchObject({ stores: 0 });
+});
+
+it("rejects a heap that contains no root nodes instead of reporting zero retained objects", async () => {
+  await expect(inspect([])).rejects.toThrow(/heap.*root/i);
+});
+
+it("rejects a heap with a mismatched declared edge count", async () => {
+  await expect(inspect(fixture(), 12345)).rejects.toThrow(/heap.*layout/i);
 });

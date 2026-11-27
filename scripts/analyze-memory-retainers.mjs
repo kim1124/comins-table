@@ -1,6 +1,7 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
+import { fileURLToPath } from "node:url";
 
 // 같은 진단 실행의 연속 snapshot만 비교하며, 다른 process/session의 ID를 결합하지 않는다.
 function load(filename) {
@@ -98,7 +99,12 @@ export function analyzeRetainers(resultFile) {
       if (!baseline) { baseline = current; previous = current; continue; }
       const rootPaths = roots(heap);
       for (const reference of previous === baseline ? [baseline] : [baseline, previous]) {
-        const changes = [...summary.classes.values()].map(item => ({ ...item, countDelta: item.count - (reference.summary.classes.get(item.class)?.count ?? 0), bytesDelta: item.bytes - (reference.summary.classes.get(item.class)?.bytes ?? 0) })).sort((a, b) => b.bytesDelta - a.bytesDelta);
+        const classes = new Set([...summary.classes.keys(), ...reference.summary.classes.keys()]);
+        const changes = [...classes].map(name => {
+          const before = reference.summary.classes.get(name);
+          const item = summary.classes.get(name) ?? { ...before, count: 0, bytes: 0 };
+          return { ...item, countDelta: item.count - (before?.count ?? 0), bytesDelta: item.bytes - (before?.bytes ?? 0) };
+        }).sort((a, b) => b.bytesDelta - a.bytesDelta);
         const growing = changes.filter(item => item.bytesDelta > 0 || item.countDelta > 0).slice(0, 20);
         const selected = new Set(growing.map(item => item.class)), examples = new Map();
         for (let i = 0; i < heap.count; i += 1) {
@@ -112,7 +118,11 @@ export function analyzeRetainers(resultFile) {
           referenceFile: reference.filename, checkpointFile: filename,
           changes: changes.filter(item => item.bytesDelta !== 0 || item.countDelta !== 0),
           growthPaths: growing.map(item => ({ ...item, newlyObservedSurvivors: examples.get(item.class) ?? [] })),
-          closureChanges: [...summary.functions.values()].map(item => ({ ...item, countDelta: item.count - (reference.summary.functions.get(item.name)?.count ?? 0) })).filter(item => item.countDelta !== 0).sort((a, b) => b.countDelta - a.countDelta),
+          closureChanges: [...new Set([...summary.functions.keys(), ...reference.summary.functions.keys()])].map(name => {
+            const before = reference.summary.functions.get(name);
+            const item = summary.functions.get(name) ?? { ...before, count: 0 };
+            return { ...item, countDelta: item.count - (before?.count ?? 0) };
+          }).filter(item => item.countDelta !== 0).sort((a, b) => b.countDelta - a.countDelta),
         });
       }
       previous = current;
@@ -125,7 +135,7 @@ export function analyzeRetainers(resultFile) {
   return report;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (process.argv[1] && existsSync(process.argv[1]) && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   if (!process.argv[2]) throw new Error("Usage: node scripts/analyze-memory-retainers.mjs <diagnostic/result.json>");
   analyzeRetainers(process.argv[2]);
 }

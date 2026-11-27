@@ -8,7 +8,7 @@ import type {
   CominsTableState,
 } from "../model";
 import {
-  getCominsVisibleColumns,
+  getVisibleLayoutColumns,
 } from "../layout/columns";
 
 export function createEmptySelection(): CominsSelectionState {
@@ -25,7 +25,27 @@ export function getCellRangeBounds<TData>(
   range: CominsCellRange,
   rowIds: readonly CominsRowId[] = state.rowIds,
 ) {
-  const visibleColumns = getCominsVisibleColumns(state);
+  return getLayoutCellRangeBounds(state, range, rowIds);
+}
+
+type CellRangeLayoutSource<TColumn, TGroup> = Pick<CominsTableState<unknown>,
+  "columnOrder" | "columnState" | "columnGroupState" | "selection" | "rowIds"
+> & { columns: readonly TColumn[]; columnGroups: readonly TGroup[] };
+
+export function getLayoutCellRangeBounds<TColumn extends { id: string }, TGroup extends { id: string; children: string[] }>(
+  state: CellRangeLayoutSource<TColumn, TGroup>,
+  range: CominsCellRange,
+  rowIds: readonly CominsRowId[] = state.rowIds,
+) {
+  const visibleColumns = getVisibleLayoutColumns(state);
+  return getCellRangeBoundsInColumns(visibleColumns, range, rowIds);
+}
+
+function getCellRangeBoundsInColumns<TColumn extends { id: string }>(
+  visibleColumns: readonly TColumn[],
+  range: CominsCellRange,
+  rowIds: readonly CominsRowId[],
+) {
   const anchorRowIndex = rowIds.indexOf(range.anchor.rowId);
   const focusRowIndex = rowIds.indexOf(range.focus.rowId);
   const anchorColumnIndex = visibleColumns.findIndex((column) => column.id === range.anchor.columnId);
@@ -45,8 +65,25 @@ export function getCellRangeBounds<TData>(
   };
 }
 
-export function selectRow<TData>(
-  state: CominsTableState<TData>,
+export function getCellRangeMembership(
+  visibleColumns: readonly { id: string }[],
+  range: CominsCellRange,
+  rowIds: readonly CominsRowId[],
+) {
+  const bounds = getCellRangeBoundsInColumns(visibleColumns, range, rowIds);
+  if (!bounds) return null;
+  return {
+    rowIds: new Set(bounds.rowIds.slice(bounds.rowStart, bounds.rowEnd + 1)),
+    columnIds: new Set(bounds.visibleColumns.slice(bounds.columnStart, bounds.columnEnd + 1).map(column => column.id)),
+  };
+}
+
+export function selectRow<TData>(state: CominsTableState<TData>, rowId: CominsRowId, options: CominsRowSelectionOptions = {}) {
+  return selectRowInState(state, rowId, options);
+}
+
+export function selectRowInState<TState extends { selection: CominsSelectionState }>(
+  state: TState,
   rowId: CominsRowId,
   options: CominsRowSelectionOptions = {},
 ) {
@@ -72,6 +109,10 @@ export function selectRow<TData>(
 }
 
 export function selectRows<TData>(state: CominsTableState<TData>, rowIds: readonly CominsRowId[]) {
+  return selectRowsInState(state, rowIds);
+}
+
+export function selectRowsInState<TState extends { selection: CominsSelectionState }>(state: TState, rowIds: readonly CominsRowId[]) {
   return {
     ...state,
     selection: {
@@ -85,8 +126,12 @@ export function areCellAddressesEqual(left: CominsCellAddress, right: CominsCell
   return left.rowId === right.rowId && left.columnId === right.columnId;
 }
 
-export function selectCell<TData>(
-  state: CominsTableState<TData>,
+export function selectCell<TData>(state: CominsTableState<TData>, cell: CominsCellAddress, options: CominsCellSelectionOptions = {}) {
+  return selectCellInState(state, cell, options);
+}
+
+export function selectCellInState<TState extends { selection: CominsSelectionState }>(
+  state: TState,
   cell: CominsCellAddress,
   options: CominsCellSelectionOptions = {},
 ) {
@@ -117,6 +162,10 @@ export function selectCell<TData>(
 }
 
 export function selectCellRange<TData>(state: CominsTableState<TData>, range: CominsCellRange) {
+  return selectCellRangeInState(state, range);
+}
+
+export function selectCellRangeInState<TState extends { selection: CominsSelectionState }>(state: TState, range: CominsCellRange) {
   return {
     ...state,
     selection: {
@@ -129,6 +178,10 @@ export function selectCellRange<TData>(state: CominsTableState<TData>, range: Co
 }
 
 export function clearCominsCellRange<TData>(state: CominsTableState<TData>) {
+  return clearCellRangeInState(state);
+}
+
+export function clearCellRangeInState<TState extends { selection: CominsSelectionState }>(state: TState) {
   return {
     ...state,
     selection: {
@@ -139,6 +192,10 @@ export function clearCominsCellRange<TData>(state: CominsTableState<TData>) {
 }
 
 export function clearCominsSelection<TData>(state: CominsTableState<TData>) {
+  return clearSelectionInState(state);
+}
+
+export function clearSelectionInState<TState extends { selection: CominsSelectionState }>(state: TState) {
   return {
     ...state,
     selection: createEmptySelection(),
@@ -164,17 +221,25 @@ export function getCominsSelectedCellRange<TData>(
   range: CominsCellRange | null = state.selection.range,
   rowIds: readonly CominsRowId[] = state.rowIds,
 ) {
+  return getLayoutSelectedCellRange(state, range, rowIds);
+}
+
+export function getLayoutSelectedCellRange<TColumn extends { id: string }, TGroup extends { id: string; children: string[] }>(
+  state: CellRangeLayoutSource<TColumn, TGroup>,
+  range: CominsCellRange | null = state.selection.range,
+  rowIds: readonly CominsRowId[] = state.rowIds,
+) {
   if (!range) {
     return [];
   }
 
-  const visibleColumns = getCominsVisibleColumns(state);
-  const bounds = getCellRangeBounds(state, range, rowIds);
+  const bounds = getLayoutCellRangeBounds(state, range, rowIds);
 
   if (!bounds) {
     return [];
   }
 
+  const { visibleColumns } = bounds;
   const cells: CominsCellAddress[] = [];
 
   for (let rowIndex = bounds.rowStart; rowIndex <= bounds.rowEnd; rowIndex += 1) {
@@ -201,7 +266,28 @@ export function isCominsCellInSelectedRange<TData>(
   cell: CominsCellAddress,
   rowIds: readonly CominsRowId[] = state.rowIds,
 ) {
-  return getCominsSelectedCellRange(state, state.selection.range, rowIds).some(
-    (selected) => selected.rowId === cell.rowId && selected.columnId === cell.columnId,
-  );
+  return isCellInLayoutSelectedRange(state, cell, rowIds);
+}
+
+export function isCellInLayoutSelectedRange<TColumn extends { id: string }, TGroup extends { id: string; children: string[] }>(
+  state: CellRangeLayoutSource<TColumn, TGroup>,
+  cell: CominsCellAddress,
+  rowIds: readonly CominsRowId[] = state.rowIds,
+) {
+  const bounds = state.selection.range ? getLayoutCellRangeBounds(state, state.selection.range, rowIds) : null;
+  if (!bounds) return false;
+  let columnInRange = false;
+  for (let index = bounds.columnStart; index <= bounds.columnEnd; index += 1) {
+    const column = bounds.visibleColumns[index];
+    if (column && column.id === cell.columnId) {
+      columnInRange = true;
+      break;
+    }
+  }
+  if (!columnInRange) return false;
+  for (let index = bounds.rowStart; index <= bounds.rowEnd; index += 1) {
+    const rowId = bounds.rowIds[index];
+    if (rowId !== undefined && rowId === cell.rowId) return true;
+  }
+  return false;
 }

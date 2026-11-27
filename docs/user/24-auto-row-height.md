@@ -37,6 +37,8 @@ Only mounted automatic Rows and Details are observed. Fixed-height Rows keep the
 
 [Viewport loading](25-viewport-datasource.md) also supports automatic heights. Its unloaded rows use the estimate, and both data and height history have bounded caches.
 
+Measurements are discarded when their layout or content generation expires. Rows use estimates until they can be measured again.
+
 ## Playground controls
 
 Use **Long content** to change the Row data, **Narrow width** to change the available wrapping width, and **Row Detail** to show the independently measured Detail. The first Row also contains **Expanded content**, which changes only that renderer's content. Each is a toggle with a visible pressed state and Enter/Space support; turn it off to restore the corresponding setting. None requires manually setting a renderer height.

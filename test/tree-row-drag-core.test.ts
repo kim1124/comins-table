@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moveCominsTreeNode, type CominsTreeNode } from "../src/tree";
+import { flattenCominsTree, moveCominsTreeNode, type CominsTreeNode } from "../src/tree";
 
 type Row = { id: string };
 const id = (row: Row) => row.id;
@@ -49,4 +49,24 @@ describe("tree subtree movement", () => {
     expect(moveCominsTreeNode(data, "missing", { parentId: null, beforeRowId: null }, id)).toBe(data);
     expect(() => moveCominsTreeNode([node("x", [node("x")])], "x", { parentId: null, beforeRowId: null }, id)).toThrow("Duplicate tree row id");
   });
+});
+
+it("resolves position-derived IDs using the traversal after removing the source", () => {
+  const tree = [node("a"), node("b"), node("c")];
+  const getRowId = (_item: { id: string }, index: number) => index;
+  expect(moveCominsTreeNode(tree, 0, { beforeRowId: 2, parentId: null }, getRowId).map(entry => entry.item.id)).toEqual(["b", "c", "a"]);
+  expect(moveCominsTreeNode(tree, 0, { beforeRowId: null, parentId: 2 }, getRowId, { allowReparent: true })).toBe(tree);
+});
+
+it("preserves sparse tree positions except in the source sibling array during a move", () => {
+  const children = new Array<CominsTreeNode<{ id: string }>>(4);
+  children[1] = node("a");
+  children[2] = node("b");
+  children[3] = node("c");
+  const tree = [{ item: { id: "parent" }, expand: true, children }];
+  expect(flattenCominsTree(tree, id).map(entry => [entry.rowId, entry.item.id])).toEqual([
+    ["parent", "parent"], ["a", "a"], ["b", "b"], ["c", "c"],
+  ]);
+  const result = moveCominsTreeNode(tree, "a", { beforeRowId: null, parentId: "parent" }, id);
+  expect(result[0]!.children!.map(entry => entry.item.id)).toEqual(["b", "c", "a"]);
 });

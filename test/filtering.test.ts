@@ -135,3 +135,12 @@ describe("column filtering", () => {
     ])).toEqual([1]);
   });
 });
+
+it.each(["0001-01-01", "0099-06-10", "0100-11-30"])("preserves the UTC calendar year for %s", async (iso) => {
+  const { getDateDayValue } = await import("../src/core/rows/filter-value");
+  const day = Date.parse(iso);
+  expect(getDateDayValue(iso)).toBe(day);
+  expect(getDateDayValue(new Date(day + 123))).toBe(day);
+  expect(getDateDayValue(day + 123)).toBe(day);
+  expect(getDateDayValue("0099-02-29")).toBeNull();
+});

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, createRef } from "react";
+import { act, createRef, startTransition, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
 import { CominsTable, createCominsViewportData, reduceCominsViewportData, type CominsTableRef } from "../src";
@@ -202,4 +202,58 @@ it("rejects copy preparation errors through the Promise without writing", async 
     await expect(result).rejects.toBe(failure);
     expect(write).not.toHaveBeenCalled();
   });
+});
+
+it("copies and pastes internal clipboard ranges in sorted display order", () => {
+  const data = [
+    { id: 0, order: 1, value: "A" }, { id: 1, order: 4, value: "B" },
+    { id: 2, order: 2, value: "C" }, { id: 3, order: 3, value: "D" },
+    { id: 4, order: 5, value: "E" },
+  ];
+  const ref = createRef<CominsTableRef<(typeof data)[number]>>();
+  const changed = vi.fn<(value: typeof data) => void>();
+  mount(<CominsTable ref={ref} data={data} getRowId={id}
+    columns={[{ field: "order", sort: true }, { field: "value" }]} onChangeData={changed} />);
+  act(() => ref.current!.setSortModel([{ columnId: "order", direction: "asc" }]));
+  const click = (index: number, shiftKey = false) => act(() =>
+    node.querySelector(cell(index))!.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey })));
+  const press = (index: number, key: string) => act(() =>
+    node.querySelector(cell(index))!.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, ctrlKey: true })));
+  click(0);
+  click(2, true);
+  press(0, "c");
+  click(3);
+  press(3, "v");
+  expect(changed).toHaveBeenCalledTimes(1);
+  expect(changed.mock.calls[0]![0].map(row => row.value)).toEqual(["A", "C", "C", "A", "E"]);
+});
+
+it("keeps the committed public fill operation during a suspended Table transition", async () => {
+  const columns: CominsTableColumn<{ id: string; value: string }>[] = [{ field: "value", label: "Value" }];
+  const rows = [{ id: "a", value: "A" }, { id: "b", value: "B" }];
+  const ref = createRef<CominsTableRef<(typeof rows)[number]>>();
+  const change = vi.fn();
+  const suspended = new Promise<void>(() => {});
+  let reachedBlocker = false;
+  function Blocker({ waiting }: { waiting: boolean }) {
+    if (waiting) { reachedBlocker = true; throw suspended; }
+    return null;
+  }
+  function view(waiting: boolean) {
+    return <Suspense fallback={<span>pending</span>}>
+      <CominsTable columns={columns} data={rows} getRowId={row => row.id} ref={ref} cellSelection fillHandle={!waiting} onChangeData={change} />
+      <Blocker waiting={waiting} />
+    </Suspense>;
+  }
+  mount(view(false));
+  const mounted = node;
+  act(() => mounted.querySelector<HTMLElement>("[data-testid='cell-a-value']")!.click());
+  act(() => mounted.querySelector<HTMLElement>("[data-testid='cell-b-value']")!.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: true })));
+  expect(ref.current?.getSelection().range?.focus.rowId).toBe("b");
+  expect(mounted.querySelector("[data-testid='fill-handle']")).not.toBeNull();
+  await act(async () => { startTransition(() => root.render(view(true))); });
+  expect(reachedBlocker).toBe(true);
+  expect(mounted.querySelector("[data-testid='fill-handle']")).not.toBeNull();
+  act(() => expect(ref.current?.fillSelection("down")).toBe(true));
+  expect(change).toHaveBeenCalledOnce();
 });

@@ -31,7 +31,14 @@ for (const variant of ["builtin", "badge", "panel", "custom"]) {
     await expect(search).toHaveValue("");
     await expect(card.getByTestId("value-filter-model")).toHaveText("[]");
     await expect(card.getByTestId("summary-cell-status")).toHaveText("10000");
-    await expect(popup.locator(".comins-column-filter__option")).toHaveCount(100);
+    await expect(popup.locator(".comins-column-filter__option")).toHaveCount(50);
+    await expect(popup.getByRole("checkbox", { name: "Value 00099", exact: true })).toHaveCount(0);
+    const nextPage = popup.getByRole("button", { name: "Next options", exact: true });
+    await nextPage.click();
+    await expect(nextPage).toHaveAttribute("aria-disabled", "true");
+    await expect(nextPage).toBeFocused();
+    await expect(popup.locator(".comins-column-filter__option")).toHaveCount(50);
+    await expect(popup.getByRole("checkbox", { name: "Value 00099", exact: true })).toBeVisible();
     await popup.getByRole("checkbox", { name: /Select (all )?matching values/, exact: true }).uncheck();
     await expect(card.getByTestId("summary-cell-status")).toHaveText("0");
     await expect(popup).toBeVisible();

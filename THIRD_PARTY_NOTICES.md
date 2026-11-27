@@ -8,7 +8,7 @@
 - Source: https://github.com/radix-ui/icons
 - License: MIT
 - Use surface: external runtime dependency; may be bundled by downstream applications
-- Modified or copied by Comins: no
+- Modified or copied by Comins: no for the external runtime dependency
 
 The Comins library build keeps Radix Icons external. Applications that bundle
 and redistribute Radix Icons must preserve the following MIT notice in their
@@ -47,6 +47,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ---
+
+### Embedded drag-handle geometry
+
+Comins Table includes the unchanged SVG path from the `DragHandleDots2Icon`
+export in `src/table-icons.tsx`. The path comes from the Radix Icons version and
+revision listed above and uses the same MIT license and copyright notice.
+It is distributed in the library and Playground as inline SVG geometry.
+The dependency itself remains external to the library build.
 
 ## Legacy Lucide and Feather notices
 

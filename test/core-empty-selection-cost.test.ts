@@ -18,10 +18,11 @@ it.each([false, true])("preserves empty selection without scanning previous row 
   });
   const { state } = reconcileCoreState({ current, nextInput: input, columnOrderHistory: current.columnOrder,
     dataChanged: false, getRowIdChanged: false });
+  // Stop observing before value assertions enumerate a potentially shared rowIds array.
+  expect(previousRowIdReads).toBe(0);
   expect(state.selection).toBe(current.selection);
   expect(state.rowIds).toEqual(["a", "b"]);
   expect(state.rows).toBe(rows);
-  expect(previousRowIdReads).toBe(0);
 });
 
 it.each(["cell", "row"] as const)("still clears a populated %s selection when its row disappears", kind => {

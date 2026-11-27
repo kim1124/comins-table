@@ -18,6 +18,160 @@ const create = () => legacy.createCominsTableState({ rows, getRowId: row => row.
 });
 
 describe("React state bridge", () => {
+  it("applies the saved group layout without evaluating unrelated React metadata", () => {
+    const state = create();
+    const originalColumn = state.columns[0]!;
+    let metadataReads = 0;
+    for (const key of ["cell", "sort", "filter", "label"] as const) {
+      const value = originalColumn[key];
+      Object.defineProperty(originalColumn, key, { configurable: true, get: () => { metadataReads++; return value; } });
+    }
+    const initial = legacy.serializeCominsColumnLayout(state);
+    const hidden = legacy.applyCominsColumnLayout(state, { ...initial, groups: { g: { hidden: true } } });
+    const resized = legacy.applyCominsColumnLayout(hidden, { ...initial, columns: { score: { width: 132 } } });
+    const reset = legacy.applyCominsColumnLayout(resized, initial);
+    expect(hidden.columnGroupState.g?.hidden).toBe(true);
+    expect(resized.columnState.score?.width).toBe(132);
+    expect(legacy.serializeCominsColumnLayout(reset)).toEqual(initial);
+    for (const next of [hidden, resized, reset]) {
+      expect(next).not.toBe(state);
+      expect(next.columns).toBe(state.columns);
+      expect(next.columnGroups).toBe(state.columnGroups);
+      expect(next.rows).toBe(rows);
+      expect(next.getRowId).toBe(state.getRowId);
+      expect(next.selection).toBe(state.selection);
+      expect(next.theme).toBe(theme);
+    }
+    expect(legacy.applyCominsColumnLayout(state, initial)).not.toBe(state);
+    expect(metadataReads).toBe(0);
+  });
+
+  it("changes group layout without evaluating unrelated React metadata", () => {
+    const state = legacy.createCominsTableState({
+      rows, getRowId: row => row.id, theme,
+      columns: [
+        { field: "score", label, width: 100, minWidth: 90, maxWidth: 140, cell: { renderer: () => label } },
+        { field: "id", label, width: 100 },
+      ],
+      columnGroups: [{ id: "g", label, children: ["score"] }],
+    });
+    let metadataReads = 0;
+    for (const column of state.columns) {
+      for (const key of ["cell", "sort", "filter", "label"] as const) {
+        const value = column[key];
+        Object.defineProperty(column, key, { configurable: true, get: () => { metadataReads++; return value; } });
+      }
+    }
+    const hidden = legacy.setCominsColumnGroupHidden(state, "g", true);
+    const restored = legacy.setCominsColumnGroupHidden(hidden, "g", false);
+    const resized = legacy.setCominsColumnGroupWidth(restored, "g", 200);
+    const moved = legacy.moveCominsColumnGroup(resized, "g", 1);
+    expect(hidden.columnGroupState.g?.hidden).toBe(true);
+    expect(restored.columnGroupState.g?.hidden).toBe(false);
+    expect(resized.columnState.score?.width).toBe(140);
+    expect(moved.columnOrder).toEqual(["id", "score"]);
+    for (const next of [hidden, restored, resized, moved]) {
+      expect(next.columns).toBe(state.columns);
+      expect(next.columnGroups).toBe(state.columnGroups);
+      expect(next.rows).toBe(rows);
+      expect(next.getRowId).toBe(state.getRowId);
+      expect(next.selection).toBe(state.selection);
+      expect(next.theme).toBe(theme);
+    }
+    expect(legacy.setCominsColumnGroupHidden(state, "missing", true)).toBe(state);
+    expect(legacy.setCominsColumnGroupWidth(hidden, "g", 200)).toBe(hidden);
+    expect(legacy.moveCominsColumnGroup(state, "g", 0)).toBe(state);
+    // Existing setters allocate a state even when the requested value is unchanged.
+    expect(legacy.setCominsColumnGroupHidden(hidden, "g", true)).not.toBe(hidden);
+    expect(legacy.setCominsColumnGroupWidth(resized, "g", 140)).not.toBe(resized);
+    expect(metadataReads).toBe(0);
+  });
+
+  it("initializes normalized state without evaluating unused filter presentation metadata", () => {
+    let metadataReads = 0;
+    const optionLabel = (value: legacy.CominsColumnFilterValue) => String(value);
+    const filter = {
+      kind: "number" as const,
+      get getOptionLabel() { metadataReads++; return optionLabel; },
+    };
+    const getRowId = (row: (typeof rows)[number]) => row.id;
+    const state = legacy.createCominsTableState({
+      rows, getRowId, theme,
+      columns: [{ field: "score", label, sort: true, filter }],
+      columnGroups: [{ id: "g", label, children: ["missing", "score", "score"] }],
+      sortModel: [{ columnId: "missing", direction: "asc" }, { columnId: "score", direction: "desc" }],
+    });
+    expect(metadataReads).toBe(0);
+    expect(state.rows).toBe(rows);
+    expect(state.getRowId).toBe(getRowId);
+    expect(state.theme).toBe(theme);
+    expect(state.columns[0]?.id).toBe("score");
+    expect(state.columns[0]?.label).toBe(label);
+    expect(state.columns[0]?.filter).toBe(filter);
+    expect(state.columnGroups[0]?.label).toBe(label);
+    expect(state.columnGroups[0]?.children).toEqual(["score"]);
+    expect(state.sortModel).toEqual([{ columnId: "score", direction: "desc" }]);
+    expect(state.columns[0]?.filter?.getOptionLabel).toBe(optionLabel);
+  });
+
+  it("derives layout without evaluating unrelated render and editing metadata", () => {
+    const state = create();
+    const originalColumn = state.columns[0]!;
+    let policyReads = 0;
+    const cell = originalColumn.cell;
+    Object.defineProperty(originalColumn, "cell", { configurable: true, get: () => { policyReads++; return cell; } });
+    const visible = legacy.getCominsVisibleColumns(state);
+    const headers = legacy.getCominsHeaderRows(state);
+    expect(visible).toEqual([originalColumn]);
+    expect(headers[0]?.[0]?.kind === "group" && headers[0][0].group).toBe(state.columnGroups[0]);
+    expect(headers[1]?.[0]?.kind === "column" && headers[1][0].column).toBe(originalColumn);
+    expect(policyReads).toBe(0);
+  });
+
+  it("serializes layout without reading unused React column metadata and preserves snapshot copies", () => {
+    const state = create();
+    const originalColumn = state.columns[0]!;
+    const cell = originalColumn.cell;
+    let policyReads = 0;
+    Object.defineProperty(originalColumn, "cell", { configurable: true, get: () => { policyReads++; return cell; } });
+    const layout = legacy.serializeCominsColumnLayout(state);
+    expect(layout).toEqual({
+      columns: { ...state.columnState },
+      groups: { g: { ...state.columnGroupState.g } },
+      order: [...state.columnOrder],
+    });
+    expect(layout.columns).not.toBe(state.columnState);
+    expect(layout.columns!.score).toBe(state.columnState.score);
+    expect(layout.groups!.g).not.toBe(state.columnGroupState.g);
+    expect(layout.order).not.toBe(state.columnOrder);
+    expect(legacy.serializeCominsColumnLayout(state)).toEqual(layout);
+    expect(policyReads).toBe(0);
+  });
+
+  it("queries selected layout ranges without evaluating unused cell policies", () => {
+    const state = create();
+    const range = { anchor: { rowId: "a", columnId: "score" }, focus: { rowId: "b", columnId: "score" } };
+    state.selection = { ...state.selection, range };
+    const cell = state.columns[0]!.cell;
+    let policyReads = 0;
+    Object.defineProperty(state.columns[0]!, "cell", { configurable: true, get: () => { policyReads++; return cell; } });
+    expect(legacy.getCominsSelectedCellRange(state)).toEqual([
+      { rowId: "a", columnId: "score" }, { rowId: "b", columnId: "score" },
+    ]);
+    expect(legacy.isCominsCellInSelectedRange(state, { rowId: "b", columnId: "score" })).toBe(true);
+    expect(legacy.isCominsCellInSelectedRange(state, { rowId: "missing", columnId: "score" })).toBe(false);
+    expect(legacy.getCominsSelectedCellRange(state, range, ["b", "a"])).toEqual([
+      { rowId: "b", columnId: "score" }, { rowId: "a", columnId: "score" },
+    ]);
+    state.selection.range = { anchor: { rowId: "a", columnId: "score" }, focus: { rowId: "c", columnId: "score" } };
+    expect(legacy.isCominsCellInSelectedRange(state, { rowId: "b", columnId: "score" }, ["b", "a", "b", "c"])).toBe(true);
+    state.selection.range = range;
+    state.columnState.score!.hidden = true;
+    expect(legacy.getCominsSelectedCellRange(state)).toEqual([]);
+    expect(legacy.isCominsCellInSelectedRange(state, { rowId: "b", columnId: "score" })).toBe(false);
+    expect(policyReads).toBe(0);
+  });
+
   it("projects only filter data fields and preserves the original getValue column", () => {
     const render = () => label;
     const getOptionLabel = (value: legacy.CominsColumnFilterValue) => String(value);

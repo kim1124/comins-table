@@ -20,6 +20,17 @@ function mount(custom = false) {
   return { surface, cell: host.querySelector<HTMLElement>('[data-testid="cell-a-name"]')! };
 }
 describe("inactive tooltip render cost", () => {
+  it("does not serialize tooltip identity while rendering a cell without a custom tooltip", () => {
+    const stringify = vi.spyOn(JSON, "stringify");
+    const { cell } = mount();
+
+    expect(cell.textContent).toBe("Alpha");
+    expect(stringify.mock.calls.some(([value]) =>
+      Array.isArray(value) && value[0] === "string" && value[1] === "a" && value[2] === "name",
+    )).toBe(false);
+    expect(cell.hasAttribute("data-comins-tooltip-key")).toBe(false);
+  });
+
   it("does not render a surface for ordinary cells or pointer exit", () => {
     const { surface, cell } = mount();
     act(() => cell.dispatchEvent(new MouseEvent("pointerout", { bubbles: true })));

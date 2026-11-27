@@ -44,10 +44,16 @@ N/A는 실행 전에 근거를 남긴 승인 목록에서 필수 제외로 선�
 | loading-pending-unmount | SDK lazy/viewport 요청 refs·중단 정책; 소비자 pending Promise와 callback | initial/refetch/lazy의 실제 pending·늦은 완료, 별도 ownership resolve/reject 회귀. 취소 불가능 소비자 Promise 자체 제거를 강제하지 않음 |
 | portal-menu-tooltip-teardown-case8 | SDK Portal/tooltip anchor·document 리스너·callback refs | 실제 열린 UI 종료; visible-tooltip 표본 회귀. 모든 menu 경로/내부 원시 캐시는 미검증 |
 | column-groups-open-ui-unmount | SDK 그룹 UI·메뉴 refs/리스너; 소비자 column config | 열린 UI SPA 종료 회귀. 모든 그룹 metadata/Portal 표본 해제는 미검증 |
-| selection-clipboard-gesture-unmount | SDK selection drag·pending clipboard가 보유한 data/ref; 소비자 clipboard Promise | 실제 gesture·copy/paste, 별도 pending-copy ownership resolve/reject 회귀. 모든 clipboard 경로는 미검증 |
+| selection-clipboard-gesture-unmount | SDK selection drag·pending clipboard가 보유한 data/ref; 소비자 clipboard Promise | 현재 workload는 범위·비연속 선택 제스처와 종료를 관측한다. 복사·붙여넣기 동작과 pending-copy ownership resolve/reject는 별도 증거로 기록한다. |
 | column-filtering-open-ui-unmount-case2 | SDK filter popup/선택/포커스 refs·document 리스너; 소비자 filter state | 실제 열린 UI 종료와 focused-filter dismissal 표본 회귀. 전체 map/cache 수명은 미검증 |
 
 기존 근거: `test/playwright/helpers/memory-unmount-workloads.ts`, `memory-loading-workload.ts`와 각 ownership/lifetime spec. 이 테스트의 통과만으로 위 미검증 항목을 VERIFIED로 승격하지 않는다. 소스/번들/런타임/조건이 같은 범위에서만 기존 증거를 재사용한다.
+
+## 컬럼 그룹 레이아웃 동작의 L3 추가 coverage
+
+`column-groups-layout-operations-unmount`는 같은 실제 컬럼 그룹 페이지의 두 테이블·각30행에서 그룹 숨김/복원, 부모 리사이즈, 부모 이동, 초기 폭·순서 복원을 확인한 후 실제 SPA로 이탈한다. 팝업 열기만 수행하는 기존 `column-groups-open-ui-unmount`를 보존하고 별도 L3 counter로 추가한다. warmup10·독립3×300·고정 기준값·각 지표2%·중간FAIL 보존은 동일하다. mounted 최초 기준과 조작 직전·초기 레이아웃 복원 직후 체크포인트를 비교하며, 기준과 복원 상태 모두 Reset 버튼 포커스를 고정한다. 기존 L1/L2 표본과 반복 수는 늘리지 않는다. snapshot/WeakRef 진단을 이 수치 실행에 혼합하지 않는다. 통과해도 객체 수명 전체 VERIFIED를 뜻하지 않는다.
+
+공통 체크포인트의 화면 서명은 포커스 대상의 DOM 경로와 Table 바깥의 팝업·메뉴·툴팁 상태도 비교한다. 레이아웃 변경으로 생긴 상태·콜백의 회수는 별도 스냅샷에서 실제 조작 직후의 양성 표본과 Table 없는 이탈 샘플을 대응해 확인한다. 이 진단은 L3 카운터와 분리한다.
 
 ## 실행 결과 저장
 
@@ -84,3 +90,21 @@ fixture의 새 controller는 setter만 캡처하며 대상 배열/객체/WeakRef
 수정 전/후 회귀를 고정할 때 development fixture의 `COMINS_RETENTION_SOURCE_ROOT`는 보존된 SDK source 디렉터리만 교체한다. 기본값은 현재 저장소이며, 실제 alias 경로·Script/HTTP 및 소스 전후 해시를 검증한다. 보존된 이전 source와 새 source의 SDK 차이, 독립 서버/cache URL 차이를 기록한다. fixture 파일이 같다는 사실을 실제 HTTP 바이트 전체 동일로 표현하지 않는다.
 
 교정·schema·source 검증 실패는 실행 무효이며 제품 RED가 아니다. 실제 행의 prototype→constructor 소유 관계로 생성자를 검증하고, 같은 이름의 사용되지 않는 VM closure 개수로 생성자 수를 제한하지 않는다. 정상 교체 후 `completed: true`·`FAIL_A_COHORT_RETAINED`가 기록되면 유효한 보유 실패다. 이 회귀의 성공도 정식 L3 수치·기존 L1/L2 범위를 대체하지 않는다.
+
+## 조사 종결과 예산·출시 판정의 경계
+
+조사 상태는 작업 보고에서 `OPEN`, `CLOSED_IN_SCOPE`, `INVALID`로 구분한다. 이 상태는 SDK API나 기존 실행 reporter의 자동 승인 필드가 아니다. 기존 `lifetimeObservation`, `defectAttribution`, `numericBudget`, `releaseMemoryGate`를 재사용하며 새 판정 엔진이나 필수 테스트 분류를 추가하지 않는다.
+
+- **조사 종결:** 사전 고정한 범위의 필수 대상·기대 수명·질문·증거 적격성·미해결 결함을 대조하고 실제 Astra/high가 그 범위의 종결을 검토한다. 유효한 필수 증거가 부족하거나 필수 질문·결함이 남으면 `OPEN`, 입력 자체가 무효이면 `INVALID`다. `CLOSED_IN_SCOPE`는 전체 SDK 무누수나 출시 합격이 아니다.
+- **제품 수명·기능:** L1/L2의 기존 승인 표본과 정리 책임을 판단한다. 수치 PASS로 미해결 필수 생존을 지우지 않는다. 양성 대조의 의도적 보유를 retired 표본의 회수 성공으로 바꾸지 않는다.
+- **수치 예산:** L3 전체 JS Heap·DOM Nodes·이벤트 리스너의 기존 각각 2% 규칙을 적용한다. 이 FAIL만으로 제품 누수를 확정하거나 조사 상태를 결정하지 않는다. 반대로 조사 종결·선택 표본 회수로 수치 FAIL을 해제하지 않는다.
+- **실제 사용 관측:** 자연 GC의 피크·회수 후 바닥값·GC 부담은 조건을 명시한 별도 관찰이다. 강제 GC 결과와 합산하거나 새 합격 임계값을 임의로 만들지 않는다.
+- **출시:** 기존 전체 inventory·artifact·결함 해결·정식 수치 gate를 충족해야 한다. 유효한 조사 종결과 수치 FAIL이 공존하면 출시 상태는 계속 `BLOCKED`다.
+
+기존 자료를 재사용할 때는 원시 파일·소스/번들/런타임/collector 해시·실행 모드·대상·기대값과 절차 준수를 함께 확인한다. 사후 작성 설명, 시간 제한 위반, 제한된 객체 표본, 다른 artifact는 각각의 제약으로 남긴다. 적격성이 부족한 자료는 참고 관찰로만 사용하며 필수 검증 PASS로 승격하지 않는다. 보고용 증거 연결표를 과거 실행 전에 승인된 manifest나 전체 출시 inventory로 표현하지 않는다.
+
+Code/VM·캐시 유형 분류와 대조군 증가는 객체 위치와 비교 범위를 설명할 뿐, 전체 정상성·유한 상한·SDK 무관성·독점 보유량을 입증하지 않는다. 필수 질문을 사후 제거하거나 미검증 보조 자원을 새 필수 조건으로 늘려 종결을 만들거나 지연하지 않는다. 다음 판정을 바꿀 새 구체적 질문이 없으면 같은 측정·전수 감사를 반복하지 않는다.
+
+종합 보고는 조사 상태, 수명/귀속 관측, 수치 예산, 실제 사용 관찰, 출시 상태, artifact·근거·제약·최종 검토를 각각 기록한다. 예를 들어 `CLOSED_IN_SCOPE`와 `numericBudget: FAIL`, `releaseMemoryGate: BLOCKED`는 함께 성립할 수 있다. 실행 요약의 `NOT_ASSESSED`를 이 예시만으로 승인된 전체 coverage로 승격하지 않는다.
+
+기존 Goal의 완료 조건과 실제 상태는 해당 Goal에서 별도로 유지한다. 이 운영 경계의 정리나 후속 Goal 제안 문서 작성만으로 기존 Goal을 완료·재개·변경하지 않는다. 고정 warmup10·독립3×300·체크포인트·최초 동일 상태 기준·중간 FAIL 보존·반올림 없는 각각2%와 기존 출시 보류는 그대로다.

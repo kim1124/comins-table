@@ -112,8 +112,6 @@ import * as selection from "../core/selection/state";
 import {
   projectReactState,
   restoreReactState,
-  projectReactColumn,
-  projectReactGroup,
 } from "./model";
 export type { CominsRowGroupMoveOptions } from "../core/state/table";
 import type {
@@ -145,9 +143,7 @@ export function setCominsColumnGroupHidden<TData>(
   groupId: string,
   hidden: boolean,
 ) {
-  const bridge = projectReactState(state);
-  const next = columns.setCominsColumnGroupHidden(bridge.core, groupId, hidden);
-  return restoreReactState(bridge, next);
+  return columns.setColumnGroupLayoutHidden(state, groupId, hidden);
 }
 
 export function setCominsColumnGroupWidth<TData>(
@@ -155,9 +151,7 @@ export function setCominsColumnGroupWidth<TData>(
   groupId: string,
   width: number,
 ) {
-  const bridge = projectReactState(state);
-  const next = columns.setCominsColumnGroupWidth(bridge.core, groupId, width);
-  return restoreReactState(bridge, next);
+  return columns.setColumnGroupLayoutWidth(state, groupId, width);
 }
 
 export function moveCominsColumn<TData>(
@@ -175,21 +169,15 @@ export function moveCominsColumnGroup<TData>(
   groupId: string,
   targetIndex: number,
 ) {
-  const bridge = projectReactState(state);
-  const next = columns.moveCominsColumnGroup(bridge.core, groupId, targetIndex);
-  return restoreReactState(bridge, next);
+  return columns.moveColumnGroupLayout(state, groupId, targetIndex);
 }
 
 export function serializeCominsColumnLayout<TData>(state: CominsTableState<TData>): CominsColumnLayout {
-  const bridge = projectReactState(state);
-  const next = columns.serializeCominsColumnLayout(bridge.core);
-  return next;
+  return columns.serializeColumnLayoutState(state);
 }
 
 export function applyCominsColumnLayout<TData>(state: CominsTableState<TData>, layout: CominsColumnLayout) {
-  const bridge = projectReactState(state);
-  const next = columns.applyCominsColumnLayout(bridge.core, layout);
-  return restoreReactState(bridge, next);
+  return columns.applyColumnLayoutState(state, layout);
 }
 
 export function selectRow<TData>(
@@ -197,15 +185,11 @@ export function selectRow<TData>(
   rowId: CominsRowId,
   options: CominsRowSelectionOptions = {},
 ) {
-  const bridge = projectReactState(state);
-  const next = selection.selectRow(bridge.core, rowId, options);
-  return restoreReactState(bridge, next);
+  return selection.selectRowInState(state, rowId, options);
 }
 
 export function selectRows<TData>(state: CominsTableState<TData>, rowIds: readonly CominsRowId[]) {
-  const bridge = projectReactState(state);
-  const next = selection.selectRows(bridge.core, rowIds);
-  return restoreReactState(bridge, next);
+  return selection.selectRowsInState(state, rowIds);
 }
 
 export function selectCell<TData>(
@@ -213,27 +197,19 @@ export function selectCell<TData>(
   cell: CominsCellAddress,
   options: CominsCellSelectionOptions = {},
 ) {
-  const bridge = projectReactState(state);
-  const next = selection.selectCell(bridge.core, cell, options);
-  return { ...restoreReactState(bridge, next), selection: next.selection };
+  return selection.selectCellInState(state, cell, options);
 }
 
 export function selectCellRange<TData>(state: CominsTableState<TData>, range: CominsCellRange) {
-  const bridge = projectReactState(state);
-  const next = selection.selectCellRange(bridge.core, range);
-  return { ...restoreReactState(bridge, next), selection: next.selection };
+  return selection.selectCellRangeInState(state, range);
 }
 
 export function clearCominsCellRange<TData>(state: CominsTableState<TData>) {
-  const bridge = projectReactState(state);
-  const next = selection.clearCominsCellRange(bridge.core);
-  return { ...restoreReactState(bridge, next), selection: next.selection };
+  return selection.clearCellRangeInState(state);
 }
 
 export function clearCominsSelection<TData>(state: CominsTableState<TData>) {
-  const bridge = projectReactState(state);
-  const next = selection.clearCominsSelection(bridge.core);
-  return restoreReactState(bridge, next);
+  return selection.clearSelectionInState(state);
 }
 
 export function isCominsRowSelected<TData>(state: CominsTableState<TData>, rowId: CominsRowId) {
@@ -250,9 +226,7 @@ export function getCominsSelectedCellRange<TData>(
   rowIds: readonly CominsRowId[] = state.rowIds,
 ) {
   if (!range) return [];
-  const bridge = projectReactState(state);
-  const next = selection.getCominsSelectedCellRange(bridge.core, range, rowIds);
-  return next;
+  return selection.getLayoutSelectedCellRange(state, range, rowIds);
 }
 
 export function isCominsCellInSelectedRange<TData>(
@@ -261,9 +235,7 @@ export function isCominsCellInSelectedRange<TData>(
   rowIds: readonly CominsRowId[] = state.rowIds,
 ) {
   if (!state.selection.range) return false;
-  const bridge = projectReactState(state);
-  const next = selection.isCominsCellInSelectedRange(bridge.core, cell, rowIds);
-  return next;
+  return selection.isCellInLayoutSelectedRange(state, cell, rowIds);
 }
 
 export function queryCominsRows<TData>(
@@ -409,20 +381,30 @@ export function getCominsCellValue<TData>(
 export function createCominsTableState<TData>(input: CominsTableStateInput<TData>): CominsTableState<TData> {
   const runtimeColumns = columns.normalizeColumns(input.columns);
   const runtimeGroups = columns.normalizeColumnGroups(runtimeColumns, input.columnGroups);
-  const state = table.createCominsTableState({ ...input, columns: runtimeColumns.map(projectReactColumn), columnGroups: runtimeGroups.map(projectReactGroup) });
-  return { ...state, columns: runtimeColumns, columnGroups: runtimeGroups, theme: input.theme ?? {} };
+  const state = table.createNormalizedCominsTableState(input, runtimeColumns, runtimeGroups);
+  return { ...state, theme: input.theme ?? {} };
+}
+
+export function initializeCominsTableAndLayout<TData>(input: CominsTableStateInput<TData>) {
+  const runtimeColumns = columns.normalizeColumns(input.columns);
+  const runtimeGroups = columns.normalizeColumnGroups(runtimeColumns, input.columnGroups);
+  const lookup = columns.createLayoutGroupLookup(runtimeGroups);
+  const state: CominsTableState<TData> = { ...table.createNormalizedCominsTableState(input, runtimeColumns, runtimeGroups, undefined, lookup), theme: input.theme ?? {} };
+  return { state, layout: columns.getLayoutProjection(state, lookup) };
 }
 
 export function getCominsVisibleColumns<TData>(state: CominsTableState<TData>) {
-  const bridge = projectReactState(state);
-  return columns.getCominsVisibleColumns(bridge.core).map(bridge.restoreColumn);
+  return columns.getVisibleLayoutColumns(state);
 }
 
 export function getCominsHeaderRows<TData>(state: CominsTableState<TData>): Array<Array<CominsHeaderCell<TData>>> {
-  const bridge = projectReactState(state);
-  return columns.getCominsHeaderRows(bridge.core).map(row => row.map(cell => cell.kind === "column"
-    ? { ...cell, column: bridge.restoreColumn(cell.column) }
-    : { ...cell, group: bridge.restoreGroup(cell.group) }));
+  return columns.getLayoutHeaderRows(state);
+}
+
+export function getReactColumnLayoutProjection<TData>(
+  state: Pick<CominsTableState<TData>, "columns" | "columnGroups" | "columnOrder" | "columnState" | "columnGroupState">,
+) {
+  return columns.getLayoutProjection(state);
 }
 
 export function setCominsTableTheme<TData>(state: CominsTableState<TData>, theme: CominsTableTheme) {

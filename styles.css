@@ -1817,6 +1817,11 @@
   padding: 2px;
 }
 
+.comins-table__td--plain-text {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .comins-table__cell-value {
   display: block;
   min-width: 0;
@@ -1905,6 +1910,7 @@
 .comins-column-filter__option[data-selected="true"] { background: var(--comins-table-component-accent-soft); }
 .comins-column-filter__count { color: var(--comins-table-component-muted); margin-left: auto; }
 .comins-column-filter__select-all, .comins-column-filter__actions { display: flex; align-items: center; gap: 6px; }
+.comins-column-filter__actions button[aria-disabled="true"] { opacity: 0.5; }
 .comins-column-filter__no-results { color: var(--comins-table-component-muted); padding: 8px; }
 
 /* Avoid per-element paged-media UA queries on scrolling screens; retain print rules. */

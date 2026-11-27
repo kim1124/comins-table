@@ -1,5 +1,6 @@
 import { memo, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { CominsTable, type CominsColumnFilterModel, type CominsTableColumn, type CominsValueFilterPanelRenderParams } from "../../../src";
+import { FilterOptionPageControls, useFilterOptionPage } from "../../../src/react/value-filter";
 import { FeatureSampleSection } from "../components/FeatureSampleSection";
 import { defineLocalizedText, usePlaygroundLocale } from "../i18n/playground-locale";
 
@@ -10,14 +11,16 @@ const sample: Row[] = [
   { id: "v5", status: "Blocked", region: "US" }, { id: "v6", status: null, region: "KR" },
 ];
 function CustomPanel({ params: p, custom }: { params: CominsValueFilterPanelRenderParams<Row>; custom: boolean }) {
+  const pagination = useFilterOptionPage(p.query, p.visibleOptions.length);
   return <section data-testid="value-filter-custom-panel">
     <input {...p.getSearchInputProps()} data-comins-column-filter-value-input="true" placeholder="Search" />
     <label><input {...p.getSelectAllProps()} />Select matching values</label>
-    <ul className="value-filter-list">{p.visibleOptions.map(option => <li key={option.id} {...p.getOptionContainerProps(option)}>
+    <ul className="value-filter-list" data-total-options={p.visibleOptions.length}>{p.visibleOptions.slice(pagination.start, pagination.end).map(option => <li key={option.id} {...p.getOptionContainerProps(option)}>
       {custom ? <div {...p.getOptionProps(option, { element: "custom", props: { className: "value-filter-check" } })}>{option.selected ? "☑" : "☐"}</div>
         : <input {...p.getOptionProps(option)} />}
       {p.renderOption(option)}<small>{option.count}</small>
     </li>)}</ul>
+    <FilterOptionPageControls {...pagination} />
     <button {...p.getClearProps()}>Clear</button> <button {...p.getCloseProps()}>Close</button>
   </section>;
 }

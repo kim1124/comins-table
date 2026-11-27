@@ -23,5 +23,6 @@ export function getBuiltinSummaryValue(kind: CominsSummaryBuiltin, values: reado
     return numericValues.reduce((total, value) => total + value, 0) / numericValues.length;
   }
 
-  return kind === "min" ? Math.min(...numericValues) : Math.max(...numericValues);
+  const compare = kind === "min" ? Math.min : Math.max;
+  return numericValues.reduce((result, value) => compare(result, value));
 }

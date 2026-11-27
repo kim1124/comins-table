@@ -197,6 +197,7 @@ export function getCominsColumnPinningSpanFragments(
 
     if (previous && previous.pinned === pin.pinned) {
       previous.colSpan += 1;
+      if (pin.boundary) previous.boundary = true;
 
       if (pin.pinned === "right") {
         previous.offset = pin.offset;

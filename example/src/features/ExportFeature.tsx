@@ -15,7 +15,7 @@ type ExportMode = "csv" | "json";
 
 const exportColumns: Array<CominsExportColumn<PersonRow>> = [
   { id: "name", label: "name", value: (row) => row.name },
-  { id: "age", label: "age", value: (_row, rowIndex) => `Data ${rowIndex + 1}` },
+  { id: "age", label: "age", value: (row) => row.age },
   { id: "role", label: "role", value: (row) => row.role },
 ];
 

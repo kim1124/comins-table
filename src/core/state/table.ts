@@ -16,6 +16,9 @@ import {
   normalizeColumnState,
   normalizeColumnGroupState,
   normalizeColumnOrder,
+  type ColumnLayoutDefinition,
+  type ColumnGroupLayoutDefinition,
+  type LayoutGroupLookup,
 } from "../layout/columns";
 import {
   createEmptySelection,
@@ -76,8 +79,8 @@ export function areSortModelsEqual(left: CominsSortModel, right: CominsSortModel
   );
 }
 
-export function normalizeSortModel<TData>(
-  columns: ReadonlyArray<CominsTableRuntimeColumn<TData>>,
+export function normalizeSortModel(
+  columns: ReadonlyArray<{ id: string; sort?: unknown }>,
   sortModel: CominsSortModel,
 ): CominsSortState[] {
   const sortableColumnIds = new Set(columns.filter((column) => Boolean(column.sort)).map((column) => column.id));
@@ -108,24 +111,31 @@ export function defaultCompare(left: unknown, right: unknown) {
   return String(left ?? "").localeCompare(String(right ?? ""));
 }
 
-export function createCominsTableState<TData>({
+export function createCominsTableState<TData>(input: CominsTableStateInput<TData>): CominsTableState<TData> {
+  const nextColumns = normalizeColumns(input.columns);
+  const nextColumnGroups = normalizeColumnGroups(nextColumns, input.columnGroups);
+  return createNormalizedCominsTableState(input, nextColumns, nextColumnGroups);
+}
+
+// Shared data-only initialization after each adapter has normalized its own definitions.
+export function createNormalizedCominsTableState<
+  TData,
+  TColumn extends ColumnLayoutDefinition & { sort?: unknown },
+  TGroup extends ColumnGroupLayoutDefinition,
+>({
   columnLayout,
-  columnGroups,
-  columns,
   getRowId = defaultGetRowId,
   pagination,
   rows,
   showHeader = true,
   sort = null,
   sortModel,
-}: CominsTableStateInput<TData>): CominsTableState<TData> {
+}: Omit<CominsTableStateInput<TData>, "columns" | "columnGroups">, nextColumns: TColumn[], nextColumnGroups: TGroup[], currentRowIds?: CominsRowId[], prepared?: LayoutGroupLookup<TGroup>) {
   const nextRows = useRowsReference(rows);
-  const nextColumns = normalizeColumns(columns);
-  const nextColumnGroups = normalizeColumnGroups(nextColumns, columnGroups);
   const nextSortModel = normalizeSortModel(nextColumns, sortModel ?? (sort ? [sort] : []));
 
   return {
-    columnOrder: normalizeColumnOrder(nextColumns, columnLayout, nextColumnGroups),
+    columnOrder: normalizeColumnOrder(nextColumns, columnLayout, nextColumnGroups, prepared),
     columnGroups: nextColumnGroups,
     columnGroupState: normalizeColumnGroupState(nextColumnGroups, columnLayout),
     columns: nextColumns,
@@ -135,7 +145,7 @@ export function createCominsTableState<TData>({
       pageIndex: pagination?.pageIndex ?? 0,
       pageSize: pagination?.pageSize ?? Math.max(nextRows.length, 1),
     },
-    rowIds: nextRows.map(getRowId),
+    rowIds: currentRowIds ?? nextRows.map(getRowId),
     rows: nextRows,
     selection: createEmptySelection(),
     showHeader,
@@ -250,26 +260,29 @@ export function getCominsSortedRowIndexes<TData>(
     return indexes;
   }
 
-  return [...indexes].sort((leftIndex, rightIndex) => {
+  const columnsById = new Map<string, CominsTableRuntimeColumn<TData>>();
+  for (const column of state.columns) {
+    const id = column.id;
+    if (!columnsById.has(id)) columnsById.set(id, column);
+  }
+  const rules = state.sortModel.flatMap(rule => {
+    const column = columnsById.get(rule.columnId);
+    return column?.sort ? [{ column, direction: rule.direction }] : [];
+  });
+  return indexes.sort((leftIndex, rightIndex) => {
     const leftRow = state.rows[leftIndex]!;
     const rightRow = state.rows[rightIndex]!;
 
-    for (const rule of state.sortModel) {
-      const column = findColumn(state, rule.columnId);
-
-      if (!column?.sort) {
-        continue;
-      }
-
-      const leftValue = getCominsCellValue(state, leftRow, column.id);
-      const rightValue = getCominsCellValue(state, rightRow, column.id);
+    for (const { column, direction } of rules) {
+      const leftValue = getNestedFieldValue(leftRow, column.field);
+      const rightValue = getNestedFieldValue(rightRow, column.field);
       const result =
         typeof column.sort === "function"
           ? column.sort(leftValue, rightValue, leftRow, rightRow)
           : defaultCompare(leftValue, rightValue);
 
       if (result !== 0) {
-        return rule.direction === "desc" ? result * -1 : result;
+        return direction === "desc" ? result * -1 : result;
       }
     }
 
@@ -308,10 +321,12 @@ export function getCominsVirtualRows<TData>(
   const rowIndexes = getCominsSortedRowIndexes(state);
   const totalRows = rowIndexes.length;
   const totalHeight = totalRows * safeRowHeight;
-  const startIndex = Math.max(0, Math.floor(Math.max(0, scrollTop) / safeRowHeight) - Math.max(0, overscan));
+  const height = Math.max(0, viewportHeight);
+  const position = Math.min(Math.max(0, scrollTop), Math.max(0, totalHeight - height));
+  const startIndex = Math.max(0, Math.floor(position / safeRowHeight) - Math.max(0, overscan));
   const endIndex = Math.min(
     totalRows,
-    Math.ceil((Math.max(0, scrollTop) + Math.max(0, viewportHeight)) / safeRowHeight) + Math.max(0, overscan),
+    Math.ceil((position + height) / safeRowHeight) + Math.max(0, overscan),
   );
   const topSpacerHeight = startIndex * safeRowHeight;
 

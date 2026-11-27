@@ -2,15 +2,16 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { chromium, expect, type CDPSession, type Page, type TestInfo } from "@playwright/test";
-import { completeMemoryAudit, findMemoryStateFailures, memoryAuditStatus, type MemoryPoint } from "./memory-growth";
-import { evaluateMemoryVerdict } from "./memory-verdict";
+import { compareMemoryCheckpoints, completeMemoryAudit, memoryAuditStatus, type MemoryPoint } from "./memory-growth";
+import { createMemoryArtifactKey, evaluateMemoryVerdict } from "./memory-verdict";
 import { findHeapGrowth, readMemoryHeap, saveMemoryHeap } from "./memory-heap";
 import { installMemoryResources } from "./memory-resources";
 import { readBrowserResidentMemory } from "./memory-process";
 import { initializeMemoryInstrumentation } from "./memory-instrumentation";
+import { memoryStateSignatureExpression } from "./memory-state-signature";
 import { createMemoryScroller, MEMORY_SCROLL_DELIVERY_PROTOCOL } from "./memory-scroll";
 import { initializePlaygroundLocale } from "./playground-locale";
-import { createUnmountWorkload, unmountScenarios, type UnmountScenario } from "./memory-unmount-workloads";
+import { createUnmountWorkload, numericUnmountScenarios, type UnmountScenario } from "./memory-unmount-workloads";
 import { readBrowserBundleEvidence, readMemoryRuntime } from "./memory-runtime";
 import { readMemoryPlaygroundMode, readPlaygroundBuildInputs, readDevelopmentPlaygroundEvidence } from "./playground-build";
 import { collectMemoryServedScripts, assertProductionServedScripts, assertDevelopmentServedScripts } from "./memory-served-scripts";
@@ -87,15 +88,19 @@ async function readCounter(session: CDPSession, processSession: CDPSession, step
     expression: `({elements:document.querySelectorAll('*').length,rows:document.querySelectorAll('tr[data-comins-row-data-index]').length,tableRoots:document.querySelectorAll('[data-comins-table-instance-id]').length,activeMounts:window.__cominsTableLifecycle?.activeMountCount??0,${resources}scrollTop:document.querySelector('[data-testid="data-table-viewport"]')?.scrollTop??0,scrollLeft:document.querySelector('[data-testid="data-table-viewport"]')?.scrollLeft??0})`,
     returnByValue: true, objectGroup: "memory-counter",
   });
+  const evidence = await session.send("Runtime.evaluate", {
+    expression: memoryStateSignatureExpression,
+    returnByValue: true, objectGroup: "memory-counter",
+  });
   await session.send("Runtime.releaseObjectGroup", { objectGroup: "memory-counter" });
-  if (result.exceptionDetails) throw new Error(JSON.stringify(result.exceptionDetails));
+  if (result.exceptionDetails || evidence.exceptionDetails) throw new Error(JSON.stringify(result.exceptionDetails ?? evidence.exceptionDetails));
   if (diagnostic && result.result.value.resourceCoverageComplete !== 1) warn("Observer/timer measurement coverage incomplete");
   // 보조 계측 누락은 기록하되 필수 세 지표의 수치 판정과 분리한다.
   const resident = await readBrowserResidentMemory(processSession).catch(error => {
     warn(`Process RSS unavailable: ${String(error)}`);
     return {};
   });
-  return { step, metrics: { jsHeapUsedSize: heap,
+  return { step, stateSignature: evidence.result.value as string, metrics: { jsHeapUsedSize: heap,
     ...(nativeUsage.embedderHeapUsedSize === undefined ? {} : { embedderHeapUsedSize: nativeUsage.embedderHeapUsedSize }),
     ...(nativeUsage.backingStorageSize === undefined ? {} : { backingStorageSize: nativeUsage.backingStorageSize }),
     ...dom, ...result.result.value, ...resident } } satisfies MemoryPoint;
@@ -113,7 +118,7 @@ export async function runSustainedMemory(scenario: MemoryScenario, repeat: numbe
   const servedScripts = collectMemoryServedScripts(page);
   await initializePlaygroundLocale(page, "en");
   await installMemoryResources(page, diagnostic ? "diagnostic" : "counter");
-  const featureScenario = unmountScenarios.find(value => value === scenario);
+  const featureScenario = numericUnmountScenarios.find(value => value === scenario);
   const workload = featureScenario ? await createUnmountWorkload(page, featureScenario) : undefined;
   const isUnmount = scenario === "route-unmount" || Boolean(workload);
   const errors: string[] = [];
@@ -129,9 +134,10 @@ export async function runSustainedMemory(scenario: MemoryScenario, repeat: numbe
   let processSession: CDPSession | undefined;
   let scroller: Awaited<ReturnType<typeof createMemoryScroller>> | undefined;
   async function persist() { await writeFile(path.join(directory, "result.json"), JSON.stringify(result, null, 2)); }
-  async function point(step: string, target: MemoryPoint[], heap = false) {
+  async function point(step: string, target: MemoryPoint[], expectedState: "free" | "mounted", heap = false) {
     await settle(page);
     const sample = await readCounter(session!, processSession!, step, auxiliaryWarnings, diagnostic);
+    sample.expectedState = expectedState;
     target.push(sample);
     measurements.push(sample);
     await persist();
@@ -171,14 +177,20 @@ export async function runSustainedMemory(scenario: MemoryScenario, repeat: numbe
     async function cycle(index: number, measured = false) {
       if (workload) {
         await enter();
-        if (measured && checkpoints.includes(index)) await point(`mounted-${index}`, mounted, diagnostic);
-        await workload.exercise({ enter, leave });
+        if (measured && checkpoints.includes(index)) await point(`mounted-${index}`, mounted, "mounted", diagnostic);
+        await workload.exercise({ enter, leave: async () => {
+          if (scenario === "column-groups-layout-operations-unmount" && measured && checkpoints.includes(index)) {
+            // Layout has been restored; compare with the original mounted baseline before retiring it.
+            await point(`mounted-after-layout-${index}`, mounted, "mounted", diagnostic);
+          }
+          await leave();
+        } });
         await leave();
       } else if (scenario === "route-unmount") {
         await route(page, basic, token);
         await scroller!.scroll(0.5);
         await scroller!.scroll(0);
-        if (measured && checkpoints.includes(index)) await point(`mounted-${index}`, mounted, diagnostic);
+        if (measured && checkpoints.includes(index)) await point(`mounted-${index}`, mounted, "mounted", diagnostic);
         await route(page, free, token);
       } else {
         // 같은 구간, 새로운 구간, 재방문 구간을 섞되 비교 시점은 시작점으로 고정한다.
@@ -191,7 +203,16 @@ export async function runSustainedMemory(scenario: MemoryScenario, repeat: numbe
     if (scenario === "virtual-scroll") await expect(page.getByTestId("data-table-viewport")).toHaveAttribute("data-virtualized", "true");
     else if (!workload) await expect(page.getByTestId("data-table-viewport")).not.toHaveAttribute("data-virtualized", "true");
     if (scenario === "virtual-scroll") {
-      await expect.poll(() => page.getByTestId("data-table-viewport").evaluate(element => element.scrollHeight)).toBeGreaterThan(100_000);
+      const rowCount = await page.getByTestId("virtualization-logical-row-count").getAttribute("data-row-count");
+      expect(rowCount).toBe("100000");
+      Object.assign(result, { logicalRowCount: Number(rowCount) });
+      const viewport = page.getByTestId("data-table-viewport");
+      await expect.poll(() => viewport.evaluate(element => element.scrollHeight)).toBeGreaterThan(100_000);
+      await scroller!.scroll(1);
+      const lastRow = viewport.locator('[data-comins-row-data-index="99999"]');
+      await expect(lastRow).toBeVisible();
+      Object.assign(result, { lastRenderedRowIndex: Number(await lastRow.getAttribute("data-comins-row-data-index")) });
+      await scroller!.scroll(0);
     }
     for (let index = 0; index < warmup; index += 1) await cycle(index);
     await route(page, free, token);
@@ -205,48 +226,56 @@ export async function runSustainedMemory(scenario: MemoryScenario, repeat: numbe
     }
     Object.assign(result, { browserBundles, actualServedScripts,
       scriptEvidenceProtocol: "HTTP bytes collected in Node before baselines; fixed URL inventory during measured cycles; same-URL repeated body/status not reverified; no additional in-page history" });
-    await point("free-baseline", unmounted, diagnostic);
+    await point("free-baseline", unmounted, "free", diagnostic);
     await enter();
     if (!workload) { await scroller!.scroll(0.5); await scroller!.scroll(0); }
-    await point("mounted-baseline", mounted, diagnostic && isUnmount);
+    await point("mounted-baseline", mounted, "mounted", diagnostic && isUnmount);
     if (isUnmount) await leave();
-    await point("baseline", points, diagnostic);
+    await point("baseline", points, isUnmount ? "free" : "mounted", diagnostic);
     for (let index = 1; index <= 300; index += 1) {
       await cycle(index, true);
-      if (checkpoints.includes(index)) await point(`cycle-${index}`, points, diagnostic);
+      if (checkpoints.includes(index)) await point(`cycle-${index}`, points, isUnmount ? "free" : "mounted", diagnostic);
     }
     await route(page, free, token);
-    await point("unmounted", unmounted, diagnostic);
+    await point("unmounted", unmounted, "free", diagnostic);
     await page.waitForTimeout(1000);
-    await point("unmounted-idle", unmounted, diagnostic);
-    if (isUnmount) await point("final-idle", points, diagnostic);
+    await point("unmounted-idle", unmounted, "free", diagnostic);
+    if (isUnmount) await point("final-idle", points, "free", diagnostic);
     const after = await inputs();
     expect(after, "Memory measurement inputs changed during execution").toEqual(before);
     expect(readMemoryRuntime(), "Installed runtime changed during execution").toEqual(runtime);
     expect(readBrowserBundleEvidence(), "Local bundle files changed during measurement").toEqual(browserBundles);
     await servedScripts.verify();
-    const growth = findMemoryStateFailures(measurements);
+    const { failures: growth, stateErrors } = compareMemoryCheckpoints(measurements);
     const nativeGrowth = diagnostic ? Object.values(heapGroups).flatMap(group => findHeapGrowth(group)) : undefined;
-    Object.assign(result, { after, growth, numericStatus: diagnostic ? "DIAGNOSTIC_ONLY" : memoryAuditStatus(growth), nativeGrowth, coverage: diagnostic ? "separate heap diagnostic; not numeric acceptance evidence" : result.coverage });
+    const status = growth.length ? "FAIL" : stateErrors.length ? "INVALID" : memoryAuditStatus(growth);
+    Object.assign(result, { after, growth, stateErrors, numericStatus: diagnostic ? "DIAGNOSTIC_ONLY" : status, nativeGrowth, coverage: diagnostic ? "separate heap diagnostic; not numeric acceptance evidence" : result.coverage });
     scroller?.verify();
+    if (stateErrors.length) throw new Error(stateErrors.join("\n"));
     completeMemoryAudit(result);
     // This counter/diagnostic run supplies no L1/L2 evidence. Do not infer leak absence.
+    const artifact = createMemoryArtifactKey({ sources: before, buildMode, browser: result.browser, runtime, browserBundles, servedScripts: actualServedScripts });
     Object.assign(result, { verdict: evaluateMemoryVerdict({
-      artifact: createHash("sha256").update(JSON.stringify(before)).digest("hex"),
+      artifact,
       requiredNumeric: [`${scenario}-${repeat}`], requiredCoverage: [
         { id: "product-lifetime", layer: "lifetime", phase: "retired", target: scenario, expectation: "released" },
         { id: "active-cleanup", layer: "integration", phase: "retired", target: scenario, expectation: "responsibility-satisfied" },
       ],
-      numeric: [{ id: `${scenario}-${repeat}`, artifact: createHash("sha256").update(JSON.stringify(before)).digest("hex"),
-        status: diagnostic ? "NOT_RUN" : memoryAuditStatus(growth), evidence: path.join(directory, "result.json") }],
+      numeric: [{ id: `${scenario}-${repeat}`, artifact,
+        status: diagnostic ? "NOT_RUN" : status, evidence: path.join(directory, "result.json") }],
       coverage: [], lifetimeObservation: "NOT_ASSESSED", defectAttribution: "UNATTRIBUTED", defects: [],
     }) });
     await persist();
     await testInfo.attach(`${scenario}-${repeat}-${diagnostic ? "heap" : "counter"}`, { path: path.join(directory, "result.json"), contentType: "application/json" });
     return { growth, nativeGrowth, directory };
   } catch (error) {
-    Object.assign(result, { completed: false, executionError: String(error) });
+    const { failures: growth, stateErrors } = compareMemoryCheckpoints(measurements);
+    Object.assign(result, {
+      completed: false, executionError: String(error), growth, stateErrors,
+      numericStatus: diagnostic ? "DIAGNOSTIC_ONLY" : growth.length ? "FAIL" : "INVALID",
+    });
     await persist();
+    await testInfo.attach(`${scenario}-${repeat}-incomplete`, { path: path.join(directory, "result.json"), contentType: "application/json" });
     throw error;
   } finally {
     servedScripts.dispose();

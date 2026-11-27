@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ButtonHTMLAttributes, type HTMLAttributes, type InputHTMLAttributes, type Ref, type SyntheticEvent } from "react";
-import { getCominsColumnFilterOptions, setCominsColumnFilterValues, type CominsColumnFilterOptionsInput, type CominsColumnFilterRule, type CominsColumnFilterOption } from "../filtering";
+import { getCominsColumnFilterOptions, proposeCominsColumnFilterValues, type CominsColumnFilterOptionsInput, type CominsColumnFilterRule, type CominsColumnFilterOption, type CominsColumnFilterValuesAction } from "../filtering";
 import { searchFilterOptions } from "../core/rows/values-filter";
 import type { CominsTableRuntimeColumn } from "../react-types";
 import type { CominsFilterButtonGetter, CominsFilterCheckboxGetter, CominsFilterCustomOptions, CominsFilterNativeOptions, CominsValueFilterPanelRenderParams, CominsValueFilterPart, CominsValueFilterTriggerRenderParams } from "./value-filter-types";
@@ -85,9 +85,9 @@ export function useValueFilter<TData>(input: {
   const base = useMemo(() => open && enabled ? getCominsColumnFilterOptions({ ...source, query: "" }) : null,
     [open, enabled, source.columnId, source.columns, source.rows, source.model]);
   const result = useMemo(() => base ? searchFilterOptions(base, query) : null, [base, query]);
-  const apply = (action: Parameters<typeof setCominsColumnFilterValues<TData>>[0]["action"]) => {
+  const apply = (action: CominsColumnFilterValuesAction) => {
     if (readOnly) return;
-    const next = setCominsColumnFilterValues({ ...source, query, action });
+    const next = proposeCominsColumnFilterValues({ ...source, query, action }, result);
     if (next !== source.model) onChangeModel?.([...next]);
   };
   if (!result) return { params: null, searchRef };
@@ -113,16 +113,41 @@ export function useValueFilter<TData>(input: {
   return { params, searchRef };
 }
 
+const FILTER_OPTIONS_PER_PAGE = 50;
+
+export function useFilterOptionPage(query: string, count: number) {
+  const [position, setPosition] = useState({ query, page: 0 });
+  if (position.query !== query) setPosition({ query, page: 0 });
+  const pageCount = Math.max(1, Math.ceil(count / FILTER_OPTIONS_PER_PAGE));
+  const page = position.query === query ? Math.min(position.page, pageCount - 1) : 0;
+  const start = page * FILTER_OPTIONS_PER_PAGE;
+  return { page, pageCount, start, end: start + FILTER_OPTIONS_PER_PAGE,
+    goTo: (next: number) => setPosition({ query, page: Math.min(pageCount - 1, Math.max(0, next)) }) };
+}
+
+export function FilterOptionPageControls({ page, pageCount, goTo }: ReturnType<typeof useFilterOptionPage>) {
+  if (pageCount <= 1) return null;
+  const atStart = page === 0;
+  const atEnd = page === pageCount - 1;
+  return <div className="comins-column-filter__actions" role="group" aria-label="Filter option pages">
+    <button type="button" aria-disabled={atStart} onClick={() => { if (!atStart) goTo(page - 1); }}>Previous options</button>
+    <span aria-live="polite">{page + 1} / {pageCount}</span>
+    <button type="button" aria-disabled={atEnd} onClick={() => { if (!atEnd) goTo(page + 1); }}>Next options</button>
+  </div>;
+}
+
 export function ValueFilterPanel<TData>({ params }: { params: CominsValueFilterPanelRenderParams<TData> }) {
   const custom = params.column.filter?.panel?.render?.(params);
+  const pagination = useFilterOptionPage(params.query, params.visibleOptions.length);
   return <div {...visual({ className: "comins-column-filter__values" }, partProps(params.column.filter?.panel, params))} data-readonly={params.readOnly ? "true" : undefined}>
     {custom !== undefined ? custom : <>
       <input {...params.getSearchInputProps()} data-comins-column-filter-value-input="true" />
       <label className="comins-column-filter__select-all"><input {...params.getSelectAllProps()} />Select all matching values</label>
-      <div className="comins-column-filter__options">
-        {params.visibleOptions.map(option => <label key={option.id} {...params.getOptionContainerProps(option)}><input {...params.getOptionProps(option)} />{params.renderOption(option)}</label>)}
+      <div className="comins-column-filter__options" data-total-options={params.visibleOptions.length}>
+        {params.visibleOptions.slice(pagination.start, pagination.end).map(option => <label key={option.id} {...params.getOptionContainerProps(option)}><input {...params.getOptionProps(option)} />{params.renderOption(option)}</label>)}
         {!params.visibleOptions.length ? <span className="comins-column-filter__no-results">No matching values</span> : null}
       </div>
+      <FilterOptionPageControls {...pagination} />
       <div className="comins-column-filter__actions"><button {...params.getClearProps()}>Clear</button><button {...params.getCloseProps()}>Close</button></div>
     </>}
   </div>;

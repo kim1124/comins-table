@@ -11,6 +11,16 @@
 
 ### Fixed
 
+- Reduce repeated Table cell and Playground navigation work while preserving selection, popup focus, and route teardown.
+
+- Discard automatic Row height measurements when their layout or content generation expires or automatic height is disabled.
+
+- Release Row Drag resources when an application callback removes the Table, and release previous Viewport rows and callbacks without interrupting valid requests during cache policy changes.
+- Keep disabled cells read-only, preserve transferred Group membership and stable IDs, and apply selection and internal clipboard operations in displayed Row order.
+- Keep Column Groups inside their owning Table during Drag and preserve valid Group boundaries, Column widths, and literal Column IDs when saving and restoring Layout.
+- Bound fixed-height virtual slot construction to the rendered window, handle large Summary and Group transfer operations, and reuse Tree drag indexes until drop. Reduce repeated selection, edit, sort, and filter work.
+- Correct Playground loading, input, filter, export, and mobile interactions. Preserve completed memory evidence across unrelated browser runs and validate comparable checkpoints before applying the existing thresholds.
+
 - Keep header input-boundary registration on its DOM owner so retired headers leave no module-wide WeakSet capacity history.
 
 - Cancel queued virtual scroll frames during layout cleanup so SPA exits release retired Table models.

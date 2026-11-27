@@ -1,4 +1,5 @@
 import { useCominsLayoutEffect } from "./react/layout-effect";
+import { getDateDayValue } from "./core/rows/filter-value";
 import { createFilterButtonGetter, useValueFilter, ValueFilterPanel, renderFilterTrigger, getFilterTriggerVisual } from "./react/value-filter";
 import type { CominsTableRuntimeColumn } from "./react-types";
 import type { CominsColumnFilterOptionsInput } from "./filtering";
@@ -72,14 +73,7 @@ function getRuleInputValueTo<TData>(
 }
 
 function isValidDateInput(value: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/u.test(value)) {
-    return false;
-  }
-
-  const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(Date.UTC(year!, month! - 1, day!));
-
-  return date.getUTCFullYear() === year && date.getUTCMonth() === month! - 1 && date.getUTCDate() === day;
+  return /^\d{4}-\d{2}-\d{2}$/u.test(value) && getDateDayValue(value) !== null;
 }
 
 export function CominsColumnFilterControl<TData>({

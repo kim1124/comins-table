@@ -50,13 +50,24 @@ function getPathKey(path: readonly number[]) {
 function createCominsTreeNodeIndex<TItem>(
   nodes: readonly CominsTreeNode<TItem>[],
   getRowId: (item: TItem, index: number) => CominsRowId,
+  omittedPath?: readonly number[],
 ): CominsTreeNodeIndex<TItem> {
   const byId = new Map<CominsRowId, readonly number[]>();
   const idByPath = new Map<string, CominsRowId>();
   let itemIndex = 0;
 
-  const visit = (currentNodes: readonly CominsTreeNode<TItem>[], parentPath: readonly number[]) => {
-    currentNodes.forEach((node, childIndex) => {
+  const visit = (
+    currentNodes: readonly CominsTreeNode<TItem>[],
+    parentPath: readonly number[],
+    remainingOmission?: readonly number[],
+  ) => {
+    const removingSibling = remainingOmission?.length === 1;
+    let keptSiblingIndex = 0;
+    currentNodes.forEach((node, originalIndex) => {
+      const matchesOmission = remainingOmission?.[0] === originalIndex;
+      if (matchesOmission && removingSibling) return;
+      // Only the source sibling array is compacted by removal.
+      const childIndex = removingSibling ? keptSiblingIndex++ : originalIndex;
       const path = [...parentPath, childIndex];
       const rowId = getRowId(node.item, itemIndex);
       itemIndex += 1;
@@ -69,12 +80,12 @@ function createCominsTreeNodeIndex<TItem>(
       idByPath.set(getPathKey(path), rowId);
 
       if (node.children?.length) {
-        visit(node.children, path);
+        visit(node.children, path, matchesOmission ? remainingOmission.slice(1) : undefined);
       }
     });
   };
 
-  visit(nodes, []);
+  visit(nodes, [], omittedPath);
 
   return { byId, idByPath };
 }
@@ -110,6 +121,64 @@ function updateCominsTreeNodeAtPath<TItem>(
   });
 }
 
+function getTreeSiblings<TItem>(nodes: readonly CominsTreeNode<TItem>[], path: readonly number[]) {
+  let siblings = nodes;
+  for (const part of path) siblings = siblings[part]?.children ?? [];
+  return siblings;
+}
+
+function sameTreePath(a: readonly number[], b: readonly number[]) {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+/** Prepare a single source's structural move checks without cloning any tree nodes. */
+export function prepareCominsTreeMove<TItem>(
+  nodes: readonly CominsTreeNode<TItem>[],
+  rowId: CominsRowId,
+  getRowId: (item: TItem, index: number) => CominsRowId,
+  options: { allowReparent?: boolean } = {},
+) {
+  const index = createCominsTreeNodeIndex(nodes, getRowId);
+  const sourcePath = index.byId.get(rowId);
+  const sourceParent = sourcePath?.slice(0, -1);
+  const sourceIndex = sourcePath?.at(-1);
+  let indexWithoutSource: CominsTreeNodeIndex<TItem> | undefined;
+
+  function resolve(destination: CominsTreeMoveDestination) {
+    if (!sourcePath || !sourceParent || sourceIndex === undefined) return null;
+    const parentPath = destination.parentId === null ? [] : index.byId.get(destination.parentId);
+    const beforePath = destination.beforeRowId === null ? undefined : index.byId.get(destination.beforeRowId);
+    if (!parentPath || (destination.beforeRowId !== null && !beforePath)) return null;
+    const sameParent = sameTreePath(sourceParent, parentPath);
+    if (!options.allowReparent && !sameParent) return null;
+    if (sourcePath.length <= parentPath.length && sourcePath.every((value, i) => value === parentPath[i])) return null;
+    if (beforePath && !sameTreePath(beforePath.slice(0, -1), parentPath)) return null;
+    const targetIndex = beforePath?.at(-1) ?? getTreeSiblings(nodes, parentPath).length;
+    if (sameParent && (targetIndex === sourceIndex || targetIndex === sourceIndex + 1)) return null;
+    // A consumer's getRowId can depend on the traversal index after the source is removed.
+    indexWithoutSource ??= createCominsTreeNodeIndex(nodes, getRowId, sourcePath);
+    const nextParent = destination.parentId === null ? [] : indexWithoutSource.byId.get(destination.parentId);
+    const nextBefore = destination.beforeRowId === null ? undefined : indexWithoutSource.byId.get(destination.beforeRowId);
+    return nextParent ? { nextParent, nextBefore, sourceParent, sourceIndex } : null;
+  }
+
+  return {
+    canMove: (destination: CominsTreeMoveDestination) => resolve(destination) !== null,
+    move(destination: CominsTreeMoveDestination): readonly CominsTreeNode<TItem>[] {
+      const paths = resolve(destination);
+      if (!paths) return nodes;
+      const { nextParent, nextBefore, sourceParent, sourceIndex } = paths;
+      const sourceSiblings = getTreeSiblings(nodes, sourceParent);
+      const source = sourceSiblings[sourceIndex]!;
+      const removed = sourceSiblings.filter((_node, i) => i !== sourceIndex);
+      const detached = sourceParent.length === 0 ? removed : updateCominsTreeNodeAtPath(nodes, sourceParent, node => ({ ...node, children: removed }));
+      const children = [...getTreeSiblings(detached, nextParent)];
+      children.splice(nextBefore?.at(-1) ?? children.length, 0, source);
+      return nextParent.length === 0 ? children : updateCominsTreeNodeAtPath(detached, nextParent, node => ({ ...node, children }));
+    },
+  };
+}
+
 /** Move a complete subtree. Invalid and unchanged moves retain the input reference. */
 export function moveCominsTreeNode<TItem>(
   nodes: readonly CominsTreeNode<TItem>[],
@@ -118,36 +187,7 @@ export function moveCominsTreeNode<TItem>(
   getRowId: (item: TItem, index: number) => CominsRowId,
   options: { allowReparent?: boolean } = {},
 ): readonly CominsTreeNode<TItem>[] {
-  const index = createCominsTreeNodeIndex(nodes, getRowId);
-  const sourcePath = index.byId.get(rowId);
-  const parentPath = destination.parentId === null ? [] : index.byId.get(destination.parentId);
-  const beforePath = destination.beforeRowId === null ? undefined : index.byId.get(destination.beforeRowId);
-  if (!sourcePath || !parentPath || (destination.beforeRowId !== null && !beforePath)) return nodes;
-  const samePath = (a: readonly number[], b: readonly number[]) => a.length === b.length && a.every((value, i) => value === b[i]);
-  const sourceParent = sourcePath.slice(0, -1);
-  if (!options.allowReparent && !samePath(sourceParent, parentPath)) return nodes;
-  if (sourcePath.length <= parentPath.length && sourcePath.every((value, i) => value === parentPath[i])) return nodes;
-  if (beforePath && !samePath(beforePath.slice(0, -1), parentPath)) return nodes;
-  if (destination.beforeRowId === rowId) return nodes;
-  const siblingsAt = (tree: readonly CominsTreeNode<TItem>[], path: readonly number[]) => {
-    let siblings = tree;
-    for (const part of path) siblings = siblings[part]?.children ?? [];
-    return siblings;
-  };
-  const sourceSiblings = siblingsAt(nodes, sourceParent);
-  const sourceIndex = sourcePath[sourcePath.length - 1]!;
-  const source = sourceSiblings[sourceIndex]!;
-  const targetIndex = beforePath?.[beforePath.length - 1] ?? siblingsAt(nodes, parentPath).length;
-  if (samePath(sourceParent, parentPath) && (targetIndex === sourceIndex || targetIndex === sourceIndex + 1)) return nodes;
-  const removed = sourceSiblings.filter((_node, i) => i !== sourceIndex);
-  const detached = sourceParent.length === 0 ? removed : updateCominsTreeNodeAtPath(nodes, sourceParent, node => ({ ...node, children: removed }));
-  const nextIndex = createCominsTreeNodeIndex(detached, getRowId);
-  const nextParent = destination.parentId === null ? [] : nextIndex.byId.get(destination.parentId);
-  const nextBefore = destination.beforeRowId === null ? undefined : nextIndex.byId.get(destination.beforeRowId);
-  if (!nextParent) return nodes;
-  const children = [...siblingsAt(detached, nextParent)];
-  children.splice(nextBefore?.[nextBefore.length - 1] ?? children.length, 0, source);
-  return nextParent.length === 0 ? children : updateCominsTreeNodeAtPath(detached, nextParent, node => ({ ...node, children }));
+  return prepareCominsTreeMove(nodes, rowId, getRowId, options).move(destination);
 }
 
 export function flattenCominsTree<TItem>(

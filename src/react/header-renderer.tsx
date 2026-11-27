@@ -16,17 +16,47 @@ import type {
 } from "../filtering";
 import type { CominsColumnPinningBlock, CominsResolvedColumnPinning, CominsColumnPinned } from "../column-pinning";
 import { getCominsPinnedBlockResizeMaxWidth } from "../column-pinning";
-import { getEffectiveColumnMinWidth, setColumnWidthInsideParentGroup } from "../column-layout";
+import { getEffectiveColumnMaxWidth, getEffectiveColumnMinWidth, setColumnWidthInsideParentGroup } from "../column-layout";
 import { getCominsElementRect } from "../browser/measurements";
 import { getAriaSortState, getSortIndicatorState, getSortRule } from "../table-state";
-import { setCominsColumnWidth, setCominsColumnGroupWidth } from "./core-compat";
+import { setCominsColumnGroupWidth } from "./core-compat";
 import { CominsColumnFilterControl } from "../column-filter";
-import { CominsTableIcon, CominsTableIconButton } from "../table-icons";
+import { cominsColumnMoveIcon, CominsTableIconButton } from "../table-icons";
 
 type HeaderState<TData> = Pick<CominsTableState<TData>, "columns" | "columnState" | "columnGroupState" | "sortModel">;
 type MutableRef<T> = { current: T };
 type HeaderRendererBody = { body: React.ReactNode; renderer: unknown; kind: "render" | "legacy" };
 type PointerGestureCleanup = (unmounting?: boolean) => void;
+
+function captureVisibleWidths<TData>(
+  header: HTMLDivElement | null,
+  columns: readonly CominsTableRuntimeColumn<TData>[],
+  state: HeaderState<TData>,
+) {
+  const cells = new Map<string, HTMLTableCellElement>();
+  for (const cell of header?.querySelectorAll<HTMLTableCellElement>("[data-comins-column-id]") ?? []) {
+    const id = cell.dataset.cominsColumnId;
+    if (id !== undefined && !cells.has(id)) cells.set(id, cell);
+  }
+  return new Map(columns.map(column => {
+    const width = getCominsElementRect(cells.get(column.id))?.width;
+    const fallback = state.columnState[column.id]?.width ?? column.width ?? 160;
+    return [column.id, width && Number.isFinite(width) ? width : fallback] as const;
+  }));
+}
+
+function applyVisibleWidths<TData>(
+  state: CominsTableState<TData>,
+  widths: ReadonlyMap<string, number>,
+): CominsTableState<TData> {
+  const columnState = { ...state.columnState };
+  for (const [id, width] of widths) {
+    Object.defineProperty(columnState, id, {
+      value: { ...columnState[id], width }, enumerable: true, writable: true, configurable: true,
+    });
+  }
+  return { ...state, columnState };
+}
 
 /** Per-render input only. No module cache, renderer factory, or deferred action publication. */
 export type CominsHeaderRenderEnvironment<TData> = {
@@ -41,7 +71,6 @@ export type CominsHeaderRenderEnvironment<TData> = {
   getPinnedColumnAttributes: (columnId: string) => { boundary?: boolean; pinned?: CominsColumnPinned; style?: React.CSSProperties };
   getCominsColumnPlaceholderText: (label: React.ReactNode, fallback: string) => string;
   COMINS_COLUMN_PLACEHOLDER_INTERACTION_PROPS: React.HTMLAttributes<HTMLElement>;
-  bindCominsColumnPlaceholderNativeBoundary: (element: HTMLElement | null) => void;
   beginGroupPointerInteraction: (event: React.PointerEvent<HTMLElement>, group: CominsTableRuntimeColumnGroup, activateImmediately?: boolean) => void;
   beginHeaderPointerInteraction: (event: React.PointerEvent<HTMLElement>, cell: Extract<CominsHeaderCell<TData>, { kind: "column" }>, activateImmediately?: boolean) => void;
   headerRef: MutableRef<HTMLDivElement | null>;
@@ -82,7 +111,6 @@ export function renderCominsHeaderCell<TData>(
     getCominsColumnPlaceholderText,
     showColumnMoveHandle,
     COMINS_COLUMN_PLACEHOLDER_INTERACTION_PROPS,
-    bindCominsColumnPlaceholderNativeBoundary,
     beginGroupPointerInteraction,
     resizingColumnId,
     headerRef,
@@ -140,7 +168,9 @@ export function renderCominsHeaderCell<TData>(
       : groupPinned === "right"
         ? firstGroupPin?.boundary
         : undefined;
-    const groupPlaceholderLabel = getCominsColumnPlaceholderText(cell.group.label, cell.groupId);
+    const groupPlaceholderLabel = isGroupPlaceholder
+      ? getCominsColumnPlaceholderText(cell.group.label, cell.groupId)
+      : cell.groupId;
     return (
       <th
         aria-label={isGroupPlaceholder ? groupPlaceholderLabel : undefined}
@@ -181,7 +211,6 @@ export function renderCominsHeaderCell<TData>(
           className="comins-table__header-content"
           data-comins-header-body="true"
           inert={isGroupPlaceholder ? true : undefined}
-          ref={bindCominsColumnPlaceholderNativeBoundary}
         >
           {showColumnMoveHandle && !groupPositionLocked ? (
             <span
@@ -197,7 +226,7 @@ export function renderCominsHeaderCell<TData>(
                 beginGroupPointerInteraction(event, cell.group, true);
               }}
             >
-              <CominsTableIcon name="columnMove" />
+              {cominsColumnMoveIcon}
             </span>
           ) : null}
           <span className="comins-table__header-label">{isGroupPlaceholder ? null : cell.group.label}</span>
@@ -218,26 +247,10 @@ export function renderCominsHeaderCell<TData>(
             event.stopPropagation();
             const startX = event.clientX;
             const measuredWidth = getCominsElementRect(event.currentTarget.closest<HTMLTableCellElement>("th"))?.width;
-            const visibleWidthSnapshot = new Map<string, number>();
-
-            for (const childId of cell.group.children) {
-              const visibleColumn = visibleColumns.find((column) => column.id === childId);
-
-              if (!visibleColumn) {
-                continue;
-              }
-
-              const headerCell = Array.from(
-                headerRef.current?.querySelectorAll<HTMLTableCellElement>("[data-comins-column-id]") ?? [],
-              ).find((element) => element.dataset.cominsColumnId === visibleColumn.id);
-              const measuredColumnWidth = getCominsElementRect(headerCell)?.width;
-              const fallbackWidth = stateRef.current.columnState[visibleColumn.id]?.width ?? visibleColumn.width ?? 160;
-
-              visibleWidthSnapshot.set(
-                visibleColumn.id,
-                measuredColumnWidth && Number.isFinite(measuredColumnWidth) ? measuredColumnWidth : fallbackWidth,
-              );
-            }
+            const groupChildren = new Set(cell.group.children);
+            const visibleWidthSnapshot = captureVisibleWidths(
+              headerRef.current, visibleColumns.filter(column => groupChildren.has(column.id)), stateRef.current,
+            );
 
             const fallbackGroupWidth = [...visibleWidthSnapshot.values()].reduce((sum, width) => sum + width, 0);
             const startWidth =
@@ -252,11 +265,7 @@ export function renderCominsHeaderCell<TData>(
             const handlePointerMove = (moveEvent: PointerEvent) => {
               commitState(
                 (current) => {
-                  let next = current;
-
-                  for (const [visibleColumnId, visibleColumnWidth] of visibleWidthSnapshot) {
-                    next = setCominsColumnWidth(next, visibleColumnId, visibleColumnWidth);
-                  }
+                  const next = applyVisibleWidths(current, visibleWidthSnapshot);
 
                   return setCominsColumnGroupWidth(
                     next,
@@ -310,7 +319,16 @@ export function renderCominsHeaderCell<TData>(
   const showSortPriority = sortRule !== null && state.sortModel.length > 1;
   const isMovingGroupChild = Boolean(movingGroup?.children.includes(column.id));
   const isColumnPlaceholder = movingColumnId === column.id || isMovingGroupChild;
-  const columnPlaceholderLabel = getCominsColumnPlaceholderText(column.label, column.id);
+  const columnFilterKind = column.filter?.kind;
+  const columnFilterable =
+    filteringRequested &&
+    (columnFilterKind === "boolean" ||
+      columnFilterKind === "date" ||
+      columnFilterKind === "number" ||
+      columnFilterKind === "text");
+  const columnPlaceholderLabel = isColumnPlaceholder || column.sort || columnFilterable
+    ? getCominsColumnPlaceholderText(column.label, column.id)
+    : column.id;
   const headerClassName = [
     "comins-table__th px-3 py-2 text-left font-semibold",
     movingColumnId === column.id ? "comins-column-moving" : undefined,
@@ -348,13 +366,6 @@ export function renderCominsHeaderCell<TData>(
   const columnPositionLocked =
     column.lockPosition === true ||
     (!cell.groupId && columnState?.pinned !== undefined);
-  const columnFilterKind = column.filter?.kind;
-  const columnFilterable =
-    filteringRequested &&
-    (columnFilterKind === "boolean" ||
-      columnFilterKind === "date" ||
-      columnFilterKind === "number" ||
-      columnFilterKind === "text");
 
   return (
     <th
@@ -439,7 +450,6 @@ export function renderCominsHeaderCell<TData>(
         data-comins-header-components={hasHeaderComponents ? "true" : undefined}
         data-comins-sort-indicator-visible={sortIndicatorVisible ? "true" : undefined}
         inert={isColumnPlaceholder ? true : undefined}
-        ref={bindCominsColumnPlaceholderNativeBoundary}
       >
         <span className="comins-table__header-slot" data-comins-header-slot="left">
           {showColumnMoveHandle && !columnPositionLocked ? (
@@ -456,7 +466,7 @@ export function renderCominsHeaderCell<TData>(
                 beginHeaderPointerInteraction(event, cell, true);
               }}
             >
-              <CominsTableIcon name="columnMove" />
+              {cominsColumnMoveIcon}
             </span>
           ) : null}
           {headerLeftSlots}
@@ -529,20 +539,7 @@ export function renderCominsHeaderCell<TData>(
           event.stopPropagation();
           const startX = event.clientX;
           const measuredWidth = getCominsElementRect(event.currentTarget.closest<HTMLTableCellElement>("th"))?.width;
-          const visibleWidthSnapshot = new Map<string, number>();
-
-          for (const visibleColumn of visibleColumns) {
-            const headerCell = Array.from(
-              headerRef.current?.querySelectorAll<HTMLTableCellElement>("[data-comins-column-id]") ?? [],
-            ).find((element) => element.dataset.cominsColumnId === visibleColumn.id);
-            const measuredColumnWidth = getCominsElementRect(headerCell)?.width;
-            const fallbackWidth = stateRef.current.columnState[visibleColumn.id]?.width ?? visibleColumn.width ?? 160;
-
-            visibleWidthSnapshot.set(
-              visibleColumn.id,
-              measuredColumnWidth && Number.isFinite(measuredColumnWidth) ? measuredColumnWidth : fallbackWidth,
-            );
-          }
+          const visibleWidthSnapshot = captureVisibleWidths(headerRef.current, visibleColumns, stateRef.current);
 
           const startWidth =
             visibleWidthSnapshot.get(column.id) ??
@@ -559,17 +556,14 @@ export function renderCominsHeaderCell<TData>(
           const handlePointerMove = (moveEvent: PointerEvent) => {
             commitState(
               (current) => {
-                let next = current;
-
-                for (const [visibleColumnId, visibleColumnWidth] of visibleWidthSnapshot) {
-                  next = setCominsColumnWidth(next, visibleColumnId, visibleColumnWidth);
-                }
+                const next = applyVisibleWidths(current, visibleWidthSnapshot);
 
                 return setColumnWidthInsideParentGroup(
                   next,
                   column.id,
                   Math.min(
                     resizeMaxWidth ?? Number.POSITIVE_INFINITY,
+                    getEffectiveColumnMaxWidth(column),
                     Math.max(getEffectiveColumnMinWidth(column), startWidth + moveEvent.clientX - startX),
                   ),
                 );

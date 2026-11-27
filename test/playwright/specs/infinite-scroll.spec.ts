@@ -122,3 +122,25 @@ test("controlled infinite scroll appends once, stops at exhaustion, and refreshe
     for (const deferredRequest of deferredRequests) deferredRequest.release();
   }
 });
+
+test("regression: retries the failed append at the same offset", async ({ page }) => {
+  const skips: number[] = [];
+  await page.route(dummyJsonUrl, async route => {
+    const skip = Number(new URL(route.request().url()).searchParams.get("skip"));
+    skips.push(skip);
+    if (skips.length === 2) return route.fulfill({ status: 503, json: { message: "Unavailable" } });
+    return route.fulfill({ json: { total: 80, users: Array.from({ length: 40 }, (_, index) => ({
+      id: skip + index + 1, age: 30, firstName: "Remote", lastName: String(skip + index + 1), email: "row@example.test",
+    })) } });
+  });
+  await page.goto("/performance/infinite-scroll");
+  await expect(page.getByTestId("infinite-load-count")).toHaveText("불러옴 40 / 80");
+  await page.getByTestId("infinite-scroll-viewport").evaluate(node => {
+    node.scrollTop = node.scrollHeight;
+    node.dispatchEvent(new Event("scroll"));
+  });
+  await expect(page.getByTestId("infinite-append-error")).toBeVisible({ timeout: 3000 });
+  await page.getByTestId("infinite-append-retry").click();
+  await expect(page.getByTestId("infinite-load-count")).toHaveText("불러옴 80 / 80");
+  expect(skips).toEqual([0, 40, 40]);
+});

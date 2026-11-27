@@ -63,3 +63,9 @@ describe("COMINS export helpers", () => {
     ).toBe(JSON.stringify([{ Name: "Alpha", Salary: "$80,000" }], null, 2));
   });
 });
+
+it("falls back to the declared header for a prototype-shaped ID that has no own override", () => {
+  const options = { rows: [5], columns: [{ id: "constructor", label: "Total", value: (row: number) => row }], headerOverrides: {} };
+  expect(JSON.parse(exportCominsRowsToJson(options))).toEqual([{ Total: 5 }]);
+  expect(exportCominsRowsToCsv(options)).toBe("Total\n5");
+});

@@ -480,12 +480,23 @@ export function transferCominsGroupBetweenTables<TData, TGroup>(
     groupInsertIndex = position === "after" ? targetGroupIndex + 1 : targetGroupIndex;
   }
 
-  targetGroups.splice(groupInsertIndex, 0, sourceGroupEndpoint.group);
-  const memberRows = sourceGroupEndpoint.rows.map((row) => row.row);
   const dataInsertIndex = overwriteDataInsertIndex === null
     ? targetData.length
     : Math.min(overwriteDataInsertIndex, targetData.length);
-  targetData.splice(dataInsertIndex, 0, ...memberRows);
+  const members = sourceGroupEndpoint.rows;
+  if (members.some((member, offset) => {
+    const index = dataInsertIndex + offset;
+    return target.getRowId(member.row, index) !== member.rowId ||
+      target.getRowGroupId(member.row, index) !== sourceGroupEndpoint.groupId;
+  })) return null;
+
+  const memberRows = members.map((member) => member.row);
+  if (targetData.some((row, index) => {
+    const finalIndex = index < dataInsertIndex ? index : index + memberRows.length;
+    return sourceRowIds.has(target.getRowId(row, finalIndex));
+  })) return null;
+  targetGroups.splice(groupInsertIndex, 0, sourceGroupEndpoint.group);
+  targetData = targetData.slice(0, dataInsertIndex).concat(memberRows, targetData.slice(dataInsertIndex));
   const sourceMemberIndexes = new Set(sourceGroupEndpoint.rows.map((row) => row.dataIndex));
 
   return {

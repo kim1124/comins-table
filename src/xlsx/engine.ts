@@ -23,6 +23,7 @@ function descriptor(meta: XlsxCellMetadata | undefined, cell: XLSX.CellObject | 
   if (cell.t !== "n" || typeof cell.v !== "number") throw new CominsXlsxError("UNSUPPORTED_VALUE", base);
   let number = cell.v;
   let fallback = "General";
+  let date1904 = sheet.date1904;
   if (meta?.type === "d") {
     const match = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(?:Z|[+-]\d{2}:\d{2})?)?$/.exec(meta.value ?? "");
     if (!match) throw new CominsXlsxError("INVALID_WORKBOOK", base);
@@ -30,8 +31,10 @@ function descriptor(meta: XlsxCellMetadata | undefined, cell: XLSX.CellObject | 
     const timestamp = Date.UTC(fields[0], fields[1]-1, fields[2], fields[3], fields[4], fields[5], fields[6]);
     const date = new Date(timestamp);
     if (fields[0] < 1900 || fields[0] > 9999 || date.getUTCFullYear() !== fields[0] || date.getUTCMonth()+1 !== fields[1] || date.getUTCDate() !== fields[2] || fields[3] > 23 || fields[4] > 59 || fields[5] > 59) throw new CominsXlsxError("INVALID_WORKBOOK", base);
-    number = (timestamp - (sheet.date1904 ? Date.UTC(1904,0,1) : Date.UTC(1899,11,30))) / DAY;
-    if (!sheet.date1904 && timestamp < Date.UTC(1900,2,1)) number--;
+    // ISO dates already own their calendar fields. Use a representable serial for SSF formatting.
+    date1904 = date1904 && timestamp >= Date.UTC(1904, 0, 1);
+    number = (timestamp - (date1904 ? Date.UTC(1904,0,1) : Date.UTC(1899,11,30))) / DAY;
+    if (!date1904 && timestamp < Date.UTC(1900,2,1)) number--;
     fallback = match[4] ? `yyyy-mm-dd hh:mm:ss${match[7] ? ".000" : ""}` : "yyyy-mm-dd";
   }
   const format = meta?.style !== undefined && formats[meta.style] === 14 ? "yyyy-mm-dd" : !cell.z || cell.z === "General" ? fallback : cell.z;
@@ -40,14 +43,14 @@ function descriptor(meta: XlsxCellMetadata | undefined, cell: XLSX.CellObject | 
       if (!Number.isFinite(number) || number < 0) throw new CominsXlsxError("UNSUPPORTED_VALUE", base);
       if (format === "yyyy-mm-dd hh:mm:ss.000") {
         const day = Math.floor(number); const millis = Math.round((number-day) * DAY);
-        const parsed = XLSX.SSF.parse_date_code(day + (millis === DAY ? 1 : 0), { date1904: sheet.date1904 });
+        const parsed = XLSX.SSF.parse_date_code(day + (millis === DAY ? 1 : 0), { date1904 });
         if (!parsed || parsed.y > 9999) throw new CominsXlsxError("UNSUPPORTED_VALUE", base);
         const time = millis % DAY; const pad = (value: number, width = 2) => String(value).padStart(width,"0");
         // Preserve millisecond Date precision instead of SSF's 15-digit serial truncation.
         const dateText = `${pad(parsed.y,4)}-${pad(parsed.m)}-${pad(parsed.d)} ${pad(Math.floor(time/3600000))}:${pad(Math.floor(time/60000)%60)}:${pad(Math.floor(time/1000)%60)}.${pad(time%1000,3)}`;
         return { ...base, kind: "date", dateText };
       }
-      let dateNumber = number; let date1904 = sheet.date1904;
+      let dateNumber = number;
       // SSF excludes time fractions on 9999-12-31 in the 1900 system.
       // Equivalent 1904 serials preserve calendar fields; conditions/elapsed values cannot be shifted.
       if (!date1904 && number > 2958465 && number < 2958466) {

@@ -548,7 +548,7 @@ const koreanDocsCopy: Record<string, KoreanDocsCopy> = {
       "Row Grouping은 application-owned flat Row에서 synthetic business data 없이 client-side hierarchy를 만듭니다.",
       "Application은 `expandedGroupIds`를 소유하고 `onChangeExpandedGroupIds` 결과를 같은 controlled state에 반영합니다. Callback이 없으면 disclosure는 disabled read-only입니다.",
       "Grouping Column sort rule은 sibling Group을 정렬하고 나머지 rule은 leaf를 정렬합니다. count, sum, avg, min, max는 모든 descendant leaf를 집계합니다.",
-      "Group Row는 selection, Clipboard, Row Detail, 일반 Row/Cell callback, renderer와 drag 대상이 아닙니다. Pagination, Infinite/Lazy Loading, Tree Grid와 draggable Row는 Row Grouping과 결합할 수 없습니다.",
+      "Group Row는 selection과 Clipboard의 대상에서 제외됩니다. Group Drag로 그룹 순서를 바꾸고 Row Drag로 그룹 내 순서 또는 행의 소속 그룹을 바꿀 수 있습니다. Pagination, Infinite/Lazy Loading, Tree Grid는 Row Grouping과 결합할 수 없습니다.",
     ],
     category: "Row / Context",
     label: "Row Grouping",

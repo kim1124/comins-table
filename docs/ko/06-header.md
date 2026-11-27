@@ -216,3 +216,5 @@ Playground 검증 기준:
 - 사용자가 header 위치, resize, sort 표시 문제를 지적한 경우 Playwright assertion 외에 screenshot 또는 DOM geometry evidence를 report에 남긴다.
 
 [`/api/ref`](http://127.0.0.1:4002/api/ref) live 예제는 Flat Table에서 `setSortModel`, `clearSort`, `getColumnLayout`, `setColumnLayout`을 실행한다. Layout method는 현재 Column 순서, 표시 상태, width를 저장하고 복원한다.
+
+`columns` prop이 바뀌면 현재 Table은 최근 제거된 Column ID 128개의 위치를 기억한다. 이력에서 밀려난 ID가 다시 나타나면 새 Column과 같은 삽입 규칙을 적용한다. 더 큰 스키마 변경이나 재마운트에서 레이아웃을 유지하려면 위 메서드로 명시적으로 저장하고 복원한다.

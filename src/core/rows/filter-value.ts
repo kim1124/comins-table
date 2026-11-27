@@ -4,14 +4,19 @@ export function isEmptyFilterValue(value: unknown) {
   return value === null || value === undefined || value === "";
 }
 
+function utcDay(year: number, month: number, day: number) {
+  const date = new Date(0);
+  date.setUTCFullYear(year, month, day);
+  return date;
+}
+
 export function getDateDayValue(value: unknown): number | null {
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/u.test(value)) {
     const [year, month, day] = value.split("-").map(Number);
-    const normalized = Date.UTC(year!, month! - 1, day!);
-    const date = new Date(normalized);
+    const date = utcDay(year!, month! - 1, day!);
 
     return date.getUTCFullYear() === year && date.getUTCMonth() === month! - 1 && date.getUTCDate() === day
-      ? normalized
+      ? date.getTime()
       : null;
   }
 
@@ -25,7 +30,7 @@ export function getDateDayValue(value: unknown): number | null {
     return null;
   }
 
-  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  return utcDay(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()).getTime();
 }
 
 export function normalizeFilterOptionValue(config: { kind: CominsColumnFilterKind; caseSensitive?: boolean }, raw: unknown): { value: CominsColumnFilterValue; key: string; label: string } | null {

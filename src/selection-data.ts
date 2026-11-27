@@ -1,6 +1,9 @@
 import { planCoreSelectionCopy } from "./core/selection/navigation";
+import { canUseCellClipboard } from "./core/editing/cells";
+import { getNestedFieldValue, indexCominsRows } from "./core/state/access";
+import { projectReactState } from "./react/model";
 import {
-  copyCominsCell, getCominsCellValue, getCominsSelectedCellRange, getCominsVisibleColumns,
+  getCominsCellValue, getCominsSelectedCellRange, getCominsVisibleColumns,
 } from "./react/core-compat";
 import type { CominsCellAddress, CominsCopiedCellRange, CominsRowId } from "./model";
 import type { CominsTableState } from "./react-types";
@@ -38,13 +41,20 @@ export function copySelectionData<T>(state: CominsTableState<T>, target: CominsC
   const plan = planCoreSelectionCopy({ cells, selectedRowIds: state.selection.rowIds, rowIds: order, columnIds: visible.map(column => column.id), target });
   if (!plan) return null;
   const { target: kind, rowIds, selected } = plan;
-  const columnsById = new Map(visible.map(column => [column.id, column]));
+  const core = projectReactState(state).core;
+  const rowIndexes = indexCominsRows(core.rowIds);
+  const columnsById = new Map(core.columns.map(column => [column.id, column]));
   const columns = plan.columnIds.map(id => columnsById.get(id)!);
-  const rows = rowIds.map(rowId => columns.map(column => {
-    if (kind === "cells" && !selected.get(rowId)?.has(column.id)) return null;
-    const cell = copyCominsCell(state, { rowId, columnId: column.id });
-    return cell ? { columnId: column.id, value: cell.value, text: encodeTsv(cell.value) } : null;
-  }));
+  const rows = rowIds.map(rowId => {
+    const index = rowIndexes.get(rowId) ?? -1;
+    const row = core.rows[index];
+    return columns.map(column => {
+      if (kind === "cells" && !selected.get(rowId)?.has(column.id)) return null;
+      if (row === undefined || !canUseCellClipboard(core, row, rowId, column, "copy", index)) return null;
+      const value = getNestedFieldValue(row, column.field);
+      return { columnId: column.id, value, text: encodeTsv(value) };
+    });
+  });
   if (!rows.some(row => row.some(Boolean))) return null;
   const text = rows.map(row => row.map(cell => cell?.text ?? "").join("\t")).join("\n");
   return { target: kind, text, data: { kind: "cell-range", rows, text } };
